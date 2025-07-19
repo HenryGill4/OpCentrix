@@ -1,0 +1,136 @@
+:root {
+    --bg-color: #f0f0f0;
+    --container-bg: #ffffff;
+    --text-color: #333;
+    --input-bg: #fff;
+    --input-border: #ccc;
+    --button-bg: #007bff;
+    --button-hover-bg: #0056b3;
+    --table-header-bg: #f8f9fa;
+    --input-text-color: #495057;
+    --blackout-bg: #dfdfdf;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg-color: #333;
+        --container-bg: #424242;
+        --text-color: #f4f7fa;
+        --input-bg: #555;
+        --input-border: #888;
+        --button-bg: #5a5;
+        --button-hover-bg: #4a4;
+        --table-header-bg: #666;
+        --input-text-color: #fff;
+        --blackout-bg: #3f3e3e;
+    }
+}
+
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 20px;
+}
+
+.container {
+    background: var(--container-bg);
+    max-width: 100%;
+    margin: auto;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+h2 {
+    text-align: center;
+    color: var(--button-bg);
+}
+
+.calendar-wrapper {
+    overflow-x: auto;
+    max-width: 100%;
+}
+
+.calendar {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: max-content;
+}
+
+    .calendar thead th,
+    .calendar tbody th {
+        border: 1px solid var(--input-border);
+        padding: 10px;
+        min-width: 50px;
+        max-width: 50px;
+        text-align: center;
+        background: var(--table-header-bg);
+        font-weight: bold;
+        vertical-align: middle;
+    }
+
+    .calendar tbody td {
+        border: 1px solid var(--input-border);
+        padding: 5px;
+        min-width: 50px;
+        max-width: 50px;
+        text-align: left;
+        vertical-align: top;
+        min-height: 80px;
+        position: relative;
+    }
+
+.job-container {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    height: 120px;
+    overflow-y: auto;
+    position: relative;
+}
+
+.job {
+    border-radius: 4px;
+    font-size: 12px;
+    background: linear-gradient(to right, var(--button-bg), var(--button-hover-bg));
+    color: white;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 6px;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.changeover {
+    width: 100%;
+    border-radius: 4px;
+    font-size: 10px;
+    background: #ff9800;
+    color: black;
+    opacity: 0.7;
+    text-align: center;
+}
+
+.add-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+    background-color: var(--button-bg);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+    .add-btn:hover {
+        background-color: var(--button-hover-bg);
+    }
+
+.weekend-column {
+    background-color: var(--blackout-bg) !important;
+}
+
