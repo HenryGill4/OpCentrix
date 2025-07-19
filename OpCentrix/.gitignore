@@ -1,6 +1,35 @@
-﻿bin/
+﻿# Build outputs
+bin/
 obj/
-*.db
+*.dll
+*.exe
+
+# User-specific files
 *.user
 *.suo
+*.userosscache
+*.sln.docstates
+
+# VS Code and VS folders
 .vs/
+.vscode/
+
+# Logs
+*.log
+
+# Database files
+*.db
+*.sqlite
+
+# Dependency cache
+packages/
+*.nupkg
+*.snupkg
+
+# Frontend build artifacts (if used later)
+node_modules/
+dist/
+build/
+
+# Environment configs
+.env
