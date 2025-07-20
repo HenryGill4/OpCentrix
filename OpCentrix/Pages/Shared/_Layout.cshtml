@@ -4,48 +4,46 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - OpCentrix</title>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/OpCentrix.styles.css" asp-append-version="true" />
-</head>
-<body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container">
-                <a class="navbar-brand" asp-area="" asp-page="/Index">OpCentrix</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/Privacy">Privacy</a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
-    </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2025 - OpCentrix - <a asp-area="" asp-page="/Privacy">Privacy</a>
+    <!-- Tailwind CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+    <!-- Custom Site Styles -->
+    <link rel="stylesheet" href="~/css/site.css" />
+
+    <!-- Gridstack CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/gridstack@9.3.0/dist/gridstack.min.css" rel="stylesheet" />
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <!-- NAVIGATION BAR -->
+    <header class="bg-white shadow sticky top-0 z-50">
+        <div class="max-w-screen-xl mx-auto px-4 py-4 flex items-center justify-between">
+            <h1 class="text-xl font-bold text-blue-800">OpCentrix</h1>
+            <nav class="space-x-6 text-sm font-medium text-gray-700">
+                <a href="/Scheduler" class="hover:text-blue-600">Scheduler</a>
+                <a href="/Machining" class="hover:text-blue-600">Machining</a>
+                <a href="/EDM" class="hover:text-blue-600">EDM</a>
+                <a href="/QC" class="hover:text-blue-600">QC</a>
+                <a href="/Coating" class="hover:text-blue-600">Coating</a>
+                <a href="/Shipping" class="hover:text-blue-600">Shipping</a>
+                <a href="/Media" class="hover:text-blue-600">Media</a>
+                <a href="/Analytics" class="hover:text-blue-600">Analytics</a>
+            </nav>
         </div>
+    </header>
+
+    <!-- MAIN BODY CONTENT -->
+    <main class="max-w-screen-xl mx-auto p-4">
+        @RenderBody()
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="mt-10 text-center text-xs text-gray-400 pb-4">
+        &copy; @DateTime.Now.Year - OpCentrix ERP by Henry Gill
     </footer>
 
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
-
-    @await RenderSectionAsync("Scripts", required: false)
+    <!-- Gridstack JS -->
+    <script src="https://cdn.jsdelivr.net/npm/gridstack@9.3.0/dist/gridstack-h5.js"></script>
 </body>
 </html>
