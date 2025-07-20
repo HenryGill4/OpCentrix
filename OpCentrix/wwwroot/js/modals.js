@@ -3,7 +3,7 @@
 let partList = [];
 
 export async function fetchParts() {
-    const res = await fetch('/api/get_part_list.php'); // Replace with /api/parts when ready
+    const res = await fetch('/api/parts');
     partList = await res.json();
 
     const printer = document.getElementById('modalPrinter').value;
@@ -21,7 +21,7 @@ export async function fetchParts() {
         const partMaterial = ['TI1', 'TI2'].includes(part.printer) ? 'titanium' : 'inconel';
         if (partMaterial !== materialType) continue;
 
-        const duration = parseAvgToMin(part.avg);
+        const duration = parseAvgToMin(part.avgDuration);
         const jobStart = new Date(date + 'T08:00:00');
         const jobEnd = new Date(jobStart.getTime() + duration * 60000);
 
@@ -30,17 +30,21 @@ export async function fetchParts() {
         const endDay = jobEnd.getDay();
 
         let tier = 3;
+
         if (endDay !== 0 && endDay !== 6) {
-            if (endHour < 15 || (endHour === 15 && endMin <= 30)) tier = 1;
-            else tier = 2;
+            if (endHour < 15 || (endHour === 15 && endMin <= 30)) {
+                tier = 1;
+            } else {
+                tier = 2;
+            }
         }
 
         options.push({
             partNumber: part.partNumber,
-            avg: part.avg,
+            avg: part.avgDuration,
             duration,
             tier,
-            label: `${part.partNumber} — ${part.avg}`
+            label: `${part.partNumber} — ${part.avgDuration}`
         });
     }
 
@@ -61,10 +65,13 @@ export async function fetchParts() {
 
         const tier = parseInt(selected.dataset.tier);
         let msg = '';
-        if (tier === 1) msg = `🟢 ✔️ Recommended: ${selected.textContent} (Day shift, ends before 3:30 PM)`;
-        else if (tier === 2) msg = `🟡 🌙 Warning: ${selected.textContent} (Night shift, ends after 3:30 PM)`;
-        else msg = `🔴 ⚠️ Last Resort: ${selected.textContent} (Ends on weekend)`;
-
+        if (tier === 1) {
+            msg = `🟢 ✔️ Recommended: ${selected.textContent} (Day shift, ends before 3:30 PM)`;
+        } else if (tier === 2) {
+            msg = `🟡 🌙 Warning: ${selected.textContent} (Night shift, ends after 3:30 PM)`;
+        } else {
+            msg = `🔴 ⚠️ Last Resort: ${selected.textContent} (Ends on weekend)`;
+        }
         suggestionBox.textContent = msg;
     });
 
@@ -81,6 +88,7 @@ export async function fetchParts() {
         document.getElementById('modalDuration').value = '';
     }
 }
+
 
 export function addJob(printer, date) {
     document.getElementById('modalPrinter').value = printer;
