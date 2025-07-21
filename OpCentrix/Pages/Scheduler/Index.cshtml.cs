@@ -35,72 +35,83 @@ namespace OpCentrix.Pages.Scheduler
         // This method runs when the /Scheduler page is first loaded
         public void OnGet()
         {
-            // For now, we use a hardcoded machine and job (demo mode)
+            var today = DateTime.Today;
+            int diff = (int)today.DayOfWeek - (int)DayOfWeek.Monday;
+            if (diff < 0) diff += 7;
+            var start = today.AddDays(-diff);
+
+            ViewModel.StartOfWeek = start;
+            ViewModel.Dates = Enumerable.Range(0, 7)
+                .Select(i => start.AddDays(i).ToString("yyyy-MM-dd"))
+                .ToList();
+
             ViewModel.Machines = new List<MachineViewModel>
             {
                 new MachineViewModel
                 {
-                    Id = "machine_1",
+                    Id = "TI1",
                     Name = "TI1",
-                    Jobs = new List<JobViewModel>
+                    Jobs = new List<ScheduledJob>
                     {
-                        new JobViewModel
+                        new ScheduledJob
                         {
-                            Id = "job1",
-                            MachineId = "machine_1",
-                            PartNumber = "PN-1234",
-                            ScheduledStart = DateTime.Today.AddHours(6),
-                            ScheduledEnd = DateTime.Today.AddHours(10),
-                            Operator = "Henry",
+                            JobId = 1,
+                            PartNumber = "PN-1001",
+                            MachineName = "TI1",
+                            StartDate = start.AddDays(1),
+                            DurationDays = 2,
                             Status = "Scheduled",
-                            Notes = "Initial build"
+                            OperatorName = "Alice",
+                            Notes = "Sample job"
                         }
                     }
-                }
+                },
+                new MachineViewModel { Id = "TI2", Name = "TI2", Jobs = new List<ScheduledJob>() },
+                new MachineViewModel { Id = "INC", Name = "INC", Jobs = new List<ScheduledJob>() }
             };
         }
 
         // This handles HTMX GET request when the user clicks "+ Add Job"
         // It returns a blank form inside the _AddEditJobModal partial view
-        public PartialViewResult OnGetShowAddModal()
+        public PartialViewResult OnGetShowAddModal(string machine, DateTime date)
         {
-            // Pre-populate with default time range
-            var emptyModel = new JobViewModel
+            var job = new ScheduledJob
             {
-                ScheduledStart = DateTime.Now,
-                ScheduledEnd = DateTime.Now.AddHours(2)
+                MachineName = machine,
+                StartDate = date,
+                DurationDays = 1
             };
 
             var vm = new AddEditJobModalViewModel
             {
-                Job = emptyModel,
+                Job = job,
                 Parts = ExampleParts
             };
 
-            // Return modal view with empty job form and part list
             return Partial("_AddEditJobModal", vm);
         }
 
         // This handles HTMX POST request when the user submits the modal form
         // It re-renders the scheduler row with the new job included
-        public PartialViewResult OnPostAddOrUpdateJob(JobViewModel model)
+        public PartialViewResult OnPostAddOrUpdateJob(ScheduledJob job)
         {
-            // For now, we're just injecting the form input into a fake "database"
-            // Later, you’ll replace this with EF Core to persist real job records
+            var start = job.StartDate.AddDays(-(int)job.StartDate.DayOfWeek + (int)DayOfWeek.Monday);
+            ViewModel.StartOfWeek = start;
+            ViewModel.Dates = Enumerable.Range(0, 7)
+                .Select(i => start.AddDays(i).ToString("yyyy-MM-dd"))
+                .ToList();
+
             ViewModel.Machines = new List<MachineViewModel>
             {
                 new MachineViewModel
                 {
-                    Id = model.MachineId,
-                    Name = model.MachineId.ToUpper(),
-                    Jobs = new List<JobViewModel>
-                    {
-                        model
-                    }
+                    Id = job.MachineName,
+                    Name = job.MachineName,
+                    Jobs = new List<ScheduledJob> { job }
                 }
             };
 
-            // Return the updated machine row to HTMX to swap into #schedulerBody
+            ViewData["StartOfWeek"] = ViewModel.StartOfWeek;
             return Partial("_MachineRow", ViewModel.Machines.First());
         }
     }
