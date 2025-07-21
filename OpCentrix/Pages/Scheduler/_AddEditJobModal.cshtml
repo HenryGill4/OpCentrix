@@ -15,9 +15,9 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Machine</label>
                     <select name="MachineId" class="w-full border border-gray-300 rounded-lg p-2" required>
-                        <option value="machine_1" @(Model.MachineId == "machine_1" ? "selected" : "")>TI1</option>
-                        <option value="machine_2" @(Model.MachineId == "machine_2" ? "selected" : "")>TI2</option>
-                        <option value="machine_3" @(Model.MachineId == "machine_3" ? "selected" : "")>INC</option>
+                        <option value="machine_1" selected="@(Model.MachineId == "machine_1")">TI1</option>
+                        <option value="machine_2" selected="@(Model.MachineId == "machine_2")">TI2</option>
+                        <option value="machine_3" selected="@(Model.MachineId == "machine_3")">INC</option>
                     </select>
                 </div>
 
