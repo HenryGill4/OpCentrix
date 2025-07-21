@@ -1,169 +1,46 @@
-﻿@page
+﻿@* Index.cshtml: *@
+@page
+@model IndexModel
 @{
     ViewData["Title"] = "Scheduler";
 }
 
-<!-- Main Calendar Table -->
-<div class="container">
-    <div class="calendar-wrapper">
-        <table class="calendar" id="calendar">
-            <thead id="calendar-head"></thead>
-            <tbody id="calendar-body"></tbody>
-        </table>
+<div class="space-y-6 px-4 font-sans">
+    <!-- Header Section -->
+    <div class="flex items-center justify-between">
+        <div class="text-2xl font-bold text-gray-800">🗓️ OpCentrix Scheduler</div>
+
+        <!-- Zoom Controls -->
+        <div class="flex items-center space-x-2">
+            <button onclick="adjustZoom(-1)" class="bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded text-sm font-medium">− Zoom Out</button>
+            <button onclick="adjustZoom(1)" class="bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded text-sm font-medium">+ Zoom In</button>
+        </div>
+    </div>
+
+    <!-- Add Job Button (HTMX-triggered) -->
+    <div class="flex justify-end mb-4">
+        <button hx-get="/Scheduler?handler=ShowAddModal"
+                hx-target="#modalContainer"
+                hx-swap="innerHTML"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
+            + Add Job
+        </button>
+    </div>
+
+    <!-- Main Scheduler Content -->
+    <div class="space-y-4" id="schedulerBody">
+        @foreach (var machine in Model.ViewModel.Machines)
+        {
+            @await Html.PartialAsync("_MachineRow", machine)
+        }
     </div>
 </div>
 
-<!-- Add Print Modal -->
-<div id="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.6); justify-content: center; align-items: center; z-index: 10;">
-    <div style="background: var(--container-bg); padding: 20px; border-radius: 10px; width: 300px; max-width: 90%; color: var(--text-color);">
-        <h3 style="margin-top: 0;">Add Print</h3>
-        <label>Part:</label>
-        <select id="modalPart"></select>
-        <div id="suggestionBox" style="margin-bottom: 10px; font-size: 13px;"></div>
+<!-- Modal Container for HTMX -->
+<div id="modalContainer"></div>
 
-        <label>Estimated Duration (min):</label>
-        <input type="number" id="modalDuration" readonly />
-        <label>Start Time:</label>
-        <input type="time" id="modalStartTime" />
-
-        <input type="hidden" id="modalPrinter" />
-        <input type="hidden" id="modalDate" />
-
-        <button onclick="confirmAdd()">Add</button>
-        <button onclick="closeModal()">Cancel</button>
-    </div>
-</div>
-
-<!-- Edit/Delete Modal -->
-<div id="editModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.6); justify-content: center; align-items: center; z-index: 11;">
-    <div style="background: var(--container-bg); padding: 20px; border-radius: 10px; width: 300px; max-width: 90%; color: var(--text-color);">
-        <h3 style="margin-top: 0;">Edit Job</h3>
-        <input type="hidden" id="editId" />
-
-        <label>Part Number:</label>
-        <input type="text" id="editPart" readonly />
-
-        <label>Duration (min):</label>
-        <input type="number" id="editDuration" />
-
-        <button onclick="saveEdit()">Save</button>
-        <button onclick="deleteJob()">Delete</button>
-        <button onclick="closeEditModal()">Cancel</button>
-    </div>
-</div>
-
-<!-- Load Scripts & Styles -->
-<link rel="stylesheet" href="~/css/style.css" />
-<script type="module">
-    import { getLatestJobEndDate, generateCalendarDatesUntil, buildCalendarGrid, printers, today } from '/js/calendar.js';
-    import { renderJobs } from '/js/jobs.js';
-    import { addJob, confirmAdd, closeModal, openEditModal, closeEditModal, saveEdit, deleteJob } from '/js/modals.js';
-
-    let dates = [];
-
-    async function loadJobs() {
-        const res = await fetch('/api/jobs');
-        const jobs = await res.json();
-        const latest = getLatestJobEndDate(jobs);
-        dates = generateCalendarDatesUntil(latest);
-        buildCalendarGrid(dates, addJob);
-        renderJobs(jobs, dates, openEditModal);
-    }
-
-    window.addJob = addJob;
-    window.openEditModal = openEditModal;
-    window.closeModal = closeModal;
-    window.confirmAdd = confirmAdd;
-    window.closeEditModal = closeEditModal;
-    window.saveEdit = saveEdit;
-    window.deleteJob = deleteJob;
-
-    loadJobs();
-</script>
-
-@{
-    ViewData["Title"] = "Scheduler";
+<!-- Zoom Control Script -->
+@section Scripts {
+    <script type="module" src="~/js/scheduler-ui.js"></script>
 }
-
-<!-- Main Calendar Table -->
-<div class="container">
-    <div class="calendar-wrapper">
-        <table class="calendar" id="calendar">
-            <thead id="calendar-head"></thead>
-            <tbody id="calendar-body"></tbody>
-        </table>
-    </div>
-</div>
-
-<!-- Add Print Modal -->
-<div id="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.6); justify-content: center; align-items: center; z-index: 10;">
-    <div style="background: var(--container-bg); padding: 20px; border-radius: 10px; width: 300px; max-width: 90%; color: var(--text-color);">
-        <h3 style="margin-top: 0;">Add Print</h3>
-        <label>Part:</label>
-        <select id="modalPart"></select>
-        <div id="suggestionBox" style="margin-bottom: 10px; font-size: 13px;"></div>
-
-        <label>Estimated Duration (min):</label>
-        <input type="number" id="modalDuration" readonly />
-        <label>Start Time:</label>
-        <input type="time" id="modalStartTime" />
-
-        <input type="hidden" id="modalPrinter" />
-        <input type="hidden" id="modalDate" />
-
-        <button onclick="confirmAdd()">Add</button>
-        <button onclick="closeModal()">Cancel</button>
-    </div>
-</div>
-
-<!-- Edit/Delete Modal -->
-<div id="editModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.6); justify-content: center; align-items: center; z-index: 11;">
-    <div style="background: var(--container-bg); padding: 20px; border-radius: 10px; width: 300px; max-width: 90%; color: var(--text-color);">
-        <h3 style="margin-top: 0;">Edit Job</h3>
-        <input type="hidden" id="editId" />
-
-        <label>Part Number:</label>
-        <input type="text" id="editPart" readonly />
-
-        <label>Duration (min):</label>
-        <input type="number" id="editDuration" />
-
-        <button onclick="saveEdit()">Save</button>
-        <button onclick="deleteJob()">Delete</button>
-        <button onclick="closeEditModal()">Cancel</button>
-    </div>
-</div>
-
-<!-- Load Scripts & Styles -->
-<link rel="stylesheet" href="~/css/style.css" />
-<script type="module">
-    import { getLatestJobEndDate, generateCalendarDatesUntil, buildCalendarGrid, printers, today } from '/js/calendar.js';
-    import { renderJobs } from '/js/jobs.js';
-    import { addJob, confirmAdd, closeModal, openEditModal, closeEditModal, saveEdit, deleteJob } from '/js/modals.js';
-
-    let dates = [];
-
-    async function loadJobs() {
-        const res = await fetch('/api/jobs');
-        const jobs = await res.json();
-        const latest = getLatestJobEndDate(jobs);
-        dates = generateCalendarDatesUntil(latest);
-        buildCalendarGrid(dates, addJob);
-        renderJobs(jobs, dates, openEditModal);
-    }
-
-    window.addJob = addJob;
-    window.openEditModal = openEditModal;
-    window.closeModal = closeModal;
-    window.confirmAdd = confirmAdd;
-    window.closeEditModal = closeEditModal;
-    window.saveEdit = saveEdit;
-    window.deleteJob = deleteJob;
-
-    loadJobs();
-</script>
 

@@ -1,0 +1,7 @@
+﻿@* _JobBlock.cshtml *@
+@model OpCentrix.Models.JobViewModel
+
+<div class="rounded-xl text-xs text-white px-2 py-1 cursor-pointer shadow-sm overflow-hidden truncate transition-all duration-200 @Model.StatusClass"
+     title="Part: @Model.PartNumber&#10;Operator: @Model.Operator&#10;@Model.Notes">
+    @Model.PartNumber
+</div>

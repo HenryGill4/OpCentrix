@@ -1,15 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
-
+﻿//Part.cs:
 namespace OpCentrix.Models
 {
     public class Part
     {
         public int Id { get; set; }
-
-        [Required]
-        public string PartNumber { get; set; }
-
-        // This can be stored as a string like "2d 3h 15m" or normalized later
-        public string AvgDuration { get; set; }
+        public string PartNumber { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string Material { get; set; } = string.Empty;
+        public string AvgDuration { get; set; } = "1h 0m";
     }
 }

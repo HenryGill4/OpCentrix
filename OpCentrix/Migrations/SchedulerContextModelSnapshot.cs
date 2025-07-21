@@ -23,18 +23,28 @@ namespace OpCentrix.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("DurationMinutes")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("MachineId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Operator")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("PartNumber")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Printer")
-                        .IsRequired()
+                    b.Property<DateTime>("ScheduledEnd")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("StartDateTime")
+                    b.Property<DateTime>("ScheduledStart")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -52,6 +62,14 @@ namespace OpCentrix.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Material")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("PartNumber")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -59,40 +77,6 @@ namespace OpCentrix.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Parts");
-                });
-
-            modelBuilder.Entity("OpCentrix.Models.PostPrintLog", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("EndTime")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Notes")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("PartNumber")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Printer")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("StartTime")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("PostPrintLogs");
                 });
 #pragma warning restore 612, 618
         }

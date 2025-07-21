@@ -11,7 +11,7 @@ using OpCentrix.Data;
 namespace OpCentrix.Migrations
 {
     [DbContext(typeof(SchedulerContext))]
-    [Migration("20250719115758_InitialCreate")]
+    [Migration("20250721164727_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -26,18 +26,28 @@ namespace OpCentrix.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("DurationMinutes")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("MachineId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Operator")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("PartNumber")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Printer")
-                        .IsRequired()
+                    b.Property<DateTime>("ScheduledEnd")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("StartDateTime")
+                    b.Property<DateTime>("ScheduledStart")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -52,6 +62,14 @@ namespace OpCentrix.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("AvgDuration")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Material")
                         .IsRequired()
                         .HasColumnType("TEXT");
 

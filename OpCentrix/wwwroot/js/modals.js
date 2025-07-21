@@ -1,4 +1,5 @@
-﻿import { parseAvgToMin } from './utils.js';
+﻿//Modals.js:
+import { parseAvgToMin } from './utils.js';
 
 let partList = [];
 

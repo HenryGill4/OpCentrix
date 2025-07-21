@@ -17,10 +17,13 @@ namespace OpCentrix.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
+                    MachineId = table.Column<string>(type: "TEXT", nullable: false),
                     PartNumber = table.Column<string>(type: "TEXT", nullable: false),
-                    Printer = table.Column<string>(type: "TEXT", nullable: false),
-                    StartDateTime = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    DurationMinutes = table.Column<int>(type: "INTEGER", nullable: false)
+                    ScheduledStart = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    ScheduledEnd = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    Status = table.Column<string>(type: "TEXT", nullable: false),
+                    Notes = table.Column<string>(type: "TEXT", nullable: true),
+                    Operator = table.Column<string>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -34,6 +37,8 @@ namespace OpCentrix.Migrations
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     PartNumber = table.Column<string>(type: "TEXT", nullable: false),
+                    Description = table.Column<string>(type: "TEXT", nullable: false),
+                    Material = table.Column<string>(type: "TEXT", nullable: false),
                     AvgDuration = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>

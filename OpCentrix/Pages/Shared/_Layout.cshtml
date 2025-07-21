@@ -1,4 +1,5 @@
-﻿<!DOCTYPE html>
+﻿@* _layout.cshtml *@
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -22,6 +23,7 @@
             <h1 class="text-xl font-bold text-blue-800">OpCentrix</h1>
             <nav class="space-x-6 text-sm font-medium text-gray-700">
                 <a href="/Scheduler" class="hover:text-blue-600">Scheduler</a>
+                <a href="/SchedulerTemplate" class="hover:text-blue-600">Scheduler Template</a>
                 <a href="/Machining" class="hover:text-blue-600">Machining</a>
                 <a href="/EDM" class="hover:text-blue-600">EDM</a>
                 <a href="/QC" class="hover:text-blue-600">QC</a>
@@ -38,12 +40,26 @@
         @RenderBody()
     </main>
 
+    <!-- Modal container for HTMX to swap in modals -->
+    <div id="modalContainer"></div>
     <!-- FOOTER -->
     <footer class="mt-10 text-center text-xs text-gray-400 pb-4">
         &copy; @DateTime.Now.Year - OpCentrix ERP by Henry Gill
     </footer>
 
+
     <!-- Gridstack JS -->
     <script src="https://cdn.jsdelivr.net/npm/gridstack@9.3.0/dist/gridstack-h5.js"></script>
+
+    <script src="https://unpkg.com/htmx.org@1.9.4"></script>
+    <script type="module">
+        import { initSchedulerZoom } from '/js/scheduler-ui.js';
+        document.addEventListener('DOMContentLoaded', () => {
+            initSchedulerZoom('zoomIn', 'zoomOut', 'schedulerBody');
+        });
+    </script>
+
+    @RenderSection("Scripts", required: false)
 </body>
 </html>
+

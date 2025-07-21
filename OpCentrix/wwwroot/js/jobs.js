@@ -1,4 +1,5 @@
-﻿export function renderJobs(jobs, dates, openEditModal) {
+﻿// wwwroot/js/Jobs.js
+export function renderJobs(jobs, dates, openEditModal) {
     const dateIndex = {};
     dates.forEach((d, i) => dateIndex[d] = i);
     const usageMap = {};

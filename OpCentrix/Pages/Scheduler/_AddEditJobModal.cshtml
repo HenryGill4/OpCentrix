@@ -1,0 +1,59 @@
+﻿@* _AddEditJobModal.cshtml: *@
+@model OpCentrix.Models.JobViewModel
+
+<div class="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50" id="jobModal">
+    <div class="bg-white w-full max-w-md rounded-t-2xl p-6 shadow-lg transition-all duration-200 font-sans">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">
+            @(string.IsNullOrEmpty(Model.Id) ? "➕ Add Job" : "✏️ Edit Job")
+        </h2>
+
+        <form id="jobForm" hx-post="/Scheduler/AddOrUpdateJob" hx-target="#schedulerBody" hx-swap="outerHTML">
+            <input type="hidden" name="Id" value="@Model.Id" />
+
+            <div class="space-y-4">
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Machine ID</label>
+                    <input type="text" name="MachineId" value="@Model.MachineId" required
+                           class="w-full border border-gray-300 rounded-lg p-2" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Part Number</label>
+                    <input type="text" name="PartNumber" value="@Model.PartNumber" required
+                           class="w-full border border-gray-300 rounded-lg p-2" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Start</label>
+                    <input type="datetime-local" name="ScheduledStart" value="@Model.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")"
+                           class="w-full border border-gray-300 rounded-lg p-2" required />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">End</label>
+                    <input type="datetime-local" name="ScheduledEnd" value="@Model.ScheduledEnd.ToString("yyyy-MM-ddTHH:mm")"
+                           class="w-full border border-gray-300 rounded-lg p-2" required />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Notes</label>
+                    <textarea name="Notes" class="w-full border border-gray-300 rounded-lg p-2">@Model.Notes</textarea>
+                </div>
+
+                <div class="flex justify-end space-x-2 pt-4">
+                    <button type="button"
+                            onclick="document.getElementById('jobModal').remove()"
+                            class="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded-lg">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                        Save
+                    </button>
+                </div>
+
+            </div>
+        </form>
+    </div>
+</div>
