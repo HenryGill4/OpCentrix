@@ -1,7 +1,6 @@
-﻿@* _JobBlock.cshtml *@
-@model OpCentrix.Models.ScheduledJob
+@model OpCentrix.Models.Job
 
-<div class="rounded text-sm text-white px-2 py-1 @Model.StatusClass">
-    @Model.PartNumber (@Model.DurationDays d)
-    <div class="text-xs">Status: @Model.Status</div>
+<div class="absolute top-1 left-1 right-1 bg-blue-600 text-white text-xs px-2 py-1 rounded shadow">
+    <div class="font-semibold">@Model.PartNumber</div>
+    <div class="text-[10px]">@Model.ScheduledStart:MMM d → @Model.ScheduledEnd:MMM d</div>
 </div>

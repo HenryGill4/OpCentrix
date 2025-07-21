@@ -1,35 +1,32 @@
-﻿@* Index.cshtml: *@
-@page
-@model IndexModel
-@{
-    ViewData["Title"] = "Scheduler";
-}
+@model OpCentrix.Pages.Scheduler.IndexModel
 
-<div class="space-y-6 px-4 font-sans">
-    <div class="text-2xl font-bold text-gray-800">🗓️ OpCentrix Scheduler</div>
+<div id="scheduler-grid" class="grid grid-cols-[120px_repeat(3,_1fr)] auto-rows-[60px] gap-px bg-gray-200 text-sm">
 
-    <div class="grid grid-cols-8 gap-1 text-sm font-medium mb-2">
-        <div class=""></div>
-        @foreach (var d in Model.ViewModel.Dates)
-        {
-            <div class="text-center">@DateTime.Parse(d).ToString("ddd MM/dd")</div>
-        }
-    </div>
+    <!-- Header Row -->
+    <div class="bg-white font-bold text-center flex items-center justify-center">Date / Printer</div>
+    @foreach (var machine in Model.ViewModel.Machines)
+    {
+        <div class="bg-white font-bold text-center flex items-center justify-center">@machine</div>
+    }
 
-    <div id="schedulerBody" class="space-y-2">
+    @foreach (var date in Model.ViewModel.Dates)
+    {
+        <!-- Date label on the left -->
+        <div class="bg-white text-center font-medium flex items-center justify-center">
+            @date.ToString("ddd, MMM d")
+        </div>
+
         @foreach (var machine in Model.ViewModel.Machines)
         {
-            <div class="grid grid-cols-8 gap-1 items-start">
-                <div class="font-semibold">@machine.Name</div>
-                @await Html.PartialAsync("_MachineRow", machine, new ViewDataDictionary(ViewData){["StartOfWeek"] = Model.ViewModel.StartOfWeek})
-            </div>
+            var jobsForCell = Model.ViewModel.Jobs
+                .Where(j => j.MachineId == machine && j.ScheduledStart.Date == date.Date)
+                .ToList();
+
+            <partial name="_DayCell" model="new DayCellViewModel {
+                Date = date,
+                MachineId = machine,
+                Jobs = jobsForCell
+            }" />
         }
-    </div>
+    }
 </div>
-
-<div id="modalContainer"></div>
-
-@section Scripts {
-    <script src="https://unpkg.com/htmx.org@1.9.4"></script>
-}
-
