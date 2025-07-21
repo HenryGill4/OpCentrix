@@ -14,5 +14,77 @@
     "status": "Scheduled",
     "createdAt": "2025-07-18T10:00",
     "modifiedAt": "2025-07-18T10:00"
+  },
+  {
+    "id": "job_001",
+    "machineId": "machine_1",
+    "partNumber": "14-5397 version 2 of 22\u2019s",
+    "scheduledStart": "2025-07-21T08:00",
+    "scheduledEnd": "2025-07-26T01:55",
+    "status": "Completed",
+    "notes": "Long build with high part count, recoat and melt time both recorded."
+  },
+  {
+    "id": "job_002",
+    "machineId": "machine_1",
+    "partNumber": "MPS 14-5301 stacked with 14-5321",
+    "scheduledStart": "2025-07-26T03:55",
+    "scheduledEnd": "2025-07-30T03:55",
+    "status": "Completed",
+    "notes": "Stacked job, multi-part production."
+  },
+  {
+    "id": "job_003",
+    "machineId": "machine_1",
+    "partNumber": "14-5557 SPC-45 STACKED",
+    "scheduledStart": "2025-07-30T05:55",
+    "scheduledEnd": "2025-08-03T05:55",
+    "status": "Completed",
+    "notes": "SPC-45 production, stacked job for throughput."
+  },
+  {
+    "id": "job_004",
+    "machineId": "machine_1",
+    "partNumber": "14-5299",
+    "scheduledStart": "2025-08-03T07:55",
+    "scheduledEnd": "2025-08-06T07:55",
+    "status": "Completed",
+    "notes": "Standard job, single or light part count."
+  },
+  {
+    "id": "job_005",
+    "machineId": "machine_1",
+    "partNumber": "Z#001.5 ENG 56 14-5011",
+    "scheduledStart": "2025-08-06T09:55",
+    "scheduledEnd": "2025-08-09T09:55",
+    "status": "Completed",
+    "notes": "Engineering test run, moderate duration."
+  },
+  {
+    "id": "job_006",
+    "machineId": "machine_1",
+    "partNumber": "APCP50 14-5330",
+    "scheduledStart": "2025-08-09T11:55",
+    "scheduledEnd": "2025-08-11T11:55",
+    "status": "Completed",
+    "notes": "APCP run with 14-5330 series."
+  },
+  {
+    "id": "job_007",
+    "machineId": "machine_1",
+    "partNumber": "APCP50 14-5288",
+    "scheduledStart": "2025-08-11T13:55",
+    "scheduledEnd": "2025-08-13T13:55",
+    "status": "Completed",
+    "notes": "Multiple entries, short job used frequently."
+  },
+  {
+    "id": "job_008",
+    "machineId": "machine_1",
+    "partNumber": "SPC 45 and 14-5557",
+    "scheduledStart": "2025-08-13T15:55",
+    "scheduledEnd": "2025-08-17T15:55",
+    "status": "Completed",
+    "notes": "Combination run of SPC 45 and 14-5557 parts."
   }
 ]
