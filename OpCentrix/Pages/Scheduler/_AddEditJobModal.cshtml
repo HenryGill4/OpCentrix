@@ -7,7 +7,7 @@
             @(string.IsNullOrEmpty(Model.Id) ? "➕ Add Job" : "✏️ Edit Job")
         </h2>
 
-        <form id="jobForm" hx-post="/Scheduler/AddOrUpdateJob" hx-target="#schedulerBody" hx-swap="outerHTML">
+        <form id="jobForm" hx-post="/Scheduler/AddOrUpdateJob" hx-redirect="true">
             <input type="hidden" name="Id" value="@Model.Id" />
 
             <div class="space-y-4">
@@ -42,15 +42,12 @@
                 </div>
 
                 <div class="flex justify-end space-x-2 pt-4">
-                    <button type="button"
-                            onclick="document.getElementById('jobModal').remove()"
-                            class="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded-lg">
-                        Cancel
-                    </button>
-                    <button type="submit"
-                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
-                        Save
-                    </button>
+                    <button type="button" onclick="document.getElementById('jobModal').remove()" class="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded-lg">Cancel</button>
+                    @if (!string.IsNullOrEmpty(Model.Id))
+                    {
+                        <button hx-post="/Scheduler/DeleteJob" hx-include="#jobForm" hx-redirect="true" type="button" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg">Delete</button>
+                    }
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">Save</button>
                 </div>
 
             </div>

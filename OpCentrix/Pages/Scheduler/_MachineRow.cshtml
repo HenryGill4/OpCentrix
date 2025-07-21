@@ -1,9 +1,9 @@
 ﻿@* _MachineRow.cshtml *@
 @model OpCentrix.Models.MachineViewModel
 
-<div class="flex flex-col gap-1">
+<div id="row_@Model.Id" class="flex flex-col gap-1">
     <div class="text-sm font-semibold text-gray-700 pl-2">@Model.Name</div>
-    <div class="grid grid-cols-[repeat(24,minmax(60px,1fr))] gap-1">
+    <div class="grid machine-grid grid-cols-[repeat(24,minmax(var(--cell-width,60px),1fr))] gap-1">
         @foreach (var job in Model.Jobs)
         {
             <div class="relative col-span-@((int)Math.Ceiling(job.DurationMinutes / 60.0))">

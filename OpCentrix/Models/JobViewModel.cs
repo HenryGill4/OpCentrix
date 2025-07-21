@@ -10,9 +10,16 @@ namespace OpCentrix.Models
         public DateTime ScheduledStart { get; set; } = DateTime.Now;
         public DateTime ScheduledEnd { get; set; } = DateTime.Now.AddHours(1);
 
+        // Additional fields used for persistence
+        public DateTime? ActualStart { get; set; }
+        public DateTime? ActualEnd { get; set; }
+        public string? EndReason { get; set; }
+
         public string Status { get; set; } = "Scheduled";
         public string Notes { get; set; } = string.Empty;
         public string Operator { get; set; } = string.Empty;
+
+        public int DurationHrs => (int)(ScheduledEnd - ScheduledStart).TotalHours;
 
         public int DurationMinutes => (int)(ScheduledEnd - ScheduledStart).TotalMinutes;
 

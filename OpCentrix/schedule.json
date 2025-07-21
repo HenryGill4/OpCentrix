@@ -1,0 +1,18 @@
+[
+  {
+    "id": "job_001",
+    "machineId": "machine_1",
+    "partNumber": "PN-1234",
+    "scheduledStart": "2025-07-20T06:00",
+    "scheduledEnd": "2025-07-20T10:00",
+    "actualStart": "2025-07-20T06:30",
+    "actualEnd": "2025-07-20T10:15",
+    "endReason": "",
+    "notes": "Initial build",
+    "operator": "Henry",
+    "durationHrs": 4,
+    "status": "Scheduled",
+    "createdAt": "2025-07-18T10:00",
+    "modifiedAt": "2025-07-18T10:00"
+  }
+]

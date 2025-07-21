@@ -11,6 +11,7 @@
 
     <!-- Custom Site Styles -->
     <link rel="stylesheet" href="~/css/site.css" />
+    <link rel="stylesheet" href="~/css/scheduler.css" />
 
     <!-- Gridstack CSS -->
     <link href="https://cdn.jsdelivr.net/npm/gridstack@9.3.0/dist/gridstack.min.css" rel="stylesheet" />
@@ -52,12 +53,7 @@
     <script src="https://cdn.jsdelivr.net/npm/gridstack@9.3.0/dist/gridstack-h5.js"></script>
 
     <script src="https://unpkg.com/htmx.org@1.9.4"></script>
-    <script type="module">
-        import { initSchedulerZoom } from '/js/scheduler-ui.js';
-        document.addEventListener('DOMContentLoaded', () => {
-            initSchedulerZoom('zoomIn', 'zoomOut', 'schedulerBody');
-        });
-    </script>
+    <script src="/js/scheduler.js"></script>
 
     @RenderSection("Scripts", required: false)
 </body>
