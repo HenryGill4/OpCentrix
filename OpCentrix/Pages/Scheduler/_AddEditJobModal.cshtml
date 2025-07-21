@@ -32,7 +32,7 @@
                 <select name="DurationDays" class="w-full border rounded p-2">
                     @for (int i = 1; i <= 5; i++)
                     {
-                        <option value="@i" @(i==Model.Job.DurationDays?"selected":null)>@i d</option>
+                        <option value="@i" selected="@(i == Model.Job.DurationDays ? \"selected\" : null)">@i d</option>
                     }
                 </select>
             </div>
@@ -40,9 +40,9 @@
             <div>
                 <label class="block text-sm font-medium">Status</label>
                 <select name="Status" class="w-full border rounded p-2">
-                    <option @(Model.Job.Status=="Scheduled"?"selected":null)>Scheduled</option>
-                    <option @(Model.Job.Status=="In Progress"?"selected":null)>In Progress</option>
-                    <option @(Model.Job.Status=="Complete"?"selected":null)>Complete</option>
+                    <option selected="@(Model.Job.Status == \"Scheduled\" ? \"selected\" : null)">Scheduled</option>
+                    <option selected="@(Model.Job.Status == \"In Progress\" ? \"selected\" : null)">In Progress</option>
+                    <option selected="@(Model.Job.Status == \"Complete\" ? \"selected\" : null)">Complete</option>
                 </select>
             </div>
 

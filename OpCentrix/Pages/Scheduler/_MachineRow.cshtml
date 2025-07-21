@@ -2,7 +2,7 @@
 @model OpCentrix.Models.MachineViewModel
 
 @{
-    var start = (DateTime)ViewData["StartOfWeek"];
+    var start = ViewData["StartOfWeek"] as DateTime? ?? DateTime.Today;
     int current = 0;
     var jobs = Model.Jobs.OrderBy(j => j.StartDate).ToList();
 }
