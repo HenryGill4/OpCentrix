@@ -19,6 +19,16 @@ namespace OpCentrix.Pages.Scheduler
         {
             var jobs = LoadJobs();
             ViewModel.Machines = BuildMachines(jobs);
+            if (jobs.Count > 0)
+            {
+                var start = jobs.Min(j => j.ScheduledStart);
+                var end = jobs.Max(j => j.ScheduledEnd);
+                ViewData["TotalHours"] = (int)Math.Ceiling((end - start).TotalHours);
+            }
+            else
+            {
+                ViewData["TotalHours"] = 24;
+            }
         }
 
         // This handles HTMX GET request when the user clicks "+ Add Job"
@@ -34,6 +44,22 @@ namespace OpCentrix.Pages.Scheduler
 
             // Return modal view with empty job form
             return Partial("_AddEditJobModal", emptyModel);
+        }
+
+        // HTMX handler for editing an existing job
+        public PartialViewResult OnGetShowEditModal(string id)
+        {
+            var jobs = LoadJobs();
+            var job = jobs.FirstOrDefault(j => j.Id == id);
+            if (job == null)
+            {
+                job = new JobViewModel
+                {
+                    ScheduledStart = DateTime.Now,
+                    ScheduledEnd = DateTime.Now.AddHours(2)
+                };
+            }
+            return Partial("_AddEditJobModal", job);
         }
 
         // Add or update a job and persist to schedule.json
