@@ -8,5 +8,6 @@ namespace OpCentrix.Models
         public string Description { get; set; } = string.Empty;
         public string Material { get; set; } = string.Empty;
         public string AvgDuration { get; set; } = "1h 0m";
+        public int AvgDurationDays { get; set; } = 1;
     }
 }

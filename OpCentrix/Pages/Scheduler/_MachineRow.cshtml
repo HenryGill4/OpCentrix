@@ -3,10 +3,11 @@
 
 <div class="flex flex-col gap-1">
     <div class="text-sm font-semibold text-gray-700 pl-2">@Model.Name</div>
-    <div class="grid grid-cols-[repeat(24,minmax(60px,1fr))] gap-1">
+    <div class="grid grid-cols-[repeat(30,minmax(60px,1fr))] gap-1">
         @foreach (var job in Model.Jobs)
         {
-            <div class="relative col-span-@((int)Math.Ceiling(job.DurationMinutes / 60.0))">
+            var days = (int)Math.Ceiling((job.ScheduledEnd - job.ScheduledStart).TotalDays);
+            <div class="relative col-span-@days">
                 @await Html.PartialAsync("_JobBlock", job)
             </div>
         }
