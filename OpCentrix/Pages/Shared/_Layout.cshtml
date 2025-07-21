@@ -55,7 +55,9 @@
     <script type="module">
         import { initSchedulerZoom } from '/js/scheduler-ui.js';
         document.addEventListener('DOMContentLoaded', () => {
-            initSchedulerZoom('zoomIn', 'zoomOut', 'schedulerBody');
+            if (document.getElementById('schedulerBody')) {
+                initSchedulerZoom('zoomIn', 'zoomOut', 'schedulerBody');
+            }
         });
     </script>
 
