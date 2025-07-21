@@ -1,60 +1,40 @@
-﻿@* _AddEditJobModal.cshtml: *@
-@model OpCentrix.Models.AddEditJobViewModel
+@model OpCentrix.Models.ViewModels.AddEditJobViewModel
 
-<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" id="jobModal">
-    <div class="bg-white w-full max-w-md rounded-lg p-6 shadow-lg">
-        <h2 class="text-lg font-semibold mb-4">+ Add Job</h2>
-        <form hx-post="/Scheduler?handler=AddOrUpdateJob" hx-target="#schedulerBody" hx-swap="outerHTML" class="space-y-4">
-            <input type="hidden" name="JobId" value="@Model.Job.JobId" />
+<form hx-post="/Scheduler/AddOrUpdateJob"
+      hx-target="#modal-content"
+      hx-swap="outerHTML"
+      class="space-y-4">
 
-            <div>
-                <label class="block text-sm font-medium">Machine</label>
-                <input type="text" name="MachineName" value="@Model.Job.MachineName" class="w-full border rounded p-2" readonly />
-            </div>
+    <input type="hidden" name="Job.Id" value="@Model.Job.Id" />
+    <input type="hidden" name="Job.MachineId" value="@Model.Job.MachineId" />
 
-            <div>
-                <label class="block text-sm font-medium">Part #</label>
-                <select name="PartNumber" class="w-full border rounded p-2">
-                    @foreach (var part in Model.Parts)
-                    {
-                        <option value="@part.PartNumber">@part.PartNumber</option>
-                    }
-                </select>
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium">Start Date</label>
-                <input type="date" name="StartDate" value="@Model.Job.StartDate.ToString("yyyy-MM-dd")" class="w-full border rounded p-2" />
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium">Duration</label>
-                <select name="DurationDays" class="w-full border rounded p-2">
-                    @for (int i = 1; i <= 5; i++)
-                    {
-                        <option value="@i" selected="@(i == Model.Job.DurationDays ? \"selected\" : null)">@i d</option>
-                    }
-                </select>
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium">Status</label>
-                <select name="Status" class="w-full border rounded p-2">
-                    <option selected="@(Model.Job.Status == \"Scheduled\" ? \"selected\" : null)">Scheduled</option>
-                    <option selected="@(Model.Job.Status == \"In Progress\" ? \"selected\" : null)">In Progress</option>
-                    <option selected="@(Model.Job.Status == \"Complete\" ? \"selected\" : null)">Complete</option>
-                </select>
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium">Notes</label>
-                <textarea name="Notes" class="w-full border rounded p-2">@Model.Job.Notes</textarea>
-            </div>
-
-            <div class="flex justify-end gap-2 pt-2">
-                <button type="button" class="bg-gray-400 text-white px-4 py-1 rounded" onclick="document.getElementById('jobModal').remove()">Cancel</button>
-                <button type="submit" class="bg-blue-600 text-white px-4 py-1 rounded">Save</button>
-            </div>
-        </form>
+    <div>
+        <label class="block text-sm font-medium">Part Number</label>
+        <select name="Job.PartNumber" class="w-full border border-gray-300 rounded p-2">
+            <option value="">-- Select Part --</option>
+            @foreach (var part in Model.Parts)
+            {
+                <option value="@part.PartNumber" @(part.PartNumber == Model.Job.PartNumber ? "selected" : "")>
+                    @part.PartNumber (@part.AvgDurationDays d)
+                </option>
+            }
+        </select>
     </div>
-</div>
+
+    <div class="grid grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm">Start Date</label>
+            <input type="date" name="Job.ScheduledStart" value="@Model.Job.ScheduledStart.ToString("yyyy-MM-dd")" class="w-full border rounded p-2" />
+        </div>
+        <div>
+            <label class="block text-sm">End Date</label>
+            <input type="date" name="Job.ScheduledEnd" value="@Model.Job.ScheduledEnd.ToString("yyyy-MM-dd")" class="w-full border rounded p-2" />
+        </div>
+    </div>
+
+    <div class="flex justify-end">
+        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
+            Save Job
+        </button>
+    </div>
+</form>

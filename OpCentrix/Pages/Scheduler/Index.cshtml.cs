@@ -55,27 +55,32 @@ namespace OpCentrix.Pages.Scheduler
         }
 
         // This handles HTMX POST request when the user submits the modal form
-        // It re-renders the scheduler row with the new job included
-        public PartialViewResult OnPostAddOrUpdateJob(ScheduledJob job)
+        // It saves the job then re-renders the day cell with the updated jobs
+        public IActionResult OnPostAddOrUpdateJob([FromForm] Job job)
         {
-            var start = job.StartDate.AddDays(-(int)job.StartDate.DayOfWeek + (int)DayOfWeek.Monday);
-            ViewModel.StartOfWeek = start;
-            ViewModel.Dates = Enumerable.Range(0, 7)
-                .Select(i => start.AddDays(i).ToString("yyyy-MM-dd"))
+            if (job.Id == 0)
+            {
+                _context.Jobs.Add(job);
+            }
+            else
+            {
+                _context.Jobs.Update(job);
+            }
+
+            _context.SaveChanges();
+
+            var jobs = _context.Jobs
+                .Where(j => j.MachineId == job.MachineId && j.ScheduledStart.Date == job.ScheduledStart.Date)
                 .ToList();
 
-            ViewModel.Machines = new List<MachineViewModel>
+            var viewModel = new DayCellViewModel
             {
-                new MachineViewModel
-                {
-                    Id = job.MachineName,
-                    Name = job.MachineName,
-                    Jobs = new List<ScheduledJob> { job }
-                }
+                Date = job.ScheduledStart.Date,
+                MachineId = job.MachineId,
+                Jobs = jobs
             };
 
-            ViewData["StartOfWeek"] = ViewModel.StartOfWeek;
-            return Partial("_MachineRow", ViewModel.Machines.First());
+            return Partial("_DayCell", viewModel);
         }
     }
 }
