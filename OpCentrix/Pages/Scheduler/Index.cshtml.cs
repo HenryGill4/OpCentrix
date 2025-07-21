@@ -2,6 +2,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using OpCentrix.Models;
+using System.Text.Json;
+using System;
 
 namespace OpCentrix.Pages.Scheduler
 {
@@ -10,32 +12,13 @@ namespace OpCentrix.Pages.Scheduler
         // The main view model passed to the Razor view to render the scheduler
         public SchedulerPageViewModel ViewModel { get; set; } = new();
 
-        // This method runs when the /Scheduler page is first loaded
+        private const string ScheduleFile = "schedule.json";
+
+        // Load schedule.json and map to machines
         public void OnGet()
         {
-            // For now, we use a hardcoded machine and job (demo mode)
-            ViewModel.Machines = new List<MachineViewModel>
-            {
-                new MachineViewModel
-                {
-                    Id = "machine_1",
-                    Name = "TI1",
-                    Jobs = new List<JobViewModel>
-                    {
-                        new JobViewModel
-                        {
-                            Id = "job1",
-                            MachineId = "machine_1",
-                            PartNumber = "PN-1234",
-                            ScheduledStart = DateTime.Today.AddHours(6),
-                            ScheduledEnd = DateTime.Today.AddHours(10),
-                            Operator = "Henry",
-                            Status = "Scheduled",
-                            Notes = "Initial build"
-                        }
-                    }
-                }
-            };
+            var jobs = LoadJobs();
+            ViewModel.Machines = BuildMachines(jobs);
         }
 
         // This handles HTMX GET request when the user clicks "+ Add Job"
@@ -53,27 +36,81 @@ namespace OpCentrix.Pages.Scheduler
             return Partial("_AddEditJobModal", emptyModel);
         }
 
-        // This handles HTMX POST request when the user submits the modal form
-        // It re-renders the scheduler row with the new job included
-        public PartialViewResult OnPostAddOrUpdateJob(JobViewModel model)
+        // Add or update a job and persist to schedule.json
+        public IActionResult OnPostAddOrUpdateJob(JobViewModel model)
         {
-            // For now, we're just injecting the form input into a fake "database"
-            // Later, you’ll replace this with EF Core to persist real job records
-            ViewModel.Machines = new List<MachineViewModel>
+            var jobs = LoadJobs();
+            if (string.IsNullOrEmpty(model.Id))
             {
-                new MachineViewModel
+                model.Id = $"job_{Guid.NewGuid().ToString("N").Substring(0, 8)}";
+                jobs.Add(model);
+            }
+            else
+            {
+                var existing = jobs.FirstOrDefault(j => j.Id == model.Id);
+                if (existing != null)
                 {
-                    Id = model.MachineId,
-                    Name = model.MachineId.ToUpper(),
-                    Jobs = new List<JobViewModel>
-                    {
-                        model
-                    }
+                    existing.MachineId = model.MachineId;
+                    existing.PartNumber = model.PartNumber;
+                    existing.ScheduledStart = model.ScheduledStart;
+                    existing.ScheduledEnd = model.ScheduledEnd;
+                    existing.Notes = model.Notes;
                 }
+                else
+                {
+                    jobs.Add(model);
+                }
+            }
+
+            SaveJobs(jobs);
+            Response.Headers.Add("HX-Redirect", "/Scheduler");
+            return new EmptyResult();
+        }
+
+        public IActionResult OnPostDeleteJob(JobViewModel model)
+        {
+            var jobs = LoadJobs();
+            jobs.RemoveAll(j => j.Id == model.Id);
+            SaveJobs(jobs);
+            Response.Headers.Add("HX-Redirect", "/Scheduler");
+            return new EmptyResult();
+        }
+
+        // Helper to load jobs from JSON
+        private List<JobViewModel> LoadJobs()
+        {
+            if (!System.IO.File.Exists(ScheduleFile))
+            {
+                return new List<JobViewModel>();
+            }
+            var json = System.IO.File.ReadAllText(ScheduleFile);
+            return JsonSerializer.Deserialize<List<JobViewModel>>(json) ?? new List<JobViewModel>();
+        }
+
+        private void SaveJobs(List<JobViewModel> jobs)
+        {
+            var json = JsonSerializer.Serialize(jobs, new JsonSerializerOptions { WriteIndented = true });
+            System.IO.File.WriteAllText(ScheduleFile, json);
+        }
+
+        private List<MachineViewModel> BuildMachines(List<JobViewModel> jobs)
+        {
+            var machines = new List<MachineViewModel>
+            {
+                new() { Id = "machine_1", Name = "TI1" },
+                new() { Id = "machine_2", Name = "TI2" },
+                new() { Id = "machine_3", Name = "INC" }
             };
 
-            // Return the updated machine row to HTMX to swap into #schedulerBody
-            return Partial("_MachineRow", ViewModel.Machines.First());
+            foreach (var job in jobs.OrderBy(j => j.ScheduledStart))
+            {
+                var machine = machines.FirstOrDefault(m => m.Id == job.MachineId);
+                if (machine != null)
+                {
+                    machine.Jobs.Add(job);
+                }
+            }
+            return machines;
         }
     }
 }
