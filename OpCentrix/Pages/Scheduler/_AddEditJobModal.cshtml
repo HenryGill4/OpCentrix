@@ -24,7 +24,7 @@
                         <option value="">-- Select Part --</option>
                         @foreach (var part in Model.Parts)
                         {
-                            <option value="@part.PartNumber" data-days="@part.AvgDurationDays" @(part.PartNumber == Model.Job.PartNumber ? "selected" : "")>@part.PartNumber (@part.AvgDurationDays d)</option>
+                        <option value="@part.PartNumber" data-days="@part.AvgDurationDays" selected="@(part.PartNumber == Model.Job.PartNumber ? "selected" : null)">@part.PartNumber (@part.AvgDurationDays d)</option>
                         }
                     </select>
                 </div>
