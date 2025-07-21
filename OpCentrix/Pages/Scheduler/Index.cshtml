@@ -6,41 +6,30 @@
 }
 
 <div class="space-y-6 px-4 font-sans">
-    <!-- Header Section -->
-    <div class="flex items-center justify-between">
-        <div class="text-2xl font-bold text-gray-800">🗓️ OpCentrix Scheduler</div>
+    <div class="text-2xl font-bold text-gray-800">🗓️ OpCentrix Scheduler</div>
 
-        <!-- Zoom Controls -->
-        <div class="flex items-center space-x-2">
-            <button id="zoomOut" class="bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded text-sm font-medium">− Zoom Out</button>
-            <button id="zoomIn" class="bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded text-sm font-medium">+ Zoom In</button>
-        </div>
+    <div class="grid grid-cols-8 gap-1 text-sm font-medium mb-2">
+        <div class=""></div>
+        @foreach (var d in Model.ViewModel.Dates)
+        {
+            <div class="text-center">@DateTime.Parse(d).ToString("ddd MM/dd")</div>
+        }
     </div>
 
-    <!-- Add Job Button (HTMX-triggered) -->
-    <div class="flex justify-end mb-4">
-        <button hx-get="/Scheduler?handler=ShowAddModal"
-                hx-target="#modalContainer"
-                hx-swap="innerHTML"
-                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
-            + Add Job
-        </button>
-    </div>
-
-    <!-- Main Scheduler Content -->
-    <div class="space-y-4" id="schedulerBody">
+    <div id="schedulerBody" class="space-y-2">
         @foreach (var machine in Model.ViewModel.Machines)
         {
-            @await Html.PartialAsync("_MachineRow", machine)
+            <div class="grid grid-cols-8 gap-1 items-start">
+                <div class="font-semibold">@machine.Name</div>
+                @await Html.PartialAsync("_MachineRow", machine, new ViewDataDictionary(ViewData){["StartOfWeek"] = Model.ViewModel.StartOfWeek})
+            </div>
         }
     </div>
 </div>
 
-<!-- Modal Container for HTMX -->
 <div id="modalContainer"></div>
 
-<!-- Zoom Control Script -->
 @section Scripts {
-    <script type="module" src="~/js/scheduler-ui.js"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.4"></script>
 }
 

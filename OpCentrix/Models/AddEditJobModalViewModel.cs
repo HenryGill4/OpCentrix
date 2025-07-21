@@ -4,7 +4,7 @@ namespace OpCentrix.Models
 {
     public class AddEditJobModalViewModel
     {
-        public JobViewModel Job { get; set; } = new();
+        public ScheduledJob Job { get; set; } = new();
         public List<Part> Parts { get; set; } = new();
     }
 }

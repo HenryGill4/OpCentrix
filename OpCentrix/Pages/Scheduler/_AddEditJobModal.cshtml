@@ -1,78 +1,60 @@
 ﻿@* _AddEditJobModal.cshtml: *@
 @model OpCentrix.Models.AddEditJobModalViewModel
 
-<div class="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50" id="jobModal">
-    <div class="bg-white w-full max-w-md rounded-t-2xl p-6 shadow-lg transition-all duration-200 font-sans">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4">
-            @(string.IsNullOrEmpty(Model.Job.Id) ? "➕ Add Job" : "✏️ Edit Job")
-        </h2>
+<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" id="jobModal">
+    <div class="bg-white w-full max-w-md rounded-lg p-6 shadow-lg">
+        <h2 class="text-lg font-semibold mb-4">+ Add Job</h2>
+        <form hx-post="/Scheduler?handler=AddOrUpdateJob" hx-target="#schedulerBody" hx-swap="outerHTML" class="space-y-4">
+            <input type="hidden" name="JobId" value="@Model.Job.JobId" />
 
-        <form id="jobForm" hx-post="/Scheduler/AddOrUpdateJob" hx-target="#schedulerBody" hx-swap="outerHTML">
-            <input type="hidden" name="Id" value="@Model.Job.Id" />
+            <div>
+                <label class="block text-sm font-medium">Machine</label>
+                <input type="text" name="MachineName" value="@Model.Job.MachineName" class="w-full border rounded p-2" readonly />
+            </div>
 
-            <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium">Part #</label>
+                <select name="PartNumber" class="w-full border rounded p-2">
+                    @foreach (var part in Model.Parts)
+                    {
+                        <option value="@part.PartNumber">@part.PartNumber</option>
+                    }
+                </select>
+            </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Machine ID</label>
-                    <input type="text" name="MachineId" value="@Model.Job.MachineId" required
-                           class="w-full border border-gray-300 rounded-lg p-2" />
-                </div>
+            <div>
+                <label class="block text-sm font-medium">Start Date</label>
+                <input type="date" name="StartDate" value="@Model.Job.StartDate.ToString("yyyy-MM-dd")" class="w-full border rounded p-2" />
+            </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Part Number</label>
-                    <select id="partSelect" name="PartNumber" class="w-full border border-gray-300 rounded-lg p-2" onchange="updateEnd()">
-                        <option value="">-- Select Part --</option>
-                        @foreach (var part in Model.Parts)
-                        {
-                        <option value="@part.PartNumber" data-days="@part.AvgDurationDays" selected="@(part.PartNumber == Model.Job.PartNumber ? "selected" : null)">@part.PartNumber (@part.AvgDurationDays d)</option>
-                        }
-                    </select>
-                </div>
+            <div>
+                <label class="block text-sm font-medium">Duration</label>
+                <select name="DurationDays" class="w-full border rounded p-2">
+                    @for (int i = 1; i <= 5; i++)
+                    {
+                        <option value="@i" @(i==Model.Job.DurationDays?"selected":null)>@i d</option>
+                    }
+                </select>
+            </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Start</label>
-                    <input type="datetime-local" id="startInput" name="ScheduledStart" value="@Model.Job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")"
-                           class="w-full border border-gray-300 rounded-lg p-2" required />
-                </div>
+            <div>
+                <label class="block text-sm font-medium">Status</label>
+                <select name="Status" class="w-full border rounded p-2">
+                    <option @(Model.Job.Status=="Scheduled"?"selected":null)>Scheduled</option>
+                    <option @(Model.Job.Status=="In Progress"?"selected":null)>In Progress</option>
+                    <option @(Model.Job.Status=="Complete"?"selected":null)>Complete</option>
+                </select>
+            </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">End</label>
-                    <input type="datetime-local" id="endInput" name="ScheduledEnd" value="@Model.Job.ScheduledEnd.ToString("yyyy-MM-ddTHH:mm")"
-                           class="w-full border border-gray-300 rounded-lg p-2" required />
-                </div>
+            <div>
+                <label class="block text-sm font-medium">Notes</label>
+                <textarea name="Notes" class="w-full border rounded p-2">@Model.Job.Notes</textarea>
+            </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Notes</label>
-                    <textarea name="Notes" class="w-full border border-gray-300 rounded-lg p-2">@Model.Job.Notes</textarea>
-                </div>
-
-                <div class="flex justify-end space-x-2 pt-4">
-                    <button type="button"
-                            onclick="document.getElementById('jobModal').remove()"
-                            class="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded-lg">
-                        Cancel
-                    </button>
-                    <button type="submit"
-                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
-                        Save
-                    </button>
-                </div>
-
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" class="bg-gray-400 text-white px-4 py-1 rounded" onclick="document.getElementById('jobModal').remove()">Cancel</button>
+                <button type="submit" class="bg-blue-600 text-white px-4 py-1 rounded">Save</button>
             </div>
         </form>
+    </div>
 </div>
-</div>
-<script>
-    function updateEnd() {
-        const select = document.getElementById('partSelect');
-        const days = parseInt(select.options[select.selectedIndex].dataset.days || '0');
-        if (!days) return;
-        const start = document.getElementById('startInput').value;
-        if (!start) return;
-        const startDate = new Date(start);
-        const endDate = new Date(startDate.getTime());
-        endDate.setDate(startDate.getDate() + days);
-        document.getElementById('endInput').value = endDate.toISOString().slice(0,16);
-    }
-    document.addEventListener('DOMContentLoaded', updateEnd);
-</script>
