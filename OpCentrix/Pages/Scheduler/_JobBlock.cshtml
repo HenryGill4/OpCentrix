@@ -3,7 +3,9 @@
 @{
     var color = "bg-blue-200";
 }
-<div class="rounded-xl shadow-md hover:shadow-lg transition px-2 py-1 text-xs @color">
+<div class="rounded-xl shadow-md hover:shadow-lg transition px-2 py-1 text-xs @color cursor-pointer"
+     hx-get="/Scheduler/ShowAddModal?machineId=@Model.MachineId&date=@Model.ScheduledStart.ToString("yyyy-MM-dd")&id=@Model.Id"
+     hx-target="#modal-content" hx-swap="innerHTML">
     <div class="font-semibold">@Model.PartNumber</div>
     <div class="text-sm">@Model.ScheduledStart:MMM d → @Model.ScheduledEnd:MMM d</div>
     @if (!string.IsNullOrEmpty(Model.Part?.Description))

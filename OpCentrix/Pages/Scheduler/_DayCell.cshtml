@@ -1,0 +1,19 @@
+@model OpCentrix.Models.ViewModels.DayCellViewModel
+<div id="cell-@Model.MachineId-@Model.Date.ToString("yyyyMMdd")" class="relative border h-20 col-span-@Model.ColSpan">
+    @if (Model.Job != null)
+    {
+        <partial name="_JobBlock" model="Model.Job" />
+    }
+    else if (Model.IsChangeover)
+    {
+        <div class="bg-orange-100 opacity-60 text-xs italic flex items-center justify-center h-full">Changeover</div>
+    }
+    else if (Model.ShowAdd)
+    {
+        <button class="absolute bottom-1 right-1 text-xs text-gray-500 hover:text-indigo-600"
+                hx-get="/Scheduler/ShowAddModal?machineId=@Model.MachineId&date=@Model.Date.ToString("yyyy-MM-dd")"
+                hx-target="#modal-content" hx-swap="innerHTML">
+            + Add Job
+        </button>
+    }
+</div>

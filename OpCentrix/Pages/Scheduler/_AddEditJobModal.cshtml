@@ -7,11 +7,21 @@
           hx-swap="outerHTML"
           class="space-y-4">
 
+            @if (Model.Errors.Any())
+            {
+                <ul class="text-red-600 text-sm list-disc pl-5">
+                    @foreach (var err in Model.Errors)
+                    {
+                        <li>@err</li>
+                    }
+                </ul>
+            }
+
             <input type="hidden" name="Job.Id" value="@Model.Job.Id" />
 
             <div>
                 <label class="block text-sm font-medium">Machine</label>
-                <select name="Job.MachineId" class="w-full border border-gray-300 rounded p-2">
+                <select name="Job.MachineId" class="w-full border border-gray-300 rounded p-2" required>
                     @foreach (var m in new[]{"TI1","TI2","INC"})
                     {
                         <option value="@m" selected="@(Model.Job.MachineId==m)">@m</option>
@@ -20,12 +30,12 @@
             </div>
 
             <div>
-                <label class="block text-sm font-medium">Part Number</label>
-                <select name="Job.PartNumber" class="w-full border border-gray-300 rounded p-2">
+                <label class="block text-sm font-medium">Part</label>
+                <select name="Job.PartId" class="w-full border border-gray-300 rounded p-2" required>
                     <option value="">-- Select Part --</option>
                     @foreach (var part in Model.Parts)
                     {
-                        <option value="@part.PartNumber" @(Model.Job.PartNumber==part.PartNumber?"selected":null)>
+                        <option value="@part.Id" @(Model.Job.PartId==part.Id?"selected":null)>
                             @part.PartNumber (@part.AvgDurationDays d)
                         </option>
                     }
@@ -35,7 +45,7 @@
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm">Start</label>
-                    <input type="datetime-local" name="Job.ScheduledStart" value="@Model.Job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")" class="w-full border rounded p-2" />
+                    <input type="datetime-local" name="Job.ScheduledStart" value="@Model.Job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")" class="w-full border rounded p-2" required />
                 </div>
                 <div>
                     <label class="block text-sm">End</label>
@@ -53,9 +63,18 @@
                 <textarea name="Job.Part.Description" class="w-full border rounded p-2">@Model.Job.Part?.Description</textarea>
             </div>
 
-            <div class="flex justify-end space-x-2">
-                <button type="button" hx-get="/Scheduler/CloseModal" hx-target="#modal" hx-swap="outerHTML" class="rounded-md px-4 py-2 text-sm border">Cancel</button>
-                <button type="submit" class="rounded-md bg-indigo-600 text-white px-4 py-2 text-sm font-medium">Save</button>
+            <div class="flex justify-between items-center">
+                @if (Model.Job.Id != 0)
+                {
+                    <button type="button" class="text-red-600 text-sm"
+                            hx-delete="/Scheduler/DeleteJob?id=@Model.Job.Id"
+                            hx-target="#row-@Model.Job.MachineId" hx-swap="outerHTML"
+                            onclick="return confirm('Are you sure?');">Delete</button>
+                }
+                <div class="space-x-2 ml-auto">
+                    <button type="button" hx-get="/Scheduler/CloseModal" hx-target="#modal" hx-swap="outerHTML" class="rounded-md px-4 py-2 text-sm border">Cancel</button>
+                    <button type="submit" class="rounded-md bg-indigo-600 text-white px-4 py-2 text-sm font-medium">Save</button>
+                </div>
             </div>
     </form>
 </div>
