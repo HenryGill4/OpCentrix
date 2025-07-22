@@ -134,6 +134,9 @@ namespace OpCentrix.Pages.Scheduler
         {
             try
             {
+                // Add detailed logging for debugging
+                Console.WriteLine($"Received job data: Id={job.Id}, MachineId={job.MachineId}, PartId={job.PartId}, Status={job.Status}");
+                
                 // PERFORMANCE FIX: Only check for conflicts with relevant jobs
                 var conflictStartTime = job.ScheduledStart.AddDays(-1); // Buffer for long jobs
                 var conflictEndTime = job.ScheduledEnd.AddDays(1);
@@ -151,33 +154,104 @@ namespace OpCentrix.Pages.Scheduler
                     return Partial("_AddEditJobModal", new AddEditJobViewModel { Job = job, Parts = parts, Errors = errors });
                 }
 
-                // Set part information
+                // Get part information first to set required fields
                 var part = await _context.Parts.FindAsync(job.PartId);
-                if (part != null)
+                if (part == null)
                 {
-                    job.PartNumber = part.PartNumber;
-                    job.EstimatedHours = part.EstimatedHours;
+                    var parts = await _context.Parts.Where(p => p.IsActive).OrderBy(p => p.PartNumber).ToListAsync();
+                    return Partial("_AddEditJobModal", new AddEditJobViewModel 
+                    { 
+                        Job = job, 
+                        Parts = parts, 
+                        Errors = new List<string> { "Selected part not found." } 
+                    });
                 }
 
-                // Set audit fields
-                job.LastModifiedDate = DateTime.UtcNow;
+                // Set part information and other required fields
+                job.PartNumber = part.PartNumber;
+                job.EstimatedHours = part.EstimatedHours;
+                
+                // Ensure all required string fields have values (prevent null/empty validation errors)
+                job.PartNumber = job.PartNumber ?? string.Empty;
+                job.MachineId = job.MachineId ?? string.Empty;
+                job.Status = job.Status ?? "Scheduled";
+                job.CreatedBy = job.CreatedBy ?? (User.Identity?.Name ?? "System");
                 job.LastModifiedBy = User.Identity?.Name ?? "System";
+                job.RequiredSkills = job.RequiredSkills ?? string.Empty;
+                job.RequiredTooling = job.RequiredTooling ?? string.Empty;
+                job.RequiredMaterials = job.RequiredMaterials ?? string.Empty;
+                job.SpecialInstructions = job.SpecialInstructions ?? string.Empty;
+                job.ProcessParameters = job.ProcessParameters ?? "{}";
+                job.QualityCheckpoints = job.QualityCheckpoints ?? "{}";
+                job.CustomerOrderNumber = job.CustomerOrderNumber ?? string.Empty;
+                job.HoldReason = job.HoldReason ?? string.Empty;
+                job.Operator = job.Operator ?? string.Empty;
+                job.Notes = job.Notes ?? string.Empty;
+
+                // Set audit fields and timestamps
+                job.LastModifiedDate = DateTime.UtcNow;
                 
                 string logAction;
                 if (job.Id == 0)
                 {
+                    // New job - set all required fields
                     job.CreatedDate = DateTime.UtcNow;
                     job.CreatedBy = User.Identity?.Name ?? "System";
+                    
+                    // Set default values for new enhanced fields
+                    job.Priority = job.Priority == 0 ? 3 : job.Priority;
+                    job.ProducedQuantity = 0;
+                    job.DefectQuantity = 0;
+                    job.ReworkQuantity = 0;
+                    job.SetupTimeMinutes = 0;
+                    job.ChangeoverTimeMinutes = 0;
+                    job.LaborCostPerHour = 0;
+                    job.MaterialCostPerUnit = 0;
+                    job.OverheadCostPerHour = 0;
+                    job.MachineUtilizationPercent = 0;
+                    job.EnergyConsumptionKwh = 0;
+                    job.IsRushJob = false;
+                    
                     _context.Jobs.Add(job);
                     logAction = "Created";
+                    Console.WriteLine($"Creating new job with PartNumber: {job.PartNumber}");
                 }
                 else
                 {
-                    _context.Jobs.Update(job);
+                    // Update existing job - preserve existing data
+                    var existingJob = await _context.Jobs.FindAsync(job.Id);
+                    if (existingJob == null)
+                    {
+                        var parts = await _context.Parts.Where(p => p.IsActive).OrderBy(p => p.PartNumber).ToListAsync();
+                        return Partial("_AddEditJobModal", new AddEditJobViewModel 
+                        { 
+                            Job = job, 
+                            Parts = parts, 
+                            Errors = new List<string> { "Job not found for update." } 
+                        });
+                    }
+                    
+                    // Update only the fields that come from the form
+                    existingJob.MachineId = job.MachineId;
+                    existingJob.PartId = job.PartId;
+                    existingJob.PartNumber = job.PartNumber;
+                    existingJob.EstimatedHours = job.EstimatedHours;
+                    existingJob.ScheduledStart = job.ScheduledStart;
+                    existingJob.ScheduledEnd = job.ScheduledEnd;
+                    existingJob.Status = job.Status;
+                    existingJob.Quantity = job.Quantity;
+                    existingJob.Operator = job.Operator ?? string.Empty;
+                    existingJob.Notes = job.Notes ?? string.Empty;
+                    existingJob.LastModifiedDate = DateTime.UtcNow;
+                    existingJob.LastModifiedBy = User.Identity?.Name ?? "System";
+                    
+                    job = existingJob; // Use the existing job for further processing
                     logAction = "Updated";
+                    Console.WriteLine($"Updating existing job {job.Id} with PartNumber: {job.PartNumber}");
                 }
 
                 await _context.SaveChangesAsync();
+                Console.WriteLine($"Job {logAction.ToLower()} successfully in database");
 
                 // Create audit log entry
                 _context.JobLogEntries.Add(new JobLogEntry
@@ -190,20 +264,34 @@ namespace OpCentrix.Pages.Scheduler
                     Timestamp = DateTime.UtcNow
                 });
                 await _context.SaveChangesAsync();
+                Console.WriteLine($"Audit log entry created");
 
                 // HTMX FIX: Return updated machine row for seamless update
-                return await GetMachineRowPartialAsync(job.MachineId);
+                var result = await GetMachineRowPartialAsync(job.MachineId);
+                Console.WriteLine($"Returning machine row partial for {job.MachineId}");
+                return result;
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error in AddOrUpdateJob: {ex.Message}");
-                var parts = await _context.Parts.Where(p => p.IsActive).OrderBy(p => p.PartNumber).ToListAsync();
-                return Partial("_AddEditJobModal", new AddEditJobViewModel
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                
+                try
                 {
-                    Job = job,
-                    Parts = parts,
-                    Errors = new List<string> { $"Database error: {ex.Message}" }
-                });
+                    var parts = await _context.Parts.Where(p => p.IsActive).OrderBy(p => p.PartNumber).ToListAsync();
+                    return Partial("_AddEditJobModal", new AddEditJobViewModel
+                    {
+                        Job = job,
+                        Parts = parts,
+                        Errors = new List<string> { $"Error saving job: {ex.Message}" }
+                    });
+                }
+                catch (Exception innerEx)
+                {
+                    Console.WriteLine($"Error in AddOrUpdateJob fallback: {innerEx.Message}");
+                    // Return empty content to prevent page duplication
+                    return Content("");
+                }
             }
         }
 
@@ -211,32 +299,47 @@ namespace OpCentrix.Pages.Scheduler
         {
             try
             {
+                Console.WriteLine($"Attempting to delete job with ID: {id}");
+                
                 var job = await _context.Jobs.FindAsync(id);
-                if (job != null)
+                if (job == null)
                 {
-                    var machineId = job.MachineId; // Store before deletion
-                    
-                    _context.Jobs.Remove(job);
-                    _context.JobLogEntries.Add(new JobLogEntry
-                    {
-                        MachineId = job.MachineId,
-                        PartNumber = job.PartNumber ?? string.Empty,
-                        Action = "Deleted",
-                        Operator = User.Identity?.Name ?? "System",
-                        Notes = "Job deleted via scheduler",
-                        Timestamp = DateTime.UtcNow
-                    });
-                    await _context.SaveChangesAsync();
-
-                    // HTMX FIX: Return updated machine row
-                    return await GetMachineRowPartialAsync(machineId);
+                    Console.WriteLine($"Job with ID {id} not found");
+                    // Return an empty partial response instead of NotFound()
+                    // This prevents HTMX from inserting a full error page
+                    return Content(""); // Empty response - no change to the page
                 }
-                return NotFound();
+
+                var machineId = job.MachineId; // Store before deletion
+                Console.WriteLine($"Deleting job {id} from machine {machineId}");
+                
+                _context.Jobs.Remove(job);
+                
+                // Create audit log entry
+                _context.JobLogEntries.Add(new JobLogEntry
+                {
+                    MachineId = job.MachineId,
+                    PartNumber = job.PartNumber ?? string.Empty,
+                    Action = "Deleted",
+                    Operator = User.Identity?.Name ?? "System",
+                    Notes = "Job deleted via scheduler",
+                    Timestamp = DateTime.UtcNow
+                });
+                
+                await _context.SaveChangesAsync();
+                Console.WriteLine($"Job {id} deleted successfully from database");
+
+                // HTMX FIX: Return updated machine row
+                var result = await GetMachineRowPartialAsync(machineId);
+                Console.WriteLine($"Returning updated machine row for {machineId}");
+                return result;
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error in DeleteJob: {ex.Message}");
-                return StatusCode(500, $"Error deleting job: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                // Return empty content instead of StatusCode to prevent full error page insertion
+                return Content(""); // Empty response - maintains current state
             }
         }
 
@@ -244,13 +347,18 @@ namespace OpCentrix.Pages.Scheduler
         {
             try
             {
+                Console.WriteLine($"Generating machine row partial for {machineId}");
+                
                 // Get current zoom from query params
                 var zoom = Request.Query["zoom"].FirstOrDefault() ?? "day";
+                Console.WriteLine($"Using zoom level: {zoom}");
+                
                 var viewModel = _schedulerService.GetSchedulerData(zoom);
                 
                 // Load jobs for this specific machine within visible range
                 var startDate = viewModel.StartDate;
                 var endDate = startDate.AddDays(viewModel.Dates.Count);
+                Console.WriteLine($"Loading jobs for {machineId} from {startDate} to {endDate}");
                 
                 var machineJobs = await _context.Jobs
                     .Include(j => j.Part)
@@ -260,9 +368,16 @@ namespace OpCentrix.Pages.Scheduler
                     .OrderBy(j => j.ScheduledStart)
                     .ToListAsync();
 
-                var (_, rowHeight) = _schedulerService.CalculateMachineRowLayout(machineId, machineJobs);
+                Console.WriteLine($"Found {machineJobs.Count} jobs for machine {machineId}");
 
-                var machineRowViewModel = new MachineRowViewModel
+                var (_, rowHeight) = _schedulerService.CalculateMachineRowLayout(machineId, machineJobs);
+                var jobCount = machineJobs.Count;
+                var totalHours = machineJobs.Sum(j => j.DurationHours);
+
+                Console.WriteLine($"Machine {machineId}: {jobCount} jobs, {totalHours:F1} hours, row height {rowHeight}px");
+
+                // Create a view model that includes the full machine row structure
+                var fullMachineRowViewModel = new
                 {
                     MachineId = machineId,
                     Dates = viewModel.Dates,
@@ -270,16 +385,21 @@ namespace OpCentrix.Pages.Scheduler
                     RowHeight = rowHeight,
                     SlotsPerDay = viewModel.SlotsPerDay,
                     SlotMinutes = viewModel.SlotMinutes,
-                    Zoom = zoom
+                    Zoom = zoom,
+                    JobCount = jobCount,
+                    TotalHours = totalHours
                 };
 
-                return Partial("_MachineRow", machineRowViewModel);
+                Console.WriteLine($"Successfully created view model for machine {machineId}");
+                return Partial("_FullMachineRow", fullMachineRowViewModel);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error generating machine row partial: {ex.Message}");
+                Console.WriteLine($"Error generating machine row partial for {machineId}: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                
                 // Return empty machine row on error
-                var emptyViewModel = new MachineRowViewModel
+                var emptyViewModel = new
                 {
                     MachineId = machineId,
                     Dates = new List<DateTime>(),
@@ -287,9 +407,13 @@ namespace OpCentrix.Pages.Scheduler
                     RowHeight = 160,
                     SlotsPerDay = 1,
                     SlotMinutes = 1440,
-                    Zoom = "day"
+                    Zoom = "day",
+                    JobCount = 0,
+                    TotalHours = 0.0
                 };
-                return Partial("_MachineRow", emptyViewModel);
+                
+                Console.WriteLine($"Returning empty machine row for {machineId} due to error");
+                return Partial("_FullMachineRow", emptyViewModel);
             }
         }
     }

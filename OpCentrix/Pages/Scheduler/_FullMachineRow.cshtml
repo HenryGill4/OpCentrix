@@ -1,0 +1,45 @@
+@model dynamic
+@{
+    var machineId = Model.MachineId;
+    var dates = Model.Dates;
+    var jobs = Model.Jobs;
+    var rowHeight = Model.RowHeight;
+    var slotsPerDay = Model.SlotsPerDay;
+    var slotMinutes = Model.SlotMinutes;
+    var zoom = Model.Zoom;
+    var jobCount = Model.JobCount;
+    var totalHours = Model.TotalHours;
+}
+
+<!-- Complete machine row container with enhanced ID for HTMX targeting -->
+<div class="flex border-b border-gray-200 hover:bg-gray-50 transition-colors group" 
+     style="min-height:@(rowHeight)px;" 
+     data-machine="@machineId">
+    
+    <!-- Enhanced machine label -->
+    <div class="scheduler-machine-label sticky left-0 z-10 bg-white border-r" 
+         style="width: var(--machine-label-width); min-width: var(--machine-label-width); height:@(rowHeight)px;">
+        <div class="flex flex-col items-center justify-center h-full p-2">
+            <div class="text-lg font-bold text-indigo-800">@machineId</div>
+            <div class="text-xs text-gray-500 mt-1">@jobCount job@(jobCount != 1 ? "s" : "")</div>
+            @if (totalHours > 0)
+            {
+                <div class="text-xs text-gray-400">@totalHours.ToString("F1")h total</div>
+            }
+        </div>
+    </div>
+    
+    <!-- Machine row content -->
+    <div class="flex-1" style="min-height:@(rowHeight)px;">
+        <partial name="_MachineRow" 
+                 model="new OpCentrix.Models.ViewModels.MachineRowViewModel { 
+                     MachineId = machineId, 
+                     Dates = dates, 
+                     Jobs = jobs, 
+                     RowHeight = rowHeight,
+                     SlotsPerDay = slotsPerDay,
+                     SlotMinutes = slotMinutes,
+                     Zoom = zoom
+                 }" />
+    </div>
+</div>
