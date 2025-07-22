@@ -36,9 +36,15 @@ namespace OpCentrix.Migrations
                     b.Property<string>("Operator")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("PartId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("PartNumber")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("ScheduledEnd")
                         .HasColumnType("TEXT");
@@ -52,7 +58,15 @@ namespace OpCentrix.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("PartId");
+
                     b.ToTable("Jobs");
+
+                    b.HasOne("OpCentrix.Models.Part", null)
+                        .WithMany()
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("OpCentrix.Models.Part", b =>

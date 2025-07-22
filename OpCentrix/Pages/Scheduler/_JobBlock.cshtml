@@ -8,8 +8,16 @@
      hx-target="#modal-content" hx-swap="innerHTML">
     <div class="font-semibold">@Model.PartNumber</div>
     <div class="text-sm">@Model.ScheduledStart:MMM d → @Model.ScheduledEnd:MMM d</div>
+    @if (Model.Quantity > 1)
+    {
+        <div class="text-xs">Qty @Model.Quantity</div>
+    }
+    @if (!string.IsNullOrEmpty(Model.Notes))
+    {
+        <div class="text-xs text-gray-500">@Model.Notes</div>
+    }
     @if (!string.IsNullOrEmpty(Model.Part?.Description))
     {
-        <div class="text-xs text-gray-500">@Model.Part.Description</div>
+        <div class="text-xs text-gray-400 italic">@Model.Part.Description</div>
     }
 </div>

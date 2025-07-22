@@ -4,7 +4,8 @@ Entity Framework Core with a SQLite database accessed through `SchedulerContext`
 ### Data Model
 - **Part** – defines available parts with average duration and description.
 - **Job** – represents scheduled work and references a `Part`. Jobs are stored in
-the `Jobs` table and include machine assignment and start/end times.
+  the `Jobs` table and include machine assignment, start/end times, status,
+  quantity and optional notes/operator fields.
 
 ### Pages
 - **/Scheduler** – main scheduling view implemented by `Pages/Scheduler/Index.cshtml`.

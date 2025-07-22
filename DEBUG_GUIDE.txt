@@ -1,10 +1,10 @@
 The project is an ASP.NET Core web app using EF Core with a SQLite database. The container environment lacks the .NET SDK so the project could not be built or run. Manual inspection reveals several issues:
 
 1. **Model inconsistency**
-   - `Migrations` expect `Job` to contain fields such as `Status`, `Notes`, and `Operator`, but `Models/job.cs` currently defines only `Id`, `MachineId`, `ScheduledStart`, `ScheduledEnd`, `PartNumber`, `PartId`, and `Part`. This mismatch will cause database errors. Decide whether to update the model or recreate migrations.
+   - `Job` now includes `Status`, `Notes`, `Operator`, `Quantity`, and `PartId` to match the EF Core migrations. Ensure future migrations stay in sync with the model.
    
 2. **Add/Edit Job modal bindings**
-   - In `_AddEditJobModal.cshtml` the `Quantity` input reuses the name `Job.PartId`, overwriting the selected Part ID. There is also a textarea bound to `Job.Part.Description` which will not bind correctly. Consider adding properties such as `Quantity` and `Notes` directly on `Job` and update bindings.
+   - The quantity and notes fields are correctly bound to `Job.Quantity` and `Job.Notes`. Validate user input before saving.
 
 3. **Nullable vs non-nullable**
    - Several properties (e.g., `Job.MachineId`, `Job.Part`) are marked nullable yet migrations declare them non-null. Align nullability to avoid runtime errors.
@@ -16,5 +16,5 @@ The project is an ASP.NET Core web app using EF Core with a SQLite database. The
 
 To proceed:
 - Install the .NET 8 SDK locally and run `dotnet ef migrations` to verify model/database alignment.
-- Address the binding bugs in the job modal.
+- Review validation logic in the add/edit job modal and extend unit tests when possible.
 - Flesh out remaining pages and add tests to cover scheduling logic.
