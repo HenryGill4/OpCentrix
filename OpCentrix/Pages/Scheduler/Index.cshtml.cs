@@ -64,7 +64,14 @@ namespace OpCentrix.Pages.Scheduler
             }
             else
             {
-                job = new Job { MachineId = machineId, ScheduledStart = date };
+                job = new Job
+                {
+                    MachineId = machineId,
+                    ScheduledStart = date,
+                    ScheduledEnd = date,
+                    Status = "Scheduled",
+                    Quantity = 1
+                };
             }
             var parts = _context.Parts.ToList();
 
@@ -88,12 +95,19 @@ namespace OpCentrix.Pages.Scheduler
             if (string.IsNullOrWhiteSpace(job.MachineId)) errors.Add("Machine is required");
             if (job.PartId == 0) errors.Add("Part is required");
             if (job.ScheduledStart == default) errors.Add("Start time is required");
+            if (job.Quantity <= 0) errors.Add("Quantity must be greater than 0");
 
             var part = _context.Parts.FirstOrDefault(p => p.Id == job.PartId);
             if (part != null)
             {
                 job.PartNumber = part.PartNumber;
+                job.Part = part;
                 job.ScheduledEnd = job.ScheduledStart.AddDays(part.AvgDurationDays);
+            }
+
+            if (string.IsNullOrEmpty(job.Status))
+            {
+                job.Status = "Scheduled";
             }
 
             if (errors.Any())
