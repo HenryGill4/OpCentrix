@@ -4,33 +4,32 @@
 @{
     ViewData["Title"] = "Scheduler";
 }
-<div id="scheduler-grid" class="grid grid-cols-[120px_repeat(3,_1fr)] auto-rows-[60px] gap-px bg-gray-200 text-sm">
 
-    <!-- Header Row -->
-    <div class="bg-white font-bold text-center flex items-center justify-center">Date / Printer</div>
-    @foreach (var machine in Model.ViewModel.Machines)
-    {
-        <div class="bg-white font-bold text-center flex items-center justify-center">@machine</div>
-    }
+<div class="flex items-center justify-between mb-4">
+    <div>
+        <button id="zoomOut" class="rounded-md bg-indigo-600 text-white px-4 py-2 text-sm font-medium mr-2">– Zoom Out</button>
+        <button id="zoomIn" class="rounded-md bg-indigo-600 text-white px-4 py-2 text-sm font-medium">+ Zoom In</button>
+    </div>
+</div>
 
-    @foreach (var date in Model.ViewModel.Dates)
-    {
-        <!-- Date label on the left -->
-        <div class="bg-white text-center font-medium flex items-center justify-center">
-            @date.ToString("ddd, MMM d")
-        </div>
+<div class="overflow-x-auto">
+    <div id="schedulerBody" class="grid text-sm" style="grid-template-columns: 120px repeat(@Model.ViewModel.Dates.Count, var(--day-width));">
+        <div class="sticky left-0 top-0 z-20 bg-white border-b border-r"></div>
+        @foreach (var date in Model.ViewModel.Dates)
+        {
+            <div class="sticky top-0 z-10 bg-white border-b text-center p-1">@date.ToString("ddd M/d")</div>
+        }
 
         @foreach (var machine in Model.ViewModel.Machines)
         {
-            var jobsForCell = Model.ViewModel.Jobs
-                .Where(j => j.MachineId == machine && j.ScheduledStart.Date == date.Date)
-                .ToList();
-
-            <partial name="_DayCell" model="new DayCellViewModel {
-                Date = date,
-                MachineId = machine,
-                Jobs = jobsForCell
-            }" />
+            <div class="sticky left-0 z-10 bg-white border-r p-1 flex items-center">@machine</div>
+            <div id="row-@machine">
+                <partial name="_MachineRow" model="new MachineRowViewModel { MachineId = machine, Dates = Model.ViewModel.Dates, Jobs = Model.ViewModel.Jobs.Where(j => j.MachineId == machine).ToList() }" />
+            </div>
         }
-    }
+    </div>
 </div>
+
+<partial name="_FooterSummary" model="Model.Summary" />
+
+<div id="modal-content"></div>

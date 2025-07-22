@@ -1,6 +1,13 @@
 @model OpCentrix.Models.Job
 
-<div class="absolute top-1 left-1 right-1 bg-blue-600 text-white text-xs px-2 py-1 rounded shadow">
+@{
+    var color = "bg-blue-200";
+}
+<div class="rounded-xl shadow-md hover:shadow-lg transition px-2 py-1 text-xs @color">
     <div class="font-semibold">@Model.PartNumber</div>
-    <div class="text-[10px]">@Model.ScheduledStart:MMM d → @Model.ScheduledEnd:MMM d</div>
+    <div class="text-sm">@Model.ScheduledStart:MMM d → @Model.ScheduledEnd:MMM d</div>
+    @if (!string.IsNullOrEmpty(Model.Part?.Description))
+    {
+        <div class="text-xs text-gray-500">@Model.Part.Description</div>
+    }
 </div>
