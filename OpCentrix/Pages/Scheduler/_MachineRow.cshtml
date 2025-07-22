@@ -1,44 +1,47 @@
 @model OpCentrix.Models.ViewModels.MachineRowViewModel
 @{
     var start = Model.Dates.First();
-    int current = 0;
     var jobs = Model.Jobs.OrderBy(j => j.ScheduledStart).ToList();
 }
-<div class="grid grid-cols-@Model.Dates.Count">
-@foreach (var job in jobs)
-{
-    var index = (job.ScheduledStart.Date - start.Date).Days;
-    if (index > current)
-    {
-        for (int i = current; i < index && i < Model.Dates.Count; i++)
+<div class="relative" style="width:calc(var(--day-width)*@Model.Dates.Count);height:80px;">
+    <div class="absolute inset-0 pointer-events-none">
+        @for (int i = 0; i < jobs.Count; i++)
         {
-            var day = start.AddDays(i);
-            <div class="relative border h-20">
-                <button class="absolute bottom-1 right-1 text-xs text-gray-500 hover:text-indigo-600"
-                        hx-get="/Scheduler/ShowAddModal?machineId=@Model.MachineId&date=@day.ToString("yyyy-MM-dd")"
-                        hx-target="#modal-content" hx-swap="innerHTML">
-                    + Add Job
-                </button>
+            var job = jobs[i];
+            var left = (job.ScheduledStart - start).TotalDays;
+            var width = (job.ScheduledEnd - job.ScheduledStart).TotalDays;
+            <div class="absolute h-full px-0.5 pointer-events-auto"
+                 style="left:calc(var(--day-width)*@left); width:calc(var(--day-width)*@width);">
+                <partial name="_JobBlock" model="job" />
+            </div>
+            var nextStart = i < jobs.Count - 1 ? jobs[i + 1].ScheduledStart : DateTime.MaxValue;
+            if (nextStart > job.ScheduledEnd)
+            {
+                var cleft = (job.ScheduledEnd - start).TotalDays;
+                <div class="absolute h-full px-0.5 pointer-events-none"
+                     style="left:calc(var(--day-width)*@cleft); width:calc(var(--day-width)*0.125);">
+                    <div class="bg-orange-100 opacity-60 text-xs italic h-full flex items-center justify-center">Changeover</div>
+                </div>
+            }
+        }
+    </div>
+    <div class="absolute inset-0 grid grid-cols-@Model.Dates.Count">
+        @foreach (var day in Model.Dates)
+        {
+            var showAdd = OpCentrix.Pages.Scheduler.IndexModel.IsShift(day);
+            <div class="border relative">
+                @if (showAdd)
+                {
+                    <button class="absolute bottom-1 right-1 text-xs text-gray-500 hover:text-indigo-600"
+                            hx-get="/Scheduler/ShowAddModal?machineId=@Model.MachineId&date=@day.ToString("yyyy-MM-dd")"
+                            hx-target="#modal-content" hx-swap="innerHTML">
+                        + Add Job
+                    </button>
+                }
             </div>
         }
-        current = index;
-    }
-    if (index >= Model.Dates.Count) { break; }
-    var span = Math.Min((job.ScheduledEnd.Date - job.ScheduledStart.Date).Days + 1, Model.Dates.Count - index);
-    <div class="relative border h-20 col-span-@span">
-        <partial name="_JobBlock" model="job" />
     </div>
-    current = index + span;
-}
-@for (int i = current; i < Model.Dates.Count; i++)
-{
-    var day = start.AddDays(i);
-    <div class="relative border h-20">
-        <button class="absolute bottom-1 right-1 text-xs text-gray-500 hover:text-indigo-600"
-                hx-get="/Scheduler/ShowAddModal?machineId=@Model.MachineId&date=@day.ToString("yyyy-MM-dd")"
-                hx-target="#modal-content" hx-swap="innerHTML">
-            + Add Job
-        </button>
-    </div>
-}
+</div>
+<div hx-swap-oob="true" id="footer-summary">
+    <partial name="_FooterSummary" model="ViewData[\"Summary\"] as OpCentrix.Models.ViewModels.FooterSummaryViewModel" />
 </div>
