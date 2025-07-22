@@ -1,0 +1,5 @@
+# Bugs and Issues
+
+- Zoom not working
+- Row height sometimes wrong after delete
+- UI not updating after job edit

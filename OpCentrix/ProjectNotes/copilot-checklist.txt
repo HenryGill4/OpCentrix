@@ -1,0 +1,57 @@
+# Copilot Debug & Review Checklist
+
+## 1. Workspace Context
+- [ ] Confirm all projects and main files are present
+- [ ] Review Razor Pages structure and .NET 8 compatibility
+- [ ] Note any custom folders (e.g., ProjectNotes)
+
+## 2. Scheduler Grid & Zoom
+- [ ] Check if zoom state is passed via query string and handled in OnGet
+- [ ] Ensure grid recalculates slots/columns for all zoom levels
+- [ ] Test zoom in/out and verify UI updates
+- [ ] Add comments explaining zoom logic in both JS and Razor
+
+## 3. Job Add/Edit/Delete
+- [ ] Test add, edit, delete for jobs (all machines, all zoom levels)
+- [ ] Confirm row height and date range update correctly after changes
+- [ ] Ensure no UI glitches or stale data after HTMX swaps
+- [ ] Add comments to modal and backend logic
+
+## 4. Data Model & Validation
+- [ ] Review Job, Part, and related models for completeness
+- [ ] Check server-side and client-side validation
+- [ ] Add comments to model properties and validation logic
+- [ ] Test edge cases (overlaps, invalid dates, missing fields)
+
+## 5. UI/UX & Accessibility
+- [ ] Check for ARIA labels and keyboard navigation
+- [ ] Add empty state message if no jobs
+- [ ] Test modal accessibility and usability
+- [ ] Add comments to major UI blocks
+
+## 6. Job Log & Analytics
+- [ ] Test log entry creation for all job actions
+- [ ] Review log filtering/search (if present)
+- [ ] Add comments to log logic
+
+## 7. Performance & Code Quality
+- [ ] Use .AsNoTracking() for read-only queries
+- [ ] Remove dead code/legacy JS
+- [ ] Add comments to non-obvious logic
+
+## 8. Testing & Documentation
+- [ ] Add/expand unit tests for date/row logic
+- [ ] Update README or design-plan.txt with setup/usage notes
+- [ ] Document all known bugs/edge cases in bugs.txt
+
+## 9. Deployment Readiness
+- [ ] Remove test data and review config
+- [ ] Add deployment checklist to ProjectNotes
+
+## 10. General Comments
+- [ ] Add summary comments to top of each file
+- [ ] Add XML doc comments to C# methods
+- [ ] Add inline comments to Razor and JS files
+
+---
+This checklist is for Copilot to follow when reviewing, debugging, and documenting the solution. Update as needed for new features or issues.

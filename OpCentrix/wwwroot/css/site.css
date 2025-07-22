@@ -1,138 +1,270 @@
-/*Style.css:*/
-/*:root {
-    --bg-color: #f0f0f0;
-    --container-bg: #ffffff;
-    --text-color: #333;
-    --input-bg: #fff;
-    --input-border: #ccc;
-    --button-bg: #007bff;
-    --button-hover-bg: #0056b3;
-    --table-header-bg: #f8f9fa;
-    --input-text-color: #495057;
-    --blackout-bg: #dfdfdf;
+/* CSS Custom Properties */
+:root {
+    --day-width: 120px;
+    --header-height: 60px;
+    --machine-label-width: 120px;
 }
 
-@media (prefers-color-scheme: dark) {
+/* Reset and Base Styles */
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Scheduler Grid Layout */
+.scheduler-grid-header {
+    padding: 12px 8px;
+    background: white;
+    border-bottom: 1px solid #e5e7eb;
+    border-right: 1px solid #e5e7eb;
+    font-weight: 600;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 15;
+    min-height: var(--header-height);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.scheduler-machine-label {
+    background: white;
+    border-right: 1px solid #e5e7eb;
+    border-bottom: 1px solid #e5e7eb;
+    font-weight: 700;
+    color: #1e40af;
+    text-align: center;
+    width: var(--machine-label-width);
+    min-width: var(--machine-label-width);
+    position: sticky;
+    left: 0;
+    z-index: 10;
+}
+
+.scheduler-grid-cell {
+    position: relative;
+    border-right: 1px solid #f3f4f6;
+    border-bottom: 1px solid #f3f4f6;
+    min-height: 160px;
+    transition: background-color 0.2s ease;
+}
+
+.scheduler-grid-cell:hover {
+    background-color: rgba(99, 102, 241, 0.05) !important;
+}
+
+/* Job Block Styles */
+.job-block {
+    transition: all 0.2s ease;
+    font-size: 11px;
+    line-height: 1.2;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.job-block:hover {
+    transform: scale(1.02);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    z-index: 100;
+}
+
+/* Status Colors */
+.status-scheduled { background-color: #3B82F6; }
+.status-active { background-color: #10B981; }
+.status-delayed { background-color: #EF4444; }
+.status-complete { background-color: #6B7280; }
+.status-cancelled { background-color: #9CA3AF; }
+
+/* Modal Styles */
+.modal-overlay {
+    backdrop-filter: blur(4px);
+}
+
+/* Form Styles */
+.form-input {
+    transition: all 0.2s ease;
+}
+
+.form-input:focus {
+    outline: none;
+    ring: 2px;
+    ring-color: #6366f1;
+    ring-opacity: 0.5;
+    border-color: #6366f1;
+}
+
+/* Button Styles */
+.btn {
+    transition: all 0.2s ease;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 8px 16px;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-primary {
+    background-color: #4F46E5;
+    color: white;
+    border: none;
+}
+
+.btn-primary:hover {
+    background-color: #4338CA;
+}
+
+.btn-secondary {
+    background-color: white;
+    color: #4B5563;
+    border: 1px solid #D1D5DB;
+}
+
+.btn-secondary:hover {
+    background-color: #F9FAFB;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
     :root {
-        --bg-color: #333;
-        --container-bg: #424242;
-        --text-color: #f4f7fa;
-        --input-bg: #555;
-        --input-border: #888;
-        --button-bg: #5a5;
-        --button-hover-bg: #4a4;
-        --table-header-bg: #666;
-        --input-text-color: #fff;
-        --blackout-bg: #3f3e3e;
+        --day-width: 80px;
+        --machine-label-width: 80px;
+    }
+    
+    .scheduler-grid-header {
+        font-size: 11px;
+        padding: 8px 4px;
+    }
+    
+    .scheduler-machine-label {
+        font-size: 12px;
     }
 }
 
-body {
-    font-family: 'Segoe UI', sans-serif;
-    background: var(--bg-color);
-    color: var(--text-color);
-    margin: 0;
-    padding: 20px;
+/* Scroll Styling */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
 }
 
-.container {
-    background: var(--container-bg);
-    max-width: 100%;
-    margin: auto;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
 }
 
-h2 {
-    text-align: center;
-    color: var(--button-bg);
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
 }
 
-.calendar-wrapper {
-    overflow-x: auto;
-    max-width: 100%;
+::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
 }
 
-.calendar {
-    border-collapse: collapse;
-    width: 100%;
+/* Animation for job additions */
+@keyframes slideInFromTop {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.job-block-new {
+    animation: slideInFromTop 0.3s ease-out;
+}
+
+/* Grid container fixes */
+.scheduler-grid {
+    display: grid;
     min-width: max-content;
 }
 
-    .calendar thead th,
-    .calendar tbody th {
-        border: 1px solid var(--input-border);
-        padding: 10px;
-        min-width: 50px;
-        max-width: 50px;
-        text-align: center;
-        background: var(--table-header-bg);
-        font-weight: bold;
-        vertical-align: middle;
-    }
-
-    .calendar tbody td {
-        border: 1px solid var(--input-border);
-        padding: 5px;
-        min-width: 50px;
-        max-width: 50px;
-        text-align: left;
-        vertical-align: top;
-        min-height: 80px;
-        position: relative;
-    }
-
-.job-container {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 4px;
-    height: 120px;
-    overflow-y: auto;
-    position: relative;
+/* Sticky positioning fix */
+.sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: white;
 }
 
-.job {
-    border-radius: 4px;
+/* Loading states */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #4F46E5;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Error states */
+.error {
+    border-color: #EF4444 !important;
+    background-color: #FEF2F2;
+}
+
+.error-message {
+    color: #DC2626;
     font-size: 12px;
-    background: linear-gradient(to right, var(--button-bg), var(--button-hover-bg));
-    color: white;
-    text-align: center;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    padding: 0 6px;
-    cursor: pointer;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    margin-top: 4px;
 }
 
-.changeover {
-    width: 100%;
-    border-radius: 4px;
-    font-size: 10px;
-    background: #ff9800;
-    color: black;
-    opacity: 0.7;
-    text-align: center;
+/* Success states */
+.success {
+    border-color: #10B981 !important;
+    background-color: #ECFDF5;
 }
 
-.add-btn {
-    padding: 6px 10px;
-    font-size: 12px;
-    background-color: var(--button-bg);
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
+/* Focus styles for accessibility */
+button:focus,
+input:focus,
+select:focus,
+textarea:focus {
+    outline: 2px solid #4F46E5;
+    outline-offset: 2px;
 }
 
-    .add-btn:hover {
-        background-color: var(--button-hover-bg);
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .job-block {
+        border-width: 3px;
     }
-
-.weekend-column {
-    background-color: var(--blackout-bg) !important;
+    
+    .scheduler-grid-cell {
+        border-width: 2px;
+    }
 }
 
-*/
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

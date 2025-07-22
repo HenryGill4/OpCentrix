@@ -4,33 +4,320 @@
 
 @{
     ViewData["Title"] = "Scheduler";
+    
+    // Get zoom from query string, fallback to "day"
+    var zoomLevels = new[] { "day", "hour", "30min", "15min" };
+    var zoomParam = Request.Query["zoom"].FirstOrDefault() ?? "day";
+    var zoomIndex = Array.IndexOf(zoomLevels, zoomParam);
+    if (zoomIndex < 0) zoomIndex = 0;
+    var zoom = zoomLevels[zoomIndex];
+    
+    // Use the view model data
+    var viewModel = Model.ViewModel;
+    var slotsPerDay = viewModel.SlotsPerDay;
+    var slotMinutes = viewModel.SlotMinutes;
+    var slotTimes = Enumerable.Range(0, slotsPerDay).Select(i => TimeSpan.FromMinutes(i * slotMinutes)).ToList();
 }
 
-<div class="flex items-center justify-between mb-4">
-    <div>
-        <button id="zoomOut" class="rounded-md bg-indigo-600 text-white px-4 py-2 text-sm font-medium mr-2">– Zoom Out</button>
-        <button id="zoomIn" class="rounded-md bg-indigo-600 text-white px-4 py-2 text-sm font-medium">+ Zoom In</button>
+<!-- Scheduler header and zoom controls -->
+<div class="flex items-center justify-between mb-6">
+    <div class="flex gap-2">
+        <!-- Zoom Out button: decreases zoom level -->
+        <button id="zoomOut" class="rounded-lg bg-white border border-indigo-200 text-indigo-700 px-4 py-2 text-base font-semibold shadow hover:bg-indigo-50 transition">– Zoom Out</button>
+        <!-- Zoom In button: increases zoom level -->
+        <button id="zoomIn" class="rounded-lg bg-indigo-600 text-white px-4 py-2 text-base font-semibold shadow hover:bg-indigo-700 transition">+ Zoom In</button>
+        <div class="ml-4 px-3 py-2 bg-gray-100 rounded-lg text-sm font-medium text-gray-700">
+            Current: @zoom.ToUpper()
+        </div>
+    </div>
+    <div class="text-2xl font-bold text-indigo-900 tracking-tight">Production Scheduler</div>
+    <div class="flex gap-2">
+        <button class="rounded-lg bg-green-600 text-white px-4 py-2 text-base font-semibold shadow hover:bg-green-700 transition"
+                hx-get="/Scheduler?handler=ShowAddModal&machineId=TI1&date=@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")"
+                hx-target="#modal-content" hx-swap="innerHTML">
+            + Add Job
+        </button>
     </div>
 </div>
 
-<div class="overflow-x-auto">
-    <div id="schedulerBody" class="grid text-sm" style="grid-template-columns: 120px repeat(@Model.ViewModel.Dates.Count, var(--day-width));">
-        <div class="sticky left-0 top-0 z-20 bg-white border-b border-r"></div>
-        @foreach (var date in Model.ViewModel.Dates)
-        {
-            <div class="sticky top-0 z-10 bg-white border-b text-center p-1">@date.ToString("ddd M/d")</div>
-        }
-
-        @foreach (var machine in Model.ViewModel.Machines)
-        {
-            <div class="sticky left-0 z-10 bg-white border-r p-1 flex items-center">@machine</div>
-            <div id="row-@machine">
-                <partial name="_MachineRow" model="new MachineRowViewModel { MachineId = machine, Dates = Model.ViewModel.Dates, Jobs = Model.ViewModel.Jobs.Where(j => j.MachineId == machine).ToList() }" />
+<!-- Scheduler grid and machine/job rows -->
+<div class="overflow-x-auto pb-8 bg-gray-50 rounded-lg border">
+    <div id="schedulerBody" class="text-sm">
+        <!-- Main grid header: dates and time slots -->
+        <div class="grid sticky top-0 z-10 bg-white border-b" 
+             id="schedulerGrid" 
+             style="grid-template-columns: 120px repeat(@(viewModel.Dates.Count * slotsPerDay), var(--day-width, 120px)); min-width: max-content;">
+            
+            <!-- Machine label header -->
+            <div class="sticky left-0 top-0 z-20 bg-white border-b border-r p-3 font-semibold text-gray-800">
+                Machine
             </div>
-        }
+            
+            <!-- Date and time slot headers -->
+            @foreach (var date in viewModel.Dates)
+            {
+                for (int s = 0; s < slotsPerDay; s++)
+                {
+                    if (s == 0)
+                    {
+                        <div class="scheduler-grid-header font-semibold text-gray-800 border-r bg-white p-2" style="min-width:120px;">
+                            @date.ToString("ddd M/d")
+                        </div>
+                    }
+                    else if (slotsPerDay > 1)
+                    {
+                        <div class="scheduler-grid-header text-xs text-gray-600 border-r bg-gray-50 p-2" style="min-width:120px;">
+                            @slotTimes[s].ToString(@"h\:mm")
+                        </div>
+                    }
+                }
+            }
+        </div>
+        
+        <!-- Machine rows -->
+        <div class="bg-white">
+            @if (!viewModel.Jobs.Any())
+            {
+                <div class="text-center text-gray-400 py-16 text-lg font-semibold">
+                    No jobs scheduled. Click "Add Job" or click on a time slot to schedule a job.
+                </div>
+            }
+            else
+            {
+                @foreach (var machine in viewModel.Machines)
+                {
+                    var rowHeight = viewModel.MachineRowHeights.GetValueOrDefault(machine, 160);
+                    <div class="flex border-b border-gray-200 hover:bg-gray-50 transition-colors" 
+                         style="min-height:@(rowHeight)px;">
+                        
+                        <!-- Machine label -->
+                        <div class="scheduler-machine-label sticky left-0 z-10 bg-white border-r flex items-center justify-center font-bold text-indigo-800" 
+                             style="width:120px; min-width:120px; height:@(rowHeight)px;">
+                            @machine
+                        </div>
+                        
+                        <!-- Machine row content -->
+                        <div id="row-@machine" class="flex-1" style="min-height:@(rowHeight)px;">
+                            <partial name="_MachineRow" 
+                                     model="new MachineRowViewModel { 
+                                         MachineId = machine, 
+                                         Dates = viewModel.Dates, 
+                                         Jobs = viewModel.Jobs.Where(j => j.MachineId == machine).ToList(), 
+                                         RowHeight = rowHeight,
+                                         SlotsPerDay = slotsPerDay,
+                                         SlotMinutes = slotMinutes,
+                                         Zoom = zoom
+                                     }" />
+                        </div>
+                    </div>
+                }
+            }
+        </div>
     </div>
 </div>
 
-<partial name="_FooterSummary" model="Model.Summary" />
+<!-- Footer summary -->
+<div class="max-w-full mt-6" id="footer-summary">
+    <partial name="_FooterSummary" model="Model.Summary" />
+</div>
 
-<div id="modal-content"></div>
+<!-- Modal container for add/edit job -->
+<div id="modal-content" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-50"></div>
+
+@section Scripts {
+<script>
+// Initialize zoom controls and grid width
+window.addEventListener('DOMContentLoaded', function() {
+    const zoomLevels = ['day', 'hour', '30min', '15min'];
+    const currentZoom = '@zoom';
+    const currentIndex = zoomLevels.indexOf(currentZoom);
+    
+    function updateZoom(newIndex) {
+        if (newIndex >= 0 && newIndex < zoomLevels.length) {
+            const newZoom = zoomLevels[newIndex];
+            const url = new URL(window.location);
+            url.searchParams.set('zoom', newZoom);
+            window.location.href = url.toString();
+        }
+    }
+    
+    document.getElementById('zoomIn').addEventListener('click', function() {
+        updateZoom(currentIndex + 1);
+    });
+    
+    document.getElementById('zoomOut').addEventListener('click', function() {
+        updateZoom(currentIndex - 1);
+    });
+    
+    // Disable buttons if at limits
+    if (currentIndex >= zoomLevels.length - 1) {
+        document.getElementById('zoomIn').disabled = true;
+        document.getElementById('zoomIn').classList.add('opacity-50', 'cursor-not-allowed');
+    }
+    if (currentIndex <= 0) {
+        document.getElementById('zoomOut').disabled = true;
+        document.getElementById('zoomOut').classList.add('opacity-50', 'cursor-not-allowed');
+    }
+});
+
+// Enhanced HTMX modal show/hide logic
+document.body.addEventListener('htmx:afterSwap', function (e) {
+    if (e.detail.target.id === "modal-content") {
+        const container = document.getElementById("modal-content");
+        if (container.innerHTML.trim() === "") {
+            container.classList.add("hidden");
+            container.classList.remove("flex");
+        } else {
+            container.classList.remove("hidden");
+            container.classList.add("flex");
+        }
+    }
+});
+
+// Enhanced modal close functionality
+function closeJobModal() {
+    const modal = document.getElementById('modal-content');
+    if (modal) {
+        modal.innerHTML = '';
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
+// Close modal on background click
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('modal-content');
+    if (e.target === modal && modal.classList.contains('flex')) {
+        closeJobModal();
+    }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('modal-content');
+        if (modal.classList.contains('flex')) {
+            closeJobModal();
+        }
+    }
+});
+
+// Global function to open job modal
+window.openJobModal = function(machineId, date, jobId = null) {
+    const url = jobId 
+        ? `/Scheduler?handler=ShowAddModal&machineId=${encodeURIComponent(machineId)}&date=${encodeURIComponent(date)}&id=${jobId}`
+        : `/Scheduler?handler=ShowAddModal&machineId=${encodeURIComponent(machineId)}&date=${encodeURIComponent(date)}`;
+        
+    htmx.ajax('GET', url, {
+        target: '#modal-content',
+        swap: 'innerHTML'
+    }).catch(function(error) {
+        console.error('Error opening modal:', error);
+        showErrorMessage('Failed to open job form. Please try again.');
+    });
+};
+
+// Simplified delete function
+window.deleteJob = function(jobId, machineId) {
+    if (confirm('Are you sure you want to delete this job?')) {
+        fetch(`/Scheduler?handler=DeleteJob&id=${jobId}`, {
+            method: 'DELETE',
+            headers: {
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                closeJobModal();
+                refreshPageData(machineId);
+                showSuccessMessage('Job deleted successfully!');
+            } else {
+                throw new Error('Delete failed');
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting job:', error);
+            showErrorMessage('Failed to delete job. Please try again.');
+        });
+    }
+};
+
+// Simplified refresh function that reloads the page to avoid HTMX conflicts
+window.refreshPageData = function(machineId) {
+    // Add a small delay to ensure the server has processed the change
+    setTimeout(() => {
+        // Preserve the current zoom level
+        const currentUrl = new URL(window.location);
+        const zoom = currentUrl.searchParams.get('zoom') || 'day';
+        const newUrl = `/Scheduler?zoom=${zoom}`;
+        window.location.href = newUrl;
+    }, 100);
+};
+
+// Error handling for HTMX requests
+document.body.addEventListener('htmx:responseError', function(e) {
+    console.error('HTMX request failed:', e.detail);
+    showErrorMessage('Request failed. Please try again.');
+});
+
+document.body.addEventListener('htmx:sendError', function(e) {
+    console.error('HTMX send error:', e.detail);
+    showErrorMessage('Network error. Please check your connection.');
+});
+
+// Global notification functions
+window.showSuccessMessage = function(message) {
+    showNotification(message, 'success');
+};
+
+window.showErrorMessage = function(message) {
+    showNotification(message, 'error');
+};
+
+function showNotification(message, type) {
+    // Remove existing notifications
+    const existing = document.querySelectorAll('.notification');
+    existing.forEach(n => n.remove());
+    
+    // Create new notification
+    const notification = document.createElement('div');
+    notification.className = `notification fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-300 ${
+        type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+    }`;
+    notification.textContent = message;
+    
+    // Add to page
+    document.body.appendChild(notification);
+    
+    // Animate in
+    setTimeout(() => notification.classList.add('translate-x-0'), 10);
+    
+    // Auto remove
+    setTimeout(() => {
+        notification.classList.add('translate-x-full', 'opacity-0');
+        setTimeout(() => notification.remove(), 300);
+    }, type === 'success' ? 3000 : 5000);
+}
+
+// Add CSS for HTMX loading indicator
+const style = document.createElement('style');
+style.textContent = `
+.htmx-indicator {
+    display: none;
+}
+.htmx-request .htmx-indicator {
+    display: flex;
+}
+`;
+document.head.appendChild(style);
+
+// Debug function for development
+window.debugScheduler = function() {
+    console.log('Scheduler Debug Info:');
+    console.log('Current zoom:', '@zoom');
+    console.log('Machine rows:', document.querySelectorAll('[id^="row-"]').length);
+    console.log('Job blocks:', document.querySelectorAll('.job-block').length);
+    console.log('Modal state:', document.getElementById('modal-content').classList.contains('flex') ? 'open' : 'closed');
+};
+</script>
+}

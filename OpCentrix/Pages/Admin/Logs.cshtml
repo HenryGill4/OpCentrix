@@ -1,0 +1,239 @@
+@page
+@model OpCentrix.Pages.Admin.LogsModel
+@{
+    ViewData["Title"] = "Job Logs";
+    Layout = "~/Pages/Shared/_AdminLayout.cshtml";
+}
+
+<div class="mb-6">
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Job Logs</h1>
+            <p class="text-gray-600 mt-1">View audit trail and activity history</p>
+        </div>
+        <div class="text-sm text-gray-500">
+            Total entries: @Model.TotalCount
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="bg-white rounded-lg shadow p-6 mb-6">
+    <form method="get" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+            <input type="text" name="search" value="@Model.SearchTerm" placeholder="Part, operator, notes..." 
+                   class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+        </div>
+        
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Action</label>
+            <select name="action" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <option value="">All Actions</option>
+                <option value="Created" selected="@(Model.ActionFilter == "Created")">Created</option>
+                <option value="Updated" selected="@(Model.ActionFilter == "Updated")">Updated</option>
+                <option value="Deleted" selected="@(Model.ActionFilter == "Deleted")">Deleted</option>
+                <option value="Started" selected="@(Model.ActionFilter == "Started")">Started</option>
+                <option value="Completed" selected="@(Model.ActionFilter == "Completed")">Completed</option>
+            </select>
+        </div>
+        
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Machine</label>
+            <select name="machine" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <option value="">All Machines</option>
+                <option value="TI1" selected="@(Model.MachineFilter == "TI1")">TI1</option>
+                <option value="TI2" selected="@(Model.MachineFilter == "TI2")">TI2</option>
+                <option value="INC" selected="@(Model.MachineFilter == "INC")">INC</option>
+            </select>
+        </div>
+        
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+            <input type="date" name="from" value="@Model.FromDate?.ToString("yyyy-MM-dd")" 
+                   class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+        </div>
+        
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+            <input type="date" name="to" value="@Model.ToDate?.ToString("yyyy-MM-dd")" 
+                   class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+        </div>
+        
+        <div class="flex items-end">
+            <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                Filter
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Quick Filter Buttons -->
+<div class="mb-6 flex flex-wrap gap-2">
+    <a href="?from=@DateTime.Today.ToString("yyyy-MM-dd")" 
+       class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 transition">
+        Today
+    </a>
+    <a href="?from=@DateTime.Today.AddDays(-7).ToString("yyyy-MM-dd")" 
+       class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 hover:bg-green-200 transition">
+        Last 7 Days
+    </a>
+    <a href="?from=@DateTime.Today.AddDays(-30).ToString("yyyy-MM-dd")" 
+       class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition">
+        Last 30 Days
+    </a>
+    <a href="?action=Created" 
+       class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 hover:bg-purple-200 transition">
+        Created
+    </a>
+    <a href="?action=Updated" 
+       class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 hover:bg-indigo-200 transition">
+        Updated
+    </a>
+    <a href="?action=Deleted" 
+       class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 hover:bg-red-200 transition">
+        Deleted
+    </a>
+</div>
+
+<!-- Results Summary -->
+<div class="mb-4">
+    <p class="text-sm text-gray-600">
+        Showing @((Model.PageNumber - 1) * Model.PageSize + 1) to @(Math.Min(Model.PageNumber * Model.PageSize, Model.TotalCount)) of @Model.TotalCount log entries
+    </p>
+</div>
+
+<!-- Logs Timeline -->
+<div class="bg-white rounded-lg shadow overflow-hidden">
+    @if (Model.LogEntries.Any())
+    {
+        <div class="divide-y divide-gray-200">
+            @foreach (var log in Model.LogEntries)
+            {
+                <div class="p-6 hover:bg-gray-50 transition-colors">
+                    <div class="flex items-start space-x-4">
+                        <!-- Action Badge -->
+                        <div class="flex-shrink-0">
+                            @{
+                                var badgeClass = log.Action switch
+                                {
+                                    "Created" => "bg-green-100 text-green-800",
+                                    "Updated" => "bg-blue-100 text-blue-800", 
+                                    "Deleted" => "bg-red-100 text-red-800",
+                                    "Started" => "bg-yellow-100 text-yellow-800",
+                                    "Completed" => "bg-purple-100 text-purple-800",
+                                    _ => "bg-gray-100 text-gray-800"
+                                };
+                                
+                                var icon = log.Action switch
+                                {
+                                    "Created" => "M12 6v6m0 0v6m0-6h6m-6 0H6",
+                                    "Updated" => "M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z",
+                                    "Deleted" => "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16",
+                                    _ => "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                };
+                            }
+                            <div class="w-10 h-10 rounded-full @badgeClass flex items-center justify-center">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="@icon"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        
+                        <!-- Log Content -->
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-2">
+                                    <h3 class="text-sm font-medium text-gray-900">
+                                        @log.Action job @log.PartNumber
+                                    </h3>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium @(log.MachineId switch { "TI1" => "bg-blue-100 text-blue-800", "TI2" => "bg-green-100 text-green-800", "INC" => "bg-red-100 text-red-800", _ => "bg-gray-100 text-gray-800" })">
+                                        @log.MachineId
+                                    </span>
+                                </div>
+                                <div class="text-sm text-gray-500">
+                                    @log.Timestamp.ToString("MMM dd, yyyy HH:mm:ss")
+                                </div>
+                            </div>
+                            
+                            <div class="mt-1 flex items-center space-x-4 text-sm text-gray-500">
+                                <span>by @log.Operator</span>
+                                <span>•</span>
+                                <span>ID: @log.Id</span>
+                            </div>
+                            
+                            @if (!string.IsNullOrEmpty(log.Notes))
+                            {
+                                <div class="mt-2 text-sm text-gray-600 bg-gray-50 rounded p-2">
+                                    @log.Notes
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="p-12 text-center">
+            <div class="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">No logs found</h3>
+            <p class="text-gray-500">No log entries match your current filters.</p>
+        </div>
+    }
+</div>
+
+<!-- Pagination -->
+@if (Model.TotalPages > 1)
+{
+    <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 mt-6 rounded-lg shadow">
+        <div class="flex-1 flex justify-between sm:hidden">
+            @if (Model.PageNumber > 1)
+            {
+                <a href="?page=@(Model.PageNumber - 1)&search=@Model.SearchTerm&action=@Model.ActionFilter&machine=@Model.MachineFilter&from=@Model.FromDate?.ToString("yyyy-MM-dd")&to=@Model.ToDate?.ToString("yyyy-MM-dd")" 
+                   class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                    Previous
+                </a>
+            }
+            @if (Model.PageNumber < Model.TotalPages)
+            {
+                <a href="?page=@(Model.PageNumber + 1)&search=@Model.SearchTerm&action=@Model.ActionFilter&machine=@Model.MachineFilter&from=@Model.FromDate?.ToString("yyyy-MM-dd")&to=@Model.ToDate?.ToString("yyyy-MM-dd")" 
+                   class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                    Next
+                </a>
+            }
+        </div>
+        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+            <div>
+                <p class="text-sm text-gray-700">
+                    Page <span class="font-medium">@Model.PageNumber</span> of <span class="font-medium">@Model.TotalPages</span>
+                </p>
+            </div>
+            <div>
+                <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                    @for (int i = Math.Max(1, Model.PageNumber - 2); i <= Math.Min(Model.TotalPages, Model.PageNumber + 2); i++)
+                    {
+                        @if (i == Model.PageNumber)
+                        {
+                            <span class="relative inline-flex items-center px-4 py-2 border border-blue-500 bg-blue-50 text-sm font-medium text-blue-600">
+                                @i
+                            </span>
+                        }
+                        else
+                        {
+                            <a href="?page=@i&search=@Model.SearchTerm&action=@Model.ActionFilter&machine=@Model.MachineFilter&from=@Model.FromDate?.ToString("yyyy-MM-dd")&to=@Model.ToDate?.ToString("yyyy-MM-dd")" 
+                               class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                @i
+                            </a>
+                        }
+                    }
+                </nav>
+            </div>
+        </div>
+    </div>
+}

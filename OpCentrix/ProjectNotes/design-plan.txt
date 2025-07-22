@@ -1,0 +1,40 @@
+# Full Design Plan
+
+## 1. Scheduler Grid
+- Responsive grid with zoom (day/hour/30min/15min)
+- Each row = machine, each column = time slot
+- Job blocks stack vertically if overlapping
+- Row height auto-calculated based on overlaps
+
+## 2. Data Model
+- Job: Id, MachineId, ScheduledStart, ScheduledEnd, PartId, PartNumber, Status, Notes, Operator, Quantity
+- Part: Id, PartNumber, Description, Material, AvgDuration, AvgDurationDays
+- JobLogEntry: Id, Timestamp, MachineId, PartNumber, Action, Notes, Operator
+
+## 3. Core Features
+- Add/Edit/Delete jobs via modal (HTMX)
+- Prevent job overlaps per machine
+- Auto-calculate end date from part duration
+- Show job log (history)
+- Show machine hours summary
+
+## 4. UI/UX
+- Zoom in/out buttons update grid
+- Modal for job add/edit with validation
+- Responsive and accessible design
+- Show friendly empty state if no jobs
+
+## 5. Logic
+- All date range, row height, and stacking logic centralized in backend
+- Partial updates always use same logic as full page load
+- All changes update summary/footer
+
+## 6. Testing
+- Manual: Add, edit, delete jobs at all zoom levels, with/without overlaps
+- Automated: Unit test date/row logic if possible
+
+## 7. Deployment
+- Remove test data, review config, document setup
+
+---
+This plan should be updated as features/requirements evolve.

@@ -1,0 +1,8 @@
+# Scheduler Attack Plan
+
+- [ ] Fix zoom feature (JS + Razor)
+- [ ] Centralize all grid/row logic
+- [ ] Test add/edit/delete jobs
+- [ ] Polish UI/UX
+- [ ] Test edge cases
+- [ ] Final review and deploy

@@ -1,47 +1,103 @@
 @model OpCentrix.Models.ViewModels.MachineRowViewModel
 @{
-    var start = Model.Dates.First();
-    var jobs = Model.Jobs.OrderBy(j => j.ScheduledStart).ToList();
-}
-<div class="relative" style="width:calc(var(--day-width)*@Model.Dates.Count);height:80px;">
-    <div class="absolute inset-0 pointer-events-none">
-        @for (int i = 0; i < jobs.Count; i++)
+    var start = Model.Dates.First().Date;
+    var totalSlots = Model.Dates.Count * Model.SlotsPerDay;
+    var rowHeightPx = $"{Model.RowHeight}px";
+    
+    // Calculate job layers for overlapping jobs using the new Job.OverlapsWith method
+    var jobsOrdered = Model.Jobs.OrderBy(j => j.ScheduledStart).ToList();
+    var jobLayers = new List<List<OpCentrix.Models.Job>>();
+    
+    foreach (var job in jobsOrdered)
+    {
+        var placed = false;
+        for (int l = 0; l < jobLayers.Count; l++)
         {
-            var job = jobs[i];
-            var left = (job.ScheduledStart - start).TotalDays;
-            var width = (job.ScheduledEnd - job.ScheduledStart).TotalDays;
-            <div class="absolute h-full px-0.5 pointer-events-auto"
-                 style="left:calc(var(--day-width)*@left); width:calc(var(--day-width)*@width);">
-                <partial name="_JobBlock" model="job" />
-            </div>
-            var nextStart = i < jobs.Count - 1 ? jobs[i + 1].ScheduledStart : DateTime.MaxValue;
-            if (nextStart > job.ScheduledEnd)
+            if (!jobLayers[l].Any(j => job.OverlapsWith(j)))
             {
-                var cleft = (job.ScheduledEnd - start).TotalDays;
-                <div class="absolute h-full px-0.5 pointer-events-none"
-                     style="left:calc(var(--day-width)*@cleft); width:calc(var(--day-width)*0.125);">
-                    <div class="bg-orange-100 opacity-60 text-xs italic h-full flex items-center justify-center">Changeover</div>
+                jobLayers[l].Add(job);
+                placed = true;
+                break;
+            }
+        }
+        if (!placed) 
+        {
+            jobLayers.Add(new List<OpCentrix.Models.Job> { job });
+        }
+    }
+    
+    // Calculate layer height (leave space for multiple layers)
+    var maxLayers = Math.Max(1, jobLayers.Count);
+    var layerHeight = (Model.RowHeight - 20) / maxLayers; // Leave 20px padding
+}
+
+<!-- Main row container for a machine -->
+<div class="relative bg-white border-gray-200 overflow-hidden" 
+     style="width:calc(var(--day-width,120px)*@totalSlots);height:@rowHeightPx; min-height:@rowHeightPx;">
+    
+    <!-- Grid background cells -->
+    <div class="absolute inset-0 grid" 
+         style="grid-template-columns: repeat(@totalSlots, var(--day-width,120px));">
+        @for (int d = 0; d < Model.Dates.Count; d++)
+        {
+            var day = Model.Dates[d];
+            for (int s = 0; s < Model.SlotsPerDay; s++)
+            {
+                var slotTime = TimeSpan.FromMinutes(s * Model.SlotMinutes);
+                var slotDateTime = day.Add(slotTime);
+                var isToday = day.Date == DateTime.Today && slotTime <= DateTime.Now.TimeOfDay && slotTime < DateTime.Now.TimeOfDay.Add(TimeSpan.FromMinutes(Model.SlotMinutes));
+                var isWeekend = day.DayOfWeek == DayOfWeek.Saturday || day.DayOfWeek == DayOfWeek.Sunday;
+                var isPastWorkHours = slotTime < TimeSpan.FromHours(6) || slotTime >= TimeSpan.FromHours(18);
+                
+                var cellClasses = new List<string> { "scheduler-grid-cell", "group", "border-r", "border-gray-100", "relative", "cursor-pointer" };
+                if (isToday) cellClasses.Add("bg-blue-50");
+                else if (isWeekend) cellClasses.Add("bg-gray-50");
+                else if (isPastWorkHours) cellClasses.Add("bg-gray-25");
+                
+                <div class="@string.Join(" ", cellClasses)" 
+                     style="min-height:@rowHeightPx;"
+                     onclick="openJobModal('@Model.MachineId', '@slotDateTime.ToString("yyyy-MM-ddTHH:mm")')"
+                     title="Click to add job at @slotDateTime.ToString("g")">
+                     
+                    <!-- Add Job button (appears on hover) -->
+                    <div class="absolute z-10 top-2 right-2 opacity-0 group-hover:opacity-100 transition-all duration-200 
+                                bg-indigo-600 text-white rounded-full w-6 h-6 text-xs font-bold shadow-lg 
+                                hover:bg-indigo-700 hover:scale-110 flex items-center justify-center pointer-events-none">
+                        +
+                    </div>
                 </div>
             }
         }
     </div>
-    <div class="absolute inset-0 grid grid-cols-@Model.Dates.Count">
-        @foreach (var day in Model.Dates)
+    
+    <!-- Job blocks layer -->
+    <div class="absolute inset-0 pointer-events-none" style="min-height:@rowHeightPx;">
+        @for (int l = 0; l < jobLayers.Count; l++)
         {
-            var showAdd = OpCentrix.Pages.Scheduler.IndexModel.IsShift(day);
-            <div class="border relative">
-                @if (showAdd)
-                {
-                    <button class="absolute bottom-1 right-1 text-xs text-gray-500 hover:text-indigo-600"
-                            hx-get="/Scheduler/ShowAddModal?machineId=@Model.MachineId&date=@day.ToString("yyyy-MM-dd")"
-                            hx-target="#modal-content" hx-swap="innerHTML">
-                        + Add Job
-                    </button>
-                }
-            </div>
+            var jobsInLayer = jobLayers[l];
+            foreach (var job in jobsInLayer)
+            {
+                var leftPosition = job.CalculateGridPosition(start, Model.SlotMinutes);
+                var widthSlots = job.CalculateGridWidth(Model.SlotMinutes);
+                
+                var leftPct = (100.0 * leftPosition / totalSlots).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + "%";
+                var widthPct = (100.0 * widthSlots / totalSlots).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + "%";
+                
+                var top = 10 + l * layerHeight;
+                var height = layerHeight - 4; // Small gap between layers
+                var topPx = $"{top}px";
+                var heightPx = $"{height}px";
+                
+                var jobLabel = $"Job: {job.PartNumber} ({job.Status}), {job.ScheduledStart:g} - {job.ScheduledEnd:g}, Qty: {job.Quantity}";
+                
+                <div class="absolute pointer-events-auto transition-all duration-200 hover:z-20 hover:scale-105 cursor-pointer"
+                     style="left:@leftPct; width:@widthPct; top:@topPx; height:@heightPx; min-width:40px; max-width:90%;"
+                     onclick="openJobModal('@Model.MachineId', '@job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")', @job.Id)"
+                     title="@jobLabel" 
+                     aria-label="@jobLabel">
+                    <partial name="_JobBlock" model="job" />
+                </div>
+            }
         }
     </div>
-</div>
-<div hx-swap-oob="true" id="footer-summary">
-    <partial name="_FooterSummary" model="ViewData[\"Summary\"] as OpCentrix.Models.ViewModels.FooterSummaryViewModel" />
 </div>

@@ -1,23 +1,42 @@
 @model OpCentrix.Models.Job
-
 @{
-    var color = "bg-blue-200";
+    var statusColor = Model.GetStatusColor();
+    var textColor = Model.Status?.ToLower() == "cancelled" ? "#ffffff" : "#ffffff";
+    var duration = $"{Model.DurationHours:F1}h";
+    var shortPartNumber = Model.PartNumber?.Length > 10 ? Model.PartNumber.Substring(0, 10) + "..." : Model.PartNumber;
 }
-<div class="rounded-xl shadow-md hover:shadow-lg transition px-2 py-1 text-xs @color cursor-pointer"
-     hx-get="/Scheduler/ShowAddModal?machineId=@Model.MachineId&date=@Model.ScheduledStart.ToString("yyyy-MM-dd")&id=@Model.Id"
-     hx-target="#modal-content" hx-swap="innerHTML">
-    <div class="font-semibold">@Model.PartNumber</div>
-    <div class="text-sm">@Model.ScheduledStart:MMM d → @Model.ScheduledEnd:MMM d</div>
-    @if (Model.Quantity > 1)
-    {
-        <div class="text-xs">Qty @Model.Quantity</div>
-    }
-    @if (!string.IsNullOrEmpty(Model.Notes))
-    {
-        <div class="text-xs text-gray-500">@Model.Notes</div>
-    }
-    @if (!string.IsNullOrEmpty(Model.Part?.Description))
-    {
-        <div class="text-xs text-gray-400 italic">@Model.Part.Description</div>
-    }
+
+<div class="job-block rounded-lg shadow-lg border border-white/20 h-full w-full overflow-hidden cursor-pointer group"
+     style="background-color: @statusColor; color: @textColor;"
+     hx-get="/Scheduler?handler=ShowAddModal&id=@Model.Id"
+     hx-target="#modal-content" 
+     hx-swap="innerHTML"
+     title="@Model.PartNumber - @Model.Status (@duration)"
+     data-job-id="@Model.Id">
+    
+    <div class="p-2 h-full flex flex-col justify-between text-xs">
+        <!-- Job header -->
+        <div class="flex justify-between items-start mb-1">
+            <div class="font-bold truncate flex-1 mr-1">@shortPartNumber</div>
+            <div class="text-xs opacity-75 whitespace-nowrap">@duration</div>
+        </div>
+        
+        <!-- Job details -->
+        <div class="flex-1 space-y-1">
+            <div class="text-xs opacity-90 truncate">Qty: @Model.Quantity</div>
+            @if (!string.IsNullOrEmpty(Model.Operator))
+            {
+                <div class="text-xs opacity-75 truncate">@Model.Operator</div>
+            }
+        </div>
+        
+        <!-- Status indicator -->
+        <div class="flex justify-between items-end mt-1">
+            <div class="text-xs opacity-75 truncate">@Model.Status</div>
+            <div class="w-2 h-2 rounded-full bg-white/30 group-hover:bg-white/50 transition-colors"></div>
+        </div>
+    </div>
+    
+    <!-- Hover overlay -->
+    <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg"></div>
 </div>

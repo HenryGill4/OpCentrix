@@ -1,0 +1,201 @@
+@page
+@model OpCentrix.Pages.Admin.IndexModel
+@{
+    ViewData["Title"] = "Admin Dashboard";
+    Layout = "~/Pages/Shared/_AdminLayout.cshtml";
+}
+
+<div class="mb-6">
+    <h1 class="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+    <p class="text-gray-600 mt-2">Manage your OpCentrix database and view system statistics</p>
+</div>
+
+<!-- Statistics Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <!-- Total Jobs Card -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="flex-shrink-0">
+                <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                    </svg>
+                </div>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500">Total Jobs</p>
+                <p class="text-2xl font-bold text-gray-900">@Model.TotalJobs</p>
+                <p class="text-sm text-green-600">@Model.ActiveJobs active</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Parts Card -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="flex-shrink-0">
+                <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14-7l2 2-2 2M5 19l2-2-2-2"></path>
+                    </svg>
+                </div>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500">Total Parts</p>
+                <p class="text-2xl font-bold text-gray-900">@Model.TotalParts</p>
+                <p class="text-sm text-green-600">@Model.ActiveParts active</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Log Entries Card -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="flex-shrink-0">
+                <div class="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                </div>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500">Log Entries</p>
+                <p class="text-2xl font-bold text-gray-900">@Model.TotalLogEntries</p>
+                <p class="text-sm text-gray-500">Audit records</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Status Card -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="flex-shrink-0">
+                <div class="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500">System Status</p>
+                <p class="text-2xl font-bold text-green-600">Healthy</p>
+                <p class="text-sm text-gray-500">All systems online</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+        <div class="space-y-3">
+            <a href="/Admin/Jobs" class="block w-full bg-blue-600 text-white text-center py-2 px-4 rounded-lg hover:bg-blue-700 transition">
+                Manage Jobs
+            </a>
+            <a href="/Admin/Parts" class="block w-full bg-green-600 text-white text-center py-2 px-4 rounded-lg hover:bg-green-700 transition">
+                Manage Parts
+            </a>
+            <a href="/Admin/Logs" class="block w-full bg-yellow-600 text-white text-center py-2 px-4 rounded-lg hover:bg-yellow-700 transition">
+                View Logs
+            </a>
+        </div>
+    </div>
+
+    <!-- Recent Jobs -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Jobs</h3>
+        <div class="space-y-3">
+            @if (Model.RecentJobs.Any())
+            {
+                @foreach (var job in Model.RecentJobs)
+                {
+                    <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">@job.PartNumber</p>
+                            <p class="text-xs text-gray-500">@job.MachineId - @job.Status</p>
+                        </div>
+                        <span class="text-xs text-gray-400">@job.CreatedDate.ToString("MM/dd")</span>
+                    </div>
+                }
+            }
+            else
+            {
+                <p class="text-sm text-gray-500">No jobs found</p>
+            }
+        </div>
+    </div>
+
+    <!-- Recent Parts -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Parts</h3>
+        <div class="space-y-3">
+            @if (Model.RecentParts.Any())
+            {
+                @foreach (var part in Model.RecentParts)
+                {
+                    <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">@part.PartNumber</p>
+                            <p class="text-xs text-gray-500">@part.Material</p>
+                        </div>
+                        <span class="text-xs text-gray-400">@part.CreatedDate.ToString("MM/dd")</span>
+                    </div>
+                }
+            }
+            else
+            {
+                <p class="text-sm text-gray-500">No parts found</p>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity Log -->
+<div class="bg-white rounded-lg shadow">
+    <div class="px-6 py-4 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-900">Recent Activity</h3>
+    </div>
+    <div class="p-6">
+        @if (Model.RecentLogEntries.Any())
+        {
+            <div class="space-y-4">
+                @foreach (var log in Model.RecentLogEntries)
+                {
+                    <div class="flex items-center space-x-4 py-3 border-b border-gray-100 last:border-b-0">
+                        <div class="flex-shrink-0">
+                            @{
+                                var badgeClass = log.Action switch
+                                {
+                                    "Created" => "bg-green-100 text-green-800",
+                                    "Updated" => "bg-blue-100 text-blue-800", 
+                                    "Deleted" => "bg-red-100 text-red-800",
+                                    _ => "bg-gray-100 text-gray-800"
+                                };
+                            }
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium @badgeClass">
+                                @log.Action
+                            </span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900">
+                                @log.Action job @log.PartNumber on @log.MachineId
+                            </p>
+                            <p class="text-sm text-gray-500">
+                                by @log.Operator • @log.Timestamp.ToString("MM/dd/yyyy HH:mm")
+                            </p>
+                            @if (!string.IsNullOrEmpty(log.Notes))
+                            {
+                                <p class="text-xs text-gray-400 mt-1">@log.Notes</p>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <p class="text-gray-500">No recent activity</p>
+        }
+    </div>
+</div>
