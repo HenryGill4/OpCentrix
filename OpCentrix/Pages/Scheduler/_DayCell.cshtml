@@ -1,3 +1,4 @@
+@using OpCentrix.Models.ViewModels;
 @model OpCentrix.Models.ViewModels.DayCellViewModel
 
 <div class="bg-white relative border border-gray-300 h-[60px] group overflow-hidden">
@@ -9,11 +10,11 @@
             <partial name="_JobBlock" model="job" />
         }
     }
-
-    <button class="absolute inset-0 opacity-0 group-hover:opacity-100 text-xs text-gray-600 hover:text-blue-600 flex items-center justify-center transition"
-            hx-get="/Scheduler/ShowAddModal?machineId=@Model.MachineId&date=@Model.Date.ToString(\"yyyy-MM-dd\")"
-            hx-target="#modal-content"
-            hx-swap="innerHTML">
-        + Add Job
-    </button>
+<button class="absolute inset-0 opacity-0 group-hover:opacity-100 text-xs text-gray-600 hover:text-blue-600 flex items-center justify-center transition"
+        hx-get="/Scheduler/ShowAddModal?machineId=@Model.MachineId&date=@Model.Date.ToString("yyyy-MM-dd")"
+        hx-target="#modal-content"
+        hx-swap="innerHTML">
+    + Add Job
+</button>
+    
 </div>

@@ -1,3 +1,4 @@
+@using OpCentrix.Models;
 @model OpCentrix.Models.ViewModels.AddEditJobViewModel
 
 <form hx-post="/Scheduler/AddOrUpdateJob"
@@ -7,19 +8,18 @@
 
     <input type="hidden" name="Job.Id" value="@Model.Job.Id" />
     <input type="hidden" name="Job.MachineId" value="@Model.Job.MachineId" />
-
-    <div>
-        <label class="block text-sm font-medium">Part Number</label>
-        <select name="Job.PartNumber" class="w-full border border-gray-300 rounded p-2">
-            <option value="">-- Select Part --</option>
-            @foreach (var part in Model.Parts)
-            {
-                <option value="@part.PartNumber" @(part.PartNumber == Model.Job.PartNumber ? "selected" : "")>
-                    @part.PartNumber (@part.AvgDurationDays d)
-                </option>
-            }
-        </select>
-    </div>
+<div>
+    <label class="block text-sm font-medium">Part Number</label>
+    <select name="Job.PartNumber" class="w-full border border-gray-300 rounded p-2">
+        <option value="">-- Select Part --</option>
+        @foreach (var part in Model.Parts)
+        {
+            <option value="@part.PartNumber">
+                @part.PartNumber (@part.AvgDurationDays d)
+            </option>
+        }
+    </select>
+</div>
 
     <div class="grid grid-cols-2 gap-4">
         <div>
