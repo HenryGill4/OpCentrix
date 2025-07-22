@@ -1,8 +1,23 @@
-/* CSS Custom Properties */
+/* Enhanced CSS Custom Properties */
 :root {
-    --day-width: 120px;
+    --slot-width: 120px;
     --header-height: 60px;
     --machine-label-width: 120px;
+    --grid-border-color: #e5e7eb;
+    --grid-hover-color: rgba(99, 102, 241, 0.05);
+}
+
+/* Responsive slot width calculation */
+@media (max-width: 1200px) {
+    :root { --slot-width: 100px; --machine-label-width: 100px; }
+}
+
+@media (max-width: 768px) {
+    :root { --slot-width: 80px; --machine-label-width: 80px; }
+}
+
+@media (max-width: 480px) {
+    :root { --slot-width: 60px; --machine-label-width: 60px; }
 }
 
 /* Reset and Base Styles */
@@ -14,14 +29,40 @@ html, body {
     margin: 0;
     padding: 0;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    scroll-behavior: smooth;
 }
 
-/* Scheduler Grid Layout */
+/* Enhanced Loading Indicator Styles */
+.request-indicator {
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease-in-out;
+    pointer-events: none;
+    z-index: 9999;
+}
+
+.request-indicator:not(.htmx-indicator) {
+    opacity: 1;
+    visibility: visible;
+}
+
+.htmx-indicator {
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease-in-out;
+}
+
+.htmx-request .htmx-indicator {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Enhanced Scheduler Grid Layout */
 .scheduler-grid-header {
     padding: 12px 8px;
     background: white;
-    border-bottom: 1px solid #e5e7eb;
-    border-right: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--grid-border-color);
+    border-right: 1px solid var(--grid-border-color);
     font-weight: 600;
     text-align: center;
     position: sticky;
@@ -31,12 +72,13 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: center;
+    font-size: clamp(10px, 1.5vw, 14px);
 }
 
 .scheduler-machine-label {
     background: white;
-    border-right: 1px solid #e5e7eb;
-    border-bottom: 1px solid #e5e7eb;
+    border-right: 1px solid var(--grid-border-color);
+    border-bottom: 1px solid var(--grid-border-color);
     font-weight: 700;
     color: #1e40af;
     text-align: center;
@@ -45,6 +87,10 @@ html, body {
     position: sticky;
     left: 0;
     z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(12px, 2vw, 16px);
 }
 
 .scheduler-grid-cell {
@@ -52,156 +98,173 @@ html, body {
     border-right: 1px solid #f3f4f6;
     border-bottom: 1px solid #f3f4f6;
     min-height: 160px;
-    transition: background-color 0.2s ease;
+    transition: all 0.2s ease;
+    background-color: white;
 }
 
 .scheduler-grid-cell:hover {
-    background-color: rgba(99, 102, 241, 0.05) !important;
+    background-color: var(--grid-hover-color) !important;
+    border-color: rgba(99, 102, 241, 0.2);
 }
 
-/* Job Block Styles */
+.scheduler-grid-cell.bg-blue-25 {
+    background-color: rgba(59, 130, 246, 0.05);
+}
+
+.scheduler-grid-cell.bg-blue-100 {
+    background-color: rgba(59, 130, 246, 0.1);
+}
+
+.scheduler-grid-cell.bg-gray-25 {
+    background-color: rgba(156, 163, 175, 0.05);
+}
+
+.scheduler-grid-cell.bg-gray-50 {
+    background-color: #f9fafb;
+}
+
+/* Enhanced Job Block Styles */
 .job-block {
-    transition: all 0.2s ease;
-    font-size: 11px;
-    line-height: 1.2;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: clamp(9px, 1.2vw, 11px);
+    line-height: 1.3;
     border: 2px solid rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(1px);
+    position: relative;
+    overflow: hidden;
 }
 
 .job-block:hover {
-    transform: scale(1.02);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    transform: scale(1.03) translateZ(0);
+    box-shadow: 
+        0 10px 25px rgba(0, 0, 0, 0.15),
+        0 0 0 1px rgba(255, 255, 255, 0.1);
     z-index: 100;
+    border-color: rgba(255, 255, 255, 0.5);
 }
 
-/* Status Colors */
-.status-scheduled { background-color: #3B82F6; }
-.status-active { background-color: #10B981; }
-.status-delayed { background-color: #EF4444; }
-.status-complete { background-color: #6B7280; }
-.status-cancelled { background-color: #9CA3AF; }
+.job-block::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.8), rgba(255,255,255,0.2));
+}
 
-/* Modal Styles */
+/* Enhanced Status Colors with gradients */
+.status-scheduled { 
+    background: linear-gradient(135deg, #3B82F6, #2563EB);
+    color: white;
+}
+.status-active { 
+    background: linear-gradient(135deg, #10B981, #059669);
+    color: white;
+}
+.status-delayed { 
+    background: linear-gradient(135deg, #EF4444, #DC2626);
+    color: white;
+}
+.status-complete { 
+    background: linear-gradient(135deg, #6B7280, #4B5563);
+    color: white;
+}
+.status-cancelled { 
+    background: linear-gradient(135deg, #9CA3AF, #6B7280);
+    color: white;
+}
+
+/* Enhanced Modal Styles */
 .modal-overlay {
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.4);
 }
 
-/* Form Styles */
+/* Improved Form Styles */
 .form-input {
     transition: all 0.2s ease;
+    border: 2px solid #e5e7eb;
 }
 
 .form-input:focus {
     outline: none;
-    ring: 2px;
-    ring-color: #6366f1;
-    ring-opacity: 0.5;
     border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    transform: translateY(-1px);
 }
 
-/* Button Styles */
+/* Enhanced Button Styles */
 .btn {
-    transition: all 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     font-weight: 600;
     border-radius: 8px;
-    padding: 8px 16px;
+    padding: 10px 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.btn:hover::before {
+    left: 100%;
 }
 
 .btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .btn-primary {
-    background-color: #4F46E5;
+    background: linear-gradient(135deg, #4F46E5, #4338CA);
     color: white;
     border: none;
 }
 
 .btn-primary:hover {
-    background-color: #4338CA;
+    background: linear-gradient(135deg, #4338CA, #3730A3);
 }
 
 .btn-secondary {
-    background-color: white;
+    background: white;
     color: #4B5563;
-    border: 1px solid #D1D5DB;
+    border: 2px solid #D1D5DB;
 }
 
 .btn-secondary:hover {
-    background-color: #F9FAFB;
+    background: #F9FAFB;
+    border-color: #9CA3AF;
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-    :root {
-        --day-width: 80px;
-        --machine-label-width: 80px;
-    }
-    
-    .scheduler-grid-header {
-        font-size: 11px;
-        padding: 8px 4px;
-    }
-    
-    .scheduler-machine-label {
-        font-size: 12px;
-    }
-}
-
-/* Scroll Styling */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
-}
-
-/* Animation for job additions */
-@keyframes slideInFromTop {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.job-block-new {
-    animation: slideInFromTop 0.3s ease-out;
-}
-
-/* Grid container fixes */
-.scheduler-grid {
+/* Enhanced Grid Container */
+.scheduler-main-grid {
     display: grid;
     min-width: max-content;
-}
-
-/* Sticky positioning fix */
-.sticky-header {
-    position: sticky;
-    top: 0;
-    z-index: 20;
     background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
 }
 
-/* Loading states */
+/* Loading States */
 .loading {
     opacity: 0.6;
     pointer-events: none;
+    position: relative;
 }
 
 .loading::after {
@@ -209,54 +272,118 @@ html, body {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 20px;
-    height: 20px;
-    margin: -10px 0 0 -10px;
-    border: 2px solid #4F46E5;
+    width: 24px;
+    height: 24px;
+    margin: -12px 0 0 -12px;
+    border: 3px solid #4F46E5;
     border-top-color: transparent;
     border-radius: 50%;
     animation: spin 1s linear infinite;
+    z-index: 1000;
 }
 
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
 
-/* Error states */
+/* Notification Styles */
+.notification {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 8px;
+    font-weight: 500;
+    backdrop-filter: blur(8px);
+}
+
+.notification.notification-success {
+    background: linear-gradient(135deg, #10B981, #059669);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.notification.notification-error {
+    background: linear-gradient(135deg, #EF4444, #DC2626);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+/* Animation for job additions */
+@keyframes slideInFromTop {
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes slideInFromLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.job-block-new {
+    animation: slideInFromTop 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.machine-row-updated {
+    animation: slideInFromLeft 0.3s ease-out;
+}
+
+/* Error and Success States */
 .error {
     border-color: #EF4444 !important;
-    background-color: #FEF2F2;
+    background-color: rgba(239, 68, 68, 0.05);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
 }
 
-.error-message {
-    color: #DC2626;
-    font-size: 12px;
-    margin-top: 4px;
-}
-
-/* Success states */
 .success {
     border-color: #10B981 !important;
-    background-color: #ECFDF5;
+    background-color: rgba(16, 185, 129, 0.05);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
-/* Focus styles for accessibility */
+/* Accessibility Improvements */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Focus styles for better accessibility */
 button:focus,
 input:focus,
 select:focus,
 textarea:focus {
     outline: 2px solid #4F46E5;
     outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
 }
 
 /* High contrast mode support */
 @media (prefers-contrast: high) {
     .job-block {
         border-width: 3px;
+        font-weight: 600;
     }
     
     .scheduler-grid-cell {
         border-width: 2px;
+    }
+    
+    :root {
+        --grid-border-color: #000;
     }
 }
 
@@ -266,5 +393,37 @@ textarea:focus {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
+    }
+    
+    .job-block:hover {
+        transform: none;
+    }
+    
+    .btn:hover {
+        transform: none;
+    }
+}
+
+/* Dark mode support (future enhancement) */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --grid-border-color: #374151;
+        --grid-hover-color: rgba(99, 102, 241, 0.1);
+    }
+}
+
+/* Print styles */
+@media print {
+    .btn, .modal-overlay, .notification {
+        display: none !important;
+    }
+    
+    .scheduler-grid-cell {
+        border: 1px solid #000 !important;
+    }
+    
+    .job-block {
+        box-shadow: none !important;
+        border: 2px solid #000 !important;
     }
 }

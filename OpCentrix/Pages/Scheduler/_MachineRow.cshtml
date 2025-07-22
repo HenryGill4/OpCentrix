@@ -1,10 +1,10 @@
 @model OpCentrix.Models.ViewModels.MachineRowViewModel
 @{
-    var start = Model.Dates.First().Date;
+    var start = Model.Dates.FirstOrDefault().Date;
     var totalSlots = Model.Dates.Count * Model.SlotsPerDay;
     var rowHeightPx = $"{Model.RowHeight}px";
     
-    // Calculate job layers for overlapping jobs using the new Job.OverlapsWith method
+    // Calculate job layers for overlapping jobs using enhanced algorithm
     var jobsOrdered = Model.Jobs.OrderBy(j => j.ScheduledStart).ToList();
     var jobLayers = new List<List<OpCentrix.Models.Job>>();
     
@@ -26,18 +26,20 @@
         }
     }
     
-    // Calculate layer height (leave space for multiple layers)
+    // Calculate optimized layer height
     var maxLayers = Math.Max(1, jobLayers.Count);
-    var layerHeight = (Model.RowHeight - 20) / maxLayers; // Leave 20px padding
+    var layerHeight = Math.Max(30, (Model.RowHeight - 20) / maxLayers); // Minimum 30px per layer
 }
 
-<!-- Main row container for a machine -->
-<div class="relative bg-white border-gray-200 overflow-hidden" 
-     style="width:calc(var(--day-width,120px)*@totalSlots);height:@rowHeightPx; min-height:@rowHeightPx;">
+<!-- Machine row container with enhanced ID for HTMX targeting -->
+<div id="machine-row-@Model.MachineId" class="relative bg-white border-gray-200 overflow-hidden" 
+     style="width:calc(var(--slot-width) * @totalSlots); height:@rowHeightPx; min-height:@rowHeightPx;"
+     data-machine="@Model.MachineId">
     
-    <!-- Grid background cells -->
+    <!-- Grid background cells with improved responsiveness -->
     <div class="absolute inset-0 grid" 
-         style="grid-template-columns: repeat(@totalSlots, var(--day-width,120px));">
+         style="grid-template-columns: repeat(@totalSlots, var(--slot-width));"
+         data-total-slots="@totalSlots">
         @for (int d = 0; d < Model.Dates.Count; d++)
         {
             var day = Model.Dates[d];
@@ -45,59 +47,103 @@
             {
                 var slotTime = TimeSpan.FromMinutes(s * Model.SlotMinutes);
                 var slotDateTime = day.Add(slotTime);
-                var isToday = day.Date == DateTime.Today && slotTime <= DateTime.Now.TimeOfDay && slotTime < DateTime.Now.TimeOfDay.Add(TimeSpan.FromMinutes(Model.SlotMinutes));
+                var isToday = day.Date == DateTime.Today;
+                var isCurrentTimeSlot = isToday && 
+                    slotTime <= DateTime.Now.TimeOfDay && 
+                    slotTime.Add(TimeSpan.FromMinutes(Model.SlotMinutes)) > DateTime.Now.TimeOfDay;
                 var isWeekend = day.DayOfWeek == DayOfWeek.Saturday || day.DayOfWeek == DayOfWeek.Sunday;
                 var isPastWorkHours = slotTime < TimeSpan.FromHours(6) || slotTime >= TimeSpan.FromHours(18);
                 
-                var cellClasses = new List<string> { "scheduler-grid-cell", "group", "border-r", "border-gray-100", "relative", "cursor-pointer" };
-                if (isToday) cellClasses.Add("bg-blue-50");
+                var cellClasses = new List<string> { 
+                    "scheduler-grid-cell", "group", "border-r", "border-gray-100", 
+                    "relative", "cursor-pointer", "transition-colors", "duration-200" 
+                };
+                
+                if (isCurrentTimeSlot) cellClasses.Add("bg-blue-100 border-blue-300");
+                else if (isToday) cellClasses.Add("bg-blue-25");
                 else if (isWeekend) cellClasses.Add("bg-gray-50");
                 else if (isPastWorkHours) cellClasses.Add("bg-gray-25");
                 
                 <div class="@string.Join(" ", cellClasses)" 
                      style="min-height:@rowHeightPx;"
                      onclick="openJobModal('@Model.MachineId', '@slotDateTime.ToString("yyyy-MM-ddTHH:mm")')"
-                     title="Click to add job at @slotDateTime.ToString("g")">
+                     title="Click to add job at @slotDateTime.ToString("MMM dd, yyyy HH:mm")"
+                     data-slot-time="@slotDateTime.ToString("yyyy-MM-ddTHH:mm")">
                      
-                    <!-- Add Job button (appears on hover) -->
-                    <div class="absolute z-10 top-2 right-2 opacity-0 group-hover:opacity-100 transition-all duration-200 
-                                bg-indigo-600 text-white rounded-full w-6 h-6 text-xs font-bold shadow-lg 
-                                hover:bg-indigo-700 hover:scale-110 flex items-center justify-center pointer-events-none">
-                        +
+                    <!-- Enhanced Add Job button -->
+                    <div class="absolute z-10 top-2 right-2 opacity-0 group-hover:opacity-100 transition-all duration-300 
+                                bg-indigo-600 text-white rounded-full w-7 h-7 text-xs font-bold shadow-lg 
+                                hover:bg-indigo-700 hover:scale-110 flex items-center justify-center pointer-events-none
+                                transform group-hover:scale-100 scale-90">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path>
+                        </svg>
                     </div>
+                    
+                    <!-- Time indicator for current slot -->
+                    @if (isCurrentTimeSlot)
+                    {
+                        <div class="absolute top-1 left-1 w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
+                    }
                 </div>
             }
         }
     </div>
     
-    <!-- Job blocks layer -->
-    <div class="absolute inset-0 pointer-events-none" style="min-height:@rowHeightPx;">
+    <!-- Enhanced job blocks layer with better positioning -->
+    <div class="absolute inset-0 pointer-events-none" 
+         style="min-height:@rowHeightPx;" 
+         data-job-layer="true">
         @for (int l = 0; l < jobLayers.Count; l++)
         {
             var jobsInLayer = jobLayers[l];
             foreach (var job in jobsInLayer)
             {
+                // Enhanced position calculation with better accuracy
                 var leftPosition = job.CalculateGridPosition(start, Model.SlotMinutes);
                 var widthSlots = job.CalculateGridWidth(Model.SlotMinutes);
                 
-                var leftPct = (100.0 * leftPosition / totalSlots).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + "%";
-                var widthPct = (100.0 * widthSlots / totalSlots).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + "%";
+                // Ensure minimum width and prevent overflow
+                var minWidthSlots = 0.5; // Minimum half slot
+                var maxWidthSlots = totalSlots - leftPosition;
+                widthSlots = Math.Max(minWidthSlots, Math.Min(widthSlots, maxWidthSlots));
                 
-                var top = 10 + l * layerHeight;
-                var height = layerHeight - 4; // Small gap between layers
+                var leftPct = Math.Max(0, Math.Min(99, (100.0 * leftPosition / totalSlots))).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + "%";
+                var widthPct = Math.Max(1, Math.Min(100, (100.0 * widthSlots / totalSlots))).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + "%";
+                
+                // Enhanced layer positioning
+                var layerPadding = 4;
+                var top = layerPadding + l * (layerHeight + 2);
+                var height = Math.Max(24, layerHeight - 2); // Minimum 24px height
                 var topPx = $"{top}px";
                 var heightPx = $"{height}px";
                 
-                var jobLabel = $"Job: {job.PartNumber} ({job.Status}), {job.ScheduledStart:g} - {job.ScheduledEnd:g}, Qty: {job.Quantity}";
+                var jobLabel = $"Job: {job.PartNumber} ({job.Status}) - {job.ScheduledStart:MMM dd HH:mm} to {job.ScheduledEnd:MMM dd HH:mm} - Qty: {job.Quantity}";
+                if (!string.IsNullOrEmpty(job.Operator)) jobLabel += $" - Operator: {job.Operator}";
                 
-                <div class="absolute pointer-events-auto transition-all duration-200 hover:z-20 hover:scale-105 cursor-pointer"
-                     style="left:@leftPct; width:@widthPct; top:@topPx; height:@heightPx; min-width:40px; max-width:90%;"
+                <div class="absolute pointer-events-auto transition-all duration-200 hover:z-30 hover:scale-105 cursor-pointer rounded-lg shadow-sm hover:shadow-lg"
+                     style="left:@leftPct; width:@widthPct; top:@topPx; height:@heightPx; min-width:40px;"
                      onclick="openJobModal('@Model.MachineId', '@job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")', @job.Id)"
                      title="@jobLabel" 
-                     aria-label="@jobLabel">
+                     aria-label="@jobLabel"
+                     data-job-id="@job.Id"
+                     data-layer="@l">
                     <partial name="_JobBlock" model="job" />
                 </div>
             }
         }
     </div>
+    
+    <!-- Machine row overlay for debugging (only in development) -->
+    @if (Model.Zoom != "day") // Show grid lines for detailed views
+    {
+        <div class="absolute inset-0 pointer-events-none opacity-10">
+            <div class="grid h-full" style="grid-template-columns: repeat(@totalSlots, var(--slot-width));">
+                @for (int i = 0; i < totalSlots; i++)
+                {
+                    <div class="border-r border-gray-400"></div>
+                }
+            </div>
+        </div>
+    }
 </div>

@@ -1,5 +1,8 @@
 using OpCentrix.Models;
 using OpCentrix.Models.ViewModels;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace OpCentrix.Services
 {
@@ -24,16 +27,16 @@ namespace OpCentrix.Services
         public SchedulerPageViewModel GetSchedulerData(string? zoom = null, DateTime? startDate = null)
         {
             zoom ??= "day";
-            startDate ??= DateTime.Today;
+            var start = (startDate ?? DateTime.UtcNow).Date;
+            var dates = Enumerable.Range(0, 14).Select(i => start.AddDays(i)).ToList();
 
-            // This will be injected with the actual data context in the controller
             return new SchedulerPageViewModel
             {
                 Zoom = zoom,
-                StartDate = startDate.Value,
+                StartDate = start,
                 SlotsPerDay = CalculateSlotsPerDay(zoom),
                 SlotMinutes = CalculateSlotMinutes(zoom),
-                Dates = new List<DateTime>(),
+                Dates = dates,
                 Machines = new List<string> { "TI1", "TI2", "INC" },
                 Jobs = new List<Job>()
             };
@@ -58,10 +61,9 @@ namespace OpCentrix.Services
                 bool placed = false;
                 for (int layerIndex = 0; layerIndex < layers.Count; layerIndex++)
                 {
-                    var layer = layers[layerIndex];
-                    if (!layer.Any(existingJob => job.OverlapsWith(existingJob)))
+                    if (!layers[layerIndex].Any(existingJob => job.OverlapsWith(existingJob)))
                     {
-                        layer.Add(job);
+                        layers[layerIndex].Add(job);
                         placed = true;
                         break;
                     }
@@ -80,33 +82,16 @@ namespace OpCentrix.Services
         {
             errors = new List<string>();
 
-            // Basic validation
-            if (string.IsNullOrWhiteSpace(job.MachineId))
-                errors.Add("Machine is required");
+            if (string.IsNullOrWhiteSpace(job.MachineId)) errors.Add("Machine is required.");
+            if (job.PartId <= 0) errors.Add("Part is required.");
+            if (job.ScheduledStart == default) errors.Add("Start time is required.");
+            if (job.ScheduledEnd <= job.ScheduledStart) errors.Add("End time must be after start time.");
+            if (job.Quantity <= 0) errors.Add("Quantity must be greater than 0.");
 
-            if (job.PartId <= 0)
-                errors.Add("Part is required");
-
-            if (job.ScheduledStart == default)
-                errors.Add("Start time is required");
-
-            if (job.ScheduledEnd == default || job.ScheduledEnd <= job.ScheduledStart)
-                errors.Add("End time must be after start time");
-
-            if (job.Quantity <= 0)
-                errors.Add("Quantity must be greater than 0");
-
-            // Check for overlaps
-            var overlappingJobs = existingJobs.Where(j =>
-                j.MachineId == job.MachineId &&
-                j.Id != job.Id &&
-                job.OverlapsWith(j)
-            ).ToList();
-
-            if (overlappingJobs.Any())
+            if (existingJobs.Any(j => j.Id != job.Id && j.OverlapsWith(job)))
             {
-                var overlappingPartNumbers = string.Join(", ", overlappingJobs.Select(j => j.PartNumber));
-                errors.Add($"This job overlaps with existing jobs: {overlappingPartNumbers}");
+                var overlappingPartNumbers = string.Join(", ", existingJobs.Select(j => j.PartNumber));
+                errors.Add($"This job overlaps with existing jobs: {overlappingPartNumbers}.");
             }
 
             return !errors.Any();
@@ -136,18 +121,17 @@ namespace OpCentrix.Services
 
         private List<DateTime> CalculateDateRange(List<Job> jobs)
         {
+            var startDate = DateTime.UtcNow.Date;
             int days = 14; // Default to 2 weeks
 
             if (jobs.Any())
             {
                 var minDate = jobs.Min(j => j.ScheduledStart.Date);
                 var maxDate = jobs.Max(j => j.ScheduledEnd.Date);
-                var calculatedDays = (int)(maxDate - minDate).TotalDays + 3; // Add buffer
-                days = Math.Max(7, Math.Min(30, calculatedDays)); // Between 1 week and 1 month
-                return Enumerable.Range(0, days).Select(i => minDate.AddDays(i)).ToList();
+                startDate = minDate;
+                days = Math.Max(14, (int)(maxDate - minDate).TotalDays + 3);
             }
-
-            var startDate = DateTime.Today;
+            
             return Enumerable.Range(0, days).Select(i => startDate.AddDays(i)).ToList();
         }
     }

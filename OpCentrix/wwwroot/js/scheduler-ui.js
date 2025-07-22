@@ -68,13 +68,14 @@ class SchedulerUI {
         if (partSelect && startInput && endInput) {
             const updateEndTime = () => {
                 const selectedOption = partSelect.options[partSelect.selectedIndex];
-                const duration = parseFloat(selectedOption.getAttribute('data-duration')) || 1;
+                if (!selectedOption || !selectedOption.value) return;
+
+                const estimatedHours = parseFloat(selectedOption.getAttribute('data-estimated-hours')) || 8;
                 
                 if (startInput.value) {
                     const start = new Date(startInput.value);
                     if (!isNaN(start.getTime())) {
-                        const end = new Date(start);
-                        end.setDate(end.getDate() + duration);
+                        const end = new Date(start.getTime() + estimatedHours * 60 * 60 * 1000);
                         endInput.value = end.toISOString().slice(0, 16);
                     }
                 }

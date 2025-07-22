@@ -214,3 +214,6 @@ app.UseAuthorization();
 app.MapRazorPages();
 
 app.Run();
+
+// Make Program accessible for testing
+public partial class Program { }
