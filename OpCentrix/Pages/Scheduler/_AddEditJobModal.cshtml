@@ -24,7 +24,7 @@
                 <select name="Job.MachineId" class="w-full border border-gray-300 rounded p-2" required>
                     @foreach (var m in new[]{"TI1","TI2","INC"})
                     {
-                        <option value="@m" selected="@(Model.Job.MachineId==m)">@m</option>
+                        <option value="@m" @(Model.Job.MachineId==m ? "selected" : "")>@m</option>
                     }
                 </select>
             </div>
@@ -35,7 +35,7 @@
                     <option value="">-- Select Part --</option>
                     @foreach (var part in Model.Parts)
                     {
-                        <option value="@part.Id" @(Model.Job.PartId==part.Id?"selected":null)>
+                        <option value="@part.Id" @(Model.Job.PartId==part.Id ? "selected" : "")>
                             @part.PartNumber (@part.AvgDurationDays d)
                         </option>
                     }
@@ -53,14 +53,30 @@
                 </div>
             </div>
 
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm">Status</label>
+                    <select name="Job.Status" class="w-full border rounded p-2">
+                        @foreach (var s in new[] { "Scheduled", "Active", "Delayed", "Complete" })
+                        {
+                            <option value="@s" @(Model.Job.Status==s ? "selected" : "")>@s</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm">Operator</label>
+                    <input type="text" name="Job.Operator" value="@Model.Job.Operator" class="w-full border rounded p-2" />
+                </div>
+            </div>
+
             <div>
                 <label class="block text-sm">Quantity</label>
-                <input type="number" name="Job.PartId" value="@Model.Job.PartId" class="w-full border rounded p-2" />
+                <input type="number" name="Job.Quantity" value="@Model.Job.Quantity" class="w-full border rounded p-2" />
             </div>
 
             <div>
                 <label class="block text-sm">Notes</label>
-                <textarea name="Job.Part.Description" class="w-full border rounded p-2">@Model.Job.Part?.Description</textarea>
+                <textarea name="Job.Notes" class="w-full border rounded p-2">@Model.Job.Notes</textarea>
             </div>
 
             <div class="flex justify-between items-center">
