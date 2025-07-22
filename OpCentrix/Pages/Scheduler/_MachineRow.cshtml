@@ -1,34 +1,44 @@
-﻿@* _MachineRow.cshtml *@
-@model OpCentrix.Models.MachineViewModel
-
+@model OpCentrix.Models.ViewModels.MachineRowViewModel
 @{
-    var start = ViewData["StartOfWeek"] as DateTime? ?? DateTime.Today;
+    var start = Model.Dates.First();
     int current = 0;
-    var jobs = Model.Jobs.OrderBy(j => j.StartDate).ToList();
+    var jobs = Model.Jobs.OrderBy(j => j.ScheduledStart).ToList();
 }
-<div class="grid grid-cols-7 gap-1">
-    @foreach (var job in jobs)
+<div class="grid grid-cols-@Model.Dates.Count">
+@foreach (var job in jobs)
+{
+    var index = (job.ScheduledStart.Date - start.Date).Days;
+    if (index > current)
     {
-        var index = (job.StartDate.Date - start.Date).Days;
-        if (index > current)
+        for (int i = current; i < index && i < Model.Dates.Count; i++)
         {
-            for (int i = current; i < index && i < 7; i++)
-            {
-                var day = start.AddDays(i);
-                <div class="border h-20" hx-get="/Scheduler?handler=ShowAddModal&amp;machine=@Model.Name&amp;date=@day.ToString("yyyy-MM-dd")" hx-target="#modalContainer" hx-swap="innerHTML"></div>
-            }
-            current = index;
+            var day = start.AddDays(i);
+            <div class="relative border h-20">
+                <button class="absolute bottom-1 right-1 text-xs text-gray-500 hover:text-indigo-600"
+                        hx-get="/Scheduler/ShowAddModal?machineId=@Model.MachineId&date=@day.ToString("yyyy-MM-dd")"
+                        hx-target="#modal-content" hx-swap="innerHTML">
+                    + Add Job
+                </button>
+            </div>
         }
-        if (index >= 7) { break; }
-        var span = Math.Min(job.DurationDays, 7 - index);
-        <div class="border h-20 col-span-@span">
-            @await Html.PartialAsync("_JobBlock", job)
-        </div>
-        current = index + span;
+        current = index;
     }
-    @for (int i = current; i < 7; i++)
-    {
-        var day = start.AddDays(i);
-        <div class="border h-20" hx-get="/Scheduler?handler=ShowAddModal&amp;machine=@Model.Name&amp;date=@day.ToString("yyyy-MM-dd")" hx-target="#modalContainer" hx-swap="innerHTML"></div>
-    }
+    if (index >= Model.Dates.Count) { break; }
+    var span = Math.Min((job.ScheduledEnd.Date - job.ScheduledStart.Date).Days + 1, Model.Dates.Count - index);
+    <div class="relative border h-20 col-span-@span">
+        <partial name="_JobBlock" model="job" />
+    </div>
+    current = index + span;
+}
+@for (int i = current; i < Model.Dates.Count; i++)
+{
+    var day = start.AddDays(i);
+    <div class="relative border h-20">
+        <button class="absolute bottom-1 right-1 text-xs text-gray-500 hover:text-indigo-600"
+                hx-get="/Scheduler/ShowAddModal?machineId=@Model.MachineId&date=@day.ToString("yyyy-MM-dd")"
+                hx-target="#modal-content" hx-swap="innerHTML">
+            + Add Job
+        </button>
+    </div>
+}
 </div>

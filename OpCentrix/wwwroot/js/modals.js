@@ -174,9 +174,11 @@ export async function deleteJob() {
 
 document.body.addEventListener('htmx:afterSwap', function (e) {
     if (e.detail.target.id === "modal-content") {
-        const isClosing = e.detail.xhr.responseText.includes("class=\"bg-white");
-        if (!isClosing) {
-            document.getElementById("modal-content").classList.remove("hidden");
+        const container = document.getElementById("modal-content");
+        if (container.innerHTML.trim() === "") {
+            container.classList.add("hidden");
+        } else {
+            container.classList.remove("hidden");
         }
     }
 });
