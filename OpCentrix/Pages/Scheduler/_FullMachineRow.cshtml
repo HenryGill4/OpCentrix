@@ -1,0 +1,122 @@
+@model dynamic
+
+@{
+    var machineId = Model.MachineId;
+    var dates = Model.Dates as List<DateTime> ?? new List<DateTime>();
+    var jobs = Model.Jobs as List<OpCentrix.Models.Job> ?? new List<OpCentrix.Models.Job>();
+    var rowHeight = Model.RowHeight;
+    var slotsPerDay = Model.SlotsPerDay;
+    var slotMinutes = Model.SlotMinutes;
+    var jobCount = Model.JobCount;
+    var totalHours = Model.TotalHours;
+    
+    // Pre-calculate slot times to avoid lambda expression issues
+    var slotTimes = new List<TimeSpan>();
+    for (int i = 0; i < slotsPerDay; i++)
+    {
+        slotTimes.Add(TimeSpan.FromMinutes(i * slotMinutes));
+    }
+}
+
+<!-- FIXED: Full machine row container with proper data-machine attribute for HTMX targeting -->
+<div class="flex border-b border-gray-200 hover:bg-gray-50 transition-colors group" 
+     style="min-height:@(rowHeight)px;" 
+     data-machine="@machineId">
+
+    <!-- Machine label -->
+    <div class="scheduler-machine-label @machineId.ToLower()" 
+         style="height:@(rowHeight)px;">
+        <div class="flex flex-col items-center justify-center h-full p-2">
+            <div class="text-lg font-bold">@machineId</div>
+            <div class="text-xs opacity-75 mt-1">@jobCount job@(jobCount != 1 ? "s" : "")</div>
+            @if (totalHours > 0)
+            {
+                <div class="text-xs opacity-60">@totalHours.ToString("F1")h total</div>
+            }
+        </div>
+    </div>
+
+    <!-- Machine row grid cells and jobs container -->
+    <div class="flex-1">
+        @for (int d = 0; d < dates.Count; d++)
+        {
+            var day = dates[d];
+            for (int s = 0; s < slotsPerDay; s++)
+            {
+                var slotTime = slotTimes[s];
+                var slotDateTime = day.Add(slotTime);
+                var isToday = day.Date == DateTime.Today;
+                var isCurrentTimeSlot = isToday && 
+                    slotTime <= DateTime.Now.TimeOfDay && 
+                    slotTime.Add(TimeSpan.FromMinutes(slotMinutes)) > DateTime.Now.TimeOfDay;
+                var isWeekend = day.DayOfWeek == DayOfWeek.Saturday || day.DayOfWeek == DayOfWeek.Sunday;
+                var isPastWorkHours = slotTime < TimeSpan.FromHours(6) || slotTime >= TimeSpan.FromHours(18);
+                
+                var cellClasses = new List<string> { 
+                    "scheduler-grid-cell", "group", "relative", "cursor-pointer"
+                };
+                
+                if (isCurrentTimeSlot) cellClasses.Add("current-time");
+                else if (isWeekend) cellClasses.Add("weekend");
+                else if (isPastWorkHours) cellClasses.Add("off-hours");
+                
+                <div class="@string.Join(" ", cellClasses)" 
+                     style="height:@(rowHeight)px;"
+                     onclick="openJobModal('@machineId', '@slotDateTime.ToString("yyyy-MM-ddTHH:mm")')"
+                     title="Click to add job at @slotDateTime.ToString("MMM dd, yyyy HH:mm")"
+                     data-slot-time="@slotDateTime.ToString("yyyy-MM-ddTHH:mm")"
+                     data-machine="@machineId">
+                     
+                    <!-- Jobs in this slot -->
+                    @{
+                        var slotJobs = jobs.Where(job => 
+                            job.ScheduledStart < slotDateTime.Add(TimeSpan.FromMinutes(slotMinutes)) &&
+                            job.ScheduledEnd > slotDateTime).ToList();
+                    }
+                    
+                    @foreach (var job in slotJobs)
+                    {
+                        // Calculate job position and size within the slot
+                        var startDate = dates.Count > 0 ? dates[0].Date : DateTime.Today;
+                        var leftPosition = job.CalculateGridPosition(startDate, slotMinutes);
+                        var widthSlots = job.CalculateGridWidth(slotMinutes);
+                        
+                        // Only render the job if this is the starting slot
+                        var jobStartSlot = (int)Math.Floor(job.CalculateGridPosition(startDate, slotMinutes));
+                        var currentSlot = d * slotsPerDay + s;
+                        
+                        @if (jobStartSlot == currentSlot)
+                        {
+                            var leftPct = (100.0 * (leftPosition - currentSlot)).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + "%";
+                            var widthPct = (100.0 * widthSlots).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + "%";
+                            
+                            <div class="absolute top-2 bottom-2 job-block @machineId.ToLower() status-@job.Status.ToLower().Replace(" ", "-")"
+                                 style="left:@leftPct; width:@widthPct; min-width:40px; z-index:10;"
+                                 onclick="event.stopPropagation(); openJobModal('@machineId', '@job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")', @job.Id)"
+                                 title="@job.PartNumber - @job.Status (@job.DurationHours.ToString("F1")h)"
+                                 data-job-id="@job.Id">
+                                <partial name="_JobBlock" model="job" />
+                            </div>
+                        }
+                    }
+                    
+                    <!-- Enhanced Add Job button -->
+                    <div class="absolute z-10 top-2 right-2 opacity-0 group-hover:opacity-100 transition-all duration-300 
+                                bg-indigo-600 text-white rounded-full w-7 h-7 text-xs font-bold shadow-lg 
+                                hover:bg-indigo-700 hover:scale-110 flex items-center justify-center pointer-events-none
+                                transform group-hover:scale-100 scale-90">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                    </div>
+                    
+                    <!-- Time indicator for current slot -->
+                    @if (isCurrentTimeSlot)
+                    {
+                        <div class="absolute top-1 left-1 w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
+                    }
+                </div>
+            }
+        }
+    </div>
+</div>

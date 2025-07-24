@@ -1,0 +1,79 @@
+@page
+@model OpCentrix.Pages.Coating.IndexModel
+@{
+    ViewData["Title"] = "Coating Department";
+    Layout = "_OperatorLayout";
+}
+
+<div class="container-fluid py-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Coating Department</h1>
+                <p class="mt-1 text-sm text-gray-600">Manage coating operations and materials</p>
+            </div>
+            <div>
+                <button class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-all">
+                    <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    New Coating Job
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="border-b border-gray-200 bg-gray-50 px-6 py-4">
+                <h2 class="text-lg font-medium text-gray-900">Coating Operations</h2>
+            </div>
+            
+            <div class="p-6">
+                <div class="alert alert-info bg-blue-50 text-blue-700 p-4 rounded-lg mb-6">
+                    <h6 class="font-bold mb-2">Coming Soon!</h6>
+                    <p class="mb-3">The Coating Department module is currently under development. This area will include:</p>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li>Coating job tracking and scheduling</li>
+                        <li>Chemical inventory management</li>
+                        <li>Quality control processes</li>
+                        <li>Equipment maintenance logs</li>
+                        <li>Environmental compliance tracking</li>
+                    </ul>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                    <div class="bg-gray-50 rounded-xl p-6 text-center">
+                        <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">Chemical Inventory</h3>
+                        <p class="text-sm text-gray-600">Track coating materials and chemicals with automated inventory management</p>
+                    </div>
+                    
+                    <div class="bg-gray-50 rounded-xl p-6 text-center">
+                        <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">Quality Control</h3>
+                        <p class="text-sm text-gray-600">Monitor coating quality and specifications with detailed QC reporting</p>
+                    </div>
+                    
+                    <div class="bg-gray-50 rounded-xl p-6 text-center">
+                        <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">Equipment Tracking</h3>
+                        <p class="text-sm text-gray-600">Manage coating equipment maintenance and scheduling</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

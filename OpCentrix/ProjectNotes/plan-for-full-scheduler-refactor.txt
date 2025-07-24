@@ -1,0 +1,58 @@
+# Scheduler System Full Refactor & Validation Plan
+
+## 1. Data Model & Backend Logic
+1.1. Review and correct the Job, Part, and JobLogEntry models for required fields, default values, and data annotations.
+1.2. Ensure the SchedulerPageViewModel and MachineRowViewModel are complete and match UI needs.
+1.3. Refactor backend logic to:
+    - Prevent job overlaps per machine (with unit tests)
+    - Auto-calculate ScheduledEnd from part duration
+    - Centralize date range, row height, and stacking logic
+    - Ensure all partial updates use the same logic as full page load
+    - Update summary/footer on all changes
+
+## 2. Scheduler Grid & UI Logic
+2.1. Review and refactor the scheduler grid rendering:
+    - Ensure correct slot calculation for all zoom levels (day/hour/30min/15min)
+    - Validate row stacking and height calculation for overlapping jobs
+    - Ensure grid is responsive and accessible
+2.2. Validate and improve the MachineRow partial and job block rendering
+2.3. Ensure empty state is shown when no jobs exist
+
+## 3. Modal, Forms, and Validation
+3.1. Refactor add/edit job modal:
+    - Ensure modal opens/closes correctly (HTMX and JS)
+    - Validate all required fields (client and server)
+    - Auto-calculate end date/time when part or start changes
+    - Prevent job overlaps on save (with user feedback)
+    - Ensure delete works and updates grid/summary
+3.2. Ensure jQuery validation and unobtrusive validation are correctly wired up
+3.3. Ensure validation errors are shown in the modal and on the grid
+
+## 4. Job Log & History
+4.1. Ensure job log/history is recorded on all add/edit/delete actions
+4.2. Display job log in the UI (JobLog page/partial)
+4.3. Add unit tests for job log creation and retrieval
+
+## 5. Footer Summary & Analytics
+5.1. Refactor footer summary to update on all job changes
+5.2. Ensure machine hours and analytics are accurate and update live
+
+## 6. Zoom Controls & Persistence
+6.1. Validate zoom in/out controls update the grid and persist user preference
+6.2. Ensure time granularity (day/hour/30min/15min) updates grid and backend logic
+6.3. Add tests for zoom and slot logic
+
+## 7. Testing & Edge Cases
+7.1. Add/expand unit tests for all backend logic (overlap, stacking, summary, etc.)
+7.2. Add/expand E2E tests for all UI flows (modal, validation, zoom, add/edit/delete)
+7.3. Test with edge cases: overlapping jobs, jobs at day boundaries, empty state, max zoom, etc.
+
+## 8. Deployment & Cleanup
+8.1. Remove test data and review configuration
+8.2. Document setup, usage, and any known limitations
+
+---
+# Instructions
+- Dispatch each step or sub-step as a separate task.
+- Each step should be completed and validated before moving to the next.
+- If a step fails or reveals a bug, fix it before proceeding.

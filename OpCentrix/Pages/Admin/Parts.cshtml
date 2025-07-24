@@ -1,0 +1,206 @@
+@page
+@model OpCentrix.Pages.Admin.PartsModel
+@{
+    ViewData["Title"] = "Manage Parts";
+    Layout = "~/Pages/Shared/_AdminLayout.cshtml";
+}
+
+<div class="mb-6">
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Manage Parts</h1>
+            <p class="text-gray-600 mt-1">Create, edit, and manage manufacturing parts</p>
+        </div>
+        <button hx-get="/Admin/Parts?handler=Add" 
+                hx-target="#modal-container .modal-content"
+                hx-swap="innerHTML"
+                hx-on::before-request="console.log('?? [HTMX] Starting request to create new part'); console.log('?? [HTMX] Target:', '#modal-container .modal-content');"
+                hx-on::after-request="console.log('?? [HTMX] Response received:', event.detail.xhr.status, event.detail.xhr.statusText); console.log('?? [HTMX] Response body length:', event.detail.xhr.responseText.length); if(event.detail.xhr.status === 200) { console.log('? [HTMX] Success - showing modal'); document.getElementById('modal-container').classList.remove('hidden'); document.getElementById('modal-container').classList.add('flex'); document.body.style.overflow = 'hidden'; } else { console.error('? [HTMX] Failed with status:', event.detail.xhr.status); }"
+                hx-on::response-error="console.error('?? [HTMX] Response error:', event.detail); if (typeof showErrorNotification === 'function') { showErrorNotification('Error loading form. Please try again.'); } else { alert('Error loading form. Check console for details.'); }"
+                class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">
+            + Add New Part
+        </button>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="bg-white rounded-lg shadow p-6 mb-6">
+    <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+            <input type="text" name="search" value="@Model.SearchTerm" placeholder="Part number, description, material..." 
+                   class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+        </div>
+        
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Material</label>
+            <input type="text" name="material" value="@Model.MaterialFilter" placeholder="Material type..." 
+                   class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+        </div>
+        
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <select name="active" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <option value="">All Parts</option>
+                <option value="true" selected="@(Model.ActiveFilter == "true")">Active Only</option>
+                <option value="false" selected="@(Model.ActiveFilter == "false")">Inactive Only</option>
+            </select>
+        </div>
+        
+        <div class="flex items-end">
+            <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                Filter
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Results Summary -->
+<div class="mb-4">
+    <p class="text-sm text-gray-600">
+        Showing @((Model.PageNumber - 1) * Model.PageSize + 1) to @(Math.Min(Model.PageNumber * Model.PageSize, Model.TotalParts)) of @Model.TotalParts parts
+    </p>
+</div>
+
+<!-- Parts Table -->
+<div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Part Number</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Material</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Costs</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                @if (Model.Parts.Any())
+                {
+                    @foreach (var part in Model.Parts)
+                    {
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">@part.PartNumber</div>
+                                <div class="text-sm text-gray-500">ID: @part.Id</div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="text-sm text-gray-900">@part.Description</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    @part.Material
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                <div>@part.AvgDuration</div>
+                                <div class="text-xs text-gray-500">@part.EstimatedHours hrs</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                <div>Material: @part.MaterialCostPerKg.ToString("C")</div>
+                                <div class="text-xs text-gray-500">Labor: @part.StandardLaborCostPerHour.ToString("C")/hr</div>
+                                <div class="text-xs text-gray-500">Setup: @part.SetupCost.ToString("C")</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                @if (part.IsActive)
+                                {
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        Active
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                        Inactive
+                                    </span>
+                                }
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                                <button hx-get="/Admin/Parts?handler=Edit&id=@part.Id" 
+                                        hx-target="#modal-container .modal-content"
+                                        hx-swap="innerHTML"
+                                        hx-on::before-request="console.log('?? [HTMX] Starting edit request for part ID:', @part.Id);"
+                                        hx-on::after-request="console.log('?? [HTMX] Edit response received:', event.detail.xhr.status); if(event.detail.xhr.status === 200) { console.log('? [HTMX] Edit success - showing modal'); showModal(event.detail.xhr.responseText); } else { console.error('? [HTMX] Edit failed:', event.detail.xhr.status); }"
+                                        hx-on::response-error="console.error('?? [HTMX] Edit error:', event.detail);"
+                                        class="text-blue-600 hover:text-blue-900 transition">
+                                    Edit
+                                </button>
+                                <form style="display: inline;"
+                                      hx-post="/Admin/Parts?handler=Delete&id=@part.Id"
+                                      hx-confirm="Are you sure you want to delete this part? This cannot be undone."
+                                      hx-on::after-request="console.log('?? [PARTS] Delete response received:', event.detail.xhr.status); if(event.detail.xhr.status === 200) { console.log('? [PARTS] Delete success'); window.location.reload(); } else { console.error('? [PARTS] Delete failed:', event.detail.xhr.status); }"
+                                      hx-on::response-error="console.error('?? [PARTS] Delete error:', event.detail); showNotification('Error deleting part. Please try again.', 'error');">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="text-red-600 hover:text-red-900 transition">
+                                        Delete
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="7" class="px-6 py-4 text-center text-gray-500">
+                            No parts found matching your criteria.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Pagination -->
+@if (Model.TotalPages > 1)
+{
+    <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 mt-6 rounded-lg shadow">
+        <div class="flex-1 flex justify-between sm:hidden">
+            @if (Model.PageNumber > 1)
+            {
+                <a href="?page=@(Model.PageNumber - 1)&search=@Model.SearchTerm&material=@Model.MaterialFilter&active=@Model.ActiveFilter" 
+                   class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                    Previous
+                </a>
+            }
+            @if (Model.PageNumber < Model.TotalPages)
+            {
+                <a href="?page=@(Model.PageNumber + 1)&search=@Model.SearchTerm&material=@Model.MaterialFilter&active=@Model.ActiveFilter" 
+                   class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                    Next
+                </a>
+            }
+        </div>
+        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+            <div>
+                <p class="text-sm text-gray-700">
+                    Page <span class="font-medium">@Model.PageNumber</span> of <span class="font-medium">@Model.TotalPages</span>
+                </p>
+            </div>
+            <div>
+                <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                    @for (int i = Math.Max(1, Model.PageNumber - 2); i <= Math.Min(Model.TotalPages, Model.PageNumber + 2); i++)
+                    {
+                        @if (i == Model.PageNumber)
+                        {
+                            <span class="relative inline-flex items-center px-4 py-2 border border-blue-500 bg-blue-50 text-sm font-medium text-blue-600">
+                                @i
+                            </span>
+                        }
+                        else
+                        {
+                            <a href="?page=@i&search=@Model.SearchTerm&material=@Model.MaterialFilter&active=@Model.ActiveFilter" 
+                               class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                @i
+                            </a>
+                        }
+                    }
+                </nav>
+            </div>
+        </div>
+    </div>
+}

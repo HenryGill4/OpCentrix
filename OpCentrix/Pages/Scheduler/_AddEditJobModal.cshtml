@@ -1,96 +1,605 @@
 @using OpCentrix.Models
 @model OpCentrix.Models.ViewModels.AddEditJobViewModel
 
-<div class="rounded-2xl bg-white p-6 shadow-2xl" id="modal">
-    <form hx-post="/Scheduler/AddOrUpdateJob"
-          hx-target="#row-@Model.Job.MachineId"
-          hx-swap="outerHTML"
-          class="space-y-4">
+<!-- Enhanced Modal Container with improved accessibility and UX -->
+<div id="job-modal-container" class="modal-backdrop" onclick="closeJobModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <form hx-post="/Scheduler?handler=AddOrUpdateJob" 
+              hx-target="#machine-row-@Model.Job.MachineId" 
+              hx-swap="outerHTML"
+              hx-on::before-request="showFormLoading()" 
+              hx-on::after-request="handleFormResponse(event)"
+              class="modal-form" 
+              id="job-form"
+              novalidate>
+            
+            @Html.AntiForgeryToken()
+            
+            <!-- Modal Header -->
+            <div class="modal-header">
+                <h2 class="modal-title">
+                    @(Model.Job.Id == 0 ? "Schedule New SLS Job" : $"Edit Job #{Model.Job.Id}")
+                </h2>
+                <button type="button" onclick="closeJobModal()" class="modal-close-btn" aria-label="Close">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
 
-            @if (Model.Errors.Any())
+            <!-- Error Display -->
+            @if (Model.Errors?.Any() == true)
             {
-                <ul class="text-red-600 text-sm list-disc pl-5">
-                    @foreach (var err in Model.Errors)
-                    {
-                        <li>@err</li>
-                    }
-                </ul>
+                <div class="error-container">
+                    <div class="error-header">
+                        <svg class="w-5 h-5 text-red-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                        </svg>
+                        <h3 class="error-title">Please correct the following issues:</h3>
+                    </div>
+                    <ul class="error-list">
+                        @foreach (var error in Model.Errors)
+                        {
+                            <li>@error</li>
+                        }
+                    </ul>
+                </div>
             }
 
+            <!-- Hidden Fields -->
             <input type="hidden" name="Job.Id" value="@Model.Job.Id" />
+            
+            <!-- Form Content -->
+            <div class="modal-body">
+                <!-- Basic Job Information -->
+                <div class="form-section">
+                    <!-- Left Column -->
+                    <div class="form-column">
+                        <h3 class="form-section-title">Job Details</h3>
+                        
+                        <div class="form-group">
+                            <label class="form-label required" for="machine-select">Machine</label>
+                            <select name="Job.MachineId" id="machine-select" class="form-select" required onchange="JobForm.filterPartsByMachine()">
+                                <option value="TI1" selected="@(Model.Job.MachineId == "TI1")">TI1 - Titanium Line 1 (TruPrint 3000)</option>
+                                <option value="TI2" selected="@(Model.Job.MachineId == "TI2")">TI2 - Titanium Line 2 (TruPrint 3000)</option>
+                                <option value="INC" selected="@(Model.Job.MachineId == "INC")">INC - Inconel Line (TruPrint 5000)</option>
+                            </select>
+                            <small class="text-xs text-gray-500 mt-1">Each machine is configured for specific materials</small>
+                        </div>
 
-            <div>
-                <label class="block text-sm font-medium">Machine</label>
-                <select name="Job.MachineId" class="w-full border border-gray-300 rounded p-2" required>
-                    @foreach (var m in new[]{"TI1","TI2","INC"})
+                        <div class="form-group">
+                            <label class="form-label required" for="part-select">Part</label>
+                            <select name="Job.PartId" id="part-select" class="form-select" required onchange="updateJobFromPart()">
+                                <option value="">Select a part...</option>
+                                @foreach (var part in Model.Parts.OrderBy(p => p.PartNumber))
+                                {
+                                    <option value="@part.Id" 
+                                            selected="@(Model.Job.PartId == part.Id)"
+                                            data-part-number="@part.PartNumber"
+                                            data-estimated-hours="@part.EstimatedHours.ToString("F1")"
+                                            data-sls-material="@part.SlsMaterial"
+                                            data-material-type="@(part.SlsMaterial?.Contains("Ti-6Al-4V") == true ? "Titanium" : part.SlsMaterial?.Contains("Inconel") == true ? "Inconel" : "Other")"
+                                            data-laser-power="@part.RecommendedLaserPower"
+                                            data-scan-speed="@part.RecommendedScanSpeed"
+                                            data-layer-thickness="@part.RecommendedLayerThickness"
+                                            data-hatch-spacing="@part.RecommendedHatchSpacing"
+                                            data-build-temperature="@part.RecommendedBuildTemperature"
+                                            data-argon-purity="@part.RequiredArgonPurity.ToString("F1")"
+                                            data-oxygen-content="@part.MaxOxygenContent"
+                                            data-powder-usage="@part.PowderRequirementKg.ToString("F2")"
+                                            data-preheating-time="@part.PreheatingTimeMinutes"
+                                            data-cooling-time="@part.CoolingTimeMinutes"
+                                            data-post-processing-time="@part.PostProcessingTimeMinutes">
+                                        @part.PartNumber - @part.Description
+                                    </option>
+                                }
+                            </select>
+                            <small class="text-xs text-gray-500 mt-1">Only parts compatible with the selected machine are shown</small>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label required" for="quantity-input">Quantity</label>
+                                <input type="number" name="Job.Quantity" id="quantity-input" value="@Model.Job.Quantity" min="1" max="1000" 
+                                       class="form-input" required onchange="updateEndTimeFromQuantity()" />
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label" for="priority-select">Priority</label>
+                                <select name="Job.Priority" id="priority-select" class="form-select">
+                                    <option value="1" selected="@(Model.Job.Priority == 1)">1 - Critical (Rush)</option>
+                                    <option value="2" selected="@(Model.Job.Priority == 2)">2 - High Priority</option>
+                                    <option value="3" selected="@(Model.Job.Priority == 3)">3 - Normal</option>
+                                    <option value="4" selected="@(Model.Job.Priority == 4)">4 - Low Priority</option>
+                                    <option value="5" selected="@(Model.Job.Priority == 5)">5 - Background</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label required" for="start-input">Start Date & Time</label>
+                                <input type="datetime-local" name="Job.ScheduledStart" id="start-input"
+                                       value="@Model.Job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")" 
+                                       class="form-input" 
+                                       required onchange="updateEndTimeFromStart()" />
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label required" for="end-input">End Date & Time</label>
+                                <input type="datetime-local" name="Job.ScheduledEnd" id="end-input"
+                                       value="@Model.Job.ScheduledEnd.ToString("yyyy-MM-ddTHH:mm")" 
+                                       class="form-input" required />
+                                <small class="text-xs text-gray-500 mt-1">Duration: <span id="duration-display">@((Model.Job.ScheduledEnd - Model.Job.ScheduledStart).TotalHours.ToString("F1")) hours</span></small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column -->
+                    <div class="form-column">
+                        <h3 class="form-section-title">SLS Process Parameters</h3>
+                        
+                        <div class="form-group">
+                            <label class="form-label required" for="sls-material">Material</label>
+                            <select name="Job.SlsMaterial" id="sls-material" class="form-select" required>
+                                <option value="Ti-6Al-4V Grade 5" 
+                                        selected="@(Model.Job.SlsMaterial == "Ti-6Al-4V Grade 5")"
+                                        data-compatible-machines="TI1,TI2">Ti-6Al-4V Grade 5 (Aerospace)</option>
+                                <option value="Ti-6Al-4V ELI Grade 23" 
+                                        selected="@(Model.Job.SlsMaterial == "Ti-6Al-4V ELI Grade 23")"
+                                        data-compatible-machines="TI1,TI2">Ti-6Al-4V ELI Grade 23 (Medical)</option>
+                                <option value="Inconel 718" 
+                                        selected="@(Model.Job.SlsMaterial == "Inconel 718")"
+                                        data-compatible-machines="INC">Inconel 718 (High-Temp)</option>
+                                <option value="Inconel 625" 
+                                        selected="@(Model.Job.SlsMaterial == "Inconel 625")"
+                                        data-compatible-machines="INC">Inconel 625 (Corrosion Resistant)</option>
+                            </select>
+                            <small class="text-xs text-gray-500 mt-1">Material options filtered by machine compatibility</small>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" for="laser-power">Laser Power (W)</label>
+                                <input type="number" name="Job.LaserPowerWatts" id="laser-power" value="@Model.Job.LaserPowerWatts" min="50" max="400" step="1" class="form-input" />
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label" for="scan-speed">Scan Speed (mm/s)</label>
+                                <input type="number" name="Job.ScanSpeedMmPerSec" id="scan-speed" value="@Model.Job.ScanSpeedMmPerSec" min="100" max="5000" step="10" class="form-input" />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" for="layer-thickness">Layer Thickness (?m)</label>
+                                <input type="number" name="Job.LayerThicknessMicrons" id="layer-thickness" value="@Model.Job.LayerThicknessMicrons" min="20" max="60" step="5" class="form-input" />
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label" for="hatch-spacing">Hatch Spacing (?m)</label>
+                                <input type="number" name="Job.HatchSpacingMicrons" id="hatch-spacing" value="@Model.Job.HatchSpacingMicrons" min="50" max="200" step="5" class="form-input" />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" for="build-temperature">Build Temperature (°C)</label>
+                                <input type="number" name="Job.BuildTemperatureCelsius" id="build-temperature" value="@Model.Job.BuildTemperatureCelsius" min="100" max="300" step="5" class="form-input" />
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label" for="powder-usage">Estimated Powder (kg)</label>
+                                <input type="number" name="Job.EstimatedPowderUsageKg" id="powder-usage" value="@Model.Job.EstimatedPowderUsageKg.ToString("F2")" min="0" max="50" step="0.1" class="form-input" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Additional Information -->
+                <div class="form-section">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="order-number">Customer Order Number</label>
+                            <input type="text" name="Job.CustomerOrderNumber" id="order-number" value="@Model.Job.CustomerOrderNumber" maxlength="100" class="form-input" placeholder="CO-2024-001" />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="operator-input">Operator</label>
+                            <input type="text" name="Job.Operator" id="operator-input" value="@Model.Job.Operator" maxlength="100" class="form-input" placeholder="Enter operator name" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="notes-input">Special Instructions & Notes</label>
+                        <textarea name="Job.Notes" id="notes-input" rows="3" maxlength="1000" class="form-textarea" placeholder="Enter any special instructions, quality requirements, or notes for this job...">@Model.Job.Notes</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="modal-footer">
+                <div class="footer-left">
+                    <div class="form-group">
+                        <label class="form-label" for="status-select">Status</label>
+                        <select name="Job.Status" id="status-select" class="form-select">
+                            <option value="Scheduled" selected="@(Model.Job.Status == "Scheduled")">Scheduled</option>
+                            <option value="Preheating" selected="@(Model.Job.Status == "Preheating")">Preheating</option>
+                            <option value="Building" selected="@(Model.Job.Status == "Building")">Building</option>
+                            <option value="Cooling" selected="@(Model.Job.Status == "Cooling")">Cooling</option>
+                            <option value="Post-Processing" selected="@(Model.Job.Status == "Post-Processing")">Post-Processing</option>
+                            <option value="QC-Review" selected="@(Model.Job.Status == "QC-Review")">QC Review</option>
+                            <option value="Completed" selected="@(Model.Job.Status == "Completed")">Completed</option>
+                            <option value="On-Hold" selected="@(Model.Job.Status == "On-Hold")">On Hold</option>
+                            <option value="Cancelled" selected="@(Model.Job.Status == "Cancelled")">Cancelled</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-checkbox">
+                        <input type="checkbox" name="Job.IsRushJob" value="true" 
+                               checked="@Model.Job.IsRushJob"
+                               class="checkbox-input" id="rush-job" />
+                        <label for="rush-job" class="checkbox-label">Rush Job (Expedited Processing)</label>
+                    </div>
+                </div>
+
+                <div class="footer-right">
+                    @if (Model.Job.Id > 0)
                     {
-                        <option value="@m" selected="@(Model.Job.MachineId==m)">@m</option>
+                        <form style="display: inline;"
+                              hx-post="/Scheduler?handler=DeleteJob&id=@Model.Job.Id"
+                              hx-target="#machine-row-@Model.Job.MachineId"
+                              hx-swap="outerHTML"
+                              hx-confirm="Are you sure you want to delete this job? This action cannot be undone."
+                              hx-on::after-request="closeJobModal()">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-danger">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                                Delete Job
+                            </button>
+                        </form>
                     }
-                </select>
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium">Part</label>
-                <select name="Job.PartId" class="w-full border border-gray-300 rounded p-2" required>
-                    <option value="">-- Select Part --</option>
-                    @foreach (var part in Model.Parts)
-                    {
-                        <option value="@part.Id" @(Model.Job.PartId==part.Id?"selected":null)>
-                            @part.PartNumber (@part.AvgDurationDays d)
-                        </option>
-                    }
-                </select>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm">Start</label>
-                    <input type="datetime-local" name="Job.ScheduledStart" value="@Model.Job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")" class="w-full border rounded p-2" required />
-                </div>
-                <div>
-                    <label class="block text-sm">End</label>
-                    <input type="datetime-local" name="Job.ScheduledEnd" value="@Model.Job.ScheduledEnd.ToString("yyyy-MM-ddTHH:mm")" class="w-full border rounded p-2" />
+                    
+                    <button type="button" onclick="closeJobModal()" class="btn btn-secondary">
+                        Cancel
+                    </button>
+                    
+                    <button type="submit" id="submit-job-btn" class="btn btn-primary">
+                        <span id="submit-text">@(Model.Job.Id == 0 ? "Schedule Job" : "Update Job")</span>
+                        <svg id="submit-spinner" class="submit-spinner hidden" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </button>
                 </div>
             </div>
-
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm">Status</label>
-                    <select name="Job.Status" class="w-full border rounded p-2">
-                        @foreach (var s in new[] { "Scheduled", "Active", "Delayed", "Complete" })
-                        {
-                            <option value="@s" selected="@(Model.Job.Status==s)">@s</option>
-                        }
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm">Operator</label>
-                    <input type="text" name="Job.Operator" value="@Model.Job.Operator" class="w-full border rounded p-2" />
-                </div>
-            </div>
-
-            <div>
-                <label class="block text-sm">Quantity</label>
-                <input type="number" name="Job.Quantity" value="@Model.Job.Quantity" class="w-full border rounded p-2" />
-            </div>
-
-            <div>
-                <label class="block text-sm">Notes</label>
-                <textarea name="Job.Notes" class="w-full border rounded p-2">@Model.Job.Notes</textarea>
-            </div>
-
-            <div class="flex justify-between items-center">
-                @if (Model.Job.Id != 0)
-                {
-                    <button type="button" class="text-red-600 text-sm"
-                            hx-delete="/Scheduler/DeleteJob?id=@Model.Job.Id"
-                            hx-target="#row-@Model.Job.MachineId" hx-swap="outerHTML"
-                            onclick="return confirm('Are you sure?');">Delete</button>
-                }
-                <div class="space-x-2 ml-auto">
-                    <button type="button" hx-get="/Scheduler/CloseModal" hx-target="#modal" hx-swap="outerHTML" class="rounded-md px-4 py-2 text-sm border">Cancel</button>
-                    <button type="submit" class="rounded-md bg-indigo-600 text-white px-4 py-2 text-sm font-medium">Save</button>
-                </div>
-            </div>
-    </form>
+        </form>
+    </div>
 </div>
+
+<script>
+// Enhanced job form functionality with precise time calculations
+(function() {
+    'use strict';
+    
+    // Form utilities and calculations
+    const JobForm = {
+        
+        // MACHINE COMPATIBILITY FILTERING
+        filterPartsByMachine() {
+            const machineSelect = document.getElementById('machine-select');
+            const partSelect = document.getElementById('part-select');
+            
+            if (!machineSelect || !partSelect) return;
+            
+            const selectedMachine = machineSelect.value;
+            const allOptions = Array.from(partSelect.options);
+            
+            console.log('?? [JOB-FORM] Filtering parts for machine:', selectedMachine);
+            
+            // Define machine material compatibility
+            const machineCompatibility = {
+                'TI1': ['Titanium'], // Titanium Line 1
+                'TI2': ['Titanium'], // Titanium Line 2
+                'INC': ['Inconel']   // Inconel Line
+            };
+            
+            const compatibleMaterials = machineCompatibility[selectedMachine] || [];
+            console.log('?? [JOB-FORM] Compatible materials:', compatibleMaterials);
+            
+            // Filter options based on compatibility
+            allOptions.forEach((option, index) => {
+                if (index === 0) return; // Skip the "Select a part..." option
+                
+                const materialType = option.dataset.materialType;
+                const isCompatible = compatibleMaterials.includes(materialType);
+                
+                if (isCompatible) {
+                    option.style.display = '';
+                    option.disabled = false;
+                } else {
+                    option.style.display = 'none';
+                    option.disabled = true;
+                    
+                    // If this part is currently selected but incompatible, clear selection
+                    if (option.selected) {
+                        partSelect.value = '';
+                        console.log('?? [JOB-FORM] Cleared incompatible part selection');
+                    }
+                }
+            });
+            
+            // Count compatible parts
+            const compatibleCount = allOptions.filter((opt, idx) => 
+                idx > 0 && compatibleMaterials.includes(opt.dataset.materialType)
+            ).length;
+            
+            console.log(`? [JOB-FORM] Filtered to ${compatibleCount} compatible parts`);
+            
+            // Update the placeholder text
+            const placeholder = partSelect.options[0];
+            if (compatibleCount === 0) {
+                placeholder.textContent = `No compatible parts for ${selectedMachine}`;
+                placeholder.style.color = '#ef4444';
+            } else {
+                placeholder.textContent = `Select a part... (${compatibleCount} available)`;
+                placeholder.style.color = '';
+            }
+        },
+        
+        // Update job parameters based on selected part
+        updateJobFromPart() {
+            const partSelect = document.getElementById('part-select');
+            const selectedOption = partSelect?.options[partSelect.selectedIndex];
+            
+            if (!selectedOption || !selectedOption.value) {
+                return;
+            }
+            
+            console.log('?? [JOB-FORM] Updating job from selected part:', selectedOption.text);
+            
+            // Get estimated hours and update end time
+            const estimatedHours = parseFloat(selectedOption.dataset.estimatedHours) || 8;
+            this.updateEndTimeFromHours(estimatedHours);
+            
+            // Update SLS material
+            const slsMaterial = selectedOption.dataset.slsMaterial || 'Ti-6Al-4V Grade 5';
+            this.updateSelectValue('sls-material', slsMaterial);
+            
+            // Update process parameters with validation
+            this.updateInputValue('laser-power', selectedOption.dataset.laserPower, 200);
+            this.updateInputValue('scan-speed', selectedOption.dataset.scanSpeed, 1200);
+            this.updateInputValue('layer-thickness', selectedOption.dataset.layerThickness, 30);
+            this.updateInputValue('hatch-spacing', selectedOption.dataset.hatchSpacing, 120);
+            this.updateInputValue('build-temperature', selectedOption.dataset.buildTemperature, 180);
+            this.updateInputValue('powder-usage', selectedOption.dataset.powderUsage, 0.5);
+            
+            // Log the part number being selected
+            const partNumber = selectedOption.dataset.partNumber;
+            if (partNumber) {
+                console.log('? [JOB-FORM] Part number selected:', partNumber);
+            }
+            
+            this.updateDurationDisplay();
+        },
+        
+        // Update input value with fallback
+        updateInputValue(elementId, value, defaultValue) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                const numValue = parseFloat(value) || defaultValue;
+                element.value = numValue;
+            }
+        },
+        
+        // Update SLS material
+        updateSelectValue(elementId, value) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.value = value;
+                console.log('? [JOB-FORM] Updated', elementId, 'to:', value);
+            } else {
+                console.warn('?? [JOB-FORM] Element not found:', elementId);
+            }
+        },
+        
+        // Update end time when start changes
+        updateEndTimeFromStart() {
+            console.log('?? [JOB-FORM] updateEndTimeFromStart called');
+            const partSelect = document.getElementById('part-select');
+            const selectedOption = partSelect?.options[partSelect.selectedIndex];
+            
+            if (selectedOption?.value) {
+                const estimatedHours = parseFloat(selectedOption.dataset.estimatedHours) || 8;
+                console.log('?? [JOB-FORM] Using estimated hours:', estimatedHours);
+                this.updateEndTimeFromHours(estimatedHours);
+            }
+            
+            this.updateDurationDisplay();
+        },
+        
+        // Update end time when quantity changes
+        updateEndTimeFromQuantity() {
+            console.log('?? [JOB-FORM] updateEndTimeFromQuantity called');
+            const partSelect = document.getElementById('part-select');
+            const quantityInput = document.getElementById('quantity-input');
+            const selectedOption = partSelect?.options[partSelect.selectedIndex];
+            
+            if (selectedOption?.value && quantityInput?.value) {
+                const baseHours = parseFloat(selectedOption.dataset.estimatedHours) || 8;
+                const quantity = parseInt(quantityInput.value) || 1;
+                
+                console.log('?? [JOB-FORM] Calculating for:', { baseHours, quantity });
+                
+                // Calculate total hours (with some efficiency scaling for multiple parts)
+                let totalHours = baseHours * quantity;
+                if (quantity > 1) {
+                    // Apply efficiency factor for multiple parts (economies of scale)
+                    const efficiencyFactor = Math.max(0.8, 1 - (quantity - 1) * 0.05);
+                    totalHours = baseHours + (baseHours * (quantity - 1) * efficiencyFactor);
+                }
+                
+                console.log('?? [JOB-FORM] Total hours calculated:', totalHours);
+                this.updateEndTimeFromHours(totalHours);
+            }
+            
+            this.updateDurationDisplay();
+        },
+        
+        // Calculate and set end time from hours
+        updateEndTimeFromHours(hours) {
+            const startInput = document.getElementById('start-input');
+            const endInput = document.getElementById('end-input');
+            
+            if (!startInput?.value || !endInput || !hours) {
+                return;
+            }
+            
+            try {
+                const startDate = new Date(startInput.value);
+                if (isNaN(startDate.getTime())) {
+                    return;
+                }
+                
+                // Add hours to start time
+                const endDate = new Date(startDate.getTime() + (hours * 60 * 60 * 1000));
+                
+                // Format for datetime-local input
+                const year = endDate.getFullYear();
+                const month = String(endDate.getMonth() + 1).padStart(2, '0');
+                const day = String(endDate.getDate()).padStart(2, '0');
+                const hour = String(endDate.getHours()).padStart(2, '0');
+                const minute = String(endDate.getMinutes()).padStart(2, '0');
+                
+                endInput.value = `${year}-${month}-${day}T${hour}:${minute}`;
+                
+            } catch (error) {
+                console.warn('Error calculating end time:', error);
+            }
+        },
+        
+        // Update duration display
+        updateDurationDisplay() {
+            const startInput = document.getElementById('start-input');
+            const endInput = document.getElementById('end-input');
+            const durationDisplay = document.getElementById('duration-display');
+            
+            if (!startInput?.value || !endInput?.value || !durationDisplay) {
+                return;
+            }
+            
+            try {
+                const startDate = new Date(startInput.value);
+                const endDate = new Date(endInput.value);
+                
+                if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                    return;
+                }
+                
+                const diffMs = endDate.getTime() - startDate.getTime();
+                const diffHours = diffMs / (1000 * 60 * 60);
+                
+                if (diffHours > 0) {
+                    if (diffHours < 24) {
+                        durationDisplay.textContent = `${diffHours.toFixed(1)} hours`;
+                    } else {
+                        const days = Math.floor(diffHours / 24);
+                        const hours = (diffHours % 24).toFixed(1);
+                        durationDisplay.textContent = `${days}d ${hours}h`;
+                    }
+                } else {
+                    durationDisplay.textContent = 'Invalid duration';
+                    durationDisplay.className = 'text-xs text-red-500 mt-1';
+                }
+            } catch (error) {
+                console.warn('Error calculating duration:', error);
+            }
+        },
+        
+        // Form loading state management
+        showFormLoading() {
+            const submitBtn = document.getElementById('submit-job-btn');
+            const submitText = document.getElementById('submit-text');
+            const submitSpinner = document.getElementById('submit-spinner');
+            
+            if (submitBtn) submitBtn.disabled = true;
+            if (submitText) submitText.textContent = 'Processing...';
+            if (submitSpinner) submitSpinner.classList.remove('hidden');
+        },
+        
+        hideFormLoading() {
+            const submitBtn = document.getElementById('submit-job-btn');
+            const submitText = document.getElementById('submit-text');
+            const submitSpinner = document.getElementById('submit-spinner');
+            
+            if (submitBtn) submitBtn.disabled = false;
+            if (submitText) submitText.textContent = '@(Model.Job.Id == 0 ? "Schedule Job" : "Update Job")';
+            if (submitSpinner) submitSpinner.classList.add('hidden');
+        },
+        
+        // Handle HTMX form response
+        handleFormResponse(event) {
+            this.hideFormLoading();
+            
+            // Check if response contains errors (modal content)
+            if (event.detail.xhr.responseText.includes('error-container')) {
+                // Form has validation errors, keep modal open
+                return;
+            }
+            
+            // Success - modal will be closed by main app
+            if (window.showSuccessNotification) {
+                window.showSuccessNotification('Job saved successfully!');
+            }
+        }
+    };
+    
+    // Expose functions globally for HTML event handlers
+    window.updateJobFromPart = () => JobForm.updateJobFromPart();
+    window.updateEndTimeFromStart = () => JobForm.updateEndTimeFromStart();
+    window.updateEndTimeFromQuantity = () => JobForm.updateEndTimeFromQuantity();
+    window.showFormLoading = () => JobForm.showFormLoading();
+    window.hideFormLoading = () => JobForm.hideFormLoading();
+    window.handleFormResponse = (event) => JobForm.handleFormResponse(event);
+    
+    // CRITICAL FIX: Expose JobForm object globally for HTML access
+    window.JobForm = JobForm;
+    
+    // Initialize form when loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        // CRITICAL FIX: Initialize machine filtering first
+        JobForm.filterPartsByMachine();
+        
+        // Set up initial state if part is pre-selected
+        const partSelect = document.getElementById('part-select');
+        if (partSelect?.value) {
+            JobForm.updateJobFromPart();
+        }
+        
+        // Update duration display
+        JobForm.updateDurationDisplay();
+        
+        // Set up event listeners for duration updates
+        const startInput = document.getElementById('start-input');
+        const endInput = document.getElementById('end-input');
+        
+        if (startInput) {
+            startInput.addEventListener('change', () => JobForm.updateDurationDisplay());
+        }
+        if (endInput) {
+            endInput.addEventListener('change', () => JobForm.updateDurationDisplay());
+        }
+        
+        // Filter parts by machine on load
+        JobForm.filterPartsByMachine();
+    });
+    
+    // Re-filter parts when machine selection changes
+    document.getElementById('machine-select').addEventListener('change', function() {
+        JobForm.filterPartsByMachine();
+    });
+    
+})();
+</script>

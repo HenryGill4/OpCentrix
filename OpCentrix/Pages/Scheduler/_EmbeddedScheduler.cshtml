@@ -1,0 +1,218 @@
+@using OpCentrix.Models.ViewModels
+@model EmbeddedSchedulerViewModel
+
+@{
+    // Now using proper EmbeddedSchedulerViewModel
+    var jobs = Model.Jobs ?? new List<OpCentrix.Models.Job>();
+    var machines = Model.Machines ?? new List<string>();
+    var dates = Model.Dates ?? new List<DateTime>();
+    var startDate = Model.StartDate;
+    
+    var slotsPerDay = 24; // Fixed for embedded view
+    var slotMinutes = 60; // 1-hour slots for mini view
+    var slotTimes = Enumerable.Range(0, slotsPerDay).Select(i => TimeSpan.FromMinutes(i * slotMinutes)).ToList();
+    var totalSlots = dates.Count * slotsPerDay;
+}
+
+<div class="scheduler-embedded bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <div class="scheduler-header bg-indigo-50 border-b border-gray-200 px-4 py-3 flex justify-between items-center">
+        <div class="text-sm font-medium text-indigo-800">
+            @if (dates.Any())
+            {
+                <span>@dates.First().ToString("MMM dd") - @dates.Last().ToString("MMM dd, yyyy")</span>
+            }
+            else
+            {
+                <span>@DateTime.Today.ToString("MMM dd, yyyy")</span>
+            }
+        </div>
+        <a href="/Scheduler" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center">
+            Full Scheduler
+            <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+            </svg>
+        </a>
+    </div>
+
+    @if (machines.Any() && dates.Any())
+    {
+        <div class="overflow-x-auto">
+            <div class="scheduler-embedded-grid" 
+                 style="grid-template-columns: 100px repeat(@(dates.Count), 1fr); min-width: fit-content;">
+                
+                <!-- Grid header row -->
+                <!-- Machine column header -->
+                <div class="scheduler-grid-header sticky left-0 top-0 z-20 bg-white border-b border-r text-sm font-bold text-indigo-800">
+                    <div class="flex items-center justify-center h-full">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
+                        </svg>
+                        Machines
+                    </div>
+                </div>
+                
+                <!-- Date headers (simplified for mini view) -->
+                @foreach (var date in dates)
+                {
+                    var isToday = date.Date == DateTime.Today;
+                    var headerClass = "scheduler-grid-header text-xs font-semibold text-gray-800 border-r bg-white";
+                    if (isToday) headerClass += " bg-blue-50 text-blue-800 border-blue-200";
+                    
+                    <div class="@headerClass" data-date="@date.ToString("yyyy-MM-dd")">
+                        <div class="text-center">
+                            <div class="font-bold">@date.ToString("ddd")</div>
+                            <div class="text-xs">@date.ToString("M/d")</div>
+                        </div>
+                    </div>
+                }
+                
+                <!-- Machine rows (simplified) -->
+                @foreach (var machine in machines)
+                {
+                    var machineJobs = jobs.Where(j => j.MachineId == machine).ToList();
+                    var jobCount = machineJobs.Count;
+                    
+                    <!-- Machine label -->
+                    <div class="scheduler-machine-label @machine.ToLower()" 
+                         style="height:80px;"
+                         data-machine="@machine">
+                        <div class="flex flex-col items-center justify-center h-full p-2 text-sm">
+                            <div class="font-bold">@machine</div>
+                            <div class="text-xs opacity-75 mt-1">@jobCount job@(jobCount != 1 ? "s" : "")</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Day cells for this machine -->
+                    @foreach (var day in dates)
+                    {
+                        var dayJobs = machineJobs.Where(job => 
+                            job.ScheduledStart.Date <= day.Date && 
+                            job.ScheduledEnd.Date >= day.Date).ToList();
+                        
+                        var isToday = day.Date == DateTime.Today;
+                        var isWeekend = day.DayOfWeek == DayOfWeek.Saturday || day.DayOfWeek == DayOfWeek.Sunday;
+                        
+                        var cellClasses = new List<string> { 
+                            "scheduler-grid-cell", "group", "relative", "border-r", "border-b", "border-gray-100"
+                        };
+                        
+                        if (isToday) cellClasses.Add("current-day");
+                        else if (isWeekend) cellClasses.Add("weekend");
+                        
+                        <div class="@string.Join(" ", cellClasses)" 
+                             style="height:80px;"
+                             data-date="@day.ToString("yyyy-MM-dd")"
+                             data-machine="@machine">
+                             
+                            <!-- Jobs for this day -->
+                            @foreach (var job in dayJobs.Take(2)) // Limit to 2 jobs for mini view
+                            {
+                                <div class="absolute top-1 left-1 right-1 job-block @machine.ToLower() status-@job.Status.ToLower().Replace(" ", "-")"
+                                     style="height: 20px; z-index:10; @(dayJobs.Count > 1 ? "margin-bottom: 2px;" : "")"
+                                     title="@job.PartNumber - @job.Status (@job.EstimatedHours.ToString("F1")h)">
+                                    <div class="h-full w-full rounded-md flex items-center px-2 overflow-hidden text-xs font-medium text-white">
+                                        @job.PartNumber?.Substring(0, Math.Min(job.PartNumber.Length, 8))
+                                    </div>
+                                </div>
+                            }
+                            
+                            @if (dayJobs.Count > 2)
+                            {
+                                <div class="absolute bottom-1 right-1 text-xs text-gray-500 bg-white px-1 rounded">
+                                    +@(dayJobs.Count - 2) more
+                                </div>
+                            }
+                            
+                            <!-- Current time indicator -->
+                            @if (isToday)
+                            {
+                                <div class="absolute top-1 right-1 w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
+                            }
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Empty state -->
+        <div class="p-6 text-center text-gray-500">
+            <svg class="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">No machines or schedule data</h3>
+            <p class="text-sm text-gray-500 mb-4">There are no machines configured or no jobs scheduled for the current period.</p>
+            <a href="/Scheduler" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+                Open Full Scheduler
+                <svg class="ml-2 -mr-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                </svg>
+            </a>
+        </div>
+    }
+</div>
+
+<style>
+    .scheduler-embedded-grid {
+        display: grid;
+        height: fit-content;
+    }
+    
+    .scheduler-grid-header {
+        height: 40px;
+        padding: 4px;
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .scheduler-machine-label {
+        position: sticky;
+        left: 0;
+        background-color: #f9fafb;
+        border-right: 1px solid #e5e7eb;
+        border-bottom: 1px solid #e5e7eb;
+        font-weight: 500;
+        z-index: 10;
+    }
+    
+    .job-block {
+        border-radius: 4px;
+        background-color: #3B82F6;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+    
+    .job-block.ti1, .job-block.ti2 {
+        background-color: #3B82F6; /* Blue for titanium */
+    }
+    
+    .job-block.inc {
+        background-color: #8B5CF6; /* Purple for Inconel */
+    }
+    
+    .job-block.status-building, .job-block.status-in-progress {
+        background-color: #10B981; /* Green for active */
+    }
+    
+    .job-block.status-completed {
+        background-color: #6366F1; /* Indigo for completed */
+    }
+    
+    .job-block.status-cancelled {
+        background-color: #F59E0B; /* Orange for cancelled */
+    }
+    
+    .job-block.status-on-hold {
+        background-color: #F43F5E; /* Red for on hold */
+    }
+    
+    .weekend {
+        background-color: #f9fafb;
+    }
+    
+    .current-day {
+        background-color: rgba(59, 130, 246, 0.05);
+    }
+</style>

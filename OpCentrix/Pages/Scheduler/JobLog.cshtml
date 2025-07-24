@@ -1,0 +1,66 @@
+﻿@page
+@model OpCentrix.Pages.Scheduler.JobLogModel
+@{
+    ViewData["Title"] = "Job Log";
+}
+<h2 class="text-xl font-bold mb-4">Job Log</h2>
+<form method="post" class="mb-6 bg-white rounded shadow p-4 max-w-xl">
+    <div class="grid grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium">Machine</label>
+            <input name="MachineId" class="w-full border rounded p-2" required />
+        </div>
+        <div>
+            <label class="block text-sm font-medium">Part Number</label>
+            <input name="PartNumber" class="w-full border rounded p-2" required />
+        </div>
+    </div>
+    <div class="grid grid-cols-2 gap-4 mt-2">
+        <div>
+            <label class="block text-sm font-medium">Action</label>
+            <select name="Action" class="w-full border rounded p-2" required>
+                <option value="Started">Started</option>
+                <option value="Completed">Completed</option>
+                <option value="Issue">Issue</option>
+                <option value="Other">Other</option>
+                <option value="AddToSchedule">Add to Schedule</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium">Operator</label>
+            <input name="Operator" class="w-full border rounded p-2" />
+        </div>
+    </div>
+    <div class="mt-2">
+        <label class="block text-sm font-medium">Notes</label>
+        <textarea name="Notes" class="w-full border rounded p-2"></textarea>
+    </div>
+    <div class="mt-4 text-right">
+        <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded">Add Log Entry</button>
+    </div>
+</form>
+<table class="min-w-full bg-white rounded shadow">
+    <thead>
+        <tr class="bg-gray-100 text-xs">
+            <th class="p-2">Time</th>
+            <th class="p-2">Machine</th>
+            <th class="p-2">Part</th>
+            <th class="p-2">Action</th>
+            <th class="p-2">Operator</th>
+            <th class="p-2">Notes</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var log in Model.Logs)
+        {
+            <tr class="border-t text-xs">
+                <td class="p-2">@log.Timestamp.ToString("g")</td>
+                <td class="p-2">@log.MachineId</td>
+                <td class="p-2">@log.PartNumber</td>
+                <td class="p-2">@log.Action</td>
+                <td class="p-2">@log.Operator</td>
+                <td class="p-2">@log.Notes</td>
+            </tr>
+        }
+    </tbody>
+</table>

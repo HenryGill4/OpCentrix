@@ -1,0 +1,174 @@
+@page
+@model OpCentrix.Pages.Account.LogoutModel
+@{
+    ViewData["Title"] = "Logout";
+    Layout = null; // Use no layout for clean logout page
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Logout - OpCentrix</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .opcentrix-gradient {
+            background: linear-gradient(135deg, #3B82F6 0%, #6366F1 100%);
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @@keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center">
+    <div class="max-w-md w-full mx-4">
+        <div class="bg-white rounded-2xl shadow-xl overflow-hidden fade-in">
+            <!-- Header -->
+            <div class="opcentrix-gradient px-8 py-6 text-center">
+                <div class="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                    </svg>
+                </div>
+                <h1 class="text-2xl font-bold text-white">Logging Out</h1>
+                <p class="text-white text-opacity-90 mt-2">Please wait while we sign you out...</p>
+            </div>
+            
+            <!-- Content -->
+            <div class="px-8 py-6">
+                @if (TempData["LogoutMessage"] != null)
+                {
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                        <div class="flex items-center">
+                            <svg class="w-5 h-5 text-green-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <p class="text-green-800 font-medium">@TempData["LogoutMessage"]</p>
+                        </div>
+                    </div>
+                }
+                
+                @if (TempData["LogoutError"] != null)
+                {
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                        <div class="flex items-center">
+                            <svg class="w-5 h-5 text-red-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <p class="text-red-800 font-medium">@TempData["LogoutError"]</p>
+                        </div>
+                    </div>
+                }
+                
+                <!-- Loading Animation -->
+                <div id="loading-section" class="text-center py-6">
+                    <div class="inline-flex items-center space-x-3">
+                        <svg class="animate-spin h-6 w-6 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span class="text-gray-600">Clearing session data...</span>
+                    </div>
+                </div>
+                
+                <!-- Logout Complete Section (hidden initially) -->
+                <div id="complete-section" class="text-center py-6 hidden">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    </div>
+                    <h2 class="text-xl font-semibold text-gray-900 mb-2">Logout Complete</h2>
+                    <p class="text-gray-600 mb-6">Your session has been ended successfully.</p>
+                    
+                    <a href="/Account/Login" class="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white opcentrix-gradient hover:shadow-lg transition-all duration-200">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                        </svg>
+                        Return to Login
+                    </a>
+                </div>
+                
+                <!-- Security Tips -->
+                <div class="bg-gray-50 rounded-lg p-4 mt-6">
+                    <h3 class="text-sm font-semibold text-gray-900 mb-2">Security Tips:</h3>
+                    <ul class="text-xs text-gray-600 space-y-1">
+                        <li>• Close all browser windows for complete security</li>
+                        <li>• Clear browser cache if using a shared computer</li>
+                        <li>• Always logout when finished using OpCentrix</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <div class="px-8 py-4 bg-gray-50 border-t border-gray-200">
+                <div class="flex items-center justify-center space-x-2 text-sm text-gray-500">
+                    <div class="w-6 h-6 opcentrix-gradient rounded-lg flex items-center justify-center">
+                        <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
+                        </svg>
+                    </div>
+                    <span>OpCentrix Manufacturing Suite</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Enhanced logout page functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('?? Logout page loaded');
+            
+            // Clear any remaining local storage
+            try {
+                localStorage.removeItem('sessionTimeoutMinutes');
+                localStorage.removeItem('edmLogs');
+                localStorage.removeItem('edmLogNumber');
+                localStorage.clear(); // Clear all local storage for security
+                console.log('?? All local storage cleared');
+            } catch (error) {
+                console.warn('?? Could not clear local storage:', error);
+            }
+            
+            // Clear session storage
+            try {
+                sessionStorage.clear();
+                console.log('?? Session storage cleared');
+            } catch (error) {
+                console.warn('?? Could not clear session storage:', error);
+            }
+            
+            // Simulate logout process
+            setTimeout(function() {
+                document.getElementById('loading-section').classList.add('hidden');
+                document.getElementById('complete-section').classList.remove('hidden');
+                console.log('? Logout process complete');
+            }, 2000);
+            
+            // Auto-redirect to login after 5 seconds if no user action
+            setTimeout(function() {
+                const loginButton = document.querySelector('a[href="/Account/Login"]');
+                if (loginButton && document.getElementById('complete-section').classList.contains('hidden') === false) {
+                    console.log('?? Auto-redirecting to login page');
+                    window.location.href = '/Account/Login';
+                }
+            }, 7000);
+        });
+        
+        // Prevent back button after logout
+        window.history.pushState(null, "", window.location.href);
+        window.addEventListener('popstate', function() {
+            console.log('?? Back button blocked - redirecting to login');
+            window.history.pushState(null, "", window.location.href);
+            window.location.href = '/Account/Login';
+        });
+    </script>
+</body>
+</html>

@@ -1,23 +1,52 @@
 @model OpCentrix.Models.Job
 
 @{
-    var color = "bg-blue-200";
+    var priorityClass = Model.Priority switch
+    {
+        1 => "priority-critical",
+        2 => "priority-high", 
+        3 => "priority-normal",
+        4 => "priority-low",
+        5 => "priority-lowest",
+        _ => "priority-normal"
+    };
+    
+    var statusClass = Model.Status?.ToLower().Replace(" ", "-") ?? "";
+    var rushIndicator = Model.IsRushJob ? "??" : "";
+    var statusColor = Model.GetStatusColor();
+    var duration = $"{Model.DurationHours:F1}h";
+    var shortPartNumber = Model.PartNumber?.Length > 10 ? Model.PartNumber.Substring(0, 10) + "..." : Model.PartNumber;
 }
-<div class="rounded-xl shadow-md hover:shadow-lg transition px-2 py-1 text-xs @color cursor-pointer"
-     hx-get="/Scheduler/ShowAddModal?machineId=@Model.MachineId&date=@Model.ScheduledStart.ToString("yyyy-MM-dd")&id=@Model.Id"
-     hx-target="#modal-content" hx-swap="innerHTML">
-    <div class="font-semibold">@Model.PartNumber</div>
-    <div class="text-sm">@Model.ScheduledStart:MMM d → @Model.ScheduledEnd:MMM d</div>
-    @if (Model.Quantity > 1)
+
+<div class="job-block-content h-full flex flex-col justify-center p-1 @priorityClass relative overflow-hidden"
+     style="background-color: @statusColor; color: #ffffff;">
+    
+    <div class="job-block-title text-white font-bold text-xs leading-tight">
+        @rushIndicator@shortPartNumber
+    </div>
+    
+    <div class="job-block-details text-white opacity-90 text-xs leading-tight mt-1">
+        <div>Qty: @Model.Quantity</div>
+        @if (Model.DurationHours > 0)
+        {
+            <div>@duration</div>
+        }
+        @if (!string.IsNullOrEmpty(Model.Operator))
+        {
+            <div class="truncate">@Model.Operator</div>
+        }
+    </div>
+    
+    @if (Model.Priority <= 2)
     {
-        <div class="text-xs">Qty @Model.Quantity</div>
+        <div class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></div>
     }
-    @if (!string.IsNullOrEmpty(Model.Notes))
+    
+    @if (Model.IsRushJob)
     {
-        <div class="text-xs text-gray-500">@Model.Notes</div>
+        <div class="absolute top-0 left-0 w-0 h-0 border-l-4 border-l-red-600 border-b-4 border-b-transparent"></div>
     }
-    @if (!string.IsNullOrEmpty(Model.Part?.Description))
-    {
-        <div class="text-xs text-gray-400 italic">@Model.Part.Description</div>
-    }
+    
+    <!-- Status indicator at bottom -->
+    <div class="absolute bottom-1 right-1 text-xs opacity-75">@Model.Status</div>
 </div>

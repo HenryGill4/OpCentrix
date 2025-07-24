@@ -1,0 +1,521 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* OpCentrix Custom Components and Utilities */
+@layer components {
+  .opcentrix-gradient {
+    @apply bg-gradient-to-br from-opcentrix-primary to-opcentrix-secondary;
+  }
+  
+  .opcentrix-gradient-subtle {
+    @apply bg-gradient-to-br from-opcentrix-gray-50 to-white;
+  }
+  
+  .opcentrix-card {
+    @apply bg-white rounded-opcentrix shadow-opcentrix border border-opcentrix-gray-200 transition-all duration-200 ease-in-out;
+  }
+  
+  .opcentrix-card:hover {
+    @apply shadow-opcentrix-lg -translate-y-0.5;
+  }
+  
+  .opcentrix-card-elevated {
+    @apply shadow-opcentrix-lg;
+  }
+  
+  .opcentrix-button {
+    @apply inline-flex items-center justify-center px-5 py-2.5 rounded-opcentrix-sm font-semibold text-sm leading-none border-none cursor-pointer transition-all duration-200 ease-in-out no-underline;
+  }
+  
+  .opcentrix-button:hover {
+    @apply -translate-y-0.5 shadow-opcentrix-lg;
+  }
+  
+  .opcentrix-button-primary {
+    @apply bg-opcentrix-primary text-white;
+  }
+  
+  .opcentrix-button-primary:hover {
+    @apply bg-opcentrix-primary-dark text-white;
+  }
+  
+  .opcentrix-button-secondary {
+    @apply bg-opcentrix-gray-200 text-opcentrix-gray-700;
+  }
+  
+  .opcentrix-button-secondary:hover {
+    @apply bg-opcentrix-gray-300 text-opcentrix-gray-800;
+  }
+  
+  .opcentrix-button-success {
+    @apply bg-opcentrix-success text-white;
+  }
+  
+  .opcentrix-button-success:hover {
+    @apply bg-opcentrix-accent-dark;
+  }
+  
+  .opcentrix-button-danger {
+    @apply bg-opcentrix-danger text-white;
+  }
+  
+  .opcentrix-button-danger:hover {
+    @apply bg-red-700;
+  }
+  
+  .opcentrix-input {
+    @apply w-full px-4 py-3 border-2 border-opcentrix-gray-200 rounded-opcentrix-sm text-sm transition-all duration-200 ease-in-out bg-white;
+  }
+  
+  .opcentrix-input:focus {
+    @apply outline-none border-opcentrix-primary ring-4 ring-opcentrix-primary ring-opacity-10;
+  }
+  
+  .opcentrix-select {
+    @apply w-full px-4 py-3 border-2 border-opcentrix-gray-200 rounded-opcentrix-sm text-sm bg-white cursor-pointer transition-all duration-200 ease-in-out;
+  }
+  
+  .opcentrix-select:focus {
+    @apply outline-none border-opcentrix-primary ring-4 ring-opcentrix-primary ring-opacity-10;
+  }
+  
+  .nav-item {
+    @apply transition-all duration-200 ease-in-out;
+  }
+  
+  .nav-item-active {
+    @apply bg-gradient-to-br from-opcentrix-primary to-opcentrix-secondary text-white shadow-opcentrix;
+  }
+  
+  .nav-item:hover:not(.nav-item-active) {
+    @apply bg-opcentrix-primary bg-opacity-5 text-opcentrix-primary;
+  }
+}
+
+@layer utilities {
+  .animate-slide-in {
+    animation: slideInRight 0.3s ease-out;
+  }
+  
+  .animate-slide-out {
+    animation: slideOutRight 0.3s ease-in;
+  }
+  
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar {
+    @apply w-2 h-2;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-opcentrix-gray-100 rounded;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-opcentrix-gray-300 rounded;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-opcentrix-gray-400;
+  }
+}
+
+/* Animation Keyframes */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Scheduler-specific styles that require CSS Grid precision */
+:root {
+  --machine-label-width: 140px;
+  --slot-width: 120px;
+  --job-min-height: 60px;
+}
+
+.scheduler-main-grid {
+  display: block;
+  background: white;
+  border: 1px solid theme('colors.opcentrix.gray.200');
+  border-radius: theme('borderRadius.opcentrix') theme('borderRadius.opcentrix') 0 0;
+  overflow: hidden;
+}
+
+.scheduler-grid-container {
+  display: grid;
+  background: white;
+  border-radius: theme('borderRadius.opcentrix');
+  overflow: hidden;
+}
+
+.scheduler-header-row {
+  display: grid;
+  grid-template-columns: var(--machine-label-width) 1fr;
+  background: theme('colors.opcentrix.gray.50');
+  border-bottom: 2px solid theme('colors.opcentrix.gray.200');
+}
+
+.scheduler-date-headers {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: var(--slot-width);
+  gap: 0;
+}
+
+.scheduler-grid-header {
+  @apply bg-gradient-to-br from-opcentrix-gray-50 to-white border-b-2 border-opcentrix-gray-200 border-r border-opcentrix-gray-200 p-3 text-xs font-semibold text-opcentrix-gray-700 text-center flex items-center justify-center relative;
+  min-height: 60px;
+}
+
+.scheduler-grid-header:last-child {
+  border-right: none;
+}
+
+.machine-rows-container {
+  display: block;
+}
+
+.machine-row {
+  display: grid;
+  grid-template-columns: var(--machine-label-width) 1fr;
+  border-bottom: 1px solid theme('colors.opcentrix.gray.200');
+  min-height: 80px;
+}
+
+.scheduler-machine-label {
+  @apply bg-gradient-to-br from-opcentrix-gray-100 to-opcentrix-gray-200 border-r-2 border-opcentrix-gray-300 border-b border-opcentrix-gray-200 p-4 font-bold text-opcentrix-gray-800 flex items-center justify-center text-center text-sm;
+  min-height: 80px;
+}
+
+/* Machine-specific colors */
+.scheduler-machine-label[data-machine*="TI1"],
+.machine-label.ti1 {
+  @apply bg-gradient-to-br from-yellow-100 to-yellow-200 text-yellow-800 border-yellow-500;
+}
+
+.scheduler-machine-label[data-machine*="TI2"],
+.machine-label.ti2 {
+  @apply bg-gradient-to-br from-blue-100 to-blue-200 text-blue-800 border-blue-500;
+}
+
+.scheduler-machine-label[data-machine*="INC"],
+.machine-label.inc {
+  @apply bg-gradient-to-br from-green-100 to-green-200 text-green-800 border-green-500;
+}
+
+.time-slots-container {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: var(--slot-width);
+  gap: 0;
+  background: theme('colors.opcentrix.gray.50');
+}
+
+.scheduler-grid-cell {
+  @apply bg-white border-r border-opcentrix-gray-100 border-b border-opcentrix-gray-100 relative transition-all duration-200 ease-in-out cursor-pointer;
+  min-height: 80px;
+}
+
+.scheduler-grid-cell:hover {
+  @apply bg-opcentrix-primary bg-opacity-5 border-opcentrix-primary border-opacity-20;
+}
+
+.scheduler-grid-cell:last-child {
+  border-right: none;
+}
+
+.time-slot {
+  @apply bg-white border-r border-opcentrix-gray-200 relative transition-colors duration-200 ease-in-out;
+  min-height: 80px;
+}
+
+.time-slot:hover {
+  @apply bg-opcentrix-gray-50;
+}
+
+.scheduler-grid-cell.current-time,
+.time-slot.current-time {
+  @apply bg-opcentrix-primary bg-opacity-10 border-opcentrix-primary border-opacity-30;
+}
+
+.scheduler-grid-cell.weekend,
+.time-slot.weekend {
+  @apply bg-gray-500 bg-opacity-5;
+}
+
+.scheduler-grid-cell.off-hours,
+.time-slot.off-hours {
+  @apply bg-gray-500 bg-opacity-3;
+}
+
+.job-block {
+  @apply absolute bg-gradient-to-br from-opcentrix-primary to-opcentrix-secondary text-white rounded-opcentrix-sm p-2 text-xs font-semibold cursor-pointer transition-all duration-200 ease-in-out border-2 border-white border-opacity-20 z-10 shadow-opcentrix flex flex-col justify-center;
+  min-height: 32px;
+}
+
+.job-block:hover {
+  @apply -translate-y-0.5 scale-105 shadow-opcentrix-lg z-20;
+}
+
+/* Machine-specific job block colors */
+.job-block[data-machine*="TI1"],
+.job-block.ti1 {
+  @apply bg-gradient-to-br from-yellow-500 to-yellow-600;
+}
+
+.job-block[data-machine*="TI2"],
+.job-block.ti2 {
+  @apply bg-gradient-to-br from-blue-500 to-blue-700;
+}
+
+.job-block[data-machine*="INC"],
+.job-block.inc {
+  @apply bg-gradient-to-br from-green-500 to-green-600;
+}
+
+/* Priority indicators */
+.job-block.priority-1 {
+  @apply border-red-600 ring-2 ring-red-600 ring-opacity-20;
+}
+
+.job-block.priority-2 {
+  @apply border-yellow-500 ring-2 ring-yellow-500 ring-opacity-20;
+}
+
+/* Status-based styling */
+.job-block.status-scheduled {
+  @apply bg-gradient-to-br from-opcentrix-primary to-opcentrix-secondary;
+}
+
+.job-block.status-in-progress {
+  @apply bg-gradient-to-br from-opcentrix-warning to-yellow-600;
+}
+
+.job-block.status-completed {
+  @apply bg-gradient-to-br from-opcentrix-success to-opcentrix-accent-dark;
+}
+
+.job-block.status-cancelled {
+  @apply bg-gradient-to-br from-opcentrix-gray-400 to-opcentrix-gray-500;
+}
+
+.job-block.status-on-hold {
+  @apply bg-gradient-to-br from-purple-500 to-purple-600;
+}
+
+.job-block-content {
+  @apply overflow-hidden text-ellipsis whitespace-nowrap;
+}
+
+.job-block-title {
+  @apply font-bold text-xs leading-tight mb-0.5;
+}
+
+.job-block-details {
+  @apply text-xs opacity-90 leading-tight;
+}
+
+/* Responsive design */
+@media (max-width: 1024px) {
+  :root {
+    --machine-label-width: 120px;
+    --slot-width: 100px;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --machine-label-width: 100px;
+    --slot-width: 80px;
+  }
+  
+  .scheduler-machine-label {
+    @apply text-xs p-3;
+  }
+  
+  .job-block {
+    @apply text-xs p-1.5;
+    min-height: 28px;
+  }
+  
+  .job-block-title {
+    @apply text-xs;
+  }
+  
+  .job-block-details {
+    @apply text-xs;
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --machine-label-width: 80px;
+    --slot-width: 60px;
+  }
+  
+  .scheduler-machine-label {
+    @apply text-xs p-2;
+  }
+  
+  .job-block {
+    @apply text-xs p-1;
+    min-height: 24px;
+  }
+  
+  .job-block-title {
+    @apply text-xs;
+  }
+  
+  .job-block-details {
+    @apply text-xs;
+  }
+}
+
+/* Legacy compatibility classes */
+.scheduler-container {
+  display: grid;
+  grid-template-columns: var(--machine-label-width) 1fr;
+  gap: 0;
+  @apply bg-white rounded-opcentrix shadow-opcentrix overflow-hidden;
+}
+
+.machine-label {
+  @apply bg-gradient-to-br from-opcentrix-gray-100 to-opcentrix-gray-200 p-4 border-r-2 border-opcentrix-gray-200 font-bold text-opcentrix-gray-800 flex items-center justify-center text-center;
+  min-height: 80px;
+}
+
+.schedule-grid {
+  display: grid;
+  grid-auto-columns: var(--slot-width);
+  grid-auto-flow: column;
+  gap: 1px;
+  @apply bg-opcentrix-gray-100 relative;
+  min-height: 80px;
+}
+
+/* Modal styles */
+.modal-overlay {
+  @apply bg-black bg-opacity-50;
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  @apply bg-white rounded-opcentrix-lg shadow-opcentrix-xl max-h-screen overflow-y-auto;
+}
+
+/* Notification styles */
+.notification {
+  @apply rounded-opcentrix shadow-opcentrix-lg;
+  backdrop-filter: blur(8px);
+}
+
+.notification-success {
+  @apply bg-gradient-to-br from-opcentrix-success to-opcentrix-accent-dark;
+}
+
+.notification-error {
+  @apply bg-gradient-to-br from-opcentrix-danger to-red-700;
+}
+
+.notification-warning {
+  @apply bg-gradient-to-br from-opcentrix-warning to-yellow-600;
+}
+
+.notification-info {
+  @apply bg-gradient-to-br from-opcentrix-primary to-opcentrix-secondary;
+}
+
+/* Loading states */
+.htmx-indicator {
+  @apply opacity-0 transition-opacity duration-200 ease-in;
+}
+
+.htmx-request .htmx-indicator {
+  @apply opacity-100;
+}
+
+.htmx-request {
+  @apply relative;
+}
+
+.htmx-request::after {
+  content: '';
+  @apply absolute inset-0 bg-white bg-opacity-80 z-50;
+  backdrop-filter: blur(2px);
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    @apply hidden;
+  }
+  
+  .opcentrix-card {
+    @apply shadow-none border border-opcentrix-gray-300;
+  }
+  
+  .job-block {
+    @apply shadow-none border border-opcentrix-gray-400;
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.focus\:ring:focus {
+  @apply ring-4 ring-opcentrix-primary ring-opacity-50;
+}
+
+.sr-only {
+  @apply absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0;
+  clip: rect(0, 0, 0, 0);
+}
+
+/* High DPI Display Support */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .job-block {
+    border-width: 1px;
+  }
+  
+  .opcentrix-card {
+    border-width: 1px;
+  }
+}

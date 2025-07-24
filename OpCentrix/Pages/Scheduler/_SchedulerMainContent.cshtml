@@ -1,0 +1,118 @@
+@model dynamic
+
+@{
+    var viewModel = Model.ViewModel as OpCentrix.Models.ViewModels.SchedulerPageViewModel;
+    var summary = Model.Summary as OpCentrix.Models.ViewModels.FooterSummaryViewModel;
+    
+    var slotsPerDay = viewModel?.SlotsPerDay ?? 1;
+    var slotMinutes = viewModel?.SlotMinutes ?? 1440;
+    var slotTimes = Enumerable.Range(0, slotsPerDay).Select(i => TimeSpan.FromMinutes(i * slotMinutes)).ToList();
+    var totalSlots = (viewModel?.Dates.Count ?? 0) * slotsPerDay;
+    var dates = viewModel?.Dates ?? new List<DateTime>();
+    var machines = viewModel?.Machines ?? new List<string>();
+    var jobs = viewModel?.Jobs ?? new List<OpCentrix.Models.Job>();
+    var machineRowHeights = viewModel?.MachineRowHeights ?? new Dictionary<string, int>();
+}
+
+@if (!jobs.Any() && !machines.Any())
+{
+    <!-- Empty state when no data -->
+    <div class="empty-state">
+        <div class="empty-state-content">
+            <svg class="empty-state-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+            </svg>
+            <h3 class="empty-state-title">No Machines or Jobs Available</h3>
+            <p class="empty-state-text">The scheduler data may be loading or no machines are configured.</p>
+            <button class="opcentrix-button opcentrix-button-primary" onclick="location.reload()">
+                Refresh Page
+            </button>
+        </div>
+    </div>
+}
+else
+{
+    <!-- Main scheduler grid container -->
+    <div class="scheduler-main-grid opcentrix-card" 
+         style="grid-template-columns: var(--machine-label-width) repeat(@totalSlots, var(--slot-width)); min-width: fit-content;"
+         data-total-slots="@totalSlots">
+        
+        <!-- Grid header row -->
+        <!-- Machine column header -->
+        <div class="scheduler-grid-header sticky left-0 top-0 z-20 bg-white border-b border-r font-bold text-indigo-800">
+            <div class="flex items-center justify-center h-full">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
+                </svg>
+                Machine
+            </div>
+        </div>
+        
+        <!-- Date and time slot headers -->
+        @foreach (var date in dates)
+        {
+            for (int s = 0; s < slotsPerDay; s++)
+            {
+                var isFirstSlot = s == 0;
+                var slotTime = slotTimes[s];
+                var isToday = date.Date == DateTime.Today;
+                var headerClass = isFirstSlot ? "scheduler-grid-header font-semibold text-gray-800 border-r bg-white" : "scheduler-grid-header text-xs text-gray-600 border-r bg-gray-50";
+                
+                if (isToday && isFirstSlot) headerClass += " bg-blue-50 text-blue-800 border-blue-200";
+                
+                <div class="@headerClass" data-date="@date.ToString("yyyy-MM-dd")" data-slot="@s">
+                    @if (isFirstSlot)
+                    {
+                        <div class="text-center">
+                            <div class="font-bold">@date.ToString("ddd")</div>
+                            <div class="text-sm">@date.ToString("M/d")</div>
+                            @if (isToday)
+                            {
+                                <div class="text-xs text-blue-600 font-semibold">Today</div>
+                            }
+                        </div>
+                    }
+                    else if (slotsPerDay > 1)
+                    {
+                        <div class="text-center">
+                            @slotTime.ToString(@"h\:mm")
+                            @if (slotTime.Hours >= 12) 
+                            {
+                                <span class="text-xs">PM</span>
+                            } 
+                            else 
+                            {
+                                <span class="text-xs">AM</span>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        }
+        
+        <!-- Machine rows -->
+        @foreach (var machine in machines)
+        {
+            var rowHeight = machineRowHeights.GetValueOrDefault(machine, 160);
+            var machineJobs = jobs.Where(j => j.MachineId == machine).ToList();
+            var jobCount = machineJobs.Count;
+            
+            <!-- Use the _FullMachineRow partial which has the proper structure -->
+            <partial name="_FullMachineRow" model="@(new {
+                MachineId = machine,
+                Dates = dates,
+                Jobs = machineJobs,
+                RowHeight = rowHeight,
+                SlotsPerDay = slotsPerDay,
+                SlotMinutes = slotMinutes,
+                JobCount = jobCount,
+                TotalHours = machineJobs.Sum(j => j.DurationHours)
+            })" />
+        }
+    </div>
+}
+
+<!-- Updated footer summary -->
+<div class="max-w-full mt-6" id="footer-summary">
+    <partial name="_FooterSummary" model="summary" />
+</div></div>

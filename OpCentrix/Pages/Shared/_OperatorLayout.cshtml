@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - OpCentrix</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC" crossorigin="anonymous"></script>
+    
+    <!-- OpCentrix Brand Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'opcentrix': {
+                            'primary': '#3B82F6',
+                            'secondary': '#6366F1',
+                            'accent': '#10B981'
+                        }
+                    },
+                    fontFamily: {
+                        'sans': ['Inter', 'ui-sans-serif', 'system-ui']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        .session-timeout-warning {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+            color: white;
+            padding: 12px;
+            text-align: center;
+            z-index: 10000;
+            display: none;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .opcentrix-gradient {
+            background: linear-gradient(135deg, #3B82F6 0%, #6366F1 100%);
+        }
+        
+        .nav-item:hover {
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+        
+        .nav-item-active {
+            background-color: rgba(59, 130, 246, 0.1);
+            border-left: 3px solid #3B82F6;
+            color: #3B82F6;
+            font-weight: 500;
+        }
+        
+        /* Mini scheduler styles */
+        .mini-scheduler-grid {
+            display: grid;
+            grid-template-columns: 60px repeat(7, 1fr);
+            gap: 1px;
+            font-size: 0.7rem;
+        }
+        
+        .mini-job {
+            border-radius: 2px;
+            height: 16px;
+            margin: 1px 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: 0.65rem;
+            color: white;
+            padding: 0 2px;
+        }
+        
+        .mini-job-ti {
+            background-color: #3B82F6;
+        }
+        
+        .mini-job-inc {
+            background-color: #8B5CF6;
+        }
+    </style>
+    
+    @* Render Styles section to fix the error *@
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body class="bg-gray-50">
+    @{
+        var user = Context.User;
+        var isAuthenticated = user.Identity?.IsAuthenticated ?? false;
+        var userRole = user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
+        var userName = user.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value ?? user.Identity?.Name ?? "";
+        var currentPage = ViewContext.RouteData.Values["page"]?.ToString()?.TrimStart('/');
+    }
+
+    <!-- Session Timeout Warning -->
+    <div id="session-timeout-warning" class="session-timeout-warning">
+        <div class="max-w-7xl mx-auto px-4 flex items-center justify-center space-x-4">
+            <div class="flex items-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span id="timeout-message">Your session will expire in <span id="timeout-countdown">5</span> minutes</span>
+            </div>
+            <button onclick="extendSession()" class="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200">
+                Extend Session
+            </button>
+        </div>
+    </div>
+
+    <div class="min-h-screen flex">
+        <!-- Operator Sidebar -->
+        <div class="bg-white w-64 border-r border-gray-200 flex flex-col">
+            <!-- Logo Section -->
+            <div class="opcentrix-gradient px-6 py-4">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <span class="text-white text-lg font-bold">OpCentrix</span>
+                        <p class="text-white text-opacity-80 text-xs">Manufacturing Suite</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- User Profile -->
+            <div class="px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 opcentrix-gradient rounded-full flex items-center justify-center shadow">
+                        <span class="text-white font-semibold text-sm">@(userName.FirstOrDefault())</span>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-900">@userName</p>
+                        <p class="text-xs text-gray-500">@userRole</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Navigation Links -->
+            <div class="py-4 flex-grow overflow-y-auto">
+                <p class="px-6 text-xs font-medium text-gray-500 mb-3">OPERATIONS</p>
+                <nav class="space-y-1 px-3">
+                    @if (user.Identity?.IsAuthenticated ?? false)
+                    {
+                        @if (userRole == "Admin" || userRole == "Manager" || userRole == "Scheduler" || userRole == "Operator")
+                        {
+                            <a href="/Scheduler" class="nav-item flex items-center px-3 py-2 rounded-md text-gray-700 text-sm @(currentPage?.StartsWith("Scheduler") == true ? "nav-item-active" : "")">
+                                <svg class="w-5 h-5 mr-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                <span>Scheduler</span>
+                            </a>
+                        }
+                        @if (userRole == "Admin" || userRole == "Manager" || userRole == "CoatingSpecialist")
+                        {
+                            <a href="/Coating" class="nav-item flex items-center px-3 py-2 rounded-md text-gray-700 text-sm @(currentPage?.StartsWith("Coating") == true ? "nav-item-active" : "")">
+                                <svg class="w-5 h-5 mr-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17v4a2 2 0 002 2h4"></path>
+                                </svg>
+                                <span>Coating</span>
+                            </a>
+                        }
+                        @if (userRole == "Admin" || userRole == "Manager" || userRole == "ShippingSpecialist")
+                        {
+                            <a href="/Shipping" class="nav-item flex items-center px-3 py-2 rounded-md text-gray-700 text-sm @(currentPage?.StartsWith("Shipping") == true ? "nav-item-active" : "")">
+                                <svg class="w-5 h-5 mr-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                                </svg>
+                                <span>Shipping</span>
+                            </a>
+                        }
+                        @if (userRole == "Admin" || userRole == "Manager" || userRole == "EDMSpecialist")
+                        {
+                            <a href="/EDM" class="nav-item flex items-center px-3 py-2 rounded-md text-gray-700 text-sm @(currentPage?.StartsWith("EDM") == true ? "nav-item-active" : "")">
+                                <svg class="w-5 h-5 mr-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                </svg>
+                                <span>EDM</span>
+                            </a>
+                        }
+                        @if (userRole == "Admin" || userRole == "Manager" || userRole == "MachiningSpecialist")
+                        {
+                            <a href="/Machining" class="nav-item flex items-center px-3 py-2 rounded-md text-gray-700 text-sm @(currentPage?.StartsWith("Machining") == true ? "nav-item-active" : "")">
+                                <svg class="w-5 h-5 mr-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                                <span>Machining</span>
+                            </a>
+                        }
+                        @if (userRole == "Admin" || userRole == "Manager" || userRole == "QCSpecialist")
+                        {
+                            <a href="/QC" class="nav-item flex items-center px-3 py-2 rounded-md text-gray-700 text-sm @(currentPage?.StartsWith("QC") == true ? "nav-item-active" : "")">
+                                <svg class="w-5 h-5 mr-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span>Quality Control</span>
+                            </a>
+                        }
+                        @if (userRole == "Admin" || userRole == "Manager" || userRole == "PrintingSpecialist")
+                        {
+                            <a href="/Printing" class="nav-item flex items-center px-3 py-2 rounded-md text-gray-700 text-sm @(currentPage?.StartsWith("Printing") == true ? "nav-item-active" : "")">
+                                <svg class="w-5 h-5 mr-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                                </svg>
+                                <span>SLS Metal Printing</span>
+                            </a>
+                        }
+                        @if (userRole == "Admin" || userRole == "Manager" || userRole == "MediaSpecialist")
+                        {
+                            <a href="/Media" class="nav-item flex items-center px-3 py-2 rounded-md text-gray-700 text-sm @(currentPage?.StartsWith("Media") == true ? "nav-item-active" : "")">
+                                <svg class="w-5 h-5 mr-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span>Media</span>
+                            </a>
+                        }
+                        @if (userRole == "Admin" || userRole == "Manager" || userRole == "Analyst")
+                        {
+                            <a href="/Analytics" class="nav-item flex items-center px-3 py-2 rounded-md text-gray-700 text-sm @(currentPage?.StartsWith("Analytics") == true ? "nav-item-active" : "")">
+                                <svg class="w-5 h-5 mr-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                </svg>
+                                <span>Analytics</span>
+                            </a>
+                        }
+                    }
+                </nav>
+                
+                <!-- Mini Scheduler Section -->
+                @if (userRole == "Admin" || userRole == "Manager" || userRole == "PrintingSpecialist" || userRole == "Scheduler" || userRole == "Operator")
+                {
+                    <div class="mt-6 px-3">
+                        <div class="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+                            <div class="bg-indigo-50 px-3 py-2 border-b border-gray-200 flex justify-between items-center">
+                                <h3 class="text-xs font-medium text-indigo-800">SLS Print Schedule</h3>
+                                <a href="/Scheduler" class="text-xs text-indigo-600 hover:text-indigo-800">View</a>
+                            </div>
+                            <div class="px-2 py-2">
+                                <div id="sidebar-mini-scheduler" hx-get="/Scheduler?handler=EmbeddedView" hx-trigger="load" hx-swap="outerHTML">
+                                    <!-- Loading placeholder -->
+                                    <div class="p-2 text-center">
+                                        <svg class="animate-spin h-4 w-4 text-indigo-600 mx-auto mb-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        <p class="text-xs text-gray-500">Loading...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+                
+                <p class="px-6 text-xs font-medium text-gray-500 mt-6 mb-3">USER</p>
+                <nav class="space-y-1 px-3">
+                    <a href="/Account/Settings" class="nav-item flex items-center px-3 py-2 rounded-md text-gray-700 text-sm">
+                        <svg class="w-5 h-5 mr-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        <span>Settings</span>
+                    </a>
+                    <button onclick="performLogout()" class="nav-item flex items-center px-3 py-2 rounded-md text-red-600 text-sm w-full text-left">
+                        <svg class="w-5 h-5 mr-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                        </svg>
+                        <span>Logout</span>
+                    </button>
+                </nav>
+                
+                <!-- Admin Access Button -->
+                @if (userRole == "Admin")
+                {
+                    <div class="px-6 pt-6">
+                        <a href="/Admin" class="bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-sm w-full inline-block py-3 px-4 text-center font-medium transition-all duration-200">
+                            <svg class="w-5 h-5 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                            Admin Panel
+                        </a>
+                    </div>
+                }
+            </div>
+            
+            <!-- Footer -->
+            <div class="p-4 border-t border-gray-200">
+                <p class="text-xs text-gray-500 text-center">OpCentrix v2.0</p>
+            </div>
+        </div>
+        
+        <!-- Main Content Area -->
+        <div class="flex-1 flex flex-col">
+            <!-- Main Content -->
+            <main class="flex-1">
+                @RenderBody()
+            </main>
+            
+            <!-- Footer -->
+            <footer class="bg-white border-t border-gray-200 py-4 px-6">
+                <div class="flex justify-between items-center">
+                    <p class="text-xs text-gray-500">&copy; @DateTime.Now.Year OpCentrix. All rights reserved.</p>
+                    <p class="text-xs text-gray-500">Last update: @DateTime.Now.ToString("MMM dd, yyyy")</p>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Modal container with enhanced styling -->
+    <div id="modal-content" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-50 backdrop-blur-sm"></div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    
+    @if (isAuthenticated)
+    {
+        <!-- Enhanced Session Management Script -->
+        <script>
+            // Session timeout management with improved UX
+            let sessionTimeoutMinutes = 120; // Default 2 hours
+            let warningTimeoutMinutes = 5; // Show warning 5 minutes before
+            let sessionTimeoutTimer;
+            let warningTimer;
+            let countdownTimer;
+            let lastActivity = Date.now();
+
+            // Load user session timeout preference
+            const savedTimeout = localStorage.getItem('sessionTimeoutMinutes');
+            if (savedTimeout) {
+                sessionTimeoutMinutes = parseInt(savedTimeout);
+            }
+
+            function resetSessionTimeout() {
+                lastActivity = Date.now();
+                clearTimeout(sessionTimeoutTimer);
+                clearTimeout(warningTimer);
+                clearInterval(countdownTimer);
+                hideTimeoutWarning();
+
+                // Set warning timer
+                const warningTime = (sessionTimeoutMinutes - warningTimeoutMinutes) * 60 * 1000;
+                warningTimer = setTimeout(showTimeoutWarning, warningTime);
+
+                // Set session timeout
+                sessionTimeoutTimer = setTimeout(() => {
+                    window.location.href = '/Account/Logout';
+                }, sessionTimeoutMinutes * 60 * 1000);
+            }
+
+            function showTimeoutWarning() {
+                const warning = document.getElementById('session-timeout-warning');
+                warning.style.display = 'block';
+                warning.classList.add('animate-slide-in');
+                
+                let countdown = warningTimeoutMinutes * 60;
+                const countdownSpan = document.getElementById('timeout-countdown');
+                
+                countdownTimer = setInterval(() => {
+                    const minutes = Math.floor(countdown / 60);
+                    const seconds = countdown % 60;
+                    countdownSpan.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                    
+                    countdown--;
+                    
+                    if (countdown < 0) {
+                        window.location.href = '/Account/Logout';
+                    }
+                }, 1000);
+            }
+
+            function hideTimeoutWarning() {
+                const warning = document.getElementById('session-timeout-warning');
+                warning.style.display = 'none';
+                warning.classList.remove('animate-slide-in');
+                clearInterval(countdownTimer);
+            }
+
+            function extendSession() {
+                fetch('/Account/ExtendSession', { method: 'POST' })
+                    .then(() => {
+                        resetSessionTimeout();
+                    })
+                    .catch(() => {
+                        window.location.href = '/Account/Login';
+                    });
+            }
+
+            // Enhanced activity tracking
+            const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+            
+            function trackActivity() {
+                const now = Date.now();
+                if (now - lastActivity > 30000) {
+                    resetSessionTimeout();
+                }
+            }
+
+            // Add activity listeners
+            activityEvents.forEach(event => {
+                document.addEventListener(event, trackActivity, true);
+            });
+
+            // Initialize session timeout
+            resetSessionTimeout();
+
+            // Make functions globally available
+            window.extendSession = extendSession;
+            
+            // Enhanced logout function with confirmation
+            window.performLogout = function() {
+                console.log('?? Operator logout requested by user');
+                
+                // Show confirmation dialog
+                if (confirm('Are you sure you want to logout?\n\nThis will end your current session and you will need to login again.')) {
+                    console.log('?? Operator logout confirmed - redirecting to logout page');
+                    
+                    // Clear any local storage data
+                    try {
+                        localStorage.removeItem('sessionTimeoutMinutes');
+                        localStorage.removeItem('edmLogs');
+                        localStorage.removeItem('edmLogNumber');
+                        console.log('?? Local storage cleared');
+                    } catch (error) {
+                        console.warn('?? Could not clear local storage:', error);
+                    }
+                    
+                    // Clear session timers
+                    clearTimeout(sessionTimeoutTimer);
+                    clearTimeout(warningTimer);
+                    clearInterval(countdownTimer);
+                    console.log('? Session timers cleared');
+                    
+                    // Redirect to logout page
+                    window.location.href = '/Account/Logout';
+                } else {
+                    console.log('?? Operator logout cancelled by user');
+                }
+            };
+            
+            // Enhanced modal functions
+            function showJobModal() {
+                const modal = document.getElementById('modal-content');
+                if (modal) {
+                    modal.classList.remove('hidden');
+                    modal.classList.add('flex');
+                    document.body.style.overflow = 'hidden';
+                }
+            }
+
+            function closeJobModal() {
+                const modal = document.getElementById('modal-content');
+                if (modal) {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                    modal.innerHTML = '';
+                    document.body.style.overflow = '';
+                }
+            }
+
+            // HTMX event handlers
+            document.body.addEventListener('htmx:afterSwap', function (e) {
+                if (e.detail.target.id === "modal-content") {
+                    const container = document.getElementById("modal-content");
+                    if (container.innerHTML.trim() === "") {
+                        closeJobModal();
+                    } else {
+                        showJobModal();
+                    }
+                }
+            });
+
+            // Background modal close
+            document.addEventListener('click', function(e) {
+                const modal = document.getElementById('modal-content');
+                if (modal && e.target === modal && modal.classList.contains('flex')) {
+                    closeJobModal();
+                }
+            });
+
+            // Escape key modal close
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    const modal = document.getElementById('modal-content');
+                    if (modal && modal.classList.contains('flex')) {
+                        closeJobModal();
+                    }
+                }
+            });
+            
+            // Job modal opener
+            window.openJobModal = function(machineId, date, jobId = null) {
+                const params = new URLSearchParams({
+                    handler: 'ShowAddModal',
+                    machineId: machineId,
+                    date: date
+                });
+                if (jobId) params.append('id', jobId);
+                
+                htmx.ajax('GET', `/Scheduler?${params.toString()}`, {
+                    target: '#modal-content',
+                    swap: 'innerHTML'
+                });
+            };
+        </script>
+    }
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

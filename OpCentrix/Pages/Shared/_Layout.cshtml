@@ -5,66 +5,435 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - OpCentrix</title>
-
-    <!-- Tailwind CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-
-    <!-- Custom Site Styles -->
-    <link rel="stylesheet" href="~/css/site.css" />
-
-    <!-- Gridstack CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/gridstack@9.3.0/dist/gridstack.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    
+    @* Use Tailwind CDN only in development, production CSS in production *@
+    @if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
+    {
+        <script src="https://cdn.tailwindcss.com"></script>
+    }
+    else
+    {
+        <link rel="stylesheet" href="~/css/tailwind-output.css" asp-append-version="true" />
+    }
+    
+    <script src="https://unpkg.com/htmx.org@1.9.10" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC" crossorigin="anonymous"></script>
+    
+    <!-- OpCentrix Brand Configuration -->
+    @if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
+    {
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        colors: {
+                            'opcentrix': {
+                                'primary': '#3B82F6',
+                                'secondary': '#6366F1',
+                                'accent': '#10B981'
+                            }
+                        },
+                        fontFamily: {
+                            'sans': ['Inter', 'ui-sans-serif', 'system-ui']
+                        }
+                    }
+                }
+            }
+        </script>
+    }
+    
+    <style>
+        .session-timeout-warning {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+            color: white;
+            padding: 12px;
+            text-align: center;
+            z-index: 10000;
+            display: none;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+    
+    @* Render Styles section to fix the error *@
+    @await RenderSectionAsync("Styles", required: false)
 </head>
-<body class="bg-gray-100 font-sans">
+<body class="bg-gray-50">
+    @{
+        var user = Context.User;
+        var isAuthenticated = user.Identity?.IsAuthenticated ?? false;
+        var userRole = user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
+        var userName = user.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value ?? user.Identity?.Name ?? "";
+        var currentPage = ViewContext.RouteData.Values["page"]?.ToString()?.TrimStart('/');
+    }
 
-    <!-- NAVIGATION BAR -->
-    <header class="bg-white shadow sticky top-0 z-50">
-        <div class="max-w-screen-xl mx-auto px-4 py-4 flex items-center justify-between">
-            <h1 class="text-xl font-bold text-blue-800">OpCentrix</h1>
-            <nav class="space-x-6 text-sm font-medium text-gray-700">
-                <a href="/Scheduler" class="hover:text-blue-600">Scheduler</a>
-                <a href="/SchedulerTemplate" class="hover:text-blue-600">Scheduler Template</a>
-                <a href="/Machining" class="hover:text-blue-600">Machining</a>
-                <a href="/EDM" class="hover:text-blue-600">EDM</a>
-                <a href="/QC" class="hover:text-blue-600">QC</a>
-                <a href="/Coating" class="hover:text-blue-600">Coating</a>
-                <a href="/Shipping" class="hover:text-blue-600">Shipping</a>
-                <a href="/Media" class="hover:text-blue-600">Media</a>
-                <a href="/Analytics" class="hover:text-blue-600">Analytics</a>
-            </nav>
+    <!-- Session Timeout Warning -->
+    <div id="session-timeout-warning" class="session-timeout-warning">
+        <div class="max-w-7xl mx-auto px-4 flex items-center justify-center space-x-4">
+            <div class="flex items-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span id="timeout-message">Your session will expire in <span id="timeout-countdown">5</span> minutes</span>
+            </div>
+            <button onclick="extendSession()" class="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200">
+                Extend Session
+            </button>
         </div>
-    </header>
+    </div>
 
-    <!-- MAIN BODY CONTENT -->
-    <main class="max-w-screen-xl mx-auto p-4">
+    <!-- Enhanced Navigation -->
+    <nav class="bg-white shadow-lg border-b border-gray-200">
+        <div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <!-- Logo and Primary Navigation -->
+                <div class="flex items-center space-x-8">
+                    <!-- Enhanced Logo -->
+                    <div class="flex-shrink-0 flex items-center">
+                        <div class="w-10 h-10 opcentrix-gradient rounded-xl flex items-center justify-center mr-3 shadow-lg">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
+                        </div>
+                        <div>
+                            <span class="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">OpCentrix</span>
+                            <p class="text-xs text-gray-500 leading-none">SLS Metal Printing Scheduler</p>
+                        </div>
+                    </div>
+
+                    @if (isAuthenticated)
+                    {
+                        <!-- Enhanced Main Navigation Links -->
+                        <div class="hidden lg:flex space-x-1">
+                            <!-- Print Tracking Section (NEW) -->
+                            @if (userRole == "Admin" || userRole == "Manager" || userRole == "Operator" || userRole == "PrintingSpecialist")
+                            {
+                                <div class="space-y-1">
+                                    <h3 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                        Print Tracking
+                                    </h3>
+                                    <a href="/PrintTracking" 
+                                       class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("PrintTracking") == true ? "bg-blue-100 border-blue-500 text-blue-700" : "border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900") group flex items-center px-3 py-2 text-sm font-medium border-l-4">
+                                        <svg class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("PrintTracking") == true ? "text-blue-500" : "text-gray-400 group-hover:text-gray-500") flex-shrink-0 -ml-1 mr-3 h-6 w-6" 
+                                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        Print Dashboard
+                                    </a>
+                                </div>
+                            }
+
+                            <!-- Scheduling Section -->
+                            @if (userRole == "Admin" || userRole == "Manager" || userRole == "Scheduler" || userRole == "Operator")
+                            {
+                                <div class="space-y-1">
+                                    <h3 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                        Scheduling
+                                    </h3>
+                                    <a href="/Scheduler" 
+                                       class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("Scheduler") == true ? "bg-blue-100 border-blue-500 text-blue-700" : "border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900") group flex items-center px-3 py-2 text-sm font-medium border-l-4">
+                                        <svg class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("Scheduler") == true ? "text-blue-500" : "text-gray-400 group-hover:text-gray-500") flex-shrink-0 -ml-1 mr-3 h-6 w-6" 
+                                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                        </svg>
+                                        Scheduler Grid
+                                    </a>
+                                </div>
+                            }
+
+                            <!-- Admin Section -->
+                            @if (userRole == "Admin")
+                            {
+                                <div class="space-y-1">
+                                    <h3 class="px-3 text-xs font-semibold text-red-500 uppercase tracking-wider">
+                                        Administration
+                                    </h3>
+                                    <a href="/Admin" 
+                                       class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("Admin") == true ? "bg-red-100 border-red-500 text-red-700" : "border-transparent text-red-600 hover:bg-red-50 hover:text-red-700") group flex items-center px-3 py-2 text-sm font-medium border-l-4">
+                                        <svg class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("Admin") == true ? "text-red-500" : "text-red-400 group-hover:text-red-500") flex-shrink-0 -ml-1 mr-3 h-6 w-6" 
+                                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                        </svg>
+                                        Admin Panel
+                                    </a>
+                                </div>
+                            }
+                        </div>
+                        
+                        <!-- Mobile Menu Button -->
+                        <div class="lg:hidden">
+                            <button id="mobile-menu-button" class="text-gray-600 hover:text-gray-900 focus:outline-none focus:text-gray-900 p-2">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    }
+                </div>
+
+                @if (isAuthenticated)
+                {
+                    <!-- Enhanced User Menu -->
+                    <div class="flex items-center space-x-4">
+                        <!-- Quick Actions -->
+                        <div class="hidden md:flex items-center space-x-2">
+                            <a href="/Account/Settings" class="p-2 text-gray-600 hover:text-indigo-600 rounded-lg transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                            </a>
+                        </div>
+                        
+                        <!-- User Info -->
+                        <div class="flex items-center space-x-3">
+                            <div class="text-right hidden sm:block">
+                                <p class="text-sm font-medium text-gray-900">@userName</p>
+                                <p class="text-xs text-gray-500">@userRole</p>
+                            </div>
+                            <div class="relative">
+                                <div class="w-10 h-10 opcentrix-gradient rounded-full flex items-center justify-center shadow-lg cursor-pointer">
+                                    <span class="text-white font-semibold text-sm">@(userName.FirstOrDefault())</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Logout Button -->
+                        <button onclick="performLogout()" class="opcentrix-button opcentrix-button-secondary">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                            </svg>
+                            Logout
+                        </button>
+                    </div>
+                }
+            </div>
+        </div>
+        
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="lg:hidden hidden border-t border-gray-200 bg-gray-50">
+            <div class="px-4 py-3 space-y-2">
+                @if (isAuthenticated && (userRole == "Admin" || userRole == "Manager" || userRole == "Operator" || userRole == "PrintingSpecialist"))
+                {
+                    <a href="/PrintTracking" class="block px-3 py-2 text-gray-600 hover:text-indigo-600 font-medium">Print Tracking Dashboard</a>
+                }
+                @if (isAuthenticated && (userRole == "Admin" || userRole == "Manager" || userRole == "Scheduler" || userRole == "Operator"))
+                {
+                    <a href="/Scheduler" class="block px-3 py-2 text-gray-600 hover:text-indigo-600 font-medium">Production Scheduler</a>
+                }
+                @if (isAuthenticated && (userRole == "Admin" || userRole == "Manager" || userRole == "PrintingSpecialist"))
+                {
+                    <a href="/Printing" class="block px-3 py-2 text-gray-600 hover:text-indigo-600 font-medium">SLS Metal Printing</a>
+                }
+                @if (isAuthenticated && (userRole == "Admin" || userRole == "Manager" || userRole == "CoatingSpecialist"))
+                {
+                    <a href="/Coating" class="block px-3 py-2 text-gray-600 hover:text-indigo-600 font-medium">Post-Processing</a>
+                }
+                @if (isAuthenticated && (userRole == "Admin" || userRole == "Manager" || userRole == "QCSpecialist"))
+                {
+                    <a href="/QC" class="block px-3 py-2 text-gray-600 hover:text-indigo-600 font-medium">Quality Control</a>
+                }
+                @if (isAuthenticated && (userRole == "Admin" || userRole == "Manager" || userRole == "ShippingSpecialist"))
+                {
+                    <a href="/Shipping" class="block px-3 py-2 text-gray-600 hover:text-indigo-600 font-medium">Shipping</a>
+                }
+                @if (isAuthenticated && (userRole == "Admin" || userRole == "Manager" || userRole == "EDMSpecialist"))
+                {
+                    <a href="/EDM" class="block px-3 py-2 text-gray-600 hover:text-indigo-600 font-medium">EDM Operations</a>
+                }
+                @if (isAuthenticated && userRole == "Admin")
+                {
+                    <a href="/Admin" class="block px-3 py-2 text-red-600 hover:text-red-700 font-medium">Admin</a>
+                }
+                @if (isAuthenticated)
+                {
+                    <div class="border-t border-gray-200 pt-2 mt-2">
+                        <a href="/Account/Settings" class="block px-3 py-2 text-gray-600 hover:text-indigo-600 font-medium">Settings</a>
+                        <button onclick="performLogout()" class="w-full text-left px-3 py-2 text-red-600 hover:text-red-700 font-medium">
+                            <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                            </svg>
+                            Logout
+                        </button>
+                    </div>
+                }
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="min-h-screen">
         @RenderBody()
     </main>
 
-    <!-- Modal container for HTMX to swap in modals -->
-    <div id="modalContainer"></div>
-    <!-- FOOTER -->
-    <footer class="mt-10 text-center text-xs text-gray-400 pb-4">
-        &copy; @DateTime.Now.Year - OpCentrix ERP by Henry Gill
+    <!-- Enhanced Footer -->
+    <footer class="bg-white border-t border-gray-200 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <div class="w-8 h-8 opcentrix-gradient rounded-lg flex items-center justify-center">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-900">&copy; @DateTime.Now.Year OpCentrix</p>
+                        <p class="text-xs text-gray-500">SLS Metal Printing Scheduler v3.0</p>
+                    </div>
+                </div>
+                <div class="mt-4 md:mt-0">
+                    <p class="text-xs text-gray-500">Last updated: @DateTime.Now.ToString("MMM dd, yyyy HH:mm")</p>
+                </div>
+            </div>
+        </div>
     </footer>
 
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
 
-    <!-- Gridstack JS -->
-    <script src="https://cdn.jsdelivr.net/npm/gridstack@9.3.0/dist/gridstack-h5.js"></script>
+    @if (isAuthenticated)
+    {
+        <!-- Enhanced Session Management Script -->
+        <script>
+            // Session timeout management with improved UX
+            // CRITICAL FIX: Check if sessionTimeoutMinutes already exists
+            if (typeof sessionTimeoutMinutes === 'undefined') {
+                var sessionTimeoutMinutes = 120; // Default 2 hours
+                var warningTimeoutMinutes = 5; // Show warning 5 minutes before
+                var sessionTimeoutTimer;
+                var warningTimer;
+                var countdownTimer;
+                var lastActivity = Date.now();
 
-    <script src="https://unpkg.com/htmx.org@1.9.4"></script>
-    <script type="module">
-        import { initSchedulerZoom } from '/js/scheduler-ui.js';
-        document.addEventListener('DOMContentLoaded', () => {
-            if (document.getElementById('schedulerBody')) {
-                initSchedulerZoom('zoomIn', 'zoomOut', 'schedulerBody');
+                // Load user session timeout preference
+                const savedTimeout = localStorage.getItem('sessionTimeoutMinutes');
+                if (savedTimeout) {
+                    sessionTimeoutMinutes = parseInt(savedTimeout);
+                }
             }
-        });
-    </script>
 
-    @RenderSection("Scripts", required: false)
+            function resetSessionTimeout() {
+                lastActivity = Date.now();
+                clearTimeout(sessionTimeoutTimer);
+                clearTimeout(warningTimer);
+                clearInterval(countdownTimer);
+                hideTimeoutWarning();
 
-    <!-- Modal Container loaded via HTMX -->
-    <div id="modal-content" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-50"></div>
+                // Set warning timer
+                const warningTime = (sessionTimeoutMinutes - warningTimeoutMinutes) * 60 * 1000;
+                warningTimer = setTimeout(showTimeoutWarning, warningTime);
+
+                // Set session timeout
+                sessionTimeoutTimer = setTimeout(() => {
+                    window.location.href = '/Account/Logout';
+                }, sessionTimeoutMinutes * 60 * 1000);
+            }
+
+            function showTimeoutWarning() {
+                const warning = document.getElementById('session-timeout-warning');
+                warning.style.display = 'block';
+                warning.classList.add('animate-slide-in');
+                
+                let countdown = warningTimeoutMinutes * 60;
+                const countdownSpan = document.getElementById('timeout-countdown');
+                
+                countdownTimer = setInterval(() => {
+                    const minutes = Math.floor(countdown / 60);
+                    const seconds = countdown % 60;
+                    countdownSpan.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                    
+                    countdown--;
+                    
+                    if (countdown < 0) {
+                        window.location.href = '/Account/Logout';
+                    }
+                }, 1000);
+            }
+
+            function hideTimeoutWarning() {
+                const warning = document.getElementById('session-timeout-warning');
+                warning.style.display = 'none';
+                warning.classList.remove('animate-slide-in');
+                clearInterval(countdownTimer);
+            }
+
+            function extendSession() {
+                fetch('/Account/ExtendSession', { method: 'POST' })
+                    .then(() => {
+                        resetSessionTimeout();
+                        showNotification('Session extended successfully', 'success');
+                    })
+                    .catch(() => {
+                        window.location.href = '/Account/Login';
+                    });
+            }
+
+            // Enhanced activity tracking
+            const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+            
+            function trackActivity() {
+                const now = Date.now();
+                if (now - lastActivity > 30000) {
+                    resetSessionTimeout();
+                }
+            }
+
+            // Add activity listeners
+            activityEvents.forEach(event => {
+                document.addEventListener(event, trackActivity, true);
+            });
+
+            // Initialize session timeout
+            resetSessionTimeout();
+
+            // Make functions globally available
+            window.extendSession = extendSession;
+            
+            // Enhanced logout function with confirmation
+            window.performLogout = function() {
+                console.log('🔴 Logout requested by user');
+                
+                // Show confirmation dialog
+                if (confirm('Are you sure you want to logout?\n\nThis will end your current session and you will need to login again.')) {
+                    console.log('🔴 Logout confirmed - redirecting to logout page');
+                    
+                    // Clear any local storage data
+                    try {
+                        localStorage.removeItem('sessionTimeoutMinutes');
+                        localStorage.removeItem('edmLogs');
+                        localStorage.removeItem('edmLogNumber');
+                        console.log('🧹 Local storage cleared');
+                    } catch (error) {
+                        console.warn('⚠️ Could not clear local storage:', error);
+                    }
+                    
+                    // Clear session timers
+                    clearTimeout(sessionTimeoutTimer);
+                    clearTimeout(warningTimer);
+                    clearInterval(countdownTimer);
+                    console.log('⏰ Session timers cleared');
+                    
+                    // Redirect to logout page
+                    window.location.href = '/Account/Logout';
+                } else {
+                    console.log('🔴 Logout cancelled by user');
+                }
+            };
+            
+            // Mobile menu toggle
+            document.getElementById('mobile-menu-button')?.addEventListener('click', function() {
+                const mobileMenu = document.getElementById('mobile-menu');
+                mobileMenu.classList.toggle('hidden');
+            });
+        </script>
+    }
+
+    @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
 
