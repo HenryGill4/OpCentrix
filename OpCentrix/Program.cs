@@ -13,6 +13,16 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container
 builder.Services.AddRazorPages();
 
+// CRITICAL FIX: Configure antiforgery services explicitly
+builder.Services.AddAntiforgery(options =>
+{
+    options.HeaderName = "X-CSRF-TOKEN";
+    options.SuppressXFrameOptionsHeader = false;
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    options.Cookie.SameSite = SameSiteMode.Strict;
+});
+
 // Database configuration
 builder.Services.AddDbContext<SchedulerContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -29,7 +39,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Cookie.HttpOnly = true;
         options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
         options.Cookie.SameSite = SameSiteMode.Lax;
-        
+
         // Handle AJAX/HTMX authentication challenges
         options.Events = new CookieAuthenticationEvents
         {
@@ -52,25 +62,25 @@ builder.Services.AddAuthorization(options =>
     // Role-based policies
     options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
     options.AddPolicy("ManagerOrAdmin", policy => policy.RequireRole("Manager", "Admin"));
-    
+
     // Department-specific policies
-    options.AddPolicy("SchedulerAccess", policy => 
+    options.AddPolicy("SchedulerAccess", policy =>
         policy.RequireRole("Admin", "Manager", "Scheduler", "Operator"));
-    options.AddPolicy("PrintingAccess", policy => 
+    options.AddPolicy("PrintingAccess", policy =>
         policy.RequireRole("Admin", "Manager", "PrintingSpecialist"));
-    options.AddPolicy("CoatingAccess", policy => 
+    options.AddPolicy("CoatingAccess", policy =>
         policy.RequireRole("Admin", "Manager", "CoatingSpecialist"));
-    options.AddPolicy("ShippingAccess", policy => 
+    options.AddPolicy("ShippingAccess", policy =>
         policy.RequireRole("Admin", "Manager", "ShippingSpecialist"));
-    options.AddPolicy("EDMAccess", policy => 
+    options.AddPolicy("EDMAccess", policy =>
         policy.RequireRole("Admin", "Manager", "EDMSpecialist"));
-    options.AddPolicy("MachiningAccess", policy => 
+    options.AddPolicy("MachiningAccess", policy =>
         policy.RequireRole("Admin", "Manager", "MachiningSpecialist"));
-    options.AddPolicy("QCAccess", policy => 
+    options.AddPolicy("QCAccess", policy =>
         policy.RequireRole("Admin", "Manager", "QCSpecialist"));
-    options.AddPolicy("MediaAccess", policy => 
+    options.AddPolicy("MediaAccess", policy =>
         policy.RequireRole("Admin", "Manager", "MediaSpecialist"));
-    options.AddPolicy("AnalyticsAccess", policy => 
+    options.AddPolicy("AnalyticsAccess", policy =>
         policy.RequireRole("Admin", "Manager", "Analyst"));
 });
 
@@ -145,18 +155,18 @@ using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     var logger = services.GetRequiredService<ILogger<Program>>();
-    
+
     try
     {
         logger.LogInformation("Initializing database...");
-        
+
         var context = services.GetRequiredService<SchedulerContext>();
-        
+
         // In development, create database but don't recreate unless explicitly requested
         if (app.Environment.IsDevelopment())
         {
             logger.LogInformation("Development environment - ensuring database exists...");
-            
+
             // Check if user wants to recreate the database
             var recreateDatabase = Environment.GetEnvironmentVariable("RECREATE_DATABASE");
             if (recreateDatabase?.ToLower() == "true")
@@ -177,7 +187,7 @@ using (var scope = app.Services.CreateScope())
         {
             // Ensure database is created
             await context.Database.EnsureCreatedAsync();
-            
+
             // Apply any pending migrations
             if (context.Database.GetPendingMigrations().Any())
             {
@@ -185,16 +195,16 @@ using (var scope = app.Services.CreateScope())
                 await context.Database.MigrateAsync();
             }
         }
-        
+
         // Seed the database with SLS data
         var seedingService = services.GetRequiredService<SlsDataSeedingService>();
         await seedingService.SeedDatabaseAsync();
-        
+
         logger.LogInformation("Database initialization completed successfully");
         logger.LogInformation("?? TIP: Set environment variable RECREATE_DATABASE=true to recreate database on next startup");
         logger.LogInformation("?? Test users available:");
         logger.LogInformation("   admin/admin123 (Admin)");
-        logger.LogInformation("   manager/manager123 (Manager)");  
+        logger.LogInformation("   manager/manager123 (Manager)");
         logger.LogInformation("   scheduler/scheduler123 (Scheduler)");
         logger.LogInformation("   operator/operator123 (Operator)");
         logger.LogInformation("   printer/printer123 (PrintingSpecialist)");
@@ -205,7 +215,7 @@ using (var scope = app.Services.CreateScope())
     {
         logger.LogError(ex, "CRITICAL ERROR during database initialization");
         logger.LogError("Stack trace: {StackTrace}", ex.StackTrace);
-        
+
         // In development, continue running even if seeding fails
         if (!app.Environment.IsDevelopment())
         {

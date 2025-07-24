@@ -133,11 +133,16 @@
                                         class="text-blue-600 hover:text-blue-900 transition">
                                     Edit
                                 </button>
-                                <button hx-post="/Admin/Jobs?handler=Delete&id=@job.Id"
-                                        hx-confirm="Are you sure you want to delete this job?"
-                                        class="text-red-600 hover:text-red-900 transition">
-                                    Delete
-                                </button>
+                                <form style="display: inline;"
+                                      hx-post="/Admin/Jobs?handler=Delete&id=@job.Id"
+                                      hx-confirm="Are you sure you want to delete this job?"
+                                      hx-on::after-request="console.log('??? [ADMIN-JOBS] Delete response received:', event.detail.xhr.status); if(event.detail.xhr.status === 200) { console.log('? [ADMIN-JOBS] Delete success'); window.location.reload(); } else { console.error('? [ADMIN-JOBS] Delete failed:', event.detail.xhr.status); }"
+                                      hx-on::response-error="console.error('?? [ADMIN-JOBS] Delete error:', event.detail); showNotification('Error deleting job. Please try again.', 'error');">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="text-red-600 hover:text-red-900 transition">
+                                        Delete
+                                    </button>
+                                </form>
                             </td>
                         </tr>
                     }
@@ -204,3 +209,84 @@
         </div>
     </div>
 }
+
+<!-- Modal Container for Edit Forms -->
+<div id="modal-container" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50" onclick="hideModal()">
+</div>
+
+<script>
+// Enhanced notification and modal functions for Admin Jobs page
+function showNotification(message, type = 'info') {
+    // Remove existing notifications
+    const existingNotifications = document.querySelectorAll('.notification');
+    existingNotifications.forEach(n => n.remove());
+    
+    const notification = document.createElement('div');
+    notification.className = `notification fixed top-4 right-4 px-6 py-4 rounded-lg shadow-lg z-50 transform transition-all duration-300 translate-x-full text-white font-medium max-w-md`;
+    
+    // Set colors based on type
+    if (type === 'success') {
+        notification.className += ' bg-green-600';
+    } else if (type === 'error') {
+        notification.className += ' bg-red-600';
+    } else {
+        notification.className += ' bg-blue-600';
+    }
+    
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    // Animate in
+    setTimeout(() => {
+        notification.classList.remove('translate-x-full');
+    }, 10);
+    
+    // Auto dismiss after 4 seconds
+    setTimeout(() => {
+        notification.classList.add('translate-x-full');
+        setTimeout(() => notification.remove(), 300);
+    }, 4000);
+}
+
+function showModal(content) {
+    const modal = document.getElementById('modal-container');
+    if (modal) {
+        modal.innerHTML = content;
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function hideModal() {
+    const modal = document.getElementById('modal-container');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        modal.innerHTML = '';
+        document.body.style.overflow = '';
+    }
+}
+
+// Close modal on escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        hideModal();
+    }
+});
+
+// Enhanced HTMX error handling for Admin Jobs
+document.body.addEventListener('htmx:responseError', function(e) {
+    console.error('?? [ADMIN-JOBS] HTMX error:', e.detail);
+    showNotification('Request failed. Please try again.', 'error');
+});
+
+// Enhanced HTMX success handling
+document.body.addEventListener('htmx:afterRequest', function(e) {
+    if (e.detail.successful && e.detail.xhr.status === 200) {
+        console.log('? [ADMIN-JOBS] Request successful');
+    }
+});
+
+console.log('? [ADMIN-JOBS] Admin Jobs page scripts loaded successfully');
+</script>

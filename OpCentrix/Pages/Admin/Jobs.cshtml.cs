@@ -207,19 +207,25 @@ namespace OpCentrix.Pages.Admin
             {
                 var job = await _context.Jobs.FindAsync(id);
                 if (job == null)
-                    return NotFound();
+                {
+                    return Content("<script>showNotification('Job not found. It may have already been deleted.', 'error'); setTimeout(() => window.location.reload(), 1000);</script>", "text/html");
+                }
 
+                var machineId = job.MachineId;
+                var partNumber = job.PartNumber;
+
+                // Remove the job
                 _context.Jobs.Remove(job);
 
                 // Add log entry
                 _context.JobLogEntries.Add(new JobLogEntry
                 {
-                    MachineId = job.MachineId,
-                    PartNumber = job.PartNumber,
+                    MachineId = machineId,
+                    PartNumber = partNumber,
                     Action = "Deleted",
-                    Operator = "Admin",
-                    Notes = "Job deleted via admin panel",
-                    Timestamp = DateTime.Now
+                    Operator = User.Identity?.Name ?? "Admin",
+                    Notes = $"Job deleted via admin panel - Job ID: {id}",
+                    Timestamp = DateTime.UtcNow
                 });
 
                 await _context.SaveChangesAsync();
@@ -228,6 +234,9 @@ namespace OpCentrix.Pages.Admin
             }
             catch (Exception ex)
             {
+                // Log the error (you might want to use ILogger here)
+                Console.WriteLine($"Error deleting job {id}: {ex.Message}");
+                
                 return Content($"<script>showNotification('Error deleting job: {ex.Message}', 'error');</script>", "text/html");
             }
         }

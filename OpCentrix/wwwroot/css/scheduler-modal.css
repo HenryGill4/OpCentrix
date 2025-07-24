@@ -417,6 +417,104 @@
     border-color: #3b82f6;
 }
 
+/* Auto-schedule button styling */
+.input-with-button {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.input-with-button .form-input {
+    flex: 1;
+}
+
+.btn-auto-schedule {
+    padding: 0.5rem 0.75rem;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: none;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    white-space: nowrap;
+    min-width: 4rem;
+    justify-content: center;
+}
+
+.btn-auto-schedule:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-auto-schedule:active {
+    transform: translateY(0);
+}
+
+.btn-auto-schedule:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-auto-schedule svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+/* Auto-scheduled input styling */
+.form-input.auto-scheduled {
+    border-color: #10b981;
+    border-width: 2px;
+    background: linear-gradient(90deg, #f0fdf4 0%, #ffffff 100%);
+    position: relative;
+}
+
+.form-input.auto-scheduled::after {
+    content: '??';
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.75rem;
+    opacity: 0.7;
+}
+
+.form-input.auto-scheduled:hover {
+    border-color: #059669;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1);
+}
+
+/* Pulse animation for auto-schedule button when it's recommended */
+@keyframes pulse-green {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+    }
+}
+
+.btn-auto-schedule.recommended {
+    animation: pulse-green 2s infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
 /* Responsive design */
 @media (max-width: 1024px) {
     .form-section {

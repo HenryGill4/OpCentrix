@@ -20,7 +20,7 @@ namespace OpCentrix.Services
     public class SchedulerService : ISchedulerService
     {
         private readonly ILogger<SchedulerService> _logger;
-        
+
         public SchedulerService(ILogger<SchedulerService> logger)
         {
             _logger = logger;
@@ -47,7 +47,7 @@ namespace OpCentrix.Services
                 .Select(i => start.AddDays(i))
                 .ToList();
 
-            _logger.LogInformation("Generated scheduler data for {MachineCount} machines, {DateCount} days starting {StartDate}, zoom: {Zoom}", 
+            _logger.LogInformation("Generated scheduler data for {MachineCount} machines, {DateCount} days starting {StartDate}, zoom: {Zoom}",
                 machines.Count, dateCount, start.ToString("yyyy-MM-dd"), zoom);
 
             return new SchedulerPageViewModel
@@ -97,7 +97,7 @@ namespace OpCentrix.Services
                 // Build platform capacity validation
                 ValidateBuildPlatformCapacity(job, existingJobs, errors);
 
-                _logger.LogInformation("Job validation completed for {PartNumber} on {MachineId}: {ErrorCount} errors found", 
+                _logger.LogInformation("Job validation completed for {PartNumber} on {MachineId}: {ErrorCount} errors found",
                     job.PartNumber, job.MachineId, errors.Count);
 
                 return errors.Count == 0;
@@ -128,8 +128,8 @@ namespace OpCentrix.Services
                     // Try to place in existing layers
                     for (int i = 0; i < layers.Count; i++)
                     {
-                        var canPlaceInLayer = layers[i].All(existingJob => 
-                            !job.OverlapsWith(existingJob) && 
+                        var canPlaceInLayer = layers[i].All(existingJob =>
+                            !job.OverlapsWith(existingJob) &&
                             IsCompatibleForSameBuildPlatform(job, existingJob));
 
                         if (canPlaceInLayer)
@@ -151,11 +151,11 @@ namespace OpCentrix.Services
                 var baseHeight = 160;
                 var layerHeight = 40;
                 var complexityBonus = CalculateComplexityBonus(jobs);
-                
+
                 var calculatedHeight = baseHeight + (layers.Count - 1) * layerHeight + complexityBonus;
                 var finalHeight = Math.Max(160, Math.Min(400, calculatedHeight));
 
-                _logger.LogDebug("Calculated layout for {MachineId}: {LayerCount} layers, {Height}px height", 
+                _logger.LogDebug("Calculated layout for {MachineId}: {LayerCount} layers, {Height}px height",
                     machineId, layers.Count, finalHeight);
 
                 return (layers.Count, finalHeight);
@@ -184,7 +184,7 @@ namespace OpCentrix.Services
                 // Check material compatibility
                 if (!machine.SupportsMaterial(job.SlsMaterial))
                 {
-                    _logger.LogWarning("Machine {MachineId} does not support material {Material}", 
+                    _logger.LogWarning("Machine {MachineId} does not support material {Material}",
                         job.MachineId, job.SlsMaterial);
                     return false;
                 }
@@ -192,7 +192,7 @@ namespace OpCentrix.Services
                 // Check part dimensions against build envelope
                 if (job.Part != null && !machine.CanAccommodatePart(job.Part))
                 {
-                    _logger.LogWarning("Part {PartNumber} dimensions exceed machine {MachineId} build envelope", 
+                    _logger.LogWarning("Part {PartNumber} dimensions exceed machine {MachineId} build envelope",
                         job.PartNumber, job.MachineId);
                     return false;
                 }
@@ -200,14 +200,14 @@ namespace OpCentrix.Services
                 // Check process parameter compatibility
                 if (job.LaserPowerWatts > machine.MaxLaserPowerWatts)
                 {
-                    _logger.LogWarning("Job {PartNumber} requires laser power {Power}W, machine {MachineId} max is {MaxPower}W", 
+                    _logger.LogWarning("Job {PartNumber} requires laser power {Power}W, machine {MachineId} max is {MaxPower}W",
                         job.PartNumber, job.LaserPowerWatts, job.MachineId, machine.MaxLaserPowerWatts);
                     return false;
                 }
 
                 if (job.ScanSpeedMmPerSec > machine.MaxScanSpeedMmPerSec)
                 {
-                    _logger.LogWarning("Job {PartNumber} requires scan speed {Speed}mm/s, machine {MachineId} max is {MaxSpeed}mm/s", 
+                    _logger.LogWarning("Job {PartNumber} requires scan speed {Speed}mm/s, machine {MachineId} max is {MaxSpeed}mm/s",
                         job.PartNumber, job.ScanSpeedMmPerSec, job.MachineId, machine.MaxScanSpeedMmPerSec);
                     return false;
                 }
@@ -251,7 +251,7 @@ namespace OpCentrix.Services
                     [("Ti-6Al-4V ELI Grade 23", "Ti-6Al-4V Grade 5")] = 30,
                     [("Inconel 718", "Inconel 625")] = 45,
                     [("Inconel 625", "Inconel 718")] = 45,
-                    
+
                     // Different material families - full cleaning required
                     [("Ti-6Al-4V Grade 5", "Inconel 718")] = 120,
                     [("Ti-6Al-4V Grade 5", "Inconel 625")] = 120,
@@ -292,10 +292,10 @@ namespace OpCentrix.Services
                 {
                     if (job.Part.LengthMm > machine.BuildLengthMm)
                         issues.Add($"Part length ({job.Part.LengthMm}mm) exceeds machine build length ({machine.BuildLengthMm}mm)");
-                    
+
                     if (job.Part.WidthMm > machine.BuildWidthMm)
                         issues.Add($"Part width ({job.Part.WidthMm}mm) exceeds machine build width ({machine.BuildWidthMm}mm)");
-                    
+
                     if (job.Part.HeightMm > machine.BuildHeightMm)
                         issues.Add($"Part height ({job.Part.HeightMm}mm) exceeds machine build height ({machine.BuildHeightMm}mm)");
                 }
@@ -388,7 +388,7 @@ namespace OpCentrix.Services
                 // Get all jobs scheduled for this machine on this date
                 var jobs = await context.Jobs
                     .Include(j => j.Part)
-                    .Where(j => j.MachineId == machineId && 
+                    .Where(j => j.MachineId == machineId &&
                                j.ScheduledStart.Date == buildDate.Date)
                     .OrderBy(j => j.Priority)
                     .ThenBy(j => j.ScheduledStart)
@@ -413,7 +413,7 @@ namespace OpCentrix.Services
                 // TODO: Implement more sophisticated 3D packing algorithm
                 // For now, just return ordered by material compatibility and priority
 
-                _logger.LogInformation("Optimized {JobCount} jobs for machine {MachineId} on {Date}", 
+                _logger.LogInformation("Optimized {JobCount} jobs for machine {MachineId} on {Date}",
                     optimizedJobs.Count, machineId, buildDate.Date);
 
                 return optimizedJobs;
@@ -505,8 +505,8 @@ namespace OpCentrix.Services
         {
             // Find concurrent jobs on the same machine (for build platform sharing)
             var concurrentJobs = existingJobs
-                .Where(j => j.MachineId == job.MachineId && 
-                           j.ScheduledStart < job.ScheduledEnd && 
+                .Where(j => j.MachineId == job.MachineId &&
+                           j.ScheduledStart < job.ScheduledEnd &&
                            j.ScheduledEnd > job.ScheduledStart)
                 .ToList();
 

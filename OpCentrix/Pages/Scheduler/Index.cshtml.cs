@@ -1068,5 +1068,94 @@ namespace OpCentrix.Pages.Scheduler
                 });
             }
         }
+
+        public async Task<IActionResult> OnPostDeleteJobAsync(int id)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("🗑️ [SCHEDULER-{OperationId}] Processing job deletion request: JobId={JobId}",
+                operationId, id);
+
+            try
+            {
+                // Find the job to delete
+                var job = await _context.Jobs.FindAsync(id);
+                if (job == null)
+                {
+                    _logger.LogWarning("⚠️ [SCHEDULER-{OperationId}] Job not found for deletion: {JobId}", operationId, id);
+
+                    // Return empty content to close modal
+                    return Content("", "text/html");
+                }
+
+                var machineId = job.MachineId;
+                var jobInfo = $"{job.PartNumber} (ID: {job.Id})";
+
+                _logger.LogDebug("🗑️ [SCHEDULER-{OperationId}] Deleting job: {JobInfo} from machine: {MachineId}",
+                    operationId, jobInfo, machineId);
+
+                // Use transaction for safe deletion
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
+                {
+                    // Create audit log entry before deletion
+                    var auditEntry = new JobLogEntry
+                    {
+                        MachineId = job.MachineId,
+                        PartNumber = job.PartNumber ?? string.Empty,
+                        Action = "Deleted",
+                        Operator = User.Identity?.Name ?? "System",
+                        Notes = $"Job deleted via scheduler interface (Operation ID: {operationId}). " +
+                               $"Original schedule: {job.ScheduledStart:yyyy-MM-dd HH:mm} - {job.ScheduledEnd:yyyy-MM-dd HH:mm}",
+                        Timestamp = DateTime.UtcNow
+                    };
+
+                    _context.JobLogEntries.Add(auditEntry);
+
+                    // Remove the job
+                    _context.Jobs.Remove(job);
+
+                    // Save changes
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Job deleted successfully: {JobInfo}",
+                        operationId, jobInfo);
+
+                    // Return simple success response that will close modal and trigger refresh
+                    var successScript = "<div id=\"delete-success\" hx-trigger=\"load\">" +
+                        "<script>" +
+                        "if (window.closeJobModal) { window.closeJobModal(); } " +
+                        "else { const modal = document.getElementById('modal-container'); " +
+                        "if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); " +
+                        "document.body.style.overflow = ''; modal.innerHTML = ''; } } " +
+                        "if (window.showSuccessNotification) { " +
+                        "window.showSuccessNotification('Job deleted successfully!'); } " +
+                        "setTimeout(() => { window.location.reload(); }, 500);" +
+                        "</script></div>";
+
+                    return Content(successScript, "text/html");
+                }
+                catch (Exception transactionEx)
+                {
+                    await transaction.RollbackAsync();
+                    _logger.LogError(transactionEx, "🚨 [SCHEDULER-{OperationId}] Transaction error during job deletion: {ErrorMessage}",
+                        operationId, transactionEx.Message);
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "🚨 [SCHEDULER-{OperationId}] Critical error deleting job {JobId}: {ErrorMessage}",
+                    operationId, id, ex.Message);
+
+                var errorScript = "<div id=\"delete-error\">" +
+                    "<script>" +
+                    "if (window.showErrorNotification) { " +
+                    "window.showErrorNotification('Error deleting job. Please try again.'); }" +
+                    "</script></div>";
+
+                return Content(errorScript, "text/html");
+            }
+        }
     }
 }
