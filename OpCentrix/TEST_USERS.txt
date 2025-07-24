@@ -1,0 +1,329 @@
+# OpCentrix Test Users - Login Credentials
+
+## System Overview
+This file contains all test user accounts for the OpCentrix SLS Print Job Scheduler system. Each user has specific role-based permissions and access to different modules.
+
+## Test User Accounts
+
+### 1. SYSTEM ADMINISTRATOR
+**Username:** admin
+**Password:** admin123
+**Full Name:** System Administrator
+**Email:** admin@opcentrix.com
+**Role:** Admin
+**Department:** IT
+
+**Access Level:** FULL ACCESS
+- ? Scheduler (read/write/delete)
+- ? Admin Panel (user management, system settings)
+- ? All Department Modules
+- ? Analytics and Reporting
+- ? Job Management (full CRUD)
+- ? System Configuration
+- ? Print Tracking Dashboard (full access)
+
+---
+
+### 2. PRODUCTION MANAGER
+**Username:** manager
+**Password:** manager123
+**Full Name:** Production Manager
+**Email:** manager@opcentrix.com
+**Role:** Manager
+**Department:** Production
+
+**Access Level:** MANAGEMENT ACCESS
+- ? Scheduler (read/write/delete)
+- ? All Department Modules
+- ? Analytics and Reporting
+- ? Job Management (full CRUD)
+- ? Admin Panel / User Management
+- ? Print Tracking Dashboard (full access)
+
+---
+
+### 3. PRODUCTION SCHEDULER
+**Username:** scheduler
+**Password:** scheduler123
+**Full Name:** Production Scheduler
+**Email:** scheduler@opcentrix.com
+**Role:** Scheduler
+**Department:** Production
+
+**Access Level:** SCHEDULER ACCESS
+- ? Scheduler (read/write)
+- ? Job Log
+- ? Job Management (create/edit)
+- ? Job Deletion (admin/manager only)
+- ? Department Modules
+- ? Admin Panel
+- ? Print Tracking Dashboard (full access)
+
+---
+
+### 4. MACHINE OPERATOR
+**Username:** operator
+**Password:** operator123
+**Full Name:** Machine Operator
+**Email:** operator@opcentrix.com
+**Role:** Operator
+**Department:** Production
+
+**Access Level:** OPERATOR ACCESS
+- ? Scheduler (read-only)
+- ? Job status updates
+- ? Job Creation/Deletion
+- ? Department Modules
+- ? Admin Panel
+- ? Print Tracking Dashboard (full access)
+
+---
+
+### 5. 3D PRINTER OPERATOR (NEW)
+**Username:** printer
+**Password:** printer123
+**Full Name:** 3D Printer Operator
+**Email:** printer@opcentrix.com
+**Role:** PrintingSpecialist
+**Department:** 3D Printing
+
+**Access Level:** PRINT TRACKING ONLY
+- ? Scheduler (no access)
+- ? Job Creation/Deletion
+- ? Department Modules
+- ? Admin Panel
+- ? Print Tracking Dashboard (full access - start/stop prints, log parts, delays)
+
+---
+
+### 6. COATING SPECIALIST
+**Username:** coating
+**Password:** coating123
+**Full Name:** Coating Specialist
+**Email:** coating@opcentrix.com
+**Role:** CoatingSpecialist
+**Department:** Coating
+
+**Access Level:** COATING DEPARTMENT
+- ? Coating Module (full access)
+- ? Scheduler
+- ? Other Department Modules
+- ? Admin Panel
+- ? Print Tracking
+
+---
+
+### 7. SHIPPING SPECIALIST
+**Username:** shipping
+**Password:** shipping123
+**Full Name:** Shipping Specialist
+**Email:** shipping@opcentrix.com
+**Role:** ShippingSpecialist
+**Department:** Shipping
+
+**Access Level:** SHIPPING DEPARTMENT
+- ? Shipping Module (full access)
+- ? Scheduler
+- ? Other Department Modules
+- ? Admin Panel
+- ? Print Tracking
+
+---
+
+### 8. EDM SPECIALIST
+**Username:** edm
+**Password:** edm123
+**Full Name:** EDM Specialist
+**Email:** edm@opcentrix.com
+**Role:** EDMSpecialist
+**Department:** EDM
+
+**Access Level:** EDM DEPARTMENT
+- ? EDM Module (full access)
+- ? Scheduler
+- ? Other Department Modules
+- ? Admin Panel
+- ? Print Tracking
+
+---
+
+### 9. MACHINING SPECIALIST
+**Username:** machining
+**Password:** machining123
+**Full Name:** Machining Specialist
+**Email:** machining@opcentrix.com
+**Role:** MachiningSpecialist
+**Department:** Machining
+
+**Access Level:** MACHINING DEPARTMENT
+- ? Machining Module (full access)
+- ? Scheduler
+- ? Other Department Modules
+- ? Admin Panel
+- ? Print Tracking
+
+---
+
+### 10. QUALITY CONTROL SPECIALIST
+**Username:** qc
+**Password:** qc123
+**Full Name:** Quality Control Specialist
+**Email:** qc@opcentrix.com
+**Role:** QCSpecialist
+**Department:** Quality
+
+**Access Level:** QUALITY CONTROL DEPARTMENT
+- ? QC Module (full access)
+- ? Scheduler
+- ? Other Department Modules
+- ? Admin Panel
+- ? Print Tracking
+
+---
+
+### 11. MEDIA SPECIALIST
+**Username:** media
+**Password:** media123
+**Full Name:** Media Specialist
+**Email:** media@opcentrix.com
+**Role:** MediaSpecialist
+**Department:** Media
+
+**Access Level:** MEDIA DEPARTMENT
+- ? Media Module (full access)
+- ? Scheduler
+- ? Other Department Modules
+- ? Admin Panel
+- ? Print Tracking
+
+---
+
+### 12. DATA ANALYST
+**Username:** analyst
+**Password:** analyst123
+**Full Name:** Data Analyst
+**Email:** analyst@opcentrix.com
+**Role:** Analyst
+**Department:** Analytics
+
+**Access Level:** ANALYTICS ACCESS
+- ? Analytics Module (full access)
+- ? Reporting and Data Analysis
+- ? Job Creation/Modification
+- ? Department Modules
+- ? Admin Panel
+- ? Print Tracking
+
+---
+
+## Role-Based Access Matrix
+
+| Feature/Module | Admin | Manager | Scheduler | Operator | Specialists | PrintingSpecialist | Analyst |
+|----------------|-------|---------|-----------|----------|-------------|--------------------|---------|
+| Scheduler | ? Full | ? Full | ? Read/Write | ? Read | ? No | ? No | ? No |
+| Job Creation | ? Yes | ? Yes | ? Yes | ? No | ? No | ? No | ? No |
+| Job Editing | ? Yes | ? Yes | ? Yes | ? Limited | ? No | ? No | ? No |
+| Job Deletion | ? Yes | ? Yes | ? No | ? No | ? No | ? No | ? No |
+| Admin Panel | ? Yes | ? No | ? No | ? No | ? No | ? No | ? No |
+| Department Modules | ? All | ? All | ? No | ? No | ? Own Only | ? No | ? No |
+| Analytics | ? Yes | ? Yes | ? No | ? No | ? No | ? No | ? Yes |
+| Print Tracking | ? Yes | ? Yes | ? Yes | ? Yes | ? Yes | ? No | ? No |
+| User Management | ? Yes | ? No | ? No | ? No | ? No | ? No | ? No |
+
+## Quick Login Instructions
+
+1. **Navigate to:** `http://localhost:5000/Account/Login`
+2. **Choose a test user** from the list above
+3. **Enter credentials** (username and password)
+4. **Click "Sign In"**
+5. **You'll be redirected** to the appropriate starting page based on your role
+
+### Recommended Testing Users:
+
+#### For Admin Testing (Full Access):
+- **Username:** admin
+- **Password:** admin123
+- **Access:** Everything including Print Tracking
+
+#### For 3D Printer Operator Testing (Print Tracking Only):
+- **Username:** printer
+- **Password:** printer123
+- **Access:** Print Tracking Dashboard only
+
+#### For Production Testing (Scheduler + Print Tracking):
+- **Username:** operator
+- **Password:** operator123
+- **Access:** Scheduler view + Print Tracking
+
+## Security Notes
+
+?? **Important:** These are test credentials for development only!
+- All passwords are simple for testing purposes
+- In production, enforce strong password policies
+- Enable two-factor authentication for admin accounts
+- Regularly rotate passwords
+- Monitor login attempts and access logs
+
+## System Features by Role
+
+### Admin Features
+- Complete system access
+- User account management
+- System configuration
+- All department modules
+- Full job management capabilities
+- Print tracking with all permissions
+
+### Manager Features
+- Production oversight
+- Cross-department visibility
+- Analytics and reporting
+- Job management (full CRUD)
+- Department coordination
+- Print tracking oversight
+
+### Scheduler Features
+- Job scheduling and planning
+- Production timeline management
+- Resource allocation
+- Job status monitoring
+- Print tracking integration
+
+### Operator Features
+- Job status updates
+- Production feedback
+- Schedule viewing
+- Work order details
+- Print tracking operations
+
+### PrintingSpecialist Features (NEW)
+- Print start/stop operations
+- Part quantity logging
+- Delay reporting and categorization
+- Build completion tracking
+- Printer status updates
+- NO access to scheduling or other modules
+
+### Specialist Features (Department-Specific)
+- Department-specific workflows
+- Specialized tools and processes
+- Department data management
+- Status reporting
+
+### Analyst Features
+- Data analysis and reporting
+- Performance metrics
+- Trend analysis
+- Business intelligence
+
+---
+
+## Support Information
+
+For testing support or issues with user accounts:
+- **System Admin:** admin@opcentrix.com
+- **Technical Support:** Use the admin account for troubleshooting
+- **Documentation:** Check the project notes for detailed system information
+
+**Last Updated:** December 2024
+**System Version:** OpCentrix v2.0.0 with Authentication & Print Tracking

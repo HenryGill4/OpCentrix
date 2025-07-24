@@ -1,6 +1,22 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
-namespace OpCentrix.Pages;
-public class MediaModel : PageModel
+using OpCentrix.Authorization;
+using Microsoft.Extensions.Logging;
+
+namespace OpCentrix.Pages
 {
-    public void OnGet() {}
+    [MediaAccess]
+    public class MediaModel : PageModel
+    {
+        private readonly ILogger<MediaModel> _logger;
+
+        public MediaModel(ILogger<MediaModel> logger)
+        {
+            _logger = logger;
+        }
+
+        public void OnGet()
+        {
+            _logger.LogInformation("Media page accessed");
+        }
+    }
 }

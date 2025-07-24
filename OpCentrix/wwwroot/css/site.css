@@ -1,429 +1,620 @@
-/* Enhanced CSS Custom Properties */
+/* OpCentrix Design System - Global Styles */
+
 :root {
+    /* OpCentrix Color Palette */
+    --opcentrix-primary: #3B82F6;
+    --opcentrix-primary-dark: #1E40AF;
+    --opcentrix-primary-light: #93C5FD;
+    --opcentrix-secondary: #6366F1;
+    --opcentrix-secondary-dark: #4338CA;
+    --opcentrix-accent: #10B981;
+    --opcentrix-accent-dark: #047857;
+    --opcentrix-warning: #F59E0B;
+    --opcentrix-danger: #EF4444;
+    --opcentrix-success: #10B981;
+    
+    /* Grays */
+    --opcentrix-gray-50: #F9FAFB;
+    --opcentrix-gray-100: #F3F4F6;
+    --opcentrix-gray-200: #E5E7EB;
+    --opcentrix-gray-300: #D1D5DB;
+    --opcentrix-gray-400: #9CA3AF;
+    --opcentrix-gray-500: #6B7280;
+    --opcentrix-gray-600: #4B5563;
+    --opcentrix-gray-700: #374151;
+    --opcentrix-gray-800: #1F2937;
+    --opcentrix-gray-900: #111827;
+    
+    /* Typography */
+    --opcentrix-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --opcentrix-font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+    
+    /* Spacing & Layout */
+    --opcentrix-radius: 12px;
+    --opcentrix-radius-sm: 8px;
+    --opcentrix-radius-lg: 16px;
+    --opcentrix-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    --opcentrix-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --opcentrix-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    
+    /* Scheduler specific */
+    --machine-label-width: 140px;
     --slot-width: 120px;
-    --header-height: 60px;
-    --machine-label-width: 120px;
-    --grid-border-color: #e5e7eb;
-    --grid-hover-color: rgba(99, 102, 241, 0.05);
+    --job-min-height: 60px;
 }
 
-/* Responsive slot width calculation */
-@media (max-width: 1200px) {
-    :root { --slot-width: 100px; --machine-label-width: 100px; }
-}
-
-@media (max-width: 768px) {
-    :root { --slot-width: 80px; --machine-label-width: 80px; }
-}
-
-@media (max-width: 480px) {
-    :root { --slot-width: 60px; --machine-label-width: 60px; }
-}
-
-/* Reset and Base Styles */
+/* Global Resets & Base Styles */
 * {
     box-sizing: border-box;
 }
 
-html, body {
-    margin: 0;
-    padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    scroll-behavior: smooth;
+body {
+    font-family: var(--opcentrix-font-family);
+    background-color: var(--opcentrix-gray-50);
+    color: var(--opcentrix-gray-900);
+    line-height: 1.6;
+    font-size: 14px;
 }
 
-/* Enhanced Loading Indicator Styles */
-.request-indicator {
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.2s ease-in-out;
-    pointer-events: none;
-    z-index: 9999;
+/* OpCentrix Component Classes */
+.opcentrix-gradient {
+    background: linear-gradient(135deg, var(--opcentrix-primary) 0%, var(--opcentrix-secondary) 100%);
 }
 
-.request-indicator:not(.htmx-indicator) {
-    opacity: 1;
-    visibility: visible;
+.opcentrix-gradient-subtle {
+    background: linear-gradient(135deg, var(--opcentrix-gray-50) 0%, white 100%);
 }
 
-.htmx-indicator {
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.2s ease-in-out;
-}
-
-.htmx-request .htmx-indicator {
-    opacity: 1;
-    visibility: visible;
-}
-
-/* Enhanced Scheduler Grid Layout */
-.scheduler-grid-header {
-    padding: 12px 8px;
+.opcentrix-card {
     background: white;
-    border-bottom: 1px solid var(--grid-border-color);
-    border-right: 1px solid var(--grid-border-color);
+    border-radius: var(--opcentrix-radius);
+    box-shadow: var(--opcentrix-shadow);
+    border: 1px solid var(--opcentrix-gray-200);
+    transition: all 0.2s ease-in-out;
+}
+
+.opcentrix-card:hover {
+    box-shadow: var(--opcentrix-shadow-lg);
+    transform: translateY(-1px);
+}
+
+.opcentrix-card-elevated {
+    box-shadow: var(--opcentrix-shadow-lg);
+}
+
+.opcentrix-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 20px;
+    border-radius: var(--opcentrix-radius-sm);
     font-weight: 600;
-    text-align: center;
+    font-size: 14px;
+    line-height: 1;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    text-decoration: none;
+}
+
+.opcentrix-button:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--opcentrix-shadow-lg);
+}
+
+.opcentrix-button-primary {
+    background: var(--opcentrix-primary);
+    color: white;
+}
+
+.opcentrix-button-primary:hover {
+    background: var(--opcentrix-primary-dark);
+    color: white;
+}
+
+.opcentrix-button-secondary {
+    background: var(--opcentrix-gray-200);
+    color: var(--opcentrix-gray-700);
+}
+
+.opcentrix-button-secondary:hover {
+    background: var(--opcentrix-gray-300);
+    color: var(--opcentrix-gray-800);
+}
+
+.opcentrix-button-success {
+    background: var(--opcentrix-success);
+    color: white;
+}
+
+.opcentrix-button-success:hover {
+    background: var(--opcentrix-accent-dark);
+}
+
+.opcentrix-button-danger {
+    background: var(--opcentrix-danger);
+    color: white;
+}
+
+.opcentrix-button-danger:hover {
+    background: #DC2626;
+}
+
+/* Form Elements */
+.opcentrix-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid var(--opcentrix-gray-200);
+    border-radius: var(--opcentrix-radius-sm);
+    font-size: 14px;
+    transition: all 0.2s ease-in-out;
+    background: white;
+}
+
+.opcentrix-input:focus {
+    outline: none;
+    border-color: var(--opcentrix-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.opcentrix-select {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid var(--opcentrix-gray-200);
+    border-radius: var(--opcentrix-radius-sm);
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+.opcentrix-select:focus {
+    outline: none;
+    border-color: var(--opcentrix-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Navigation */
+.nav-item {
+    transition: all 0.2s ease-in-out;
+}
+
+.nav-item-active {
+    background: linear-gradient(135deg, var(--opcentrix-primary) 0%, var(--opcentrix-secondary) 100%);
+    color: white;
+    box-shadow: var(--opcentrix-shadow);
+}
+
+.nav-item:hover:not(.nav-item-active) {
+    background-color: rgba(59, 130, 246, 0.05);
+    color: var(--opcentrix-primary);
+}
+
+/* ============================================================================
+   SCHEDULER SPECIFIC STYLES - HORIZONTALLY SCROLLABLE GRID SYSTEM
+   ============================================================================ */
+
+/* Main Scheduler Container - Enable horizontal scrolling */
+.scheduler-main-content {
+    position: relative;
+    width: 100%;
+    height: auto;
+    background: var(--opcentrix-gray-50);
+    border-radius: var(--opcentrix-radius);
+    overflow: hidden; /* Hide default scrollbars */
+}
+
+/* Horizontal Scroll Container - Core scrolling element */
+.scheduler-scroll-container {
+    width: 100%;
+    height: auto;
+    overflow-x: auto;
+    overflow-y: visible;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    scroll-behavior: smooth;
+    padding-bottom: 20px; /* Space for custom scrollbar */
+}
+
+/* Hide default scrollbar for webkit browsers */
+.scheduler-scroll-container::-webkit-scrollbar {
+    display: none;
+}
+
+/* Main Scheduler Grid Layout - Fixed width for horizontal scrolling */
+.scheduler-main-grid {
+    display: block;
+    background: white;
+    border: 1px solid var(--opcentrix-gray-200);
+    border-radius: var(--opcentrix-radius) var(--opcentrix-radius) 0 0;
+    overflow: hidden;
+    min-width: fit-content; /* Ensure grid can extend beyond viewport */
+}
+
+/* Grid Container for Headers and Content - Optimized width calculation */
+.scheduler-grid-container {
+    display: block;
+    background: white;
+    border-radius: var(--opcentrix-radius);
+    overflow: visible;
+    min-width: calc(var(--machine-label-width) + (var(--slot-width) * 50)); /* Minimum for 50 slots */
+    width: max-content; /* Expand to full content width */
+    box-shadow: var(--opcentrix-shadow);
+}
+
+/* Header Row - Sticky machine column + scrollable content */
+.scheduler-header-row {
+    display: grid;
+    grid-template-columns: var(--machine-label-width) minmax(0, 1fr);
+    background: var(--opcentrix-gray-50);
+    border-bottom: 2px solid var(--opcentrix-gray-200);
     position: sticky;
     top: 0;
     z-index: 15;
-    min-height: var(--header-height);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: clamp(10px, 1.5vw, 14px);
 }
 
-.scheduler-machine-label {
-    background: white;
-    border-right: 1px solid var(--grid-border-color);
-    border-bottom: 1px solid var(--grid-border-color);
-    font-weight: 700;
-    color: #1e40af;
+/* Machine Header - Enhanced sticky positioning */
+.machine-header-sticky {
+    position: sticky !important;
+    left: 0 !important;
+    z-index: 25 !important;
+    background: white !important;
+    border-right: 2px solid var(--opcentrix-gray-300) !important;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Date Headers Container - Horizontal scroll content */
+.scheduler-date-headers {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: var(--slot-width);
+    gap: 0;
+    min-width: fit-content;
+    width: max-content;
+    overflow: visible;
+}
+
+/* Enhanced Grid Headers */
+.scheduler-grid-header {
+    background: linear-gradient(135deg, var(--opcentrix-gray-50) 0%, white 100%);
+    border-bottom: 2px solid var(--opcentrix-gray-200);
+    border-right: 1px solid var(--opcentrix-gray-200);
+    padding: 12px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--opcentrix-gray-700);
     text-align: center;
-    width: var(--machine-label-width);
-    min-width: var(--machine-label-width);
-    position: sticky;
-    left: 0;
-    z-index: 10;
+    min-height: 60px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: clamp(12px, 2vw, 16px);
+    position: relative;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
-.scheduler-grid-cell {
+/* Current time header highlighting */
+.scheduler-grid-header.current-time-header {
+    background: linear-gradient(135deg, #DBEAFE 0%, #93C5FD 100%) !important;
+    color: #1E40AF !important;
+    border-color: #3B82F6 !important;
+    box-shadow: inset 0 2px 4px rgba(0, 130, 246, 0.1);
     position: relative;
-    border-right: 1px solid #f3f4f6;
-    border-bottom: 1px solid #f3f4f6;
-    min-height: 160px;
-    transition: all 0.2s ease;
-    background-color: white;
+}
+
+.scheduler-grid-header.current-time-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: #3B82F6;
+    animation: pulse 2s infinite;
+}
+
+/* Machine Rows Container */
+.machine-rows-container {
+    display: block;
+    overflow: visible;
+}
+
+/* Individual Machine Row - Enhanced for horizontal scrolling */
+.machine-row {
+    display: grid;
+    grid-template-columns: var(--machine-label-width) minmax(0, 1fr);
+    border-bottom: 1px solid var(--opcentrix-gray-200);
+    min-height: 80px;
+    position: relative;
+    background: white;
+}
+
+/* Machine Labels - Enhanced sticky positioning */
+.machine-label-sticky {
+    position: sticky !important;
+    left: 0 !important;
+    z-index: 20 !important;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1) !important;
+    border-right: 2px solid var(--opcentrix-gray-300) !important;
+}
+
+/* Time Slots Container - Optimized for scrolling */
+.time-slots-container {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: var(--slot-width);
+    gap: 0;
+    background: var(--opcentrix-gray-50);
+    min-width: fit-content;
+    width: max-content;
+    overflow: visible;
+}
+
+/* Enhanced Grid Cells */
+.scheduler-grid-cell {
+    background: white;
+    border-right: 1px solid var(--opcentrix-gray-100);
+    border-bottom: 1px solid var(--opcentrix-gray-100);
+    position: relative;
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+    min-height: 80px;
+    width: var(--slot-width);
+    flex-shrink: 0;
+    overflow: visible;
 }
 
 .scheduler-grid-cell:hover {
-    background-color: var(--grid-hover-color) !important;
-    border-color: rgba(99, 102, 241, 0.2);
+    background: rgba(59, 130, 246, 0.05);
+    border-color: rgba(59, 130, 246, 0.2);
+    transform: scale(1.02);
+    z-index: 5;
 }
 
-.scheduler-grid-cell.bg-blue-25 {
-    background-color: rgba(59, 130, 246, 0.05);
-}
-
-.scheduler-grid-cell.bg-blue-100 {
-    background-color: rgba(59, 130, 246, 0.1);
-}
-
-.scheduler-grid-cell.bg-gray-25 {
-    background-color: rgba(156, 163, 175, 0.05);
-}
-
-.scheduler-grid-cell.bg-gray-50 {
-    background-color: #f9fafb;
-}
-
-/* Enhanced Job Block Styles */
-.job-block {
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    font-size: clamp(9px, 1.2vw, 11px);
-    line-height: 1.3;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    backdrop-filter: blur(1px);
+/* Enhanced current time cell */
+.scheduler-grid-cell.current-time {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 197, 253, 0.05) 100%) !important;
+    border-color: rgba(59, 130, 246, 0.3) !important;
+    box-shadow: inset 0 0 10px rgba(59, 130, 246, 0.1);
     position: relative;
-    overflow: hidden;
 }
 
-.job-block:hover {
-    transform: scale(1.03) translateZ(0);
-    box-shadow: 
-        0 10px 25px rgba(0, 0, 0, 0.15),
-        0 0 0 1px rgba(255, 255, 255, 0.1);
-    z-index: 100;
-    border-color: rgba(255, 255, 255, 0.5);
-}
-
-.job-block::before {
+.scheduler-grid-cell.current-time::before {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, rgba(255,255,255,0.8), rgba(255,255,255,0.2));
+    height: 100%;
+    background: linear-gradient(to bottom, rgba(59, 130, 246, 0.1) 0%, transparent 50%, rgba(59, 130, 246, 0.1) 100%);
+    pointer-events: none;
+    animation: currentTimeGlow 3s ease-in-out infinite;
 }
 
-/* Enhanced Status Colors with gradients */
-.status-scheduled { 
-    background: linear-gradient(135deg, #3B82F6, #2563EB);
-    color: white;
-}
-.status-active { 
-    background: linear-gradient(135deg, #10B981, #059669);
-    color: white;
-}
-.status-delayed { 
-    background: linear-gradient(135deg, #EF4444, #DC2626);
-    color: white;
-}
-.status-complete { 
-    background: linear-gradient(135deg, #6B7280, #4B5563);
-    color: white;
-}
-.status-cancelled { 
-    background: linear-gradient(135deg, #9CA3AF, #6B7280);
-    color: white;
+@keyframes currentTimeGlow {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
 }
 
-/* Enhanced Modal Styles */
-.modal-overlay {
-    backdrop-filter: blur(8px);
-    background: rgba(0, 0, 0, 0.4);
-}
+/* ============================================================================
+   CUSTOM HORIZONTAL SCROLLBAR
+   ============================================================================ */
 
-/* Improved Form Styles */
-.form-input {
-    transition: all 0.2s ease;
-    border: 2px solid #e5e7eb;
-}
-
-.form-input:focus {
-    outline: none;
-    border-color: #6366f1;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-    transform: translateY(-1px);
-}
-
-/* Enhanced Button Styles */
-.btn {
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    font-weight: 600;
-    border-radius: 8px;
-    padding: 10px 20px;
-    position: relative;
-    overflow: hidden;
-}
-
-.btn::before {
-    content: '';
+.custom-scrollbar {
     position: absolute;
-    top: 0;
-    left: -100%;
+    bottom: 0;
+    left: var(--machine-label-width);
+    right: 0;
+    height: 12px;
+    background: var(--opcentrix-gray-100);
+    border-radius: 6px;
+    cursor: pointer;
+    z-index: 10;
+    margin: 4px 8px;
+}
+
+.scrollbar-track {
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-    transition: left 0.5s ease;
-}
-
-.btn:hover::before {
-    left: 100%;
-}
-
-.btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-}
-
-.btn:active {
-    transform: translateY(0);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, #4F46E5, #4338CA);
-    color: white;
-    border: none;
-}
-
-.btn-primary:hover {
-    background: linear-gradient(135deg, #4338CA, #3730A3);
-}
-
-.btn-secondary {
-    background: white;
-    color: #4B5563;
-    border: 2px solid #D1D5DB;
-}
-
-.btn-secondary:hover {
-    background: #F9FAFB;
-    border-color: #9CA3AF;
-}
-
-/* Enhanced Grid Container */
-.scheduler-main-grid {
-    display: grid;
-    min-width: max-content;
-    background: white;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-}
-
-/* Loading States */
-.loading {
-    opacity: 0.6;
-    pointer-events: none;
     position: relative;
+    border-radius: 6px;
+    background: var(--opcentrix-gray-200);
 }
 
-.loading::after {
-    content: '';
+.scrollbar-thumb {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: linear-gradient(135deg, var(--opcentrix-primary) 0%, var(--opcentrix-secondary) 100%);
+    border-radius: 6px;
+    cursor: grab;
+    transition: background 0.2s ease-in-out;
+    min-width: 30px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.scrollbar-thumb:hover {
+    background: linear-gradient(135deg, var(--opcentrix-primary-dark) 0%, var(--opcentrix-secondary-dark) 100%);
+    transform: scaleY(1.2);
+}
+
+.scrollbar-thumb:active {
+    cursor: grabbing;
+    transform: scaleY(1.3);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* ============================================================================
+   SCROLL INDICATORS
+   ============================================================================ */
+
+.scroll-indicator {
     position: absolute;
     top: 50%;
-    left: 50%;
-    width: 24px;
-    height: 24px;
-    margin: -12px 0 0 -12px;
-    border: 3px solid #4F46E5;
-    border-top-color: transparent;
+    transform: translateY(-50%);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(99, 102, 241, 0.9) 100%);
+    color: white;
+    padding: 12px;
     border-radius: 50%;
-    animation: spin 1s linear infinite;
-    z-index: 1000;
+    cursor: pointer;
+    z-index: 30;
+    opacity: 0;
+    transition: all 0.3s ease;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.2);
 }
 
-@keyframes spin {
-    to { transform: rotate(360deg); }
+.scroll-indicator:hover {
+    transform: translateY(-50%) scale(1.1);
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 1) 0%, rgba(99, 102, 241, 1) 100%);
 }
 
-/* Notification Styles */
-.notification {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border-radius: 8px;
-    font-weight: 500;
-    backdrop-filter: blur(8px);
+.scroll-indicator.visible {
+    opacity: 1;
+    pointer-events: auto;
+    animation: scrollIndicatorPulse 2s ease-in-out infinite;
 }
 
-.notification.notification-success {
-    background: linear-gradient(135deg, #10B981, #059669);
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-}
-
-.notification.notification-error {
-    background: linear-gradient(135deg, #EF4444, #DC2626);
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-}
-
-/* Animation for job additions */
-@keyframes slideInFromTop {
-    from {
-        opacity: 0;
-        transform: translateY(-20px) scale(0.95);
+@keyframes scrollIndicatorPulse {
+    0%, 100% { 
+        transform: translateY(-50%) scale(1); 
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
     }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
+    50% { 
+        transform: translateY(-50%) scale(1.05); 
+        box-shadow: 0 6px 16px rgba(59, 130, 246, 0.5);
     }
 }
 
-@keyframes slideInFromLeft {
-    from {
-        opacity: 0;
-        transform: translateX(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
+.scroll-indicator-left {
+    left: calc(var(--machine-label-width) + 10px);
 }
 
-.job-block-new {
-    animation: slideInFromTop 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+.scroll-indicator-right {
+    right: 15px;
 }
 
-.machine-row-updated {
-    animation: slideInFromLeft 0.3s ease-out;
-}
+/* ============================================================================
+   ENHANCED JOB BLOCKS FOR HORIZONTAL SCROLLING
+   ============================================================================ */
 
-/* Error and Success States */
-.error {
-    border-color: #EF4444 !important;
-    background-color: rgba(239, 68, 68, 0.05);
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
-}
-
-.success {
-    border-color: #10B981 !important;
-    background-color: rgba(16, 185, 129, 0.05);
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
-}
-
-/* Accessibility Improvements */
-.sr-only {
+.job-block {
     position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
+    background: linear-gradient(135deg, var(--opcentrix-primary) 0%, var(--opcentrix-secondary) 100%);
+    color: white;
+    border-radius: var(--opcentrix-radius-sm);
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    z-index: 10;
+    box-shadow: var(--opcentrix-shadow);
+    min-height: 32px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
     white-space: nowrap;
-    border: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    backdrop-filter: blur(5px);
 }
 
-/* Focus styles for better accessibility */
-button:focus,
-input:focus,
-select:focus,
-textarea:focus {
-    outline: 2px solid #4F46E5;
-    outline-offset: 2px;
-    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+.job-block:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: var(--opcentrix-shadow-lg);
+    z-index: 25;
+    border-color: rgba(255, 255, 255, 0.4);
 }
 
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-    .job-block {
-        border-width: 3px;
-        font-weight: 600;
-    }
-    
-    .scheduler-grid-cell {
-        border-width: 2px;
-    }
-    
+/* ============================================================================
+   RESPONSIVE HORIZONTAL SCROLLING
+   ============================================================================ */
+
+@media (max-width: 1024px) {
     :root {
-        --grid-border-color: #000;
+        --machine-label-width: 120px;
+        --slot-width: 100px;
+    }
+    
+    .custom-scrollbar {
+        height: 10px;
+        margin: 3px 6px;
+    }
+    
+    .scroll-indicator {
+        padding: 10px;
     }
 }
 
-/* Reduced motion support */
-@media (prefers-reduced-motion: reduce) {
-    * {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
+@media (max-width: 768px) {
+    :root {
+        --machine-label-width: 100px;
+        --slot-width: 80px;
+    }
+    
+    .scheduler-scroll-container {
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    
+    .custom-scrollbar {
+        height: 8px;
+        margin: 2px 4px;
+    }
+    
+    .scroll-indicator {
+        padding: 8px;
+        display: none; /* Hide on mobile to avoid interference with touch scrolling */
+    }
+}
+
+@media (max-width: 640px) {
+    :root {
+        --machine-label-width: 80px;
+        --slot-width: 60px;
+    }
+}
+
+/* ============================================================================
+   SMOOTH TRANSITIONS AND ANIMATIONS
+   ============================================================================ */
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.scheduler-grid-container {
+    animation: fadeInScale 0.3s ease-out;
+}
+
+/* Focus indicators for accessibility */
+.scheduler-grid-cell:focus,
+.job-block:focus {
+    outline: 2px solid var(--opcentrix-primary);
+    outline-offset: 2px;
+}
+
+/* Improved hover states for touch devices */
+@media (hover: none) {
+    .scheduler-grid-cell:hover {
+        transform: none;
+        background: rgba(59, 130, 246, 0.08);
     }
     
     .job-block:hover {
         transform: none;
-    }
-    
-    .btn:hover {
-        transform: none;
-    }
-}
-
-/* Dark mode support (future enhancement) */
-@media (prefers-color-scheme: dark) {
-    :root {
-        --grid-border-color: #374151;
-        --grid-hover-color: rgba(99, 102, 241, 0.1);
-    }
-}
-
-/* Print styles */
-@media print {
-    .btn, .modal-overlay, .notification {
-        display: none !important;
-    }
-    
-    .scheduler-grid-cell {
-        border: 1px solid #000 !important;
-    }
-    
-    .job-block {
-        box-shadow: none !important;
-        border: 2px solid #000 !important;
     }
 }

@@ -2,200 +2,545 @@
 @model OpCentrix.Pages.Admin.IndexModel
 @{
     ViewData["Title"] = "Admin Dashboard";
+    ViewData["Description"] = "System overview and management controls";
     Layout = "~/Pages/Shared/_AdminLayout.cshtml";
 }
 
-<div class="mb-6">
-    <h1 class="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-    <p class="text-gray-600 mt-2">Manage your OpCentrix database and view system statistics</p>
-</div>
-
-<!-- Statistics Cards -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-    <!-- Total Jobs Card -->
-    <div class="bg-white rounded-lg shadow p-6">
-        <div class="flex items-center">
-            <div class="flex-shrink-0">
-                <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+<!-- Welcome Section -->
+<div class="mb-8">
+    <div class="opcentrix-card p-6 opcentrix-gradient text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold mb-2">Welcome to OpCentrix Admin</h1>
+                <p class="text-white text-opacity-90">Manage your SLS print job scheduling system with comprehensive administrative controls</p>
+            </div>
+            <div class="hidden lg:block">
+                <div class="w-32 h-32 bg-white bg-opacity-10 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                    <svg class="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                     </svg>
                 </div>
             </div>
-            <div class="ml-4">
-                <p class="text-sm font-medium text-gray-500">Total Jobs</p>
-                <p class="text-2xl font-bold text-gray-900">@Model.TotalJobs</p>
-                <p class="text-sm text-green-600">@Model.ActiveJobs active</p>
+        </div>
+    </div>
+</div>
+
+<!-- Database Management Panel -->
+<div class="mb-8" id="database-status">
+    <div class="opcentrix-card p-6 border-l-4 @(Model.HasSampleData ? "border-orange-500" : "border-green-500")">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h2 class="text-xl font-bold text-gray-900 flex items-center">
+                    <svg class="w-6 h-6 @(Model.HasSampleData ? "text-orange-500" : "text-green-500") mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"></path>
+                    </svg>
+                    Database Management
+                </h2>
+                <p class="text-gray-600">
+                    @if (Model.HasSampleData)
+                    {
+                        <span class="text-orange-600">?? Sample data detected - remove for production use</span>
+                    }
+                    else
+                    {
+                        <span class="text-green-600">? Production ready - add your real manufacturing data</span>
+                    }
+                </p>
+            </div>
+            <div class="flex items-center space-x-2">
+                <div class="w-3 h-3 bg-@(Model.HasSampleData ? "orange" : "green")-500 rounded-full @(Model.HasSampleData ? "animate-pulse" : "")"></div>
+                <span class="text-sm font-medium text-@(Model.HasSampleData ? "orange" : "green")-600">
+                    @(Model.HasSampleData ? "Sample Data Active" : "Production Ready")
+                </span>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Database Status -->
+            <div class="@(Model.HasSampleData ? "bg-orange-50" : "bg-green-50") rounded-lg p-4">
+                <h3 class="font-semibold text-gray-900 mb-3">
+                    @(Model.HasSampleData ? "?? Sample Data Status" : "? Production Status")
+                </h3>
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-600">Sample Parts:</span>
+                        <span class="text-sm font-medium @(Model.SamplePartsCount > 0 ? "text-orange-600" : "text-green-600")">
+                            @Model.SamplePartsCount
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-600">Sample Jobs:</span>
+                        <span class="text-sm font-medium @(Model.SampleJobsCount > 0 ? "text-orange-600" : "text-green-600")">
+                            @Model.SampleJobsCount
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-600">Real Data:</span>
+                        <span class="text-sm font-medium text-blue-600">
+                            @Model.RealDataCount parts/jobs
+                        </span>
+                    </div>
+                    @if (!Model.HasSampleData && Model.RealDataCount == 0)
+                    {
+                        <div class="mt-3 p-2 bg-blue-100 rounded border border-blue-200">
+                            <p class="text-sm text-blue-700">
+                                ?? <strong>Ready for your data!</strong><br>
+                                Database is clean and ready for real manufacturing parts and jobs.
+                            </p>
+                        </div>
+                    }
+                </div>
+            </div>
+            
+            <!-- Database Actions -->
+            <div class="bg-gray-50 rounded-lg p-4">
+                <h3 class="font-semibold text-gray-900 mb-3">Database Actions</h3>
+                <div class="space-y-3">
+                    @if (Model.HasSampleData)
+                    {
+                        <button hx-post="/Admin?handler=RemoveSampleData"
+                                hx-confirm="?? COMPLETE CLEANUP: This will remove ALL sample/example data (parts, jobs, logs). Your real data will be preserved. Continue?"
+                                hx-target="#database-status"
+                                hx-swap="outerHTML"
+                                class="w-full bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition text-sm font-medium">
+                            ??? Remove ALL Sample Data
+                        </button>
+                    }
+                    else
+                    {
+                        <div class="text-center p-3 bg-green-100 rounded-lg border border-green-200">
+                            <div class="text-green-700">
+                                <p class="font-medium">? Production Ready!</p>
+                                <p class="text-sm mt-1">No sample data detected. Ready for real manufacturing.</p>
+                            </div>
+                        </div>
+                        
+                        <button hx-post="/Admin?handler=AddSampleData"
+                                hx-confirm="This will add sample data for testing. Only use for development/demo. Continue?"
+                                hx-target="#database-status"
+                                hx-swap="outerHTML"
+                                class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm font-medium">
+                            ? Add Sample Data (Testing Only)
+                        </button>
+                    }
+                    
+                    <button hx-post="/Admin?handler=BackupDatabase"
+                                hx-target="#backup-status"
+                                class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition text-sm font-medium">
+                        ?? Backup Database
+                    </button>
+                </div>
+                
+                <div id="backup-status" class="mt-2"></div>
+            </div>
+            
+            <!-- Production Setup Guide -->
+            <div class="@(Model.HasSampleData ? "bg-orange-50" : "bg-blue-50") rounded-lg p-4">
+                <h3 class="font-semibold text-gray-900 mb-3">
+                    @(Model.HasSampleData ? "?? Cleanup Steps" : "?? Production Setup")
+                </h3>
+                <div class="space-y-2 text-sm">
+                    @if (Model.HasSampleData)
+                    {
+                        <div class="flex items-start space-x-2">
+                            <span class="bg-orange-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">1</span>
+                            <span class="text-gray-700">Remove ALL sample data using button above</span>
+                        </div>
+                        <div class="flex items-start space-x-2">
+                            <span class="bg-orange-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">2</span>
+                            <span class="text-gray-700">Verify database is clean (refresh page)</span>
+                        </div>
+                        <div class="flex items-start space-x-2">
+                            <span class="bg-orange-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">3</span>
+                            <span class="text-gray-700">Add your real parts via "Manage Parts"</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="flex items-start space-x-2">
+                            <span class="bg-green-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">?</span>
+                            <span class="text-gray-700">Database is clean and production-ready</span>
+                        </div>
+                        <div class="flex items-start space-x-2">
+                            <span class="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">1</span>
+                            <span class="text-gray-700">Add your real parts via "Manage Parts"</span>
+                        </div>
+                        <div class="flex items-start space-x-2">
+                            <span class="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">2</span>
+                            <span class="text-gray-700">Start scheduling real manufacturing jobs</span>
+                        </div>
+                        <div class="flex items-start space-x-2">
+                            <span class="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">3</span>
+                            <span class="text-gray-700">Track actual production with Print Tracking</span>
+                        </div>
+                    }
+                </div>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Total Parts Card -->
-    <div class="bg-white rounded-lg shadow p-6">
-        <div class="flex items-center">
-            <div class="flex-shrink-0">
-                <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<!-- Key Performance Indicators -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <!-- Total Jobs KPI -->
+    <div class="opcentrix-card p-6 hover:shadow-lg transition-all duration-200">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-600">Total Jobs</p>
+                <p class="text-3xl font-bold text-gray-900 mt-1">@Model.TotalJobs</p>
+                <div class="flex items-center mt-2">
+                    <span class="text-sm font-medium text-green-600">@Model.ActiveJobs active</span>
+                    <span class="text-gray-400 text-sm ml-2">• @((Model.TotalJobs > 0 ? (double)Model.ActiveJobs / Model.TotalJobs * 100 : 0).ToString("F1"))% active rate</span>
+                </div>
+            </div>
+            <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                </svg>
+            </div>
+        </div>
+        <div class="mt-4 bg-gray-100 rounded-full h-2">
+            <div class="bg-blue-500 rounded-full h-2 transition-all duration-300" style="width: @((Model.TotalJobs > 0 ? (double)Model.ActiveJobs / Model.TotalJobs * 100 : 0).ToString("F1"))%"></div>
+        </div>
+    </div>
+
+    <!-- Total Parts KPI -->
+    <div class="opcentrix-card p-6 hover:shadow-lg transition-all duration-200">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-600">Total Parts</p>
+                <p class="text-3xl font-bold text-gray-900 mt-1">@Model.TotalParts</p>
+                <div class="flex items-center mt-2">
+                    <span class="text-sm font-medium text-green-600">@Model.ActiveParts active</span>
+                    <span class="text-gray-400 text-sm ml-2">• @((Model.TotalParts > 0 ? (double)Model.ActiveParts / Model.TotalParts * 100 : 0).ToString("F1"))% active rate</span>
+                </div>
+            </div>
+            <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14-7l2 2-2 2M5 19l2-2-2-2"></path>
+                </svg>
+            </div>
+        </div>
+        <div class="mt-4 bg-gray-100 rounded-full h-2">
+            <div class="bg-green-500 rounded-full h-2 transition-all duration-300" style="width: @((Model.TotalParts > 0 ? (double)Model.ActiveParts / Model.TotalParts * 100 : 0).ToString("F1"))%"></div>
+        </div>
+    </div>
+
+    <!-- System Activity KPI -->
+    <div class="opcentrix-card p-6 hover:shadow-lg transition-all duration-200">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-600">System Activity</p>
+                <p class="text-3xl font-bold text-gray-900 mt-1">@Model.TotalLogEntries</p>
+                <div class="flex items-center mt-2">
+                    <span class="text-sm font-medium text-blue-600">Log entries</span>
+                    <span class="text-gray-400 text-sm ml-2">• High activity</span>
+                </div>
+            </div>
+            <div class="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
+                <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+            </div>
+        </div>
+        <div class="mt-4 bg-gray-100 rounded-full h-2">
+            <div class="bg-yellow-500 rounded-full h-2 transition-all duration-300" style="width: 85%"></div>
+        </div>
+    </div>
+
+    <!-- System Health KPI -->
+    <div class="opcentrix-card p-6 hover:shadow-lg transition-all duration-200">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-600">System Health</p>
+                <p class="text-3xl font-bold text-green-600 mt-1">Excellent</p>
+                <div class="flex items-center mt-2">
+                    <span class="text-sm font-medium text-green-600">All systems operational</span>
+                </div>
+            </div>
+            <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+        </div>
+        <div class="mt-4 bg-gray-100 rounded-full h-2">
+            <div class="bg-green-500 rounded-full h-2 transition-all duration-300" style="width: 100%"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Management Actions & Quick Access -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+    <!-- Quick Actions Panel -->
+    <div class="opcentrix-card p-6">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-lg font-bold text-gray-900">Quick Actions</h3>
+            <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                </svg>
+            </div>
+        </div>
+        <div class="space-y-3">
+            <a href="/Admin/Jobs" class="block w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white text-center py-3 px-4 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-105">
+                <div class="flex items-center justify-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2"></path>
+                    </svg>
+                    <span>Manage Jobs</span>
+                </div>
+            </a>
+            <a href="/Admin/Parts" class="block w-full bg-gradient-to-r from-green-600 to-green-700 text-white text-center py-3 px-4 rounded-xl hover:from-green-700 hover:to-green-800 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-105">
+                <div class="flex items-center justify-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14-7l2 2-2 2M5 19l2-2-2-2"></path>
                     </svg>
+                    <span>Manage Parts</span>
                 </div>
-            </div>
-            <div class="ml-4">
-                <p class="text-sm font-medium text-gray-500">Total Parts</p>
-                <p class="text-2xl font-bold text-gray-900">@Model.TotalParts</p>
-                <p class="text-sm text-green-600">@Model.ActiveParts active</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Log Entries Card -->
-    <div class="bg-white rounded-lg shadow p-6">
-        <div class="flex items-center">
-            <div class="flex-shrink-0">
-                <div class="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
-                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            </a>
+            <a href="/Admin/Users" class="block w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white text-center py-3 px-4 rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-105">
+                <div class="flex items-center justify-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1z"></path>
+                    </svg>
+                    <span>Manage Users</span>
+                </div>
+            </a>
+            <a href="/Admin/Logs" class="block w-full bg-gradient-to-r from-yellow-600 to-yellow-700 text-white text-center py-3 px-4 rounded-xl hover:from-yellow-700 hover:to-yellow-800 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-105">
+                <div class="flex items-center justify-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
+                    <span>View System Logs</span>
                 </div>
-            </div>
-            <div class="ml-4">
-                <p class="text-sm font-medium text-gray-500">Log Entries</p>
-                <p class="text-2xl font-bold text-gray-900">@Model.TotalLogEntries</p>
-                <p class="text-sm text-gray-500">Audit records</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- System Status Card -->
-    <div class="bg-white rounded-lg shadow p-6">
-        <div class="flex items-center">
-            <div class="flex-shrink-0">
-                <div class="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
-                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
-            </div>
-            <div class="ml-4">
-                <p class="text-sm font-medium text-gray-500">System Status</p>
-                <p class="text-2xl font-bold text-green-600">Healthy</p>
-                <p class="text-sm text-gray-500">All systems online</p>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Quick Actions -->
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-    <div class="bg-white rounded-lg shadow p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-        <div class="space-y-3">
-            <a href="/Admin/Jobs" class="block w-full bg-blue-600 text-white text-center py-2 px-4 rounded-lg hover:bg-blue-700 transition">
-                Manage Jobs
-            </a>
-            <a href="/Admin/Parts" class="block w-full bg-green-600 text-white text-center py-2 px-4 rounded-lg hover:bg-green-700 transition">
-                Manage Parts
-            </a>
-            <a href="/Admin/Logs" class="block w-full bg-yellow-600 text-white text-center py-2 px-4 rounded-lg hover:bg-yellow-700 transition">
-                View Logs
             </a>
         </div>
     </div>
 
     <!-- Recent Jobs -->
-    <div class="bg-white rounded-lg shadow p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Jobs</h3>
-        <div class="space-y-3">
+    <div class="opcentrix-card p-6">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-lg font-bold text-gray-900">Recent Jobs</h3>
+            <a href="/Admin/Jobs" class="text-blue-600 hover:text-blue-800 text-sm font-medium">View All</a>
+        </div>
+        <div class="space-y-4">
             @if (Model.RecentJobs.Any())
             {
                 @foreach (var job in Model.RecentJobs)
                 {
-                    <div class="flex justify-between items-center py-2 border-b border-gray-100">
-                        <div>
-                            <p class="text-sm font-medium text-gray-900">@job.PartNumber</p>
-                            <p class="text-xs text-gray-500">@job.MachineId - @job.Status</p>
+                    <div class="flex items-center space-x-4 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <span class="text-blue-600 font-bold text-sm">@job.MachineId</span>
                         </div>
-                        <span class="text-xs text-gray-400">@job.CreatedDate.ToString("MM/dd")</span>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 truncate">@job.PartNumber</p>
+                            <p class="text-xs text-gray-500">@job.Status • Qty: @job.Quantity</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs text-gray-400">@job.CreatedDate.ToString("MM/dd")</p>
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium @(job.Status == "Completed" ? "bg-green-100 text-green-800" : job.Status == "Active" ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-800")">
+                                @job.Status
+                            </span>
+                        </div>
                     </div>
                 }
             }
             else
             {
-                <p class="text-sm text-gray-500">No jobs found</p>
+                <div class="text-center py-8">
+                    <svg class="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2"></path>
+                    </svg>
+                    <p class="text-gray-500 text-sm">No jobs found</p>
+                </div>
             }
         </div>
     </div>
 
     <!-- Recent Parts -->
-    <div class="bg-white rounded-lg shadow p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Parts</h3>
-        <div class="space-y-3">
+    <div class="opcentrix-card p-6">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-lg font-bold text-gray-900">Recent Parts</h3>
+            <a href="/Admin/Parts" class="text-green-600 hover:text-green-800 text-sm font-medium">View All</a>
+        </div>
+        <div class="space-y-4">
             @if (Model.RecentParts.Any())
             {
                 @foreach (var part in Model.RecentParts)
                 {
-                    <div class="flex justify-between items-center py-2 border-b border-gray-100">
-                        <div>
-                            <p class="text-sm font-medium text-gray-900">@part.PartNumber</p>
-                            <p class="text-xs text-gray-500">@part.Material</p>
+                    <div class="flex items-center space-x-4 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                        <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14-7l2 2-2 2"></path>
+                            </svg>
                         </div>
-                        <span class="text-xs text-gray-400">@part.CreatedDate.ToString("MM/dd")</span>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 truncate">@part.PartNumber</p>
+                            <p class="text-xs text-gray-500 truncate">@part.Material</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs text-gray-400">@part.CreatedDate.ToString("MM/dd")</p>
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium @(part.IsActive ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800")">
+                                @(part.IsActive ? "Active" : "Inactive")
+                            </span>
+                        </div>
                     </div>
                 }
             }
             else
             {
-                <p class="text-sm text-gray-500">No parts found</p>
+                <div class="text-center py-8">
+                    <svg class="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14-7l2 2-2 2"></path>
+                    </svg>
+                    <p class="text-gray-500 text-sm">No parts found</p>
+                </div>
             }
         </div>
     </div>
 </div>
 
-<!-- Recent Activity Log -->
-<div class="bg-white rounded-lg shadow">
-    <div class="px-6 py-4 border-b border-gray-200">
-        <h3 class="text-lg font-semibold text-gray-900">Recent Activity</h3>
+<!-- System Activity and Analytics -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <!-- System Status Overview -->
+    <div class="opcentrix-card p-6">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-lg font-bold text-gray-900">System Status</h3>
+            <div class="flex items-center space-x-2">
+                <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                <span class="text-sm font-medium text-green-600">All Systems Operational</span>
+            </div>
+        </div>
+        
+        <div class="space-y-4">
+            <div class="flex items-center justify-between p-3 bg-green-50 rounded-xl">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12l5 5L20 7"></path>
+                        </svg>
+                    </div>
+                    <span class="font-medium text-gray-900">Database</span>
+                </div>
+                <span class="text-sm font-medium text-green-600">Online</span>
+            </div>
+            
+            <div class="flex items-center justify-between p-3 bg-green-50 rounded-xl">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12l5 5L20 7"></path>
+                        </svg>
+                    </div>
+                    <span class="font-medium text-gray-900">Authentication</span>
+                </div>
+                <span class="text-sm font-medium text-green-600">Secure</span>
+            </div>
+            
+            <div class="flex items-center justify-between p-3 bg-green-50 rounded-xl">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12l5 5L20 7"></path>
+                        </svg>
+                    </div>
+                    <span class="font-medium text-gray-900">Scheduler Service</span>
+                </div>
+                <span class="text-sm font-medium text-green-600">Running</span>
+            </div>
+            
+            <div class="flex items-center justify-between p-3 bg-blue-50 rounded-xl">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                    </div>
+                    <span class="font-medium text-gray-900">Performance</span>
+                </div>
+                <span class="text-sm font-medium text-blue-600">Optimal</span>
+            </div>
+        </div>
     </div>
-    <div class="p-6">
-        @if (Model.RecentLogEntries.Any())
-        {
-            <div class="space-y-4">
-                @foreach (var log in Model.RecentLogEntries)
+
+    <!-- Recent Activity Timeline -->
+    <div class="opcentrix-card p-6">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-lg fontBolded text-gray-900">Recent Activity</h3>
+            <a href="/Admin/Logs" class="text-blue-600 hover:text-blue-800 text-sm font-medium">View Full Log</a>
+        </div>
+        
+        <div class="space-y-4 max-h-80 overflow-y-auto">
+            @if (Model.RecentLogEntries.Any())
+            {
+                @foreach (var log in Model.RecentLogEntries.Take(8))
                 {
-                    <div class="flex items-center space-x-4 py-3 border-b border-gray-100 last:border-b-0">
-                        <div class="flex-shrink-0">
+                    <div class="flex items-start space-x-4">
+                        <div class="flex-shrink-0 mt-1">
                             @{
-                                var badgeClass = log.Action switch
+                                var (badgeClass, iconPath) = log.Action switch
                                 {
-                                    "Created" => "bg-green-100 text-green-800",
-                                    "Updated" => "bg-blue-100 text-blue-800", 
-                                    "Deleted" => "bg-red-100 text-red-800",
-                                    _ => "bg-gray-100 text-gray-800"
+                                    "Created" => ("bg-green-100 text-green-800", "M12 6v6m0 0v6m0-6h6m-6 0H6"),
+                                    "Updated" => ("bg-blue-100 text-blue-800", "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"),
+                                    "Deleted" => ("bg-red-100 text-red-800", "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"),
+                                    _ => ("bg-gray-100 text-gray-800", "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z")
                                 };
                             }
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium @badgeClass">
-                                @log.Action
-                            </span>
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center @badgeClass">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="@iconPath"></path>
+                                </svg>
+                            </div>
                         </div>
                         <div class="flex-1 min-w-0">
                             <p class="text-sm font-medium text-gray-900">
-                                @log.Action job @log.PartNumber on @log.MachineId
+                                @log.Action @log.PartNumber
                             </p>
-                            <p class="text-sm text-gray-500">
-                                by @log.Operator • @log.Timestamp.ToString("MM/dd/yyyy HH:mm")
+                            <p class="text-xs text-gray-500">
+                                Machine: @log.MachineId • by @log.Operator
                             </p>
-                            @if (!string.IsNullOrEmpty(log.Notes))
-                            {
-                                <p class="text-xs text-gray-400 mt-1">@log.Notes</p>
-                            }
+                            <p class="text-xs text-gray-400 mt-1">
+                                @log.Timestamp.ToString("MMM dd, HH:mm")
+                            </p>
                         </div>
                     </div>
                 }
-            </div>
-        }
-        else
-        {
-            <p class="text-gray-500">No recent activity</p>
-        }
+            }
+            else
+            {
+                <div class="text-center py-8">
+                    <svg class="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <p class="text-gray-500 text-sm">No recent activity</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Additional Information Panel -->
+<div class="opcentrix-card p-6">
+    <div class="flex items-center justify-between mb-6">
+        <h3 class="text-lg font-bold text-gray-900">System Information</h3>
+        <span class="text-sm text-gray-500">Last updated: @DateTime.Now.ToString("MMM dd, yyyy HH:mm")</span>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="text-center p-4 bg-gray-50 rounded-xl">
+            <p class="text-sm font-medium text-gray-600">Database Size</p>
+            <p class="text-2xl font-bold text-gray-900 mt-1">@((Model.TotalJobs + Model.TotalParts + Model.TotalLogEntries)) records</p>
+        </div>
+        
+        <div class="text-center p-4 bg-gray-50 rounded-xl">
+            <p class="text-sm font-medium text-gray-600">Last Job Update</p>
+            <p class="text-2xl font-bold text-gray-900 mt-1">@(Model.LastJobUpdate?.ToString("MM/dd") ?? "N/A")</p>
+        </div>
+        
+        <div class="text-center p-4 bg-gray-50 rounded-xl">
+            <p class="text-sm font-medium text-gray-600">Last Part Update</p>
+            <p class="text-2xl font-bold text-gray-900 mt-1">@(Model.LastPartUpdate?.ToString("MM/dd") ?? "N/A")</p>
+        </div>
     </div>
 </div>

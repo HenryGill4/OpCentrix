@@ -13,7 +13,7 @@ This document outlines a thorough analysis of the OpCentrix Scheduler's logic to
 ### **2. Data Access & Page Model (`Index.cshtml.cs`)**
 - **Inefficient Data Loading:** The `OnGetAsync` method loads *all jobs* from the database, regardless of the currently viewed date range. This is highly inefficient and will degrade performance as the job history grows.
 - **Inefficient Validation Query:** The `OnPostAddOrUpdateJobAsync` method fetches all jobs (except the one being edited) to perform conflict validation. This should be narrowed down to only jobs on the same machine within a conflicting time window.
-- **Suboptimal HTMX Usage:** The application relies on a full-page reload after every successful CUD (Create, Update, Delete) operation. This was a temporary fix (as noted in `htmx-error-fix-summary.md`) that negates the primary benefit of HTMX, which is partial page updates. This results in a sluggish user experience.
+- **Suboptimal HTMX Usage:** The application relies on a full-page reload after every successful CUD (Create, Update, Delete) operation. This was a temporary fix that negates the primary benefit of HTMX, which is partial page updates. This results in a sluggish user experience.
 
 ### **3. Frontend Logic (`scheduler-ui.js`)**
 - **Bug in End-Time Calculation:** The `updateEndTime` function in the modal incorrectly calculates the job's end time by adding `AvgDurationDays` (an integer number of days) to the start time. This is incorrect for jobs that are measured in hours and do not align with full-day increments. The calculation should be based on `EstimatedHours`.

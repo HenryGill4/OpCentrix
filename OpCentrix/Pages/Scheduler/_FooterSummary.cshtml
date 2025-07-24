@@ -1,105 +1,109 @@
 @model OpCentrix.Models.ViewModels.FooterSummaryViewModel
+
 @{
-    // Handle null model gracefully
     var model = Model ?? new OpCentrix.Models.ViewModels.FooterSummaryViewModel();
     var totalHours = model.TotalHours;
     var totalJobs = model.TotalJobs;
+    var machineHours = model.MachineHours ?? new Dictionary<string, double>();
+    var jobCounts = model.JobCounts ?? new Dictionary<string, int>();
+    
+    var avgJobDuration = totalJobs > 0 ? totalHours / totalJobs : 0;
+    var utilizationPercent = totalHours > 0 ? Math.Min(100, (totalHours / (machineHours.Count * 24)) * 100) : 0;
 }
 
-@if (model != null && (model.MachineHours.Any() || model.JobCounts.Any()))
-{
-    <div class="bg-white rounded-lg shadow-lg border border-gray-200 p-6">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-bold text-gray-800">Production Summary</h3>
-            <div class="text-sm text-gray-600">
-                Total: @totalJobs jobs, @totalHours.ToString("F1") hours
-            </div>
+<div class="opcentrix-card">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-6">
+        <!-- Total Jobs Summary -->
+        <div class="text-center">
+            <div class="text-3xl font-bold text-indigo-600 mb-2">@totalJobs</div>
+            <div class="text-sm font-medium text-gray-700 mb-1">Total Jobs</div>
+            <div class="text-xs text-gray-500">@totalHours.ToString("F1") hours scheduled</div>
         </div>
         
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <!-- Machine Hours Breakdown -->
-            <div class="space-y-3">
-                <h4 class="font-semibold text-gray-700 text-sm uppercase tracking-wide">Machine Hours</h4>
-                @if (model.MachineHours.Any())
+        <!-- Average Duration -->
+        <div class="text-center">
+            <div class="text-3xl font-bold text-green-600 mb-2">@avgJobDuration.ToString("F1")h</div>
+            <div class="text-sm font-medium text-gray-700 mb-1">Avg Duration</div>
+            <div class="text-xs text-gray-500">per job</div>
+        </div>
+        
+        <!-- Machine Utilization -->
+        <div class="text-center">
+            <div class="text-3xl font-bold text-blue-600 mb-2">@utilizationPercent.ToString("F0")%</div>
+            <div class="text-sm font-medium text-gray-700 mb-1">Utilization</div>
+            <div class="text-xs text-gray-500">estimated capacity</div>
+        </div>
+        
+        <!-- Active Machines -->
+        <div class="text-center">
+            <div class="text-3xl font-bold text-purple-600 mb-2">@machineHours.Count</div>
+            <div class="text-sm font-medium text-gray-700 mb-1">Active Machines</div>
+            <div class="text-xs text-gray-500">with scheduled jobs</div>
+        </div>
+    </div>
+    
+    <!-- Machine Breakdown -->
+    @if (machineHours.Any())
+    {
+        <div class="border-t border-gray-200 px-6 py-4">
+            <h4 class="text-sm font-semibold text-gray-700 mb-3">Machine Breakdown</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                @foreach (var machine in machineHours.OrderBy(m => m.Key))
                 {
-                    @foreach (var machine in model.MachineHours.Keys.OrderBy(k => k))
-                    {
-                        var hours = model.MachineHours[machine];
-                        var percentage = totalHours > 0 ? (hours / totalHours * 100) : 0;
-                        
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center space-x-2">
-                                <div class="w-3 h-3 rounded-full bg-indigo-600"></div>
-                                <span class="text-sm font-medium text-gray-700">@machine</span>
-                            </div>
-                            <div class="text-right">
-                                <div class="text-sm font-bold text-gray-900">@hours.ToString("F1")h</div>
-                                <div class="text-xs text-gray-500">@percentage.ToString("F0")%</div>
-                            </div>
-                        </div>
-                    }
-                }
-                else
-                {
-                    <div class="text-sm text-gray-500">No machine hours data</div>
-                }
-            </div>
-            
-            <!-- Job Count Breakdown -->
-            <div class="space-y-3">
-                <h4 class="font-semibold text-gray-700 text-sm uppercase tracking-wide">Job Count</h4>
-                @if (model.JobCounts.Any())
-                {
-                    @foreach (var machine in model.JobCounts.Keys.OrderBy(k => k))
-                    {
-                        var count = model.JobCounts[machine];
-                        var percentage = totalJobs > 0 ? (count / (double)totalJobs * 100) : 0;
-                        
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center space-x-2">
-                                <div class="w-3 h-3 rounded-full bg-green-600"></div>
-                                <span class="text-sm font-medium text-gray-700">@machine</span>
-                            </div>
-                            <div class="text-right">
-                                <div class="text-sm font-bold text-gray-900">@count</div>
-                                <div class="text-xs text-gray-500">@percentage.ToString("F0")%</div>
+                    var hours = machine.Value;
+                    var jobs = jobCounts.GetValueOrDefault(machine.Key, 0);
+                    var machineClass = machine.Key.ToLower();
+                    
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-4 h-4 rounded-full machine-indicator @machineClass"></div>
+                            <div>
+                                <div class="font-medium text-gray-900">@machine.Key</div>
+                                <div class="text-xs text-gray-500">@jobs job@(jobs != 1 ? "s" : "")</div>
                             </div>
                         </div>
-                    }
-                }
-                else
-                {
-                    <div class="text-sm text-gray-500">No job count data</div>
+                        <div class="text-right">
+                            <div class="font-semibold text-gray-900">@hours.ToString("F1")h</div>
+                            <div class="text-xs text-gray-500">scheduled</div>
+                        </div>
+                    </div>
                 }
             </div>
-            
-            <!-- Quick Actions -->
-            <div class="space-y-3">
-                <h4 class="font-semibold text-gray-700 text-sm uppercase tracking-wide">Quick Actions</h4>
-                <div class="space-y-2">
-                    <button class="w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 rounded-lg transition"
-                            onclick="window.location.href='/Analytics'">
-                        ?? View Analytics
-                    </button>
-                    <button class="w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 rounded-lg transition"
-                            onclick="window.location.href='/Scheduler/JobLog'">
-                        ?? Job Log
-                    </button>
-                    <button class="w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 rounded-lg transition"
-                            onclick="window.location.reload()">
-                        ?? Refresh
-                    </button>
+        </div>
+    }
+    
+    <!-- Status Indicators -->
+    <div class="border-t border-gray-200 px-6 py-3 bg-gray-50">
+        <div class="flex items-center justify-between text-xs text-gray-600">
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-1">
+                    <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span>Scheduled</span>
+                </div>
+                <div class="flex items-center space-x-1">
+                    <div class="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                    <span>In Progress</span>
+                </div>
+                <div class="flex items-center space-x-1">
+                    <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <span>Completed</span>
                 </div>
             </div>
+            <div class="text-gray-500">
+                Last updated: @DateTime.Now.ToString("HH:mm")
+            </div>
         </div>
     </div>
+</div>
+
+<style>
+.machine-indicator.ti1 {
+    background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
 }
-else
-{
-    <div class="bg-white rounded-lg shadow-lg border border-gray-200 p-6">
-        <div class="text-center text-gray-500">
-            <h3 class="text-lg font-bold text-gray-800 mb-2">Production Summary</h3>
-            <p>No production data available. Schedule some jobs to see summary.</p>
-        </div>
-    </div>
+.machine-indicator.ti2 {
+    background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
 }
+.machine-indicator.inc {
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+}
+</style>

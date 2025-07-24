@@ -188,7 +188,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("MachineId", "ScheduledStart");
 
-                    b.ToTable("Jobs");
+                    b.ToTable("Jobs", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.JobLogEntry", b =>
@@ -230,7 +230,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("Timestamp");
 
-                    b.ToTable("JobLogEntries");
+                    b.ToTable("JobLogEntries", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.Part", b =>
@@ -410,7 +410,7 @@ namespace OpCentrix.Migrations
                     b.HasIndex("PartNumber")
                         .IsUnique();
 
-                    b.ToTable("Parts");
+                    b.ToTable("Parts", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.Job", b =>
