@@ -214,12 +214,13 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// Log application startup
+// Log application startup with correct URL
 var startupLogger = app.Services.GetRequiredService<ILogger<Program>>();
+var urls = builder.Configuration.GetValue<string>("Urls") ?? "http://localhost:5090";
 startupLogger.LogInformation("?? OpCentrix SLS Scheduler started successfully");
 startupLogger.LogInformation("Environment: {Environment}", app.Environment.EnvironmentName);
-startupLogger.LogInformation("URL: http://localhost:5000");
-startupLogger.LogInformation("Login Page: http://localhost:5000/Account/Login");
+startupLogger.LogInformation("URL: {Url}", urls);
+startupLogger.LogInformation("Login Page: {LoginUrl}", $"{urls}/Account/Login");
 
 app.Run();
 
