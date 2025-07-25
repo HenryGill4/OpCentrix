@@ -66,13 +66,13 @@ namespace OpCentrix.Pages.Admin
                 if (!string.IsNullOrEmpty(SearchTerm))
                 {
                     query = query.Where(p => p.PartNumber.Contains(SearchTerm) || 
-                                           p.Description.Contains(SearchTerm));
+                                           (p.Description != null && p.Description.Contains(SearchTerm)));
                     _logger.LogDebug("?? [PARTS-{OperationId}] Applied search filter: '{SearchTerm}'", operationId, SearchTerm);
                 }
 
                 if (!string.IsNullOrEmpty(MaterialFilter))
                 {
-                    query = query.Where(p => p.Material.Contains(MaterialFilter));
+                    query = query.Where(p => p.Material != null && p.Material.Contains(MaterialFilter));
                     _logger.LogDebug("?? [PARTS-{OperationId}] Applied material filter: '{MaterialFilter}'", operationId, MaterialFilter);
                 }
 
@@ -125,7 +125,7 @@ namespace OpCentrix.Pages.Admin
             }
             catch (FormatException fEx)
             {
-                _logger.LogError(fEx, "?? [PARTS-{OperationId}] Format error loading parts page: {ErrorMessage}", 
+                _logger.LogError(fEx, "? [PARTS-{OperationId}] Format error loading parts page: {ErrorMessage}", 
                     operationId, fEx.Message);
                 
                 // Provide fallback data with safe defaults
@@ -141,7 +141,7 @@ namespace OpCentrix.Pages.Admin
             }
             catch (ArgumentException aEx)
             {
-                _logger.LogError(aEx, "?? [PARTS-{OperationId}] Argument error loading parts page: {ErrorMessage}", 
+                _logger.LogError(aEx, "? [PARTS-{OperationId}] Argument error loading parts page: {ErrorMessage}", 
                     operationId, aEx.Message);
                 
                 // Provide fallback data with safe defaults
@@ -173,7 +173,7 @@ namespace OpCentrix.Pages.Admin
         public async Task<IActionResult> OnGetAddAsync()
         {
             var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogDebug("?? [PARTS-{OperationId}] Opening add part modal", operationId);
+            _logger.LogDebug("? [PARTS-{OperationId}] Opening add part modal", operationId);
 
             try
             {
@@ -198,9 +198,11 @@ namespace OpCentrix.Pages.Admin
                     AvgDurationDays = 1,
                     
                     // Cost defaults to prevent decimal conversion errors
-                    MaterialCostPerKg = 450.00m, // Default for titanium, will adjust for Inconel
+                    MaterialCostPerKg = 450.00m, // Default for titanium
                     StandardLaborCostPerHour = 85.00m,
                     SetupCost = 125.00m,
+                    MachineOperatingCostPerHour = 125.00m,
+                    ArgonCostPerHour = 15.00m,
                     
                     // SLS parameter defaults to prevent conversion errors
                     RecommendedLaserPower = 200,
@@ -333,12 +335,12 @@ namespace OpCentrix.Pages.Admin
                 // Sanitize and validate string inputs to prevent format exceptions
                 part.PartNumber = part.PartNumber?.Trim()?.ToUpperInvariant() ?? string.Empty;
                 part.Description = part.Description?.Trim() ?? string.Empty;
-                part.Material = part.Material?.Trim() ?? string.Empty;
-                part.SlsMaterial = part.SlsMaterial?.Trim() ?? string.Empty;
+                part.Material = part.Material?.Trim() ?? "Ti-6Al-4V Grade 5";
+                part.SlsMaterial = part.SlsMaterial?.Trim() ?? part.Material;
                 part.Industry = part.Industry?.Trim() ?? "General";
                 part.Application = part.Application?.Trim() ?? "General Component";
-                part.PartCategory = part.PartCategory?.Trim() ?? string.Empty;
-                part.PartClass = part.PartClass?.Trim() ?? string.Empty;
+                part.PartCategory = part.PartCategory?.Trim() ?? "Production";
+                part.PartClass = part.PartClass?.Trim() ?? "B";
 
                 // CRITICAL FIX: Validate and sanitize numeric inputs to prevent TypeConverter errors
                 if (part.EstimatedHours <= 0 || part.EstimatedHours > 1000 || double.IsNaN(part.EstimatedHours) || double.IsInfinity(part.EstimatedHours))
@@ -376,6 +378,9 @@ namespace OpCentrix.Pages.Admin
                 part.MaterialCostPerKg = SanitizeDecimal(part.MaterialCostPerKg, "MaterialCostPerKg", operationId);
                 part.StandardLaborCostPerHour = SanitizeDecimal(part.StandardLaborCostPerHour, "StandardLaborCostPerHour", operationId);
                 part.SetupCost = SanitizeDecimal(part.SetupCost, "SetupCost", operationId);
+                part.MachineOperatingCostPerHour = SanitizeDecimal(part.MachineOperatingCostPerHour, "MachineOperatingCostPerHour", operationId);
+                part.ArgonCostPerHour = SanitizeDecimal(part.ArgonCostPerHour, "ArgonCostPerHour", operationId);
+
                 _logger.LogDebug("? [PARTS-{OperationId}] Input sanitization completed successfully", operationId);
 
                 // Enhanced validation with detailed logging
@@ -436,8 +441,9 @@ namespace OpCentrix.Pages.Admin
 
                 var currentUser = User.Identity?.Name ?? "System";
                 var now = DateTime.UtcNow;
+                bool isNewPart = part.Id == 0;
 
-                if (part.Id == 0)
+                if (isNewPart)
                 {
                     // Create new part
                     _logger.LogDebug("? [PARTS-{OperationId}] Creating new part: {PartNumber}", operationId, part.PartNumber);
@@ -452,7 +458,6 @@ namespace OpCentrix.Pages.Admin
                     part.AvgDurationDays = (int)Math.Ceiling(Math.Max(part.EstimatedHours / 8, 1));
                     
                     // CRITICAL FIX: Ensure all required fields have values
-                    part.IsActive = part.IsActive; // Keep user selection
                     part.TotalJobsCompleted = 0;
                     part.TotalUnitsProduced = 0;
                     
@@ -488,73 +493,63 @@ namespace OpCentrix.Pages.Admin
                     }
 
                     // Apply all updates with safe assignments
-                    existingPart.PartNumber = part.PartNumber;
-                    existingPart.Description = part.Description;
-                    existingPart.Material = part.Material;
-                    existingPart.SlsMaterial = part.SlsMaterial;
-                    existingPart.EstimatedHours = part.EstimatedHours;
-                    existingPart.AvgDuration = $"{part.EstimatedHours:F1}h";
-                    existingPart.AvgDurationDays = (int)Math.Ceiling(Math.Max(part.EstimatedHours / 8, 1));
-                    
-                    // Update dimensional properties with safe assignments
-                    existingPart.WeightGrams = part.WeightGrams;
-                    existingPart.LengthMm = part.LengthMm;
-                    existingPart.WidthMm = part.WidthMm;
-                    existingPart.HeightMm = part.HeightMm;
-                    existingPart.VolumeMm3 = part.VolumeMm3;
-                    existingPart.PowderRequirementKg = part.PowderRequirementKg;
-                    
-                    // Update process parameters
-                    existingPart.RecommendedLaserPower = part.RecommendedLaserPower;
-                    existingPart.RecommendedScanSpeed = part.RecommendedScanSpeed;
-                    existingPart.RecommendedLayerThickness = part.RecommendedLayerThickness;
-                    existingPart.RecommendedHatchSpacing = part.RecommendedHatchSpacing;
-                    existingPart.RecommendedBuildTemperature = part.RecommendedBuildTemperature;
-                    existingPart.RequiredArgonPurity = part.RequiredArgonPurity;
-                    existingPart.MaxOxygenContent = part.MaxOxygenContent;
-                    
-                    // Update time parameters
-                    existingPart.PreheatingTimeMinutes = part.PreheatingTimeMinutes;
-                    existingPart.CoolingTimeMinutes = part.CoolingTimeMinutes;
-                    existingPart.PostProcessingTimeMinutes = part.PostProcessingTimeMinutes;
-                    
-                    // Update cost parameters
-                    existingPart.MaterialCostPerKg = part.MaterialCostPerKg;
-                    existingPart.StandardLaborCostPerHour = part.StandardLaborCostPerHour;
-                    existingPart.SetupCost = part.SetupCost;
-
+                    UpdatePartFromForm(existingPart, part);
                     existingPart.LastModifiedDate = now;
                     existingPart.LastModifiedBy = currentUser;
                     
                     _logger.LogDebug("? [PARTS-{OperationId}] Part updated successfully", operationId);
                 }
 
-                // CRITICAL FIX: Ensure navigation properties are not loaded by default
-                // This prevents loading related entities unintentionally, keeping the context clean
-                _context.Entry(part).State = EntityState.Detached;
+                // Save changes to database
+                var savedRows = await _context.SaveChangesAsync();
+                _logger.LogInformation("? [PARTS-{OperationId}] Part saved successfully: Id={PartId}, PartNumber='{PartNumber}', Rows={SavedRows}", 
+                    operationId, part.Id, part.PartNumber, savedRows);
                 
-                await _context.SaveChangesAsync();
-                _logger.LogInformation("? [PARTS-{OperationId}] Part saved successfully: Id={PartId}, PartNumber='{PartNumber}'", 
-                    operationId, part.Id, part.PartNumber);
-                
+                // CRITICAL FIX: Return proper response that closes modal and refreshes the page
                 return Content($@"
                     <script>
-                        console.log('Part saved successfully (ID: {operationId})');
-                        if (typeof hideModal === 'function') {{ hideModal(); }}
-                        if (typeof refreshPartsGrid === 'function') {{ refreshPartsGrid(); }}
+                        console.log('? Part {(isNewPart ? "created" : "updated")} successfully (ID: {operationId})');
+                        
+                        // Hide the modal
+                        if (typeof hideModal === 'function') {{ 
+                            hideModal(); 
+                        }} else {{
+                            const modal = document.getElementById('modal-container');
+                            if (modal) {{
+                                modal.classList.add('hidden');
+                                modal.classList.remove('flex');
+                                document.body.style.overflow = '';
+                                modal.innerHTML = '';
+                            }}
+                        }}
+                        
+                        // Show success notification
+                        if (typeof showSuccessNotification === 'function') {{
+                            showSuccessNotification('Part {(isNewPart ? "created" : "updated")} successfully!', 5000);
+                        }}
+                        
+                        // Refresh the parts grid to show the new/updated part
+                        if (typeof refreshPartsGrid === 'function') {{ 
+                            refreshPartsGrid(); 
+                        }} else {{
+                            // Fallback: redirect to parts page to ensure we see the changes
+                            setTimeout(() => {{
+                                window.location.href = '/Admin/Parts';
+                            }}, 1000);
+                        }}
                     </script>
                 ", "text/html");
             }
             catch (FormatException fEx)
             {
-                _logger.LogError(fEx, "?? [PARTS-{OperationId}] Format error saving part: {ErrorMessage}", 
+                _logger.LogError(fEx, "? [PARTS-{OperationId}] Format error saving part: {ErrorMessage}", 
                     operationId, fEx.Message);
                 
                 return Content($@"
                     <script>
                         console.error('Format error saving part (ID: {operationId}): {fEx.Message}');
                         if (typeof showErrorNotification === 'function') {{
-                            showErrorNotification('Format error saving part (ID: {operationId}): {fEx.Message}', 8000);
+                            showErrorNotification('Format error saving part (ID: {operationId}): Check numeric values', 8000);
                         }} else {{
                             alert('Format error saving part (ID: {operationId}): {fEx.Message}');
                         }}
@@ -563,14 +558,14 @@ namespace OpCentrix.Pages.Admin
             }
             catch (ArgumentException aEx)
             {
-                _logger.LogError(aEx, "?? [PARTS-{OperationId}] Argument error saving part: {ErrorMessage}", 
+                _logger.LogError(aEx, "? [PARTS-{OperationId}] Argument error saving part: {ErrorMessage}", 
                     operationId, aEx.Message);
                 
                 return Content($@"
                     <script>
                         console.error('Argument error saving part (ID: {operationId}): {aEx.Message}');
                         if (typeof showErrorNotification === 'function') {{
-                            showErrorNotification('Argument error saving part (ID: {operationId}): {aEx.Message}', 8000);
+                            showErrorNotification('Validation error saving part (ID: {operationId}): {aEx.Message}', 8000);
                         }} else {{
                             alert('Argument error saving part (ID: {operationId}): {aEx.Message}');
                         }}
@@ -586,9 +581,89 @@ namespace OpCentrix.Pages.Admin
                     <script>
                         console.error('Unexpected error saving part (ID: {operationId}): {ex.Message}');
                         if (typeof showErrorNotification === 'function') {{
-                            showErrorNotification('Unexpected error saving part (ID: {operationId}): {ex.Message}', 8000);
+                            showErrorNotification('Error saving part (ID: {operationId}): {ex.Message}', 8000);
                         }} else {{
                             alert('Unexpected error saving part (ID: {operationId}): {ex.Message}');
+                        }}
+                    </script>
+                ", "text/html");
+            }
+        }
+
+        // Add missing delete handler
+        public async Task<IActionResult> OnPostDeleteAsync(int id)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("??? [PARTS-{OperationId}] Processing part deletion request: PartId={PartId}", operationId, id);
+
+            try
+            {
+                var part = await _context.Parts.FindAsync(id);
+                if (part == null)
+                {
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Part not found for deletion: {PartId}", operationId, id);
+                    return Content("", "text/html");
+                }
+
+                var partInfo = $"{part.PartNumber} (ID: {part.Id})";
+                _logger.LogDebug("??? [PARTS-{OperationId}] Deleting part: {PartInfo}", operationId, partInfo);
+
+                // Check if part is used in any jobs
+                var jobsUsingPart = await _context.Jobs.CountAsync(j => j.PartId == part.Id);
+                if (jobsUsingPart > 0)
+                {
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Cannot delete part {PartInfo}: Used in {JobCount} jobs", 
+                        operationId, partInfo, jobsUsingPart);
+                    
+                    return Content($@"
+                        <script>
+                            if (typeof showErrorNotification === 'function') {{
+                                showErrorNotification('Cannot delete part: It is used in {jobsUsingPart} scheduled jobs.', 6000);
+                            }} else {{
+                                alert('Cannot delete part: It is used in {jobsUsingPart} scheduled jobs.');
+                            }}
+                        </script>
+                    ", "text/html");
+                }
+
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
+                {
+                    _context.Parts.Remove(part);
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    _logger.LogInformation("? [PARTS-{OperationId}] Part deleted successfully: {PartInfo}", operationId, partInfo);
+
+                    return Content($@"
+                        <script>
+                            console.log('? Part deleted successfully (ID: {operationId})');
+                            if (typeof showSuccessNotification === 'function') {{
+                                showSuccessNotification('Part deleted successfully!', 5000);
+                            }}
+                            setTimeout(() => {{ window.location.reload(); }}, 1000);
+                        </script>
+                    ", "text/html");
+                }
+                catch (Exception transactionEx)
+                {
+                    await transaction.RollbackAsync();
+                    _logger.LogError(transactionEx, "? [PARTS-{OperationId}] Transaction error during part deletion: {ErrorMessage}",
+                        operationId, transactionEx.Message);
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "? [PARTS-{OperationId}] Critical error deleting part {PartId}: {ErrorMessage}",
+                    operationId, id, ex.Message);
+
+                return Content($@"
+                    <script>
+                        if (typeof showErrorNotification === 'function') {{
+                            showErrorNotification('Error deleting part. Please try again.', 5000);
+                        }} else {{
+                            alert('Error deleting part. Please try again.');
                         }}
                     </script>
                 ", "text/html");
@@ -625,6 +700,52 @@ namespace OpCentrix.Pages.Admin
             }
             
             return Math.Round(value, 2); // Round to prevent precision issues
+        }
+
+        private void UpdatePartFromForm(Part existingPart, Part formPart)
+        {
+            existingPart.PartNumber = formPart.PartNumber;
+            existingPart.Description = formPart.Description;
+            existingPart.Material = formPart.Material;
+            existingPart.SlsMaterial = formPart.SlsMaterial;
+            existingPart.Industry = formPart.Industry;
+            existingPart.Application = formPart.Application;
+            existingPart.PartCategory = formPart.PartCategory;
+            existingPart.PartClass = formPart.PartClass;
+            existingPart.IsActive = formPart.IsActive;
+            
+            existingPart.EstimatedHours = formPart.EstimatedHours;
+            existingPart.AvgDuration = $"{formPart.EstimatedHours:F1}h";
+            existingPart.AvgDurationDays = (int)Math.Ceiling(Math.Max(formPart.EstimatedHours / 8, 1));
+            
+            // Update dimensional properties
+            existingPart.WeightGrams = formPart.WeightGrams;
+            existingPart.LengthMm = formPart.LengthMm;
+            existingPart.WidthMm = formPart.WidthMm;
+            existingPart.HeightMm = formPart.HeightMm;
+            existingPart.VolumeMm3 = formPart.VolumeMm3;
+            existingPart.PowderRequirementKg = formPart.PowderRequirementKg;
+            
+            // Update process parameters
+            existingPart.RecommendedLaserPower = formPart.RecommendedLaserPower;
+            existingPart.RecommendedScanSpeed = formPart.RecommendedScanSpeed;
+            existingPart.RecommendedLayerThickness = formPart.RecommendedLayerThickness;
+            existingPart.RecommendedHatchSpacing = formPart.RecommendedHatchSpacing;
+            existingPart.RecommendedBuildTemperature = formPart.RecommendedBuildTemperature;
+            existingPart.RequiredArgonPurity = formPart.RequiredArgonPurity;
+            existingPart.MaxOxygenContent = formPart.MaxOxygenContent;
+            
+            // Update time parameters
+            existingPart.PreheatingTimeMinutes = formPart.PreheatingTimeMinutes;
+            existingPart.CoolingTimeMinutes = formPart.CoolingTimeMinutes;
+            existingPart.PostProcessingTimeMinutes = formPart.PostProcessingTimeMinutes;
+            
+            // Update cost parameters
+            existingPart.MaterialCostPerKg = formPart.MaterialCostPerKg;
+            existingPart.StandardLaborCostPerHour = formPart.StandardLaborCostPerHour;
+            existingPart.SetupCost = formPart.SetupCost;
+            existingPart.MachineOperatingCostPerHour = formPart.MachineOperatingCostPerHour;
+            existingPart.ArgonCostPerHour = formPart.ArgonCostPerHour;
         }
     }
 }

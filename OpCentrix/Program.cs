@@ -162,33 +162,15 @@ using (var scope = app.Services.CreateScope())
 
         var context = services.GetRequiredService<SchedulerContext>();
 
-        // In development, create database but don't recreate unless explicitly requested
-        if (app.Environment.IsDevelopment())
+        // Ensure database is created for any environment
+        logger.LogInformation("Ensuring database exists and is up to date...");
+        
+        // Create database if it doesn't exist
+        await context.Database.EnsureCreatedAsync();
+        
+        // Apply any pending migrations in production
+        if (!app.Environment.IsDevelopment())
         {
-            logger.LogInformation("Development environment - ensuring database exists...");
-
-            // Check if user wants to recreate the database
-            var recreateDatabase = Environment.GetEnvironmentVariable("RECREATE_DATABASE");
-            if (recreateDatabase?.ToLower() == "true")
-            {
-                logger.LogInformation("RECREATE_DATABASE=true - recreating database...");
-                await context.Database.EnsureDeletedAsync();
-                await context.Database.EnsureCreatedAsync();
-                logger.LogInformation("Database recreated successfully.");
-            }
-            else
-            {
-                // Just ensure it exists, don't delete existing data
-                await context.Database.EnsureCreatedAsync();
-                logger.LogInformation("Database ensured to exist, preserving existing data.");
-            }
-        }
-        else
-        {
-            // Ensure database is created
-            await context.Database.EnsureCreatedAsync();
-
-            // Apply any pending migrations
             if (context.Database.GetPendingMigrations().Any())
             {
                 logger.LogInformation("Applying database migrations...");
@@ -201,8 +183,7 @@ using (var scope = app.Services.CreateScope())
         await seedingService.SeedDatabaseAsync();
 
         logger.LogInformation("Database initialization completed successfully");
-        logger.LogInformation("?? TIP: Set environment variable RECREATE_DATABASE=true to recreate database on next startup");
-        logger.LogInformation("?? Test users available:");
+        logger.LogInformation("TIP: Test users available:");
         logger.LogInformation("   admin/admin123 (Admin)");
         logger.LogInformation("   manager/manager123 (Manager)");
         logger.LogInformation("   scheduler/scheduler123 (Scheduler)");
@@ -226,7 +207,7 @@ using (var scope = app.Services.CreateScope())
 
 // Log application startup
 var startupLogger = app.Services.GetRequiredService<ILogger<Program>>();
-startupLogger.LogInformation("?? OpCentrix SLS Scheduler started successfully");
+startupLogger.LogInformation("OpCentrix SLS Scheduler started successfully");
 startupLogger.LogInformation("Environment: {Environment}", app.Environment.EnvironmentName);
 startupLogger.LogInformation("URL: http://localhost:5000");
 startupLogger.LogInformation("Login Page: http://localhost:5000/Account/Login");

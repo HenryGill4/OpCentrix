@@ -1,230 +1,329 @@
-﻿# 🏭 OpCentrix SLS Manufacturing Scheduler
+﻿# OpCentrix SLS Scheduler - Production Ready
 
-## 🎯 **Overview**
+## Quick Start Guide
 
-OpCentrix is a **production-ready, enterprise-grade** SLS (Selective Laser Sintering) metal printing manufacturing scheduler designed for TruPrint 3000 machines and similar industrial additive manufacturing systems.
+### Prerequisites
+- .NET 8.0 SDK
+- Windows, Linux, or macOS
+- No additional database setup required (SQLite embedded)
 
-![OpCentrix Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen)
-![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen)
-![.NET](https://img.shields.io/badge/.NET-8.0-blue)
-![Tests](https://img.shields.io/badge/Tests-13%2F13%20Passing-brightgreen)
+### Installation
+1. **Clone or download the repository**
+2. **Run the setup script**:
+   ```bash
+   # Windows
+   setup-clean-database.bat
+   
+   # Linux/Mac
+   chmod +x setup-clean-database.sh
+   ./setup-clean-database.sh
+   ```
 
----
+3. **Start the application**:
+   ```bash
+   cd OpCentrix
+   dotnet run
+   ```
 
-## ✅ **Production Ready Features**
-
-### 🔧 **Core Manufacturing Capabilities**
-- ✅ **Advanced Job Scheduling** - Complete SLS job management with conflict detection
-- ✅ **Multi-Machine Support** - TI1, TI2 (Titanium), INC (Inconel) machine configurations
-- ✅ **Material Management** - Ti-6Al-4V Grade 5, Ti-6Al-4V ELI, Inconel 718/625
-- ✅ **Process Parameter Control** - Laser power, scan speed, layer thickness, atmosphere control
-- ✅ **Real-time Print Tracking** - Live build monitoring and delay logging
-- ✅ **Cost Calculation** - Material, labor, machine operating costs
-- ✅ **Quality Management** - Inspection checkpoints and compliance tracking
-
-### 🔐 **Enterprise Security & Administration**
-- ✅ **Role-Based Access Control** - 11 different user roles with granular permissions
-- ✅ **Comprehensive Admin Panel** - Full CRUD operations for all entities
-- ✅ **Audit Logging** - Complete change tracking and compliance reporting
-- ✅ **Data Validation** - Multi-layer validation with business rule enforcement
-- ✅ **Session Management** - Secure timeout and logout functionality
-
-### 💻 **Modern Technical Architecture**
-- ✅ **.NET 8** - Latest framework with optimal performance
-- ✅ **Razor Pages** - Server-side rendering with HTMX for dynamic updates
-- ✅ **Entity Framework Core** - Robust ORM with SQLite database
-- ✅ **Responsive Design** - Professional UI that works on all devices
-- ✅ **Performance Optimized** - 70% improvement in database operations
+4. **Open browser and login**:
+   - URL: http://localhost:5000
+   - Username: `admin`
+   - Password: `admin123`
 
 ---
 
-## 🚀 **Quick Start Guide**
+## System Testing
 
-### **Prerequisites**
-- .NET 8 SDK or later
-- Windows 10/11, macOS, or Linux
-- Modern web browser (Chrome, Edge, Firefox, Safari)
+### Complete System Verification
+Run the comprehensive test suite to verify everything works:
 
-### **1. Quick Test & Start**
 ```bash
 # Windows
-quick-start.bat
+test-complete-system.bat
 
 # Linux/Mac
-chmod +x quick-start.sh
-./quick-start.sh
+chmod +x test-complete-system.sh
+./test-complete-system.sh
 ```
 
-### **2. Manual Start**
+This tests:
+- .NET SDK installation
+- Package restoration
+- Project build
+- Database creation
+- Data seeding
+- Application startup
+- HTTP endpoints
+
+### Database Verification
+Check if parts and data are saving correctly:
+
 ```bash
-# Build and run
+# Windows
+verify-parts-database.bat
+
+# Linux/Mac
+chmod +x verify-parts-database.sh
+./verify-parts-database.sh
+```
+
+---
+
+## User Accounts
+
+The system comes with pre-configured test users:
+
+| Username | Password | Role | Access Level |
+|----------|----------|------|--------------|
+| admin | admin123 | Administrator | Full system access |
+| manager | manager123 | Manager | Management functions |
+| scheduler | scheduler123 | Scheduler | Job scheduling |
+| operator | operator123 | Operator | Basic operations |
+| printer | printer123 | PrintingSpecialist | Print operations |
+
+---
+
+## Features
+
+### Scheduler
+- Visual job scheduling interface
+- Drag-and-drop job management
+- Machine capacity planning
+- Conflict detection
+- Real-time updates
+
+### Parts Management
+- Complete CRUD operations
+- Material specifications
+- Cost tracking
+- Usage history
+
+### Print Tracking
+- Build job monitoring
+- Performance metrics
+- Quality tracking
+- Resource usage
+
+### Administration
+- User management
+- System configuration
+- Data backup/restore
+- Analytics dashboard
+
+---
+
+## Architecture
+
+### Technology Stack
+- **Backend**: ASP.NET Core 8 (Razor Pages)
+- **Database**: SQLite (embedded, no setup required)
+- **Frontend**: HTML5, CSS3, JavaScript, HTMX
+- **Authentication**: Cookie-based with role authorization
+
+### Project Structure
+```
+OpCentrix/
+├── Data/                  # Database context and models
+├── Models/               # Data entities and view models
+├── Pages/                # Razor Pages (UI)
+├── Services/             # Business logic
+├── wwwroot/              # Static files (CSS, JS, images)
+├── Migrations/           # Database migrations
+└── Program.cs            # Application startup
+```
+
+---
+
+## Database
+
+### Automatic Initialization
+The database is created automatically on first run with:
+- User accounts and roles
+- Sample parts and materials
+- Machine configurations
+- Default settings
+
+### Data Storage
+- **Location**: `OpCentrix/Data/OpCentrix.db`
+- **Type**: SQLite (single file, no server required)
+- **Backup**: Copy the .db file to backup data
+
+### Reset Database
+To start fresh:
+```bash
+# Windows
+setup-clean-database.bat
+
+# Linux/Mac
+./setup-clean-database.sh
+```
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+#### Application Won't Start
+1. Check .NET 8 SDK is installed: `dotnet --version`
+2. Restore packages: `dotnet restore`
+3. Build project: `dotnet build`
+4. Check port 5000 is available
+
+#### Database Issues
+1. Ensure write permissions to `Data/` directory
+2. Delete existing database and restart app
+3. Run database verification script
+
+#### Parts Not Saving
+1. Check browser console for JavaScript errors
+2. Verify all required fields are filled
+3. Ensure unique part numbers
+4. See PARTS-TROUBLESHOOTING-GUIDE.md
+
+#### Login Problems
+1. Use correct credentials (admin/admin123)
+2. Clear browser cookies
+3. Check application logs for errors
+
+### Getting Help
+1. Check application logs in console
+2. Run diagnostic scripts
+3. Review troubleshooting guides
+4. Check browser developer tools
+
+---
+
+## Development
+
+### Requirements
+- Visual Studio 2022 or VS Code
+- .NET 8.0 SDK
+- Git for version control
+
+### Building
+```bash
+dotnet restore
 dotnet build
 dotnet run
-
-# Open browser to
-http://localhost:5000
 ```
 
-### **3. Login**
-```
-Username: admin
-Password: admin123
-```
-
----
-
-## 📊 **System Architecture**
-
-### **Database Structure**
-```
-📁 Core Manufacturing Data
-├── Jobs              - Scheduled manufacturing jobs
-├── Parts             - Part specifications and SLS parameters  
-├── JobLogEntries     - Complete audit trail
-└── BuildJobs         - Real-time print tracking
-
-📁 System Management
-├── Users             - User accounts and authentication
-├── UserSettings      - Personalization preferences
-├── SlsMachines       - Machine configurations and status
-└── MachineDataSnapshots - Historical telemetry data
+### Testing
+```bash
+dotnet test
 ```
 
-### **User Roles & Access**
-| Role | Access Level | Primary Functions |
-|------|-------------|-------------------|
-| **Admin** | Full System | User management, system configuration, all functions |
-| **Manager** | All Manufacturing | Production oversight, all departments, reporting |
-| **Scheduler** | Job Scheduling | Create/edit jobs, manage production schedule |
-| **Operator** | Machine Operations | View schedules, update job status, print tracking |
-| **PrintingSpecialist** | 3D Printing Focus | Print tracking, build management, quality control |
-| **CoatingSpecialist** | Coating Operations | Coating processes and quality management |
-| **QCSpecialist** | Quality Control | Inspection, quality reporting, compliance |
+### Adding Features
+See the comprehensive guides in:
+- `AI-INSTRUCTIONS-NO-UNICODE.md` - Important coding standards
+- `PARTS-TROUBLESHOOTING-GUIDE.md` - Common issues and solutions
 
 ---
 
-## 🔧 **Key Components**
+## Deployment
 
-### **Scheduler Module** (`/Scheduler`)
-- **Visual Timeline Grid** - Gantt-style schedule with drag-drop functionality
-- **Multi-Machine View** - TI1, TI2, INC machines with real-time status
-- **Zoom Controls** - Day/hour/30min/15min view granularity
-- **Conflict Detection** - Prevents overlapping jobs and material conflicts
-- **Smart Defaults** - Auto-fill SLS parameters based on part selection
+### Development
+- Uses SQLite database (embedded)
+- Runs on http://localhost:5000
+- Debug logging enabled
 
-### **Admin Panel** (`/Admin`)
-- **Dashboard** - Real-time KPIs, system health, recent activity
-- **Jobs Management** - Advanced filtering, bulk operations, audit trails
-- **Parts Management** - Complete part lifecycle with cost tracking
-- **System Logs** - Comprehensive activity monitoring
-- **Database Management** - Production cleanup, backup, validation
+### Production
+- Can use SQL Server, PostgreSQL, or SQLite
+- Configure connection strings in appsettings.json
+- Enable HTTPS
+- Set production logging levels
 
-### **Print Tracking** (`/PrintTracking`)
-- **Live Build Monitoring** - Real-time job progress and status 
-- **Delay Logging** - Track and categorize production delays
-- **Multi-Part Builds** - Manage complex builds with multiple components
-- **Performance Analytics** - Actual vs. planned time analysis
-
----
-
-## 📱 **User Interface**
-
-### **Modern Design System**
-- **OpCentrix Brand Colors** - Professional blue/gray color scheme
-- **Responsive Grid** - CSS Grid with mobile-first design
-- **HTMX Integration** - Partial page updates without full refreshes
-- **Loading States** - Visual feedback for all user actions
-- **Toast Notifications** - Real-time success/error messaging
-
-### **Accessibility Features**
-- **WCAG 2.1 AA Compliant** - Screen reader support, keyboard navigation
-- **High Contrast** - Clear visual hierarchy and color contrast
-- **Focus Management** - Proper tab order and focus indicators
-- **Responsive Typography** - Scalable text for all devices
+### Docker (Optional)
+```dockerfile
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
+COPY . /app
+WORKDIR /app
+EXPOSE 80
+ENTRYPOINT ["dotnet", "OpCentrix.dll"]
+```
 
 ---
 
-## 🔧 **Development & Maintenance**
+## Security
 
-### **Code Quality**
-- **Enterprise Architecture** - Clean separation of concerns
-- **Modern C# 12** - Latest language features and patterns
-- **Comprehensive Tests** - 13/13 unit tests passing
-- **Performance Optimized** - Memory efficient, fast database operations
+### Authentication
+- Cookie-based authentication
+- Role-based authorization
+- Session management
+- Password hashing (BCrypt)
 
-### **Security**
-- **Input Validation** - Multi-layer validation at all entry points
-- **SQL Injection Prevention** - Parameterized queries throughout
-- **XSS Protection** - Proper output encoding and sanitization
-- **Authentication & Authorization** - Secure session management
+### Data Protection
+- Input validation
+- SQL injection prevention
+- XSS protection
+- CSRF tokens
 
----
-
-## 📊 **Manufacturing Features**
-
-### **SLS-Specific Capabilities**
-- **Material Compatibility** - Automated material changeover time calculation
-- **Process Parameters** - Laser power, scan speed, layer thickness control
-- **Atmosphere Management** - Argon purity and oxygen content monitoring
-- **Powder Management** - Usage tracking and recycling optimization
-- **Temperature Control** - Build and ambient temperature monitoring
-
-### **Production Analytics**
-- **Efficiency Tracking** - Planned vs. actual time analysis
-- **Cost Management** - Real-time cost calculation and tracking
-- **Quality Metrics** - Defect rates, rework tracking, density analysis
-- **Machine Utilization** - Capacity planning and optimization
+### Roles and Permissions
+- Admin: Full system access
+- Manager: Management functions
+- Specialist: Department-specific access
+- Operator: Basic operations only
 
 ---
 
-## 🛠️ **Maintenance Scripts**
+## Performance
 
-| Script | Purpose | When to Use |
-|--------|---------|-------------|
-| `quick-start.bat/.sh` | **Start application** | Daily startup |
-| `reset-database.bat/.sh` | **Clean database reset** | Development/testing |
-| `reset-to-production.bat/.sh` | **Production cleanup** | Remove sample data |
-| `verify-production-ready.bat/.sh` | **System validation** | Pre-deployment check |
+### Optimizations
+- Efficient database queries
+- Partial page updates (HTMX)
+- Optimized CSS and JavaScript
+- Database indexing
 
----
-
-## 📚 **Documentation**
-
-- **[Admin System Guide](ProjectNotes/admin-system-complete.md)** - Complete admin functionality
-- **[Database Architecture](DATABASE-ARCHITECTURE-GUIDE.md)** - Schema and relationships
-- **[Production Setup](PRODUCTION-DATABASE-SETUP.md)** - Production deployment guide
-- **[Print Tracking Guide](PRINT-TRACKING-README.md)** - Real-time monitoring system
+### Monitoring
+- Application logging
+- Performance counters
+- Error tracking
+- Usage analytics
 
 ---
 
-## 🎯 **Production Deployment**
+## Support
 
-### **Ready for Manufacturing**
-OpCentrix is **immediately deployable** in production SLS manufacturing environments with:
+### Documentation
+- Complete API documentation
+- User guides
+- Developer documentation
+- Troubleshooting guides
 
-- ✅ **Zero Configuration Required** - Works out of the box
-- ✅ **Enterprise Security** - Role-based access with audit trails
-- ✅ **Scalable Architecture** - Supports growth from single to multiple machines
-- ✅ **Comprehensive Features** - All SLS manufacturing requirements covered
-- ✅ **Professional Support** - Complete documentation and maintenance scripts
-
-### **Deployment Confidence: ⭐⭐⭐⭐⭐ (5/5)**
-
----
-
-## 🏆 **Achievement Summary**
-
-**OpCentrix represents enterprise-level software quality with:**
-
-- 🎯 **100% Production Ready** - Immediate deployment capability
-- 🔧 **Comprehensive SLS Features** - Complete manufacturing workflow
-- 💻 **Modern Architecture** - .NET 8, responsive design, optimized performance
-- 🔐 **Enterprise Security** - Role-based access, audit trails, data protection
-- 📊 **Advanced Analytics** - Real-time monitoring, cost tracking, quality metrics
-- 🛠️ **Maintainable Code** - Clean architecture, comprehensive testing, documentation
+### Maintenance
+- Regular database backups
+- Log file rotation
+- Performance monitoring
+- Security updates
 
 ---
 
-**Status: 🟢 PRODUCTION READY & DEPLOYMENT CONFIDENT**
+## License
 
-*OpCentrix - Excellence in SLS Manufacturing Management*
+This is a proprietary manufacturing scheduler system. All rights reserved.
+
+---
+
+## Version History
+
+### v2.0.0 (Current)
+- Complete rewrite for .NET 8
+- Enhanced UI with HTMX
+- Improved performance
+- Comprehensive error handling
+- Production-ready deployment
+
+### v1.0.0
+- Initial version
+- Basic scheduling functionality
+- SQLite database
+- User authentication
+
+---
+
+## Contact
+
+For technical support or questions about the OpCentrix SLS Scheduler system, please refer to the documentation or contact your system administrator.
+
+**Last Updated**: December 2024
+**System Status**: Production Ready
