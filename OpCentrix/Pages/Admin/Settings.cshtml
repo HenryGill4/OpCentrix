@@ -1,0 +1,394 @@
+@page
+@model OpCentrix.Pages.Admin.SettingsModel
+@{
+    ViewData["Title"] = "System Settings";
+    Layout = "~/Pages/Admin/Shared/_AdminLayout.cshtml";
+}
+
+<div class="space-y-6">
+    <!-- Header Section -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">System Settings</h1>
+            <p class="mt-1 text-sm text-gray-600">Configure global application settings and parameters</p>
+        </div>
+        <div class="flex space-x-3">
+            <button onclick="toggleCreateForm()" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                ? Add Setting
+            </button>
+        </div>
+    </div>
+
+    <!-- Create New Setting Form (Hidden by default) -->
+    <div id="createSettingForm" class="hidden bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Create New Setting</h3>
+        <form method="post" asp-page-handler="CreateSetting" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label asp-for="NewSetting.SettingKey" class="block text-sm font-medium text-gray-700">Setting Key</label>
+                    <input asp-for="NewSetting.SettingKey" type="text" required 
+                           class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                           placeholder="e.g., category.setting_name">
+                </div>
+                
+                <div>
+                    <label asp-for="NewSetting.Category" class="block text-sm font-medium text-gray-700">Category</label>
+                    <select asp-for="NewSetting.Category" required 
+                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        <option value="">Select Category</option>
+                        <option value="Scheduler">Scheduler</option>
+                        <option value="Operations">Operations</option>
+                        <option value="Quality">Quality</option>
+                        <option value="System">System</option>
+                        <option value="Notifications">Notifications</option>
+                        <option value="Integration">Integration</option>
+                        <option value="Custom">Custom</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label asp-for="NewSetting.DataType" class="block text-sm font-medium text-gray-700">Data Type</label>
+                    <select asp-for="NewSetting.DataType" required 
+                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        <option value="String">Text</option>
+                        <option value="Integer">Number (Integer)</option>
+                        <option value="Decimal">Number (Decimal)</option>
+                        <option value="Boolean">True/False</option>
+                        <option value="TimeSpan">Time Duration</option>
+                        <option value="DateTime">Date/Time</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label asp-for="NewSetting.DisplayOrder" class="block text-sm font-medium text-gray-700">Display Order</label>
+                    <input asp-for="NewSetting.DisplayOrder" type="number" value="100" 
+                           class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                </div>
+            </div>
+            
+            <div>
+                <label asp-for="NewSetting.Description" class="block text-sm font-medium text-gray-700">Description</label>
+                <textarea asp-for="NewSetting.Description" rows="2" 
+                          class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                          placeholder="Describe what this setting controls"></textarea>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label asp-for="NewSetting.SettingValue" class="block text-sm font-medium text-gray-700">Value</label>
+                    <input asp-for="NewSetting.SettingValue" type="text" required 
+                           class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                </div>
+                
+                <div>
+                    <label asp-for="NewSetting.DefaultValue" class="block text-sm font-medium text-gray-700">Default Value</label>
+                    <input asp-for="NewSetting.DefaultValue" type="text" 
+                           class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <label class="flex items-center">
+                    <input asp-for="NewSetting.IsActive" type="checkbox" checked 
+                           class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
+                    <span class="ml-2 text-sm text-gray-700">Active</span>
+                </label>
+                
+                <label class="flex items-center">
+                    <input asp-for="NewSetting.IsReadOnly" type="checkbox" 
+                           class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
+                    <span class="ml-2 text-sm text-gray-700">Read Only</span>
+                </label>
+                
+                <label class="flex items-center">
+                    <input asp-for="NewSetting.RequiresRestart" type="checkbox" 
+                           class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
+                    <span class="ml-2 text-sm text-gray-700">Requires Restart</span>
+                </label>
+            </div>
+            
+            <div class="flex space-x-3">
+                <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                    ? Create Setting
+                </button>
+                <button type="button" onclick="toggleCreateForm()" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    ? Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Settings by Category -->
+    <form method="post" asp-page-handler="UpdateSettings" id="settingsForm">
+        <div class="space-y-6">
+            @foreach (var categoryGroup in Model.SettingsByCategory.OrderBy(kvp => kvp.Key))
+            {
+                var category = categoryGroup.Key;
+                var settings = categoryGroup.Value;
+
+                <div class="bg-white rounded-lg shadow">
+                    <!-- Category Header -->
+                    <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+                        <h3 class="text-lg font-medium text-gray-900">@Model.GetCategoryDisplayName(category)</h3>
+                        <p class="mt-1 text-sm text-gray-600">@settings.Count setting(s)</p>
+                    </div>
+
+                    <!-- Settings Table -->
+                    <div class="overflow-hidden">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Setting</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                @foreach (var setting in settings)
+                                {
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-6 py-4">
+                                            <div>
+                                                <div class="flex items-center">
+                                                    <div class="text-sm font-medium text-gray-900">
+                                                        @setting.SettingKey
+                                                        @if (setting.IsReadOnly)
+                                                        {
+                                                            <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                                ?? Read Only
+                                                            </span>
+                                                        }
+                                                        @if (setting.RequiresRestart)
+                                                        {
+                                                            <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                                                ?? Requires Restart
+                                                            </span>
+                                                        }
+                                                    </div>
+                                                </div>
+                                                @if (!string.IsNullOrEmpty(setting.Description))
+                                                {
+                                                    <div class="text-sm text-gray-500 mt-1">@setting.Description</div>
+                                                }
+                                                @if (!string.IsNullOrEmpty(setting.DefaultValue))
+                                                {
+                                                    <div class="text-xs text-gray-400 mt-1">Default: @setting.DefaultValue</div>
+                                                }
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            @if (setting.IsReadOnly)
+                                            {
+                                                <div class="text-sm text-gray-900 font-mono bg-gray-100 px-3 py-2 rounded">
+                                                    @setting.SettingValue
+                                                </div>
+                                            }
+                                            else if (setting.DataType.ToLower() == "boolean")
+                                            {
+                                                <label class="flex items-center">
+                                                    <input name="SettingValues[@setting.SettingKey]" 
+                                                           type="checkbox" 
+                                                           value="true"
+                                                           @(setting.GetBoolValue() ? "checked" : "")
+                                                           class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
+                                                    <span class="ml-2 text-sm text-gray-700">
+                                                        @(setting.GetBoolValue() ? "Enabled" : "Disabled")
+                                                    </span>
+                                                </label>
+                                                <input name="SettingValues[@setting.SettingKey]" type="hidden" value="false">
+                                            }
+                                            else
+                                            {
+                                                <input name="SettingValues[@setting.SettingKey]" 
+                                                       type="@Model.GetSettingInputType(setting.DataType)" 
+                                                       value="@setting.SettingValue" 
+                                                       class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md font-mono"
+                                                       @(setting.DataType.ToLower() == "decimal" ? "step=0.01" : "")>
+                                            }
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                @Model.GetDataTypeDisplayName(setting.DataType)
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <div class="flex justify-end space-x-2">
+                                                @if (!string.IsNullOrEmpty(setting.DefaultValue) && setting.SettingValue != setting.DefaultValue)
+                                                {
+                                                    <form method="post" asp-page-handler="ResetToDefault" class="inline">
+                                                        <input type="hidden" name="settingKey" value="@setting.SettingKey">
+                                                        <button type="submit" 
+                                                                onclick="return confirm('Reset @setting.SettingKey to default value (@setting.DefaultValue)?')"
+                                                                class="text-yellow-600 hover:text-yellow-900 text-xs">
+                                                            ?? Reset
+                                                        </button>
+                                                    </form>
+                                                }
+                                                @if (!setting.IsReadOnly)
+                                                {
+                                                    <form method="post" asp-page-handler="DeleteSetting" class="inline">
+                                                        <input type="hidden" name="settingKey" value="@setting.SettingKey">
+                                                        <button type="submit" 
+                                                                onclick="return confirm('?? Are you sure you want to delete the setting @setting.SettingKey? This action cannot be undone.')"
+                                                                class="text-red-600 hover:text-red-900 text-xs">
+                                                            ??? Delete
+                                                        </button>
+                                                    </form>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Save Button -->
+        <div class="flex items-center justify-between pt-6 border-t border-gray-200">
+            <div class="text-sm text-gray-600">
+                @Model.AllSettings.Count setting(s) across @Model.SettingsByCategory.Count categories
+            </div>
+            <div class="flex space-x-3">
+                <button type="button" onclick="resetForm()" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    ?? Reset Form
+                </button>
+                <button type="submit" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    ?? Save All Changes
+                </button>
+            </div>
+        </div>
+    </form>
+
+    @if (!Model.AllSettings.Any())
+    {
+        <div class="text-center py-12">
+            <div class="text-gray-400 text-6xl mb-4">??</div>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">No settings found</h3>
+            <p class="text-gray-600 mb-4">Create your first system setting to get started.</p>
+            <button onclick="toggleCreateForm()" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                ? Add First Setting
+            </button>
+        </div>
+    }
+</div>
+
+<!-- Success/Error Messages -->
+@if (TempData["Success"] != null)
+{
+    <div class="fixed top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded z-50" role="alert">
+        <strong class="font-bold">Success!</strong>
+        <span class="block sm:inline">@TempData["Success"]</span>
+    </div>
+}
+
+@if (TempData["Error"] != null)
+{
+    <div class="fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded z-50" role="alert">
+        <strong class="font-bold">Error!</strong>
+        <span class="block sm:inline">@TempData["Error"]</span>
+    </div>
+}
+
+@if (TempData["Info"] != null)
+{
+    <div class="fixed top-4 right-4 bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded z-50" role="alert">
+        <strong class="font-bold">Info:</strong>
+        <span class="block sm:inline">@TempData["Info"]</span>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        function toggleCreateForm() {
+            const form = document.getElementById('createSettingForm');
+            form.classList.toggle('hidden');
+            
+            if (!form.classList.contains('hidden')) {
+                // Focus on the first input
+                const firstInput = form.querySelector('input[type="text"]');
+                if (firstInput) {
+                    firstInput.focus();
+                }
+            }
+        }
+
+        function resetForm() {
+            if (confirm('Are you sure you want to reset all changes? This will reload the page and lose any unsaved modifications.')) {
+                window.location.reload();
+            }
+        }
+
+        // Auto-hide alerts after 5 seconds
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('[role="alert"]');
+            alerts.forEach(alert => {
+                alert.style.opacity = '0';
+                alert.style.transform = 'translateX(100%)';
+                setTimeout(() => alert.remove(), 300);
+            });
+        }, 5000);
+
+        // Form validation
+        document.getElementById('settingsForm').addEventListener('submit', function(e) {
+            const inputs = this.querySelectorAll('input[type="number"]');
+            let hasErrors = false;
+            
+            inputs.forEach(input => {
+                const value = input.value;
+                if (value && isNaN(value)) {
+                    hasErrors = true;
+                    input.classList.add('border-red-500');
+                } else {
+                    input.classList.remove('border-red-500');
+                }
+            });
+            
+            if (hasErrors) {
+                e.preventDefault();
+                alert('Please correct the highlighted errors before saving.');
+            }
+        });
+
+        // Real-time validation feedback
+        document.querySelectorAll('input[type="number"]').forEach(input => {
+            input.addEventListener('input', function() {
+                if (this.value && isNaN(this.value)) {
+                    this.classList.add('border-red-500');
+                } else {
+                    this.classList.remove('border-red-500');
+                }
+            });
+        });
+
+        // Update checkbox labels dynamically
+        document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const label = this.parentElement.querySelector('span');
+                if (label && label.textContent.includes('Enabled') || label.textContent.includes('Disabled')) {
+                    label.textContent = this.checked ? 'Enabled' : 'Disabled';
+                }
+            });
+        });
+    </script>
+}
+
+<style>
+    /* Smooth transitions for alerts */
+    [role="alert"] {
+        transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    
+    /* Improve form focus states */
+    input:focus, select:focus, textarea:focus {
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    /* Better visual hierarchy */
+    .bg-gray-50 {
+        background-color: #f9fafb;
+    }
+</style>

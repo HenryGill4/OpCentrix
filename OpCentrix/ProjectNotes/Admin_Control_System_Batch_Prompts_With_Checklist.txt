@@ -19,7 +19,7 @@ Create `/Pages/Admin`, `/Pages/Admin/Shared`, `/ViewModels/Admin`, and `/Service
 
 Checklist for Claude:
 
-- [ ] Use only powershell compliant commands 
+- [ ] Use only windows powershell compliant commands 
 - [ ] Implement the full feature or system described above
 - [ ] List every file created or modified
 - [ ] Provide complete code for each file
@@ -35,7 +35,7 @@ Prompt:
 Ensure that the authentication system is fully implemented using ASP.NET Identity or an equivalent solution. Verify login, logout, role enforcement, and session handling are functional and integrated before any role-based admin logic is introduced. Run `dotnet test`.
 
 Checklist for Claude:
-- [ ] Use only powershell compliant commands 
+- [ ] Use only windows powershell compliant commands 
 - [ ] Implement the full feature or system described above
 - [ ] List every file created or modified
 - [ ] Provide complete code for each file
@@ -51,7 +51,7 @@ Prompt:
 Add the following entities to the data layer: `OperatingShift`, `MachineCapability`, `SystemSetting`, `RolePermission`, `InspectionCheckpoint`, `DefectCategory`, `ArchivedJob`, `AdminAlert`, and `FeatureToggle`. Extend the existing `Machine`, `Part`, and `Role` models as needed. Generate initial migrations, update the database schema, and remove outdated migration scripts. Run `dotnet test`.
 
 Checklist for Claude:
-- [ ] Use only powershell compliant commands 
+- [ ] Use only windows powershell compliant commands 
 - [ ] Implement the full feature or system described above
 - [ ] List every file created or modified
 - [ ] Provide complete code for each file
@@ -68,7 +68,7 @@ Prompt:
 Implement global logging using a centralized logging framework such as Serilog or built-in ILogger. Ensure that all admin pages and services record exceptions and important actions. Create `/Admin/Logs` to allow admins to view logs in a paginated list. Run `dotnet test`.
 
 Checklist for Claude:
-- [ ] Use only powershell compliant commands 
+- [ ] Use only windows powershell compliant commands 
 - [ ] Implement the full feature or system described above
 - [ ] List every file created or modified
 - [ ] Provide complete code for each file
@@ -85,7 +85,7 @@ Prompt:
 Implement the `/Admin/Settings` page using a `SystemSettingService`. Allow editing of global options such as default changeover duration (3 hours) and cooldown time (1 hour). Load these values into the application configuration on startup. Run `dotnet test`.
 
 Checklist for Claude:
-- [ ] Use only powershell compliant commands 
+- [ ] Use only windows powershell compliant commands 
 - [ ] Implement the full feature or system described above
 - [ ] List every file created or modified
 - [ ] Provide complete code for each file
@@ -101,7 +101,7 @@ Prompt:
 Create the `/Admin/Roles` interface for managing access to features per role using the `RolePermission` table. Build a UI grid with toggleable permissions and a backend service layer. Run `dotnet test`.
 
 Checklist for Claude:
-- [ ] Use only powershell compliant commands 
+- [ ] Use only windows powershell compliant commands 
 - [ ] Implement the full feature or system described above
 - [ ] List every file created or modified
 - [ ] Provide complete code for each file
@@ -117,7 +117,7 @@ Prompt:
 Implement the `/Admin/Users` panel for managing user accounts. Allow administrators to add users, edit profiles, reset passwords, enable/disable accounts, and assign roles. Ensure it integrates with the authentication system. Run `dotnet test`.
 
 Checklist for Claude:
-- [ ] Use only powershell compliant commands 
+- [ ] Use only windows powershell compliant commands 
 - [ ] Implement the full feature or system described above
 - [ ] List every file created or modified
 - [ ] Provide complete code for each file
@@ -132,7 +132,7 @@ Prompt:
 Update machine data to include dynamic capability fields. Allow machines to be added or removed from the `/Admin/Machines` panel. Remove any hardcoded machine lists such as TI1, TI2, and INC. Run `dotnet test`.
 
 Checklist for Claude:
-- [ ] Use only powershell compliant commands 
+- [ ] Use only windows powershell compliant commands 
 - [ ] Implement the full feature or system described above
 - [ ] List every file created or modified
 - [ ] Provide complete code for each file
@@ -148,7 +148,7 @@ Prompt:
 Update the `/Admin/Parts` interface to allow admins to override the estimated duration for print jobs. Validate all part data on submission. Adjust scheduler logic to use override values where defined. Run `dotnet test`.
 
 Checklist for Claude:
-- [ ] Use only powershell compliant commands 
+- [ ] Use only windows powershell compliant commands 
 - [ ] Implement the full feature or system described above
 - [ ] List every file created or modified
 - [ ] Provide complete code for each file
@@ -164,7 +164,7 @@ Prompt:
 Create `/Admin/Shifts` with a calendar-style interface to define working shifts. Implement CRUD operations via `OperatingShiftService`. Ensure the scheduler respects defined shift windows when validating job start and end times. Run `dotnet test`.
 
 Checklist for Claude:
-- [ ] Use only powershell compliant commands 
+- [ ] Use only windows powershell compliant commands 
 - [ ] Implement the full feature or system described above
 - [ ] List every file created or modified
 - [ ] Provide complete code for each file
@@ -180,7 +180,7 @@ Prompt:
 Enhance the scheduler UI to support zoom levels ranging from 12 hours down to 1 hour. Extend the view to cover two months. Add color-coded job blocks and allow notes for each step in a job. Clean up and remove old scheduler view logic. Run `dotnet test`.
 
 Checklist for Claude:
-- [ ] Use only powershell compliant commands 
+- [ ] Use only windows powershell compliant commands 
 - [ ] Implement the full feature or system described above
 - [ ] List every file created or modified
 - [ ] Provide complete code for each file
@@ -196,7 +196,7 @@ Prompt:
 Add support for switching the scheduler orientation between horizontal (machines listed on the left) and vertical (machines across the top). Provide a UI toggle or button for this. Ensure full functionality is preserved in both layouts. Run `dotnet test`.
 
 Checklist for Claude:
-- [ ] Use only powershell compliant commands 
+- [ ] Use only windows powershell compliant commands 
 - [ ] Implement the full feature or system described above
 - [ ] List every file created or modified
 - [ ] Provide complete code for each file
@@ -212,7 +212,7 @@ Prompt:
 Implement support for multi-stage jobs, including Printing, EDM, Cerakoting, and Assembly. Assign individual permissions and separate schedules for each stage. Update data models, UI, and the scheduling backend accordingly. Run `dotnet test`.
 
 Checklist for Claude:
-- [ ] Use only powershell compliant commands 
+- [ ] Use only windows powershell compliant commands 
 - [ ] Implement the full feature or system described above
 - [ ] List every file created or modified
 - [ ] Provide complete code for each file
@@ -229,7 +229,7 @@ Prompt:
 Create a `/Scheduler/Master` view that combines all job stages into a single timeline with filters, progress indicators, and color coding. Integrate with SignalR for live updates when stages are completed or rescheduled. Run `dotnet test`.
 
 Checklist for Claude:
-- [ ] Use only powershell compliant commands 
+- [ ] Use only windows powershell compliant commands 
 - [ ] Implement the full feature or system described above
 - [ ] List every file created or modified
 - [ ] Provide complete code for each file
@@ -246,7 +246,7 @@ Prompt:
 Build `/Admin/Checkpoints` to assign checkpoints to parts. Include sorting, active/inactive status toggles, and backend validation. Ensure checkpoints are linked to the inspection flow logic. Run `dotnet test`.
 
 Checklist for Claude:
-- [ ] Use only powershell compliant commands 
+- [ ] Use only windows powershell compliant commands 
 - [ ] Implement the full feature or system described above
 - [ ] List every file created or modified
 - [ ] Provide complete code for each file
@@ -262,7 +262,7 @@ Prompt:
 Implement `/Admin/Defects` for creating, updating, and disabling defect categories. Prevent deletion if categories are in use by historical records. Run `dotnet test`.
 
 Checklist for Claude:
-- [ ] Use only powershell compliant commands 
+- [ ] Use only windows powershell compliant commands 
 - [ ] Implement the full feature or system described above
 - [ ] List every file created or modified
 - [ ] Provide complete code for each file
@@ -278,7 +278,7 @@ Prompt:
 Create `/Admin/Archive` to move old or completed jobs to the `ArchivedJob` table. Allow deletion with confirmation and include audit logs for removed items. Remove any outdated cleanup scripts. Run `dotnet test`.
 
 Checklist for Claude:
-- [ ] Use only powershell compliant commands 
+- [ ] Use only windows powershell compliant commands 
 - [ ] Implement the full feature or system described above
 - [ ] List every file created or modified
 - [ ] Provide complete code for each file
@@ -294,7 +294,7 @@ Prompt:
 Add `/Admin/Database` with options to export and import data. Include schema validation and integrity checks using EF Core. Provide administrator warnings before overwrites. Run `dotnet test`.
 
 Checklist for Claude:
-- [ ] Use only powershell compliant commands 
+- [ ] Use only windows powershell compliant commands 
 - [ ] Implement the full feature or system described above
 - [ ] List every file created or modified
 - [ ] Provide complete code for each file
@@ -309,7 +309,7 @@ Prompt:
 Create `/Admin/Alerts` to manage alert definitions. Allow configuration of conditions, triggers, and email recipients. Implement a background worker to send notifications based on alert criteria using the `AdminAlert` table. Run `dotnet test`.
 
 Checklist for Claude:
-- [ ] Use only powershell compliant commands 
+- [ ] Use only windows powershell compliant commands 
 - [ ] Implement the full feature or system described above
 - [ ] List every file created or modified
 - [ ] Provide complete code for each file
@@ -325,7 +325,7 @@ Prompt:
 Build `/Admin/Features` to enable or disable experimental features at runtime using entries in the `FeatureToggle` table. Ensure all affected components check for toggles before rendering or executing features. Run `dotnet test`.
 
 Checklist for Claude:
-- [ ] Use only powershell compliant commands 
+- [ ] Use only windows powershell compliant commands 
 - [ ] Implement the full feature or system described above
 - [ ] List every file created or modified
 - [ ] Provide complete code for each file
@@ -341,7 +341,7 @@ Prompt:
 Implement `/Admin/AuditLog` to track all critical changes to system settings, roles, parts, users, and scheduler logic. Include user, action, timestamp, and entity details. Store in a dedicated `AuditEntry` table. Provide filters and search capabilities. Run `dotnet test`.
 
 Checklist for Claude:
-- [ ] Use only powershell compliant commands 
+- [ ] Use only windows powershell compliant commands 
 - [ ] Implement the full feature or system described above
 - [ ] List every file created or modified
 - [ ] Provide complete code for each file
@@ -357,7 +357,7 @@ Prompt:
 Wire up navigation links for all new admin pages across the site. Apply any final pending migrations. Run `dotnet test` on the full solution. Update the README file with instructions on using admin features. Delete any superseded or legacy admin documentation files.
 
 Checklist for Claude:
-- [ ] Use only powershell compliant commands 
+- [ ] Use only windows powershell compliant commands 
 - [ ] Implement the full feature or system described above
 - [ ] List every file created or modified
 - [ ] Provide complete code for each file

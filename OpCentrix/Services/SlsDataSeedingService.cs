@@ -53,6 +53,12 @@ namespace OpCentrix.Services
             }
         }
 
+        public async Task SeedDataAsync()
+        {
+            // Alias for SeedDatabaseAsync to maintain compatibility
+            await SeedDatabaseAsync();
+        }
+
         private async Task SeedSlsMachinesAsync()
         {
             // Only seed if no machines exist

@@ -34,6 +34,8 @@ builder.Services.AddRazorPages();
 builder.Services.AddDbContext<SchedulerContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddHttpClient(); // Register HttpClient for external API calls
+
 // Authentication services
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -113,6 +115,7 @@ builder.Services.AddScoped<OpCentrix.Services.Admin.IRolePermissionService, OpCe
 builder.Services.AddScoped<OpCentrix.Services.Admin.IOperatingShiftService, OpCentrix.Services.Admin.OperatingShiftService>();
 builder.Services.AddScoped<OpCentrix.Services.Admin.ILogViewerService, OpCentrix.Services.Admin.LogViewerService>();
 builder.Services.AddScoped<OpCentrix.Services.Admin.IAdminDataSeedingService, OpCentrix.Services.Admin.AdminDataSeedingService>();
+builder.Services.AddScoped<OpCentrix.Services.Admin.ISystemConfigurationService, OpCentrix.Services.Admin.SystemConfigurationService>();
 
 // Background services for OPC UA monitoring (if needed in future)
 // builder.Services.AddHostedService<OpcUaMonitoringService>();
@@ -191,6 +194,13 @@ using (var scope = app.Services.CreateScope())
             
             // Seed admin control system data (Task 2)
             await adminSeedingService.SeedAllDefaultDataAsync();
+            
+            // Load system settings into configuration (Task 3)
+            var configurationService = scope.ServiceProvider.GetRequiredService<OpCentrix.Services.Admin.ISystemConfigurationService>();
+            await configurationService.LoadSettingsIntoConfigurationAsync();
+            
+            // Initialize static configuration helper
+            OpCentrix.Services.Admin.SystemConfiguration.Initialize(app.Services);
         }
         logger.LogInformation("Database initialization completed successfully");
         logger.LogInformation("?? TIP: Set environment variable RECREATE_DATABASE=true to recreate database on next startup");

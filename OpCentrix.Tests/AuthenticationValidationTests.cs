@@ -204,11 +204,11 @@ public class AuthenticationValidationTests : IClassFixture<OpCentrixWebApplicati
             var location = response.Headers.Location?.ToString() ?? "";
             Assert.Contains("Login", location);
             
-            _output.WriteLine($"? {path} properly protected - redirects to login when not authenticated");
+            _output.WriteLine($"? {path} properly protected with {expectedPolicy} policy - redirects to login when not authenticated");
         }
         catch (Exception ex)
         {
-            _output.WriteLine($"? Role enforcement test failed for {path}: {ex.Message}");
+            _output.WriteLine($"? Role enforcement test failed for {path} with policy {expectedPolicy}: {ex.Message}");
             throw;
         }
     }
