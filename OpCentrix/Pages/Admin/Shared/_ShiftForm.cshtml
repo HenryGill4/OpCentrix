@@ -1,0 +1,399 @@
+@model OpCentrix.Pages.Admin.ShiftsModel
+
+<div class="modal-overlay" onclick="hideModal()">
+    <div class="modal-content max-w-2xl" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h2 class="text-xl font-bold text-gray-900">
+                @(Model.Input.Id == 0 ? "Add Operating Shift" : $"Edit Shift: {Model.Input.Description}")
+            </h2>
+            <button type="button" onclick="hideModal()" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Display validation errors if any -->
+        @if (ViewData["ValidationErrors"] is List<string> errors && errors.Any())
+        {
+            <div class="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div class="flex">
+                    <svg class="w-5 h-5 text-red-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                    </svg>
+                    <div>
+                        <h3 class="text-sm font-medium text-red-800">Please correct the following errors:</h3>
+                        <ul class="mt-2 text-sm text-red-700">
+                            @foreach (var error in errors)
+                            {
+                                <li>• @error</li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <form id="shiftForm" method="post" 
+              hx-post="/Admin/Shifts?handler=Save" 
+              hx-target="body" 
+              hx-swap="none"
+              hx-on::before-request="console.log('?? [FORM] Submitting shift form'); showFormLoading();"
+              hx-on::after-request="console.log('?? [FORM] Form response received:', event.detail.xhr.status); handleShiftFormResponse(event);"
+              hx-on::response-error="console.error('?? [FORM] Submission error:', event.detail); alert('Form submission failed. Check console for details.');"
+              enctype="application/x-www-form-urlencoded">
+            
+            <input type="hidden" asp-for="Input.Id" />
+            <input type="hidden" asp-for="Input.CreatedDate" />
+            <input type="hidden" asp-for="Input.CreatedBy" />
+            
+            <div class="modal-body">
+                <!-- Basic Information Section -->
+                <div class="bg-blue-50 rounded-lg p-4 mb-6">
+                    <h3 class="text-lg font-semibold text-blue-900 mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        Shift Information
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label asp-for="Input.Description" class="block text-sm font-medium text-gray-700 mb-1">
+                                Description <span class="text-red-500">*</span>
+                            </label>
+                            <input asp-for="Input.Description" type="text" placeholder="Standard Shift, Holiday Hours, etc." required
+                                   class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                            <span asp-validation-for="Input.Description" class="text-red-500 text-sm"></span>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                            <select asp-for="Input.IsActive" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="true">Active</option>
+                                <option value="false">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Schedule Information Section -->
+                <div class="bg-green-50 rounded-lg p-4 mb-6">
+                    <h3 class="text-lg font-semibold text-green-900 mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Schedule Details
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div>
+                            <label asp-for="Input.DayOfWeek" class="block text-sm font-medium text-gray-700 mb-1">
+                                Day of Week <span class="text-red-500">*</span>
+                            </label>
+                            <select asp-for="Input.DayOfWeek" id="dayOfWeekSelect" onchange="updateSpecificDateVisibility()" 
+                                    class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                                <option value="0">Sunday</option>
+                                <option value="1">Monday</option>
+                                <option value="2">Tuesday</option>
+                                <option value="3">Wednesday</option>
+                                <option value="4">Thursday</option>
+                                <option value="5">Friday</option>
+                                <option value="6">Saturday</option>
+                            </select>
+                            <span asp-validation-for="Input.DayOfWeek" class="text-red-500 text-sm"></span>
+                        </div>
+                        
+                        <div>
+                            <label asp-for="Input.StartTime" class="block text-sm font-medium text-gray-700 mb-1">
+                                Start Time <span class="text-red-500">*</span>
+                            </label>
+                            <input asp-for="Input.StartTime" type="time" onchange="updateDurationDisplay()" required
+                                   class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-green-500 focus:border-green-500" />
+                            <span asp-validation-for="Input.StartTime" class="text-red-500 text-sm"></span>
+                        </div>
+                        
+                        <div>
+                            <label asp-for="Input.EndTime" class="block text-sm font-medium text-gray-700 mb-1">
+                                End Time <span class="text-red-500">*</span>
+                            </label>
+                            <input asp-for="Input.EndTime" type="time" onchange="updateDurationDisplay()" required
+                                   class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-green-500 focus:border-green-500" />
+                            <span asp-validation-for="Input.EndTime" class="text-red-500 text-sm"></span>
+                            <p class="text-xs text-gray-500 mt-1">End time can be next day for overnight shifts</p>
+                        </div>
+                    </div>
+
+                    <!-- Duration Display -->
+                    <div class="bg-white rounded-lg p-3 border border-green-200">
+                        <div class="flex items-center space-x-4">
+                            <div class="flex items-center">
+                                <svg class="w-4 h-4 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span class="text-sm font-medium text-gray-700">Duration:</span>
+                                <span id="durationDisplay" class="ml-2 font-semibold text-green-700">
+                                    @(Model.Input.DurationHours.ToString("F1")) hours
+                                </span>
+                            </div>
+                            <div class="flex items-center">
+                                <svg class="w-4 h-4 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span class="text-sm text-gray-500">
+                                    @(Model.Input.StartTime.ToString(@"h\:mm tt")) - @(Model.Input.EndTime.ToString(@"h\:mm tt"))
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Special Date and Holiday Section -->
+                <div class="bg-yellow-50 rounded-lg p-4">
+                    <h3 class="text-lg font-semibold text-yellow-900 mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 6.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                        </svg>
+                        Special Date & Holiday Options
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="flex items-center">
+                                <input asp-for="Input.IsHoliday" type="checkbox" onchange="updateHolidayDisplay()"
+                                       class="rounded border-gray-300 text-yellow-600 focus:ring-yellow-500 mr-2" />
+                                <span class="text-sm font-medium text-gray-700">Holiday/Special Schedule</span>
+                            </label>
+                            <p class="text-xs text-gray-500 mt-1">Check for non-working days or special schedules</p>
+                        </div>
+                        
+                        <div id="specificDateContainer" class="@(Model.Input.IsHoliday ? "" : "hidden")">
+                            <label asp-for="Input.SpecificDate" class="block text-sm font-medium text-gray-700 mb-1">
+                                Specific Date (Optional)
+                            </label>
+                            <input asp-for="Input.SpecificDate" type="date" 
+                                   class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500" />
+                            <span asp-validation-for="Input.SpecificDate" class="text-red-500 text-sm"></span>
+                            <p class="text-xs text-gray-500 mt-1">Leave empty for recurring weekly holiday</p>
+                        </div>
+                    </div>
+
+                    <div id="holidayWarning" class="@(Model.Input.IsHoliday ? "mt-4 p-3 bg-yellow-100 border border-yellow-300 rounded-lg" : "hidden")">
+                        <div class="flex items-start">
+                            <svg class="w-5 h-5 text-yellow-600 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 6.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                            </svg>
+                            <div>
+                                <p class="text-sm font-medium text-yellow-800">Holiday Schedule Notice</p>
+                                <p class="text-xs text-yellow-700 mt-1">
+                                    Holiday schedules override regular operating hours. Jobs scheduled during holiday periods will need to be reviewed for conflicts.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" onclick="hideModal()" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition">
+                    Cancel
+                </button>
+                <button type="submit" id="submitBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                    <span id="submitText">@(Model.Input.Id == 0 ? "Create Shift" : "Update Shift")</span>
+                    <span id="submitSpinner" class="hidden ml-2">
+                        <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+(function() {
+    'use strict';
+    
+    console.log('?? [FORM] Shift form script loading...');
+    
+    // Global function overrides for this form
+    window.updateSpecificDateVisibility = function() {
+        const isHoliday = document.querySelector('input[name="Input.IsHoliday"]').checked;
+        const specificDateContainer = document.getElementById('specificDateContainer');
+        
+        if (specificDateContainer) {
+            if (isHoliday) {
+                specificDateContainer.classList.remove('hidden');
+            } else {
+                specificDateContainer.classList.add('hidden');
+            }
+        }
+    };
+
+    window.updateHolidayDisplay = function() {
+        const isHoliday = document.querySelector('input[name="Input.IsHoliday"]').checked;
+        const holidayWarning = document.getElementById('holidayWarning');
+        const specificDateContainer = document.getElementById('specificDateContainer');
+        
+        if (holidayWarning) {
+            if (isHoliday) {
+                holidayWarning.classList.remove('hidden');
+                holidayWarning.className = 'mt-4 p-3 bg-yellow-100 border border-yellow-300 rounded-lg';
+            } else {
+                holidayWarning.classList.add('hidden');
+            }
+        }
+        
+        if (specificDateContainer) {
+            if (isHoliday) {
+                specificDateContainer.classList.remove('hidden');
+            } else {
+                specificDateContainer.classList.add('hidden');
+            }
+        }
+    };
+
+    window.updateDurationDisplay = function() {
+        const startTimeInput = document.querySelector('input[name="Input.StartTime"]');
+        const endTimeInput = document.querySelector('input[name="Input.EndTime"]');
+        const durationDisplay = document.getElementById('durationDisplay');
+        
+        if (!startTimeInput || !endTimeInput || !durationDisplay) return;
+        
+        const startTime = startTimeInput.value;
+        const endTime = endTimeInput.value;
+        
+        if (startTime && endTime) {
+            try {
+                const start = new Date(`2000-01-01T${startTime}:00`);
+                let end = new Date(`2000-01-01T${endTime}:00`);
+                
+                // Handle overnight shifts
+                if (end <= start) {
+                    end = new Date(`2000-01-02T${endTime}:00`);
+                }
+                
+                const durationMs = end - start;
+                const durationHours = durationMs / (1000 * 60 * 60);
+                
+                durationDisplay.textContent = `${durationHours.toFixed(1)} hours`;
+                
+                // Update time display
+                const startFormatted = start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                const endFormatted = end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                
+                const timeDisplay = durationDisplay.parentElement.parentElement.querySelector('.text-gray-500');
+                if (timeDisplay) {
+                    timeDisplay.textContent = `${startFormatted} - ${endFormatted}`;
+                }
+                
+                console.log('?? [FORM] Duration updated:', durationHours.toFixed(1), 'hours');
+            } catch (error) {
+                console.error('?? [FORM] Error calculating duration:', error);
+                durationDisplay.textContent = '0.0 hours';
+            }
+        }
+    };
+    
+    // Form loading state management
+    window.showFormLoading = function() {
+        const submitBtn = document.getElementById('submitBtn');
+        const submitText = document.getElementById('submitText');
+        const submitSpinner = document.getElementById('submitSpinner');
+        
+        if (submitBtn) {
+            submitBtn.disabled = true;
+        }
+        if (submitText) {
+            submitText.textContent = 'Saving...';
+        }
+        if (submitSpinner) {
+            submitSpinner.classList.remove('hidden');
+        }
+    };
+    
+    // Form response handler
+    window.handleShiftFormResponse = function(event) {
+        console.log('?? [FORM] Form response handler called');
+        
+        const submitBtn = document.getElementById('submitBtn');
+        const submitText = document.getElementById('submitText');
+        const submitSpinner = document.getElementById('submitSpinner');
+        
+        // Reset button state
+        if (submitBtn) {
+            submitBtn.disabled = false;
+        }
+        if (submitText) {
+            submitText.textContent = '@(Model.Input.Id == 0 ? "Create Shift" : "Update Shift")';
+        }
+        if (submitSpinner) {
+            submitSpinner.classList.add('hidden');
+        }
+        
+        // Check response type
+        const response = event.detail.xhr.responseText;
+        
+        if (response.includes('ValidationErrors')) {
+            console.log('?? [FORM] Validation errors found - keeping modal open');
+            return;
+        }
+        
+        try {
+            const data = JSON.parse(response);
+            if (data.success) {
+                console.log('? [FORM] Shift saved successfully');
+                hideModal();
+                if (data.redirect) {
+                    window.location.href = data.redirect;
+                } else {
+                    window.location.reload();
+                }
+            } else {
+                console.log('?? [FORM] Save failed:', data.message);
+                alert(data.message || 'Failed to save shift');
+            }
+        } catch (e) {
+            if (response.includes('<script>')) {
+                console.log('? [FORM] Script response received - executing');
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = response;
+                const scripts = tempDiv.querySelectorAll('script');
+                scripts.forEach(script => {
+                    try {
+                        eval(script.textContent);
+                    } catch (error) {
+                        console.error('? [FORM] Script execution error:', error);
+                    }
+                });
+                return;
+            }
+            console.log('?? [FORM] Standard response handled');
+        }
+    };
+    
+    // Initialize form when loaded
+    function initializeForm() {
+        console.log('?? [FORM] Initializing shift form...');
+        
+        setTimeout(() => {
+            // Update displays based on current values
+            updateDurationDisplay();
+            updateHolidayDisplay();
+            
+            console.log('? [FORM] Form initialization complete');
+        }, 100);
+    }
+    
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeForm);
+    } else {
+        initializeForm();
+    }
+    
+    console.log('? [FORM] Shift form script loaded successfully');
+})();
+</script>

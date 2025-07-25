@@ -1,0 +1,464 @@
+@page
+@model OpCentrix.Pages.Admin.ShiftsModel
+@{
+    ViewData["Title"] = "Operating Shifts";
+    Layout = "~/Pages/Admin/Shared/_AdminLayout.cshtml";
+}
+
+<div class="mb-6">
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Operating Shifts</h1>
+            <p class="text-gray-600 mt-1">Define working hours and production schedules</p>
+        </div>
+        <div class="flex space-x-3">
+            <!-- Template Actions -->
+            <div class="relative inline-block text-left">
+                <button id="templateDropdown" type="button" 
+                        class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 transition">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                    Templates
+                    <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                
+                <div id="templateMenu" class="hidden absolute right-0 mt-2 w-56 rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
+                    <div class="py-1">
+                        <button onclick="loadTemplate('business')" 
+                                class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                            <svg class="w-4 h-4 mr-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H9m0 0H5m0 0H3"></path>
+                            </svg>
+                            <div>
+                                <div class="font-medium">Standard Business Hours</div>
+                                <div class="text-xs text-gray-500">Mon-Fri, 8 AM - 5 PM</div>
+                            </div>
+                        </button>
+                        
+                        <button onclick="loadTemplate('twoshift')" 
+                                class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                            <svg class="w-4 h-4 mr-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <div>
+                                <div class="font-medium">Two-Shift Schedule</div>
+                                <div class="text-xs text-gray-500">Mon-Fri, 6 AM-2 PM & 2 PM-10 PM</div>
+                            </div>
+                        </button>
+                        
+                        <button onclick="loadTemplate('24x7')" 
+                                class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                            <svg class="w-4 h-4 mr-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                            <div>
+                                <div class="font-medium">24/7 Operations</div>
+                                <div class="text-xs text-gray-500">All days, continuous operation</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Add Shift Button -->
+            <button hx-get="/Admin/Shifts?handler=Add" 
+                    hx-target="#modal-container .modal-content"
+                    hx-swap="innerHTML"
+                    hx-on::before-request="console.log('?? [SHIFTS] Loading add shift form');"
+                    hx-on::after-request="if(event.detail.xhr.status === 200) { showModal(); } else { console.error('Failed to load form'); }"
+                    class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">
+                <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+                Add Shift
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-blue-100">
+                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500">Total Shifts</p>
+                <p class="text-2xl font-bold text-gray-900">@Model.Shifts.Count</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-green-100">
+                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500">Active Shifts</p>
+                <p class="text-2xl font-bold text-gray-900">@Model.Shifts.Count(s => s.IsActive)</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-yellow-100">
+                <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500">Holiday Schedules</p>
+                <p class="text-2xl font-bold text-gray-900">@Model.HolidayShifts.Count</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-purple-100">
+                <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                </svg>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm font-medium text-gray-500">Coverage</p>
+                <p class="text-2xl font-bold text-gray-900">@(Model.ShiftsByDay.Keys.Count) days</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Calendar-Style Weekly Schedule -->
+<div class="bg-white rounded-lg shadow mb-6">
+    <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-900">Weekly Schedule</h2>
+        <p class="text-sm text-gray-500">Visual overview of operating shifts by day</p>
+    </div>
+    
+    <div class="p-6">
+        <div class="grid grid-cols-7 gap-4">
+            @{
+                var daysOfWeek = new[] { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
+                for (int i = 0; i < 7; i++)
+                {
+                    var dayShifts = Model.ShiftsByDay.GetValueOrDefault(i, new List<OpCentrix.Models.OperatingShift>());
+                    var dayName = daysOfWeek[i];
+                    var isWeekend = i == 0 || i == 6;
+                    
+                    <div class="@(isWeekend ? "bg-gray-50" : "bg-blue-50") rounded-lg p-4 min-h-[200px]">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="font-semibold text-gray-900 text-sm">@dayName</h3>
+                            <button onclick="quickAddShift(@i)" 
+                                    class="text-gray-400 hover:text-gray-600 transition"
+                                    title="Add shift for @dayName">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        @if (dayShifts.Any())
+                        {
+                            @foreach (var shift in dayShifts)
+                            {
+                                <div class="@(shift.IsActive ? "bg-white border-l-4 border-green-500" : "bg-gray-100 border-l-4 border-red-300") 
+                                           rounded-lg p-3 mb-2 shadow-sm">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex-1">
+                                            <div class="font-medium text-sm text-gray-900">
+                                                @shift.StartTime.ToString(@"h\:mm") - @shift.EndTime.ToString(@"h\:mm")
+                                            </div>
+                                            <div class="text-xs text-gray-500 truncate">@shift.Description</div>
+                                            <div class="text-xs mt-1">
+                                                <span class="@(shift.IsActive ? "text-green-600 bg-green-100" : "text-red-600 bg-red-100") 
+                                                             px-2 py-1 rounded-full">
+                                                    @(shift.IsActive ? "Active" : "Inactive")
+                                                </span>
+                                                @if (shift.IsHoliday)
+                                                {
+                                                    <span class="text-orange-600 bg-orange-100 px-2 py-1 rounded-full ml-1">Holiday</span>
+                                                }
+                                                <span class="text-gray-500 ml-2">@(shift.DurationHours.ToString("F1"))h</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="flex items-center space-x-1 ml-2">
+                                            <!-- Toggle Active -->
+                                            <button hx-get="/Admin/Shifts?handler=ToggleActive&id=@shift.Id"
+                                                    hx-swap="none"
+                                                    hx-on::after-request="handleToggleResponse(event, @shift.Id)"
+                                                    class="text-gray-400 hover:text-blue-600 transition"
+                                                    title="@(shift.IsActive ? "Deactivate" : "Activate")">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                                          d="@(shift.IsActive ? "M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" : "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z")"></path>
+                                                </svg>
+                                            </button>
+                                            
+                                            <!-- Edit -->
+                                            <button hx-get="/Admin/Shifts?handler=Edit&id=@shift.Id" 
+                                                    hx-target="#modal-container .modal-content"
+                                                    hx-swap="innerHTML"
+                                                    hx-on::after-request="if(event.detail.xhr.status === 200) { showModal(); }"
+                                                    class="text-gray-400 hover:text-blue-600 transition"
+                                                    title="Edit shift">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                                </svg>
+                                            </button>
+                                            
+                                            <!-- Delete -->
+                                            <button hx-post="/Admin/Shifts?handler=Delete&id=@shift.Id"
+                                                    hx-confirm="Are you sure you want to delete this shift?"
+                                                    hx-swap="none"
+                                                    hx-on::after-request="handleDeleteResponse(event, @shift.Id)"
+                                                    class="text-gray-400 hover:text-red-600 transition"
+                                                    title="Delete shift">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="text-center py-8">
+                                <svg class="w-8 h-8 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                                </svg>
+                                <p class="text-sm text-gray-500">No shifts</p>
+                                <button onclick="quickAddShift(@i)" 
+                                        class="mt-2 text-xs text-blue-600 hover:text-blue-800">
+                                    Add shift
+                                </button>
+                            </div>
+                        }
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Holiday Shifts Table -->
+@if (Model.HolidayShifts.Any())
+{
+    <div class="bg-white rounded-lg shadow">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">Holiday & Special Date Schedules</h2>
+            <p class="text-sm text-gray-500">Special operating hours for specific dates</p>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hours</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    @foreach (var holiday in Model.HolidayShifts)
+                    {
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                @if (holiday.SpecificDate.HasValue)
+                                {
+                                    @holiday.SpecificDate.Value.ToString("MMM dd, yyyy")
+                                }
+                                else
+                                {
+                                    <span class="text-gray-500">@holiday.DayName</span>
+                                }
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-900">@holiday.Description</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                @holiday.StartTime.ToString(@"h\:mm tt") - @holiday.EndTime.ToString(@"h\:mm tt")
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                @holiday.DurationHours.ToString("F1") hours
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="@(holiday.IsActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800") 
+                                             inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
+                                    @(holiday.IsActive ? "Active" : "Inactive")
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                                <button hx-get="/Admin/Shifts?handler=Edit&id=@holiday.Id" 
+                                        hx-target="#modal-container .modal-content"
+                                        hx-swap="innerHTML"
+                                        hx-on::after-request="if(event.detail.xhr.status === 200) { showModal(); }"
+                                        class="text-blue-600 hover:text-blue-900 transition">
+                                    Edit
+                                </button>
+                                <button hx-post="/Admin/Shifts?handler=Delete&id=@holiday.Id"
+                                        hx-confirm="Are you sure you want to delete this holiday schedule?"
+                                        hx-swap="none"
+                                        hx-on::after-request="handleDeleteResponse(event, @holiday.Id)"
+                                        class="text-red-600 hover:text-red-900 transition">
+                                    Delete
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+<script>
+(function() {
+    'use strict';
+    
+    console.log('?? [SHIFTS] Shifts page script loading...');
+
+    // Template dropdown functionality
+    const templateDropdown = document.getElementById('templateDropdown');
+    const templateMenu = document.getElementById('templateMenu');
+    
+    if (templateDropdown && templateMenu) {
+        templateDropdown.addEventListener('click', function(e) {
+            e.stopPropagation();
+            templateMenu.classList.toggle('hidden');
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function() {
+            templateMenu.classList.add('hidden');
+        });
+    }
+
+    // Global functions
+    window.quickAddShift = function(dayOfWeek) {
+        console.log('?? [SHIFTS] Quick add shift for day:', dayOfWeek);
+        
+        // Pre-populate form with the selected day
+        const url = `/Admin/Shifts?handler=Add&dayOfWeek=${dayOfWeek}`;
+        
+        htmx.ajax('GET', url, {
+            target: '#modal-container .modal-content',
+            swap: 'innerHTML'
+        }).then(() => {
+            showModal();
+        });
+    };
+
+    window.loadTemplate = function(template) {
+        console.log('?? [SHIFTS] Loading template:', template);
+        templateMenu.classList.add('hidden');
+        
+        htmx.ajax('GET', `/Admin/Shifts?handler=LoadTemplate&template=${template}`, {
+            swap: 'none'
+        }).then((response) => {
+            try {
+                const data = JSON.parse(response.xhr.responseText);
+                if (data.success) {
+                    // Show confirmation modal
+                    const message = data.existingCount > 0 
+                        ? `${data.message}\n\nYou currently have ${data.existingCount} existing shifts. Do you want to replace them or add to them?`
+                        : `${data.message}\n\nDo you want to apply this template?`;
+                    
+                    if (confirm(message)) {
+                        const clearExisting = data.existingCount > 0 && 
+                            confirm('Replace existing shifts? (Select Cancel to add to existing shifts)');
+                        
+                        window.applyTemplate(template, clearExisting);
+                    }
+                } else {
+                    alert(data.message || 'Failed to load template');
+                }
+            } catch (e) {
+                console.error('Error parsing template response:', e);
+                alert('Error loading template');
+            }
+        });
+    };
+
+    window.applyTemplate = function(template, clearExisting = false) {
+        console.log('?? [SHIFTS] Applying template:', template, 'clearExisting:', clearExisting);
+        
+        const formData = new FormData();
+        formData.append('template', template);
+        formData.append('clearExisting', clearExisting);
+        
+        htmx.ajax('POST', '/Admin/Shifts?handler=ApplyTemplate', {
+            values: { template: template, clearExisting: clearExisting },
+            swap: 'none'
+        }).then((response) => {
+            try {
+                const data = JSON.parse(response.xhr.responseText);
+                if (data.success) {
+                    alert(data.message);
+                    if (data.redirect) {
+                        window.location.href = data.redirect;
+                    } else {
+                        window.location.reload();
+                    }
+                } else {
+                    alert(data.message || 'Failed to apply template');
+                }
+            } catch (e) {
+                console.error('Error parsing apply template response:', e);
+                alert('Error applying template');
+            }
+        });
+    };
+
+    window.handleToggleResponse = function(event, shiftId) {
+        console.log('?? [SHIFTS] Toggle response for shift:', shiftId);
+        
+        try {
+            const data = JSON.parse(event.detail.xhr.responseText);
+            if (data.success) {
+                console.log('? [SHIFTS] Toggle successful:', data.message);
+                // Reload page to reflect changes
+                window.location.reload();
+            } else {
+                alert(data.message || 'Failed to toggle shift status');
+            }
+        } catch (e) {
+            console.error('Error parsing toggle response:', e);
+            alert('Error updating shift status');
+        }
+    };
+
+    window.handleDeleteResponse = function(event, shiftId) {
+        console.log('?? [SHIFTS] Delete response for shift:', shiftId);
+        
+        try {
+            const data = JSON.parse(event.detail.xhr.responseText);
+            if (data.success) {
+                console.log('? [SHIFTS] Delete successful:', data.message);
+                // Reload page to reflect changes
+                window.location.reload();
+            } else {
+                alert(data.message || 'Failed to delete shift');
+            }
+        } catch (e) {
+            console.error('Error parsing delete response:', e);
+            alert('Error deleting shift');
+        }
+    };
+
+    console.log('? [SHIFTS] Shifts page script loaded successfully');
+})();
+</script>

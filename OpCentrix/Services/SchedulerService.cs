@@ -22,10 +22,12 @@ namespace OpCentrix.Services
     public class SchedulerService : ISchedulerService
     {
         private readonly ILogger<SchedulerService> _logger;
+        private readonly IOperatingShiftService _operatingShiftService;
         
-        public SchedulerService(ILogger<SchedulerService> logger)
+        public SchedulerService(ILogger<SchedulerService> logger, IOperatingShiftService operatingShiftService)
         {
             _logger = logger;
+            _operatingShiftService = operatingShiftService;
         }
 
         public SchedulerPageViewModel GetSchedulerData(string? zoom = null, DateTime? startDate = null)
@@ -105,6 +107,9 @@ namespace OpCentrix.Services
 
                 // Build platform capacity validation
                 ValidateBuildPlatformCapacity(job, existingJobs, errors);
+
+                // Task 8: Basic operating hours validation (simplified for sync method)
+                ValidateBasicOperatingHours(job, errors);
 
                 _logger.LogInformation("Job validation completed for {PartNumber} on {MachineId}: {ErrorCount} errors found", 
                     job.PartNumber, job.MachineId, errors.Count);
@@ -577,6 +582,52 @@ namespace OpCentrix.Services
             return Math.Min(80, complexityScore); // Cap at 80px bonus
         }
 
+        private void ValidateBasicOperatingHours(Job job, List<string> errors)
+        {
+            try
+            {
+                // Basic business hours validation (8 AM to 5 PM, Monday-Friday)
+                // TODO: This will be enhanced to use IOperatingShiftService in async context
+                
+                // Check job start time
+                if (!IsWithinBasicBusinessHours(job.ScheduledStart))
+                {
+                    errors.Add($"Job start time {job.ScheduledStart:MM/dd/yyyy HH:mm} is outside standard operating hours (Mon-Fri, 8 AM - 5 PM)");
+                }
+                
+                // Check job end time
+                if (!IsWithinBasicBusinessHours(job.ScheduledEnd))
+                {
+                    errors.Add($"Job end time {job.ScheduledEnd:MM/dd/yyyy HH:mm} is outside standard operating hours (Mon-Fri, 8 AM - 5 PM)");
+                }
+                
+                // Note: For full operating shift validation, use ValidateOperatingHoursAsync in async contexts
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error validating basic operating hours for job {PartNumber}", job.PartNumber);
+                errors.Add("Unable to validate operating hours");
+            }
+        }
+
+        private bool IsWithinBasicBusinessHours(DateTime dateTime)
+        {
+            // Basic business hours validation (8 AM to 5 PM, Monday-Friday)
+            var dayOfWeek = dateTime.DayOfWeek;
+            var timeOfDay = dateTime.TimeOfDay;
+            
+            // Weekend check
+            if (dayOfWeek == DayOfWeek.Saturday || dayOfWeek == DayOfWeek.Sunday)
+            {
+                return false;
+            }
+            
+            // Business hours check (8 AM to 5 PM)
+            var startTime = new TimeSpan(8, 0, 0);   // 8:00 AM
+            var endTime = new TimeSpan(17, 0, 0);    // 5:00 PM
+            
+            return timeOfDay >= startTime && timeOfDay <= endTime;
+        }
         #endregion
     }
 }

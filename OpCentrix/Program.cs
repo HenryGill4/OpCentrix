@@ -181,11 +181,11 @@ using (var scope = app.Services.CreateScope())
     {
         // Initialize database with seeded data
         logger.LogInformation("Initializing database...");
-        using (var scope = app.Services.CreateScope())
+        using (var initScope = app.Services.CreateScope())
         {
-            var context = scope.ServiceProvider.GetRequiredService<SchedulerContext>();
-            var seedingService = scope.ServiceProvider.GetRequiredService<SlsDataSeedingService>();
-            var adminSeedingService = scope.ServiceProvider.GetRequiredService<OpCentrix.Services.Admin.IAdminDataSeedingService>();
+            var context = initScope.ServiceProvider.GetRequiredService<SchedulerContext>();
+            var seedingService = initScope.ServiceProvider.GetRequiredService<SlsDataSeedingService>();
+            var adminSeedingService = initScope.ServiceProvider.GetRequiredService<OpCentrix.Services.Admin.IAdminDataSeedingService>();
 
             // Ensure database is created and up to date
             await context.Database.EnsureCreatedAsync();
@@ -197,7 +197,7 @@ using (var scope = app.Services.CreateScope())
             await adminSeedingService.SeedAllDefaultDataAsync();
             
             // Load system settings into configuration (Task 3)
-            var configurationService = scope.ServiceProvider.GetRequiredService<OpCentrix.Services.Admin.ISystemConfigurationService>();
+            var configurationService = initScope.ServiceProvider.GetRequiredService<OpCentrix.Services.Admin.ISystemConfigurationService>();
             await configurationService.LoadSettingsIntoConfigurationAsync();
             
             // Initialize static configuration helper
