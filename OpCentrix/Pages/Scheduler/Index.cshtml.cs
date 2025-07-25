@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using OpCentrix.Models;
@@ -282,7 +283,7 @@ namespace OpCentrix.Pages.Scheduler
         public async Task<IActionResult> OnGetShowAddModalAsync(string machineId, string date, int? id)
         {
             var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogDebug("?? [SCHEDULER-{OperationId}] Opening modal for machine: {MachineId}, date: {Date}, jobId: {JobId}",
+            _logger.LogDebug("🔧 [SCHEDULER-{OperationId}] Opening modal for machine: {MachineId}, date: {Date}, jobId: {JobId}",
                 operationId, machineId, date, id);
 
             try
@@ -291,14 +292,14 @@ namespace OpCentrix.Pages.Scheduler
                 if (!DateTime.TryParse(date, out var parsedDate))
                 {
                     parsedDate = DateTime.UtcNow;
-                    _logger.LogWarning("?? [SCHEDULER-{OperationId}] Invalid date provided: {Date}, using current time", operationId, date);
+                    _logger.LogWarning("⚠️ [SCHEDULER-{OperationId}] Invalid date provided: {Date}, using current time", operationId, date);
                 }
 
                 Job job;
                 if (id.HasValue)
                 {
                     // Load existing job with related data
-                    _logger.LogDebug("?? [SCHEDULER-{OperationId}] Loading existing job with ID: {JobId}", operationId, id.Value);
+                    _logger.LogDebug("🔧 [SCHEDULER-{OperationId}] Loading existing job with ID: {JobId}", operationId, id.Value);
 
                     job = await _context.Jobs
                         .Include(j => j.Part)
@@ -307,35 +308,74 @@ namespace OpCentrix.Pages.Scheduler
 
                     if (job == null)
                     {
-                        _logger.LogWarning("?? [SCHEDULER-{OperationId}] Job with ID {JobId} not found", operationId, id.Value);
+                        _logger.LogWarning("⚠️ [SCHEDULER-{OperationId}] Job with ID {JobId} not found", operationId, id.Value);
                         return await CreateJobNotFoundModalAsync(machineId, parsedDate, operationId);
                     }
 
-                    _logger.LogDebug("? [SCHEDULER-{OperationId}] Found existing job: {PartNumber}", operationId, job.PartNumber);
+                    _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Found existing job: {PartNumber}", operationId, job.PartNumber);
                 }
                 else
                 {
                     // Create new job with sensible defaults
-                    _logger.LogDebug("?? [SCHEDULER-{OperationId}] Creating new job with defaults", operationId);
+                    _logger.LogDebug("🔧 [SCHEDULER-{OperationId}] Creating new job with defaults", operationId);
                     job = CreateNewJobWithDefaults(machineId, parsedDate, operationId);
+                    
+                    // 🚀 AUTOMATIC TIMING CALCULATION FOR NEW JOBS
+                    _logger.LogDebug("🕒 [SCHEDULER-{OperationId}] Calculating automatic start time for new job", operationId);
+                    job = await CalculateOptimalJobTimingAsync(job, operationId);
                 }
 
                 // Load active parts efficiently
-                _logger.LogDebug("?? [SCHEDULER-{OperationId}] Loading active parts for modal", operationId);
+                _logger.LogDebug("🔧 [SCHEDULER-{OperationId}] Loading active parts for modal", operationId);
                 var parts = await _context.Parts
                     .Where(p => p.IsActive)
                     .OrderBy(p => p.PartNumber)
                     .AsNoTracking()
                     .ToListAsync();
 
-                _logger.LogDebug("? [SCHEDULER-{OperationId}] Modal data prepared: {PartCount} parts available",
+                // Check for scheduling conflicts and provide helpful information
+                var conflictInfo = "";
+                if (!id.HasValue) // Only check conflicts for new jobs
+                {
+                    var existingJobs = await _context.Jobs
+                        .Where(j => j.MachineId == job.MachineId)
+                        .AsNoTracking()
+                        .ToListAsync();
+
+                    var (canSchedule, reason, suggestedTime) = await _schedulerService.CheckSchedulingConflict(
+                        job.MachineId, job.ScheduledStart, job.EstimatedHours, job.SlsMaterial, existingJobs);
+
+                    if (!canSchedule)
+                    {
+                        conflictInfo = $"Note: {reason}. Suggested time: {suggestedTime:MMM dd, yyyy HH:mm}";
+                        _logger.LogInformation("ℹ️ [SCHEDULER-{OperationId}] Scheduling conflict detected: {Reason}", operationId, reason);
+                    }
+                    else
+                    {
+                        _logger.LogInformation("✅ [SCHEDULER-{OperationId}] No scheduling conflicts detected for new job", operationId);
+                    }
+                }
+
+                _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Modal data prepared: {PartCount} parts available",
                     operationId, parts.Count);
 
-                return Partial("_AddEditJobModal", new AddEditJobViewModel { Job = job, Parts = parts });
+                var viewModel = new AddEditJobViewModel 
+                { 
+                    Job = job, 
+                    Parts = parts 
+                };
+
+                // Add scheduling info to the view model if there's conflict information
+                if (!string.IsNullOrEmpty(conflictInfo))
+                {
+                    viewModel.Errors = new List<string> { conflictInfo };
+                }
+
+                return Partial("_AddEditJobModal", viewModel);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "? [SCHEDULER-{OperationId}] Error opening add/edit modal: {ErrorMessage}",
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error opening add/edit modal: {ErrorMessage}",
                     operationId, ex.Message);
                 return await CreateErrorModalAsync(machineId, DateTime.TryParse(date, out var d) ? d : DateTime.UtcNow, operationId, ex);
             }
@@ -347,17 +387,20 @@ namespace OpCentrix.Pages.Scheduler
             {
                 // Use UTC for all default date/time values
                 var now = DateTime.UtcNow;
+                
+                // Create initial job with temporary values
                 var job = new Job
                 {
                     MachineId = machineId,
-                    ScheduledStart = startDate,
-                    ScheduledEnd = startDate.AddHours(8), // Default 8-hour job
+                    ScheduledStart = startDate, // This will be automatically adjusted
+                    ScheduledEnd = startDate.AddHours(8), // This will be recalculated
                     CreatedDate = now,
                     LastModifiedDate = now,
                     Status = "Scheduled",
                     Priority = 3,
                     Quantity = 1,
                     PartNumber = "00-0000", // TEMP: Valid format, will be overwritten when part is selected
+                    EstimatedHours = 8.0, // Default 8-hour job
                     // SLS-specific defaults
                     SlsMaterial = "Ti-6Al-4V Grade 5",
                     LaserPowerWatts = 200,
@@ -383,6 +426,52 @@ namespace OpCentrix.Pages.Scheduler
                 _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error creating new job defaults: {ErrorMessage}",
                     operationId, ex.Message);
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// Calculate and set optimal start and end times for a new job
+        /// </summary>
+        private async Task<Job> CalculateOptimalJobTimingAsync(Job job, string operationId)
+        {
+            try
+            {
+                _logger.LogDebug("🕒 [SCHEDULER-{OperationId}] Calculating optimal timing for job on machine {MachineId}",
+                    operationId, job.MachineId);
+
+                // Get all existing jobs for conflict checking
+                var existingJobs = await _context.Jobs
+                    .Where(j => j.MachineId == job.MachineId && 
+                               j.ScheduledStart >= DateTime.UtcNow.Date.AddDays(-1)) // Include recent jobs for material changeover
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                // Calculate next available start time
+                var optimalStartTime = await _schedulerService.CalculateNextAvailableStartTimeAsync(
+                    job.MachineId, 
+                    job.ScheduledStart, 
+                    job.EstimatedHours, 
+                    job.SlsMaterial, 
+                    existingJobs);
+
+                // Update job timing
+                job.ScheduledStart = optimalStartTime;
+                
+                // Calculate optimal end time based on all processing requirements
+                job.ScheduledEnd = await _schedulerService.CalculateJobEndTimeWithSettingsAsync(job);
+
+                _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Optimal timing calculated - Start: {Start}, End: {End}, Duration: {Duration}h",
+                    operationId, job.ScheduledStart, job.ScheduledEnd, job.DurationHours);
+
+                return job;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error calculating optimal job timing: {ErrorMessage}",
+                    operationId, ex.Message);
+                
+                // Fallback to original timing if calculation fails
+                return job;
             }
         }
 
@@ -469,13 +558,6 @@ namespace OpCentrix.Pages.Scheduler
                         operationId, job.PartId);
                 }
 
-                if (job.ScheduledStart >= job.ScheduledEnd)
-                {
-                    validationErrors.Add("End time must be after start time");
-                    _logger.LogWarning("⚠️ [SCHEDULER-{OperationId}] Validation failed: Invalid time range (Start: {Start}, End: {End})",
-                        operationId, job.ScheduledStart, job.ScheduledEnd);
-                }
-
                 if (validationErrors.Any())
                 {
                     _logger.LogWarning("❌ [SCHEDULER-{OperationId}] Job submission failed validation: {ErrorCount} errors",
@@ -497,7 +579,32 @@ namespace OpCentrix.Pages.Scheduler
 
                 // CRITICAL FIX: Set PartNumber from selected Part BEFORE validation
                 job.PartNumber = part.PartNumber;
-                _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Set job PartNumber to: {PartNumber}", operationId, job.PartNumber);
+                job.EstimatedHours = part.EstimatedHours; // Update duration based on part
+                
+                // 🚀 AUTOMATIC TIMING RECALCULATION FOR NEW JOBS
+                if (job.Id == 0) // Only for new jobs
+                {
+                    _logger.LogDebug("🕒 [SCHEDULER-{OperationId}] Recalculating timing based on selected part", operationId);
+                    job = await CalculateOptimalJobTimingAsync(job, operationId);
+                }
+
+                _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Set job PartNumber to: {PartNumber}, Duration: {Hours}h",
+                    operationId, job.PartNumber, job.EstimatedHours);
+
+                // Basic time validation after automatic calculation
+                if (job.ScheduledStart >= job.ScheduledEnd)
+                {
+                    validationErrors.Add("End time must be after start time");
+                    _logger.LogWarning("⚠️ [SCHEDULER-{OperationId}] Validation failed: Invalid time range (Start: {Start}, End: {End})",
+                        operationId, job.ScheduledStart, job.ScheduledEnd);
+                }
+
+                if (validationErrors.Any())
+                {
+                    _logger.LogWarning("❌ [SCHEDULER-{OperationId}] Job submission failed post-calculation validation: {ErrorCount} errors",
+                        operationId, validationErrors.Count);
+                    return await CreateValidationErrorAsync(job, string.Join("; ", validationErrors), operationId);
+                }
 
                 // Validate job timing with optimized query
                 _logger.LogDebug("🔧 [SCHEDULER-{OperationId}] Checking for scheduling conflicts...", operationId);
@@ -550,8 +657,8 @@ namespace OpCentrix.Pages.Scheduler
                     // Commit transaction
                     await transaction.CommitAsync();
 
-                    _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Job {Action} successfully: {JobId} - {PartNumber}",
-                        operationId, logAction, job.Id, job.PartNumber);
+                    _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Job {Action} successfully: {JobId} - {PartNumber}, Scheduled: {Start} - {End}",
+                        operationId, logAction, job.Id, job.PartNumber, job.ScheduledStart, job.ScheduledEnd);
 
                     // **CRITICAL FIX: Return script response to close modal and update machine row**
                     var script = $@"
@@ -568,9 +675,9 @@ namespace OpCentrix.Pages.Scheduler
                                 }}
                             }}
                             
-                            // Show success notification
+                            // Show success notification with timing info
                             if (window.showSuccessNotification) {{
-                                window.showSuccessNotification('Job {logAction.ToLower()} successfully!');
+                                window.showSuccessNotification('Job {logAction.ToLower()} successfully! Scheduled: {job.ScheduledStart:MMM dd HH:mm} - {job.ScheduledEnd:MMM dd HH:mm}');
                             }}
                             
                             // Trigger machine row update via HTMX
@@ -1155,6 +1262,93 @@ namespace OpCentrix.Pages.Scheduler
                     "</script></div>";
 
                 return Content(errorScript, "text/html");
+            }
+        }
+
+        /// <summary>
+        /// Get human-readable scheduling availability information for a machine
+        /// </summary>
+        public async Task<IActionResult> OnGetSchedulingAvailabilityAsync(string machineId, string date)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogDebug("📅 [SCHEDULER-{OperationId}] Checking availability for machine {MachineId} on {Date}",
+                operationId, machineId, date);
+
+            try
+            {
+                if (!DateTime.TryParse(date, out var checkDate))
+                {
+                    checkDate = DateTime.UtcNow.Date;
+                }
+
+                // Get existing jobs for this machine
+                var existingJobs = await _context.Jobs
+                    .Where(j => j.MachineId == machineId && 
+                               j.ScheduledStart >= checkDate.Date &&
+                               j.ScheduledStart < checkDate.Date.AddDays(1))
+                    .OrderBy(j => j.ScheduledStart)
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                // Calculate next available time for a standard 8-hour job
+                var nextAvailable = await _schedulerService.CalculateNextAvailableStartTimeAsync(
+                    machineId, checkDate, 8.0, "Ti-6Al-4V Grade 5", existingJobs);
+
+                var availabilityInfo = new
+                {
+                    machineId = machineId,
+                    requestedDate = checkDate.ToString("yyyy-MM-dd"),
+                    nextAvailableTime = nextAvailable.ToString("yyyy-MM-dd HH:mm"),
+                    isToday = nextAvailable.Date == DateTime.UtcNow.Date,
+                    isSameDay = nextAvailable.Date == checkDate.Date,
+                    daysOut = (nextAvailable.Date - checkDate.Date).Days,
+                    jobsScheduled = existingJobs.Count,
+                    message = GenerateAvailabilityMessage(checkDate, nextAvailable, existingJobs.Count)
+                };
+
+                _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Availability calculated: Next available {NextAvailable}",
+                    operationId, nextAvailable);
+
+                return new JsonResult(availabilityInfo);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error checking scheduling availability: {ErrorMessage}",
+                    operationId, ex.Message);
+
+                return new JsonResult(new
+                {
+                    machineId = machineId,
+                    error = "Unable to check availability",
+                    message = "Please try again or contact support"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Generate a user-friendly availability message
+        /// </summary>
+        private string GenerateAvailabilityMessage(DateTime requestedDate, DateTime nextAvailable, int existingJobCount)
+        {
+            if (nextAvailable.Date == requestedDate.Date)
+            {
+                if (existingJobCount == 0)
+                {
+                    return $"✅ Machine is available! You can schedule a job starting at {nextAvailable:HH:mm} today.";
+                }
+                else
+                {
+                    return $"⏰ Machine has {existingJobCount} job(s) scheduled today. Next available time: {nextAvailable:HH:mm}.";
+                }
+            }
+            else if (nextAvailable.Date == requestedDate.Date.AddDays(1))
+            {
+                return $"📅 Machine is fully booked today. Next available: Tomorrow at {nextAvailable:HH:mm}.";
+            }
+            else
+            {
+                var daysOut = (nextAvailable.Date - requestedDate.Date).Days;
+                return $"📆 Machine is busy for the next {daysOut} day(s). Next available: {nextAvailable:MMM dd} at {nextAvailable:HH:mm}.";
             }
         }
     }

@@ -88,6 +88,9 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddScoped<ISchedulerService, SchedulerService>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 
+// NEW: Add scheduler settings service
+builder.Services.AddScoped<ISchedulerSettingsService, SchedulerSettingsService>();
+
 // SLS-specific services
 builder.Services.AddScoped<IOpcUaService, OpcUaService>();
 builder.Services.AddScoped<SlsDataSeedingService>();

@@ -164,6 +164,17 @@
                         <span class="ml-auto bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded-full">NEW</span>
                     </a>
                     
+                    <!-- Scheduler Settings -->
+                    <a href="/Admin/SchedulerSettings" class="nav-item flex items-center px-4 py-3 text-gray-700 rounded-xl transition-all duration-200 @(currentPage == "Admin/SchedulerSettings" ? "nav-item-active" : "")">
+                        <div class="w-5 h-5 mr-3">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"></path>
+                            </svg>
+                        </div>
+                        <span class="font-medium">Scheduler Settings</span>
+                        <span class="ml-auto bg-orange-100 text-orange-700 text-xs px-2 py-1 rounded-full">NEW</span>
+                    </a>
+                    
                     <!-- Analytics -->
                     <a href="/Admin/Analytics" class="nav-item flex items-center px-4 py-3 text-gray-700 rounded-xl transition-all duration-200 @(currentPage == "Admin/Analytics" ? "nav-item-active" : "")">
                         <div class="w-5 h-5 mr-3">
@@ -327,7 +338,7 @@
             <footer class="bg-white border-t border-gray-200 px-6 py-4">
                 <div class="flex justify-between items-center text-sm text-gray-500">
                     <p>&copy; @DateTime.Now.Year OpCentrix. All rights reserved.</p>
-                    <p>Admin Panel v2.0 • Last updated: @DateTime.Now.ToString("MM/dd/yyyy HH:mm")</p>
+                    <p>Admin Panel v2.0 - Last updated: @DateTime.Now.ToString("MM/dd/yyyy HH:mm")</p>
                 </div>
             </footer>
         </div>
@@ -366,10 +377,10 @@
             const notification = document.createElement('div');
             
             const config = {
-                success: { bg: 'bg-green-500', icon: '?' },
-                error: { bg: 'bg-red-500', icon: '?' },
-                warning: { bg: 'bg-yellow-500', icon: '?' },
-                info: { bg: 'bg-blue-500', icon: '?' }
+                success: { bg: 'bg-green-500', icon: 'SUCCESS' },
+                error: { bg: 'bg-red-500', icon: 'ERROR' },
+                warning: { bg: 'bg-yellow-500', icon: 'WARNING' },
+                info: { bg: 'bg-blue-500', icon: 'INFO' }
             };
             
             const typeConfig = config[type] || config.info;
@@ -464,26 +475,26 @@
 
         // Enhanced logout function with confirmation
         window.performLogout = function() {
-            console.log('?? Admin logout requested by user');
+            console.log('LOGOUT: Admin logout requested by user');
             
             // Show confirmation dialog
             if (confirm('Are you sure you want to logout?\n\nThis will end your current session and you will need to login again.')) {
-                console.log('?? Admin logout confirmed - redirecting to logout page');
+                console.log('LOGOUT: Admin logout confirmed - redirecting to logout page');
                 
                 // Clear any local storage data
                 try {
                     localStorage.removeItem('sessionTimeoutMinutes');
                     localStorage.removeItem('edmLogs');
                     localStorage.removeItem('edmLogNumber');
-                    console.log('?? Local storage cleared');
+                    console.log('CLEAR: Local storage cleared');
                 } catch (error) {
-                    console.warn('?? Could not clear local storage:', error);
+                    console.warn('WARNING: Could not clear local storage:', error);
                 }
                 
                 // Redirect to logout page
                 window.location.href = '/Account/Logout';
             } else {
-                console.log('?? Admin logout cancelled by user');
+                console.log('CANCEL: Admin logout cancelled by user');
             }
         };
 

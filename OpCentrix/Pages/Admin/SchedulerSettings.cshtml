@@ -1,0 +1,576 @@
+@page
+@model OpCentrix.Pages.Admin.SchedulerSettingsModel
+@{
+    ViewData["Title"] = "Scheduler Settings"; 
+    Layout = "_AdminLayout";
+}
+
+<div class="container mx-auto px-6 py-8">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Scheduler Settings</h1>
+            <p class="text-gray-600 mt-2">Configure scheduler parameters, changeover times, and operator schedules</p>
+        </div>
+        <div class="flex space-x-3">
+            <button type="button" onclick="testSettings()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                Test Settings
+            </button>
+            <a href="/Admin" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">
+                Back to Admin
+            </a>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+    {
+        <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+            <div class="flex items-center">
+                <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                <span class="text-green-800 font-medium">@Model.SuccessMessage</span>
+            </div>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div class="flex items-center">
+                <svg class="w-5 h-5 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+                <span class="text-red-800 font-medium">@Model.ErrorMessage</span>
+            </div>
+        </div>
+    }
+
+    @if (Model.ValidationErrors.Any())
+    {
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div class="flex items-start">
+                <svg class="w-5 h-5 text-red-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z"></path>
+                </svg>
+                <div>
+                    <span class="text-red-800 font-medium">Validation Errors:</span>
+                    <ul class="text-red-700 mt-1 list-disc list-inside">
+                        @foreach (var error in Model.ValidationErrors)
+                        {
+                            <li>@error</li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Settings Form -->
+    <form method="post" asp-page-handler="Save" class="space-y-8">
+        @Html.AntiForgeryToken()
+
+        <!-- Material Changeover Settings -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                <svg class="w-6 h-6 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                </svg>
+                Material Changeover Times
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label asp-for="Settings.TitaniumToTitaniumChangeoverMinutes" class="block text-sm font-medium text-gray-700 mb-2"></label>
+                    <input asp-for="Settings.TitaniumToTitaniumChangeoverMinutes" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                    <span asp-validation-for="Settings.TitaniumToTitaniumChangeoverMinutes" class="text-red-600 text-sm"></span>
+                    <p class="text-sm text-gray-500 mt-1">Time required for changeover within titanium family materials</p>
+                </div>
+                <div>
+                    <label asp-for="Settings.InconelToInconelChangeoverMinutes" class="block text-sm font-medium text-gray-700 mb-2"></label>
+                    <input asp-for="Settings.InconelToInconelChangeoverMinutes" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                    <span asp-validation-for="Settings.InconelToInconelChangeoverMinutes" class="text-red-600 text-sm"></span>
+                    <p class="text-sm text-gray-500 mt-1">Time required for changeover within Inconel family materials</p>
+                </div>
+                <div>
+                    <label asp-for="Settings.CrossMaterialChangeoverMinutes" class="block text-sm font-medium text-gray-700 mb-2"></label>
+                    <input asp-for="Settings.CrossMaterialChangeoverMinutes" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                    <span asp-validation-for="Settings.CrossMaterialChangeoverMinutes" class="text-red-600 text-sm"></span>
+                    <p class="text-sm text-gray-500 mt-1">Time required for changeover between different material families</p>
+                </div>
+                <div>
+                    <label asp-for="Settings.DefaultMaterialChangeoverMinutes" class="block text-sm font-medium text-gray-700 mb-2"></label>
+                    <input asp-for="Settings.DefaultMaterialChangeoverMinutes" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                    <span asp-validation-for="Settings.DefaultMaterialChangeoverMinutes" class="text-red-600 text-sm"></span>
+                    <p class="text-sm text-gray-500 mt-1">Default changeover time for unknown material combinations</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cooling and Timing Settings -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                <svg class="w-6 h-6 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                Process Timing Settings
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label asp-for="Settings.DefaultPreheatingTimeMinutes" class="block text-sm font-medium text-gray-700 mb-2"></label>
+                    <input asp-for="Settings.DefaultPreheatingTimeMinutes" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                    <span asp-validation-for="Settings.DefaultPreheatingTimeMinutes" class="text-red-600 text-sm"></span>
+                </div>
+                <div>
+                    <label asp-for="Settings.DefaultCoolingTimeMinutes" class="block text-sm font-medium text-gray-700 mb-2"></label>
+                    <input asp-for="Settings.DefaultCoolingTimeMinutes" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                    <span asp-validation-for="Settings.DefaultCoolingTimeMinutes" class="text-red-600 text-sm"></span>
+                </div>
+                <div>
+                    <label asp-for="Settings.DefaultPostProcessingTimeMinutes" class="block text-sm font-medium text-gray-700 mb-2"></label>
+                    <input asp-for="Settings.DefaultPostProcessingTimeMinutes" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                    <span asp-validation-for="Settings.DefaultPostProcessingTimeMinutes" class="text-red-600 text-sm"></span>
+                </div>
+                <div>
+                    <label asp-for="Settings.SetupTimeBufferMinutes" class="block text-sm font-medium text-gray-700 mb-2"></label>
+                    <input asp-for="Settings.SetupTimeBufferMinutes" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                    <span asp-validation-for="Settings.SetupTimeBufferMinutes" class="text-red-600 text-sm"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Operator Schedule Settings -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                <svg class="w-6 h-6 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                </svg>
+                Operator Availability Schedule
+            </h2>
+            
+            <!-- Shift Times -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div class="space-y-4">
+                    <h3 class="font-medium text-gray-900">Standard Shift (Day)</h3>
+                    <div>
+                        <label asp-for="Settings.StandardShiftStart" class="block text-sm font-medium text-gray-700 mb-2"></label>
+                        <input asp-for="Settings.StandardShiftStart" type="time" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                        <span asp-validation-for="Settings.StandardShiftStart" class="text-red-600 text-sm"></span>
+                    </div>
+                    <div>
+                        <label asp-for="Settings.StandardShiftEnd" class="block text-sm font-medium text-gray-700 mb-2"></label>
+                        <input asp-for="Settings.StandardShiftEnd" type="time" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                        <span asp-validation-for="Settings.StandardShiftEnd" class="text-red-600 text-sm"></span>
+                    </div>
+                </div>
+                
+                <div class="space-y-4">
+                    <h3 class="font-medium text-gray-900">Evening Shift</h3>
+                    <div>
+                        <label asp-for="Settings.EveningShiftStart" class="block text-sm font-medium text-gray-700 mb-2"></label>
+                        <input asp-for="Settings.EveningShiftStart" type="time" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                        <span asp-validation-for="Settings.EveningShiftStart" class="text-red-600 text-sm"></span>
+                    </div>
+                    <div>
+                        <label asp-for="Settings.EveningShiftEnd" class="block text-sm font-medium text-gray-700 mb-2"></label>
+                        <input asp-for="Settings.EveningShiftEnd" type="time" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                        <span asp-validation-for="Settings.EveningShiftEnd" class="text-red-600 text-sm"></span>
+                    </div>
+                </div>
+                
+                <div class="space-y-4">
+                    <h3 class="font-medium text-gray-900">Night Shift</h3>
+                    <div>
+                        <label asp-for="Settings.NightShiftStart" class="block text-sm font-medium text-gray-700 mb-2"></label>
+                        <input asp-for="Settings.NightShiftStart" type="time" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                        <span asp-validation-for="Settings.NightShiftStart" class="text-red-600 text-sm"></span>
+                    </div>
+                    <div>
+                        <label asp-for="Settings.NightShiftEnd" class="block text-sm font-medium text-gray-700 mb-2"></label>
+                        <input asp-for="Settings.NightShiftEnd" type="time" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                        <span asp-validation-for="Settings.NightShiftEnd" class="text-red-600 text-sm"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Weekend Operations -->
+            <div class="border-t pt-4">
+                <h3 class="font-medium text-gray-900 mb-4">Weekend Operations</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="flex items-center">
+                        <input asp-for="Settings.EnableWeekendOperations" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                        <label asp-for="Settings.EnableWeekendOperations" class="ml-3 text-sm font-medium text-gray-700"></label>
+                    </div>
+                    <div class="flex items-center">
+                        <input asp-for="Settings.SaturdayOperations" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                        <label asp-for="Settings.SaturdayOperations" class="ml-3 text-sm font-medium text-gray-700"></label>
+                    </div>
+                    <div class="flex items-center">
+                        <input asp-for="Settings.SundayOperations" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                        <label asp-for="Settings.SundayOperations" class="ml-3 text-sm font-medium text-gray-700"></label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Machine Priority Settings -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                <svg class="w-6 h-6 text-orange-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                </svg>
+                Machine Configuration
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label asp-for="Settings.TI1MachinePriority" class="block text-sm font-medium text-gray-700 mb-2"></label>
+                    <select asp-for="Settings.TI1MachinePriority" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="1">1 - Lowest Priority</option>
+                        <option value="2">2 - Low Priority</option>
+                        <option value="3">3 - Below Normal</option>
+                        <option value="4">4 - Below Normal</option>
+                        <option value="5">5 - Normal Priority</option>
+                        <option value="6">6 - Above Normal</option>
+                        <option value="7">7 - Above Normal</option>
+                        <option value="8">8 - High Priority</option>
+                        <option value="9">9 - Higher Priority</option>
+                        <option value="10">10 - Highest Priority</option>
+                    </select>
+                </div>
+                <div>
+                    <label asp-for="Settings.TI2MachinePriority" class="block text-sm font-medium text-gray-700 mb-2"></label>
+                    <select asp-for="Settings.TI2MachinePriority" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="1">1 - Lowest Priority</option>
+                        <option value="2">2 - Low Priority</option>
+                        <option value="3">3 - Below Normal</option>
+                        <option value="4">4 - Below Normal</option>
+                        <option value="5">5 - Normal Priority</option>
+                        <option value="6">6 - Above Normal</option>
+                        <option value="7">7 - Above Normal</option>
+                        <option value="8">8 - High Priority</option>
+                        <option value="9">9 - Higher Priority</option>
+                        <option value="10">10 - Highest Priority</option>
+                    </select>
+                </div>
+                <div>
+                    <label asp-for="Settings.INCMachinePriority" class="block text-sm font-medium text-gray-700 mb-2"></label>
+                    <select asp-for="Settings.INCMachinePriority" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="1">1 - Lowest Priority</option>
+                        <option value="2">2 - Low Priority</option>
+                        <option value="3">3 - Below Normal</option>
+                        <option value="4">4 - Below Normal</option>
+                        <option value="5">5 - Normal Priority</option>
+                        <option value="6">6 - Above Normal</option>
+                        <option value="7">7 - Above Normal</option>
+                        <option value="8">8 - High Priority</option>
+                        <option value="9">9 - Higher Priority</option>
+                        <option value="10">10 - Highest Priority</option>
+                    </select>
+                </div>
+                <div>
+                    <label asp-for="Settings.MaxJobsPerMachinePerDay" class="block text-sm font-medium text-gray-700 mb-2"></label>
+                    <input asp-for="Settings.MaxJobsPerMachinePerDay" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                    <span asp-validation-for="Settings.MaxJobsPerMachinePerDay" class="text-red-600 text-sm"></span>
+                </div>
+            </div>
+            
+            <!-- Additional Machine Settings -->
+            <div class="mt-6 space-y-4">
+                <div class="flex items-center">
+                    <input asp-for="Settings.AllowConcurrentJobs" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                    <label asp-for="Settings.AllowConcurrentJobs" class="ml-3 text-sm font-medium text-gray-700"></label>
+                    <p class="ml-8 text-sm text-gray-500">Allow multiple jobs to run simultaneously on the same machine</p>
+                </div>
+                
+                <div>
+                    <label asp-for="Settings.MinimumTimeBetweenJobsMinutes" class="block text-sm font-medium text-gray-700 mb-2"></label>
+                    <input asp-for="Settings.MinimumTimeBetweenJobsMinutes" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                    <span asp-validation-for="Settings.MinimumTimeBetweenJobsMinutes" class="text-red-600 text-sm"></span>
+                    <p class="text-sm text-gray-500 mt-1">Minimum time required between consecutive jobs on the same machine</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quality and Safety Settings -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                <svg class="w-6 h-6 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                </svg>
+                Quality and Safety Requirements
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label asp-for="Settings.RequiredOperatorCertification" class="block text-sm font-medium text-gray-700 mb-2"></label>
+                    <select asp-for="Settings.RequiredOperatorCertification" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="SLS Basic">SLS Basic Certification</option>
+                        <option value="SLS Advanced">SLS Advanced Certification</option>
+                        <option value="SLS Expert">SLS Expert Certification</option>
+                        <option value="Metal Printing">Metal Printing Certification</option>
+                        <option value="TruPrint 3000">TruPrint 3000 Specific</option>
+                    </select>
+                </div>
+                <div>
+                    <label asp-for="Settings.AdvanceWarningTimeMinutes" class="block text-sm font-medium text-gray-700 mb-2"></label>
+                    <input asp-for="Settings.AdvanceWarningTimeMinutes" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                    <span asp-validation-for="Settings.AdvanceWarningTimeMinutes" class="text-red-600 text-sm"></span>
+                </div>
+            </div>
+
+            <!-- Quality and Safety Checkboxes -->
+            <div class="mt-6 space-y-4">
+                <div class="flex items-center">
+                    <input asp-for="Settings.QualityCheckRequired" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                    <label asp-for="Settings.QualityCheckRequired" class="ml-3 text-sm font-medium text-gray-700"></label>
+                </div>
+                <div class="flex items-center">
+                    <input asp-for="Settings.EmergencyOverrideEnabled" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                    <label asp-for="Settings.EmergencyOverrideEnabled" class="ml-3 text-sm font-medium text-gray-700"></label>
+                </div>
+                <div class="flex items-center">
+                    <input asp-for="Settings.NotifyOnScheduleConflicts" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                    <label asp-for="Settings.NotifyOnScheduleConflicts" class="ml-3 text-sm font-medium text-gray-700"></label>
+                </div>
+                <div class="flex items-center">
+                    <input asp-for="Settings.NotifyOnMaterialChanges" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                    <label asp-for="Settings.NotifyOnMaterialChanges" class="ml-3 text-sm font-medium text-gray-700"></label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Change Notes -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">Change Notes</h2>
+            <div>
+                <label asp-for="Settings.ChangeNotes" class="block text-sm font-medium text-gray-700 mb-2">Notes about these changes (optional)</label>
+                <textarea asp-for="Settings.ChangeNotes" rows="3" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter notes about why these settings were changed..."></textarea>
+                <span asp-validation-for="Settings.ChangeNotes" class="text-red-600 text-sm"></span>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex justify-between items-center pt-6 border-t">
+            <button type="submit" asp-page-handler="Reset" onclick="return confirm('Are you sure you want to reset all settings to defaults? This cannot be undone.')" class="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors">
+                Reset to Defaults
+            </button>
+            <div class="flex space-x-3">
+                <button type="button" onclick="validateSettings()" class="bg-yellow-600 text-white px-6 py-3 rounded-lg hover:bg-yellow-700 transition-colors">
+                    Validate Settings
+                </button>
+                <button type="submit" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
+                    Save Settings
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Test Results Modal -->
+<div id="test-results-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-lg w-full">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold">Settings Test Results</h3>
+                    <button onclick="closeTestModal()" class="text-gray-500 hover:text-gray-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div id="test-results-content" class="space-y-3">
+                    <!-- Test results will be inserted here -->
+                </div>
+                <div class="mt-6 flex justify-end">
+                    <button onclick="closeTestModal()" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Settings test and validation functions
+function testSettings() {
+    const tests = [
+        testChangeoverTimes(),
+        testOperatorAvailability(),
+        testShiftValidation()
+    ];
+    
+    Promise.all(tests).then(results => {
+        showTestResults(results);
+    });
+}
+
+async function testChangeoverTimes() {
+    const tests = [
+        { from: 'Ti-6Al-4V Grade 5', to: 'Ti-6Al-4V ELI Grade 23', expected: 'titanium-to-titanium' },
+        { from: 'Inconel 718', to: 'Inconel 625', expected: 'inconel-to-inconel' },
+        { from: 'Ti-6Al-4V Grade 5', to: 'Inconel 718', expected: 'cross-material' }
+    ];
+    
+    const results = [];
+    for (let test of tests) {
+        try {
+            const response = await fetch(`/Admin/SchedulerSettings?handler=TestChangeover&fromMaterial=${encodeURIComponent(test.from)}&toMaterial=${encodeURIComponent(test.to)}`);
+            const data = await response.json();
+            results.push({
+                test: `${test.from} to ${test.to}`,
+                success: data.success,
+                message: data.message
+            });
+        } catch (error) {
+            results.push({
+                test: `${test.from} to ${test.to}`,
+                success: false,
+                message: 'Test failed: ' + error.message
+            });
+        }
+    }
+    
+    return { category: 'Material Changeover Times', results };
+}
+
+async function testOperatorAvailability() {
+    const now = new Date();
+    const tests = [
+        { time: '07:00', expected: 'available during standard shift' },
+        { time: '15:30', expected: 'available during evening shift' },
+        { time: '23:30', expected: 'available during night shift' },
+        { time: '05:00', expected: 'not available (between shifts)' }
+    ];
+    
+    const results = [];
+    for (let test of tests) {
+        try {
+            const startTime = new Date(now.toDateString() + ' ' + test.time);
+            const endTime = new Date(startTime.getTime() + 2 * 60 * 60 * 1000); // +2 hours
+            
+            const response = await fetch(`/Admin/SchedulerSettings?handler=TestOperatorAvailability&startTime=${startTime.toISOString()}&endTime=${endTime.toISOString()}`);
+            const data = await response.json();
+            results.push({
+                test: `${test.time} (${test.expected})`,
+                success: data.success,
+                message: data.message
+            });
+        } catch (error) {
+            results.push({
+                test: `${test.time} (${test.expected})`,
+                success: false,
+                message: 'Test failed: ' + error.message
+            });
+        }
+    }
+    
+    return { category: 'Operator Availability', results };
+}
+
+function testShiftValidation() {
+    const standardStart = document.getElementById('Settings_StandardShiftStart').value;
+    const standardEnd = document.getElementById('Settings_StandardShiftEnd').value;
+    const eveningStart = document.getElementById('Settings_EveningShiftStart').value;
+    const eveningEnd = document.getElementById('Settings_EveningShiftEnd').value;
+    const nightStart = document.getElementById('Settings_NightShiftStart').value;
+    const nightEnd = document.getElementById('Settings_NightShiftEnd').value;
+    
+    const results = [];
+    
+    // Validate shift times
+    if (standardStart >= standardEnd) {
+        results.push({ test: 'Standard shift times', success: false, message: 'Start time must be before end time' });
+    } else {
+        results.push({ test: 'Standard shift times', success: true, message: `Valid: ${standardStart} to ${standardEnd}` });
+    }
+    
+    if (eveningStart >= eveningEnd) {
+        results.push({ test: 'Evening shift times', success: false, message: 'Start time must be before end time' });
+    } else {
+        results.push({ test: 'Evening shift times', success: true, message: `Valid: ${eveningStart} to ${eveningEnd}` });
+    }
+    
+    if (nightStart === nightEnd) {
+        results.push({ test: 'Night shift times', success: false, message: 'Start and end times cannot be the same' });
+    } else {
+        results.push({ test: 'Night shift times', success: true, message: `Valid: ${nightStart} to ${nightEnd} (overnight)` });
+    }
+    
+    return Promise.resolve({ category: 'Shift Time Validation', results });
+}
+
+function validateSettings() {
+    const errors = [];
+    
+    // Validate changeover times
+    const titaniumChangeover = parseInt(document.getElementById('Settings_TitaniumToTitaniumChangeoverMinutes').value);
+    const inconelChangeover = parseInt(document.getElementById('Settings_InconelToInconelChangeoverMinutes').value);
+    const crossMaterialChangeover = parseInt(document.getElementById('Settings_CrossMaterialChangeoverMinutes').value);
+    
+    if (titaniumChangeover > crossMaterialChangeover) {
+        errors.push('Titanium-to-titanium changeover should be faster than cross-material changeover');
+    }
+    
+    if (inconelChangeover > crossMaterialChangeover) {
+        errors.push('Inconel-to-inconel changeover should be faster than cross-material changeover');
+    }
+    
+    // Validate machine priorities
+    const maxJobs = parseInt(document.getElementById('Settings_MaxJobsPerMachinePerDay').value);
+    if (maxJobs < 1 || maxJobs > 20) {
+        errors.push('Maximum jobs per machine per day should be between 1 and 20');
+    }
+    
+    if (errors.length > 0) {
+        alert('Validation Issues:\n\n' + errors.join('\n'));
+    } else {
+        alert('All settings are valid!');
+    }
+}
+
+function showTestResults(testResults) {
+    const modal = document.getElementById('test-results-modal');
+    const content = document.getElementById('test-results-content');
+    
+    content.innerHTML = '';
+    
+    testResults.forEach(category => {
+        const categoryDiv = document.createElement('div');
+        categoryDiv.className = 'border rounded-lg p-4';
+        
+        const categoryTitle = document.createElement('h4');
+        categoryTitle.className = 'font-semibold text-lg mb-2';
+        categoryTitle.textContent = category.category;
+        categoryDiv.appendChild(categoryTitle);
+        
+        category.results.forEach(result => {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `flex items-center p-2 rounded ${result.success ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`;
+            
+            const icon = document.createElement('span');
+            icon.className = 'mr-2';
+            icon.textContent = result.success ? 'PASS' : 'FAIL';
+            
+            const message = document.createElement('span');
+            message.textContent = `${result.test}: ${result.message}`;
+            
+            resultDiv.appendChild(icon);
+            resultDiv.appendChild(message);
+            categoryDiv.appendChild(resultDiv);
+        });
+        
+        content.appendChild(categoryDiv);
+    });
+    
+    modal.classList.remove('hidden');
+}
+
+function closeTestModal() {
+    document.getElementById('test-results-modal').classList.add('hidden');
+}
+</script>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

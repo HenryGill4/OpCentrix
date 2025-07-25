@@ -1,14 +1,14 @@
-﻿# OpCentrix SLS Metal Printing Scheduler
+# OpCentrix SLS Metal Printing Scheduler
 
-Professional-grade Selective Laser Sintering (SLS) production scheduling system built with .NET 8 and Razor Pages
+**Professional-grade Selective Laser Sintering (SLS) production scheduling system built with .NET 8 and Razor Pages**
 
 ---
 
-## Quick Start
+## ?? Quick Start
 
 ### Immediate Setup (5 minutes)
 ```cmd
-# 1. Navigate to workspace
+# 1. Clone/navigate to workspace
 cd "C:\Users\Henry\Source\Repos\OpCentrix"
 
 # 2. Run complete cleanup and implementation
@@ -29,37 +29,37 @@ start-application.bat
 
 ---
 
-## Workspace Organization
+## ?? Workspace Organization
 
 ```
 C:\Users\Henry\Source\Repos\OpCentrix\
-├── OpCentrix\                          # MAIN PROJECT (all code here)
-│   ├── OpCentrix.csproj               # Project file
-│   ├── Program.cs                     # Application entry point
-│   ├── Data\SchedulerContext.cs       # Database context
-│   ├── Models\                        # Data models
-│   ├── Services\                      # Business logic
-│   ├── Pages\                         # Razor Pages UI
-│   └── wwwroot\                       # Static files (CSS, JS, images)
-├── scripts\                           # ALL AUTOMATION SCRIPTS
-│   ├── Windows\                       # .bat files for Windows
-│   └── Linux\                         # .sh files for Linux/macOS
-├── docs\                              # ALL DOCUMENTATION
-│   ├── SCHEDULER-SETTINGS-*.md        # Scheduler settings docs
-│   ├── JQUERY-VALIDATION-*.md         # JavaScript fixes
-│   └── DATABASE-*.md                  # Database guides
-├── README.md                          # This file
-├── SETUP_COMPLETE.md                  # Detailed setup guide
-├── setup-clean-database.bat          # Quick database reset
-├── start-application.bat             # Application launcher
-└── diagnose-system.bat               # System diagnostic
+??? OpCentrix\                          # ?? MAIN PROJECT (all code here)
+?   ??? OpCentrix.csproj               # Project file
+?   ??? Program.cs                     # Application entry point
+?   ??? Data\SchedulerContext.cs       # Database context
+?   ??? Models\                        # Data models
+?   ??? Services\                      # Business logic
+?   ??? Pages\                         # Razor Pages UI
+?   ??? wwwroot\                       # Static files (CSS, JS, images)
+??? scripts\                           # ?? ALL AUTOMATION SCRIPTS
+?   ??? Windows\                       # .bat files for Windows
+?   ??? Linux\                         # .sh files for Linux/macOS
+??? docs\                              # ?? ALL DOCUMENTATION
+?   ??? SCHEDULER-SETTINGS-*.md        # Scheduler settings docs
+?   ??? JQUERY-VALIDATION-*.md         # JavaScript fixes
+?   ??? DATABASE-*.md                  # Database guides
+??? README.md                          # This file
+??? SETUP_COMPLETE.md                  # Detailed setup guide
+??? setup-clean-database.bat          # Quick database reset
+??? start-application.bat             # Application launcher
+??? diagnose-system.bat               # System diagnostic
 ```
 
 ---
 
-## Core Features
+## ?? Core Features
 
-### Fully Implemented
+### ? Fully Implemented
 - **Scheduler Settings Management** - Complete admin interface for all scheduling parameters
 - **Material Changeover Control** - Ti-Ti (30min), Inconel-Inconel (45min), Cross-material (120min)  
 - **Shift-Based Operations** - Standard/Evening/Night shifts with weekend controls
@@ -68,7 +68,7 @@ C:\Users\Henry\Source\Repos\OpCentrix\
 - **Database Auto-Recovery** - Automatic table creation and migration handling
 - **Production-Ready Structure** - Clean file organization and error handling
 
-### Technical Architecture
+### ?? Technical Architecture
 - **.NET 8** with **Razor Pages** (not MVC or Blazor)
 - **Entity Framework Core** with **SQLite** database
 - **Bootstrap 5** responsive UI with **HTMX** for dynamic updates
@@ -77,7 +77,7 @@ C:\Users\Henry\Source\Repos\OpCentrix\
 
 ---
 
-## Development Workflow
+## ??? Development Workflow
 
 ### Essential Scripts (Quick Access)
 ```cmd
@@ -128,7 +128,7 @@ docs\FILE-STRUCTURE-ISSUE-RESOLVED.md
 
 ---
 
-## Scheduler Settings Configuration
+## ??? Scheduler Settings Configuration
 
 The scheduler settings system provides complete control over:
 
@@ -158,7 +158,7 @@ The scheduler settings system provides complete control over:
 
 ---
 
-## Troubleshooting
+## ?? Troubleshooting
 
 ### Common Issues
 
@@ -200,7 +200,7 @@ diagnose-system.bat
 
 ---
 
-## Development Notes
+## ??? Development Notes
 
 ### Working Directory
 **Always work from the project directory:**
@@ -235,7 +235,7 @@ dotnet ef database update
 
 ---
 
-## Production Deployment
+## ?? Production Deployment
 
 ### Prerequisites
 - Windows Server 2019+ or Windows 10/11
@@ -262,16 +262,16 @@ scripts\Windows\verify-final-system.bat
 
 ---
 
-## Success Metrics
+## ?? Success Metrics
 
 ### When Everything is Working
-- Application starts without errors
-- Scheduler settings page loads with default values
-- Material changeover calculations work correctly
-- jQuery validation works on all forms
-- Database auto-creates and migrates properly
-- No JavaScript errors in browser console
-- All CRUD operations work smoothly
+- ? Application starts without errors
+- ? Scheduler settings page loads with default values
+- ? Material changeover calculations work correctly
+- ? jQuery validation works on all forms
+- ? Database auto-creates and migrates properly
+- ? No JavaScript errors in browser console
+- ? All CRUD operations work smoothly
 
 ### Performance Indicators
 - **Startup Time**: Under 5 seconds
@@ -282,13 +282,13 @@ scripts\Windows\verify-final-system.bat
 
 ---
 
-## License
+## ?? License
 
 Internal business application for SLS metal printing operations.
 
 ---
 
-## Support
+## ?? Support
 
 For technical support:
 1. Run `diagnose-system.bat` and share results

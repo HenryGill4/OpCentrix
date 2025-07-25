@@ -21,6 +21,9 @@ namespace OpCentrix.Data
         // FIXED: Add missing MachineDataSnapshot DbSet
         public DbSet<MachineDataSnapshot> MachineDataSnapshots { get; set; }
 
+        // NEW: Scheduler Settings for admin control
+        public DbSet<SchedulerSettings> SchedulerSettings { get; set; }
+
         // NEW: Print tracking tables for the refactored workflow
         public DbSet<BuildJob> BuildJobs { get; set; }
         public DbSet<BuildJobPart> BuildJobParts { get; set; }
@@ -358,6 +361,51 @@ namespace OpCentrix.Data
                 entity.Property(e => e.ProcessDataJson).HasDefaultValue("{}");
                 entity.Property(e => e.QualityDataJson).HasDefaultValue("{}");
                 entity.Property(e => e.AlarmDataJson).HasDefaultValue("{}");
+            });
+
+            #endregion
+
+            #region SchedulerSettings Configuration
+
+            modelBuilder.Entity<SchedulerSettings>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                // Ensure only one scheduler settings record exists
+                entity.HasIndex(e => e.Id).IsUnique();
+
+                // String length constraints
+                entity.Property(e => e.RequiredOperatorCertification).HasMaxLength(50);
+                entity.Property(e => e.CreatedBy).HasMaxLength(100);
+                entity.Property(e => e.LastModifiedBy).HasMaxLength(100);
+                entity.Property(e => e.ChangeNotes).HasMaxLength(1000);
+
+                // Default values
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.TitaniumToTitaniumChangeoverMinutes).HasDefaultValue(30);
+                entity.Property(e => e.InconelToInconelChangeoverMinutes).HasDefaultValue(45);
+                entity.Property(e => e.CrossMaterialChangeoverMinutes).HasDefaultValue(120);
+                entity.Property(e => e.DefaultMaterialChangeoverMinutes).HasDefaultValue(60);
+                entity.Property(e => e.DefaultPreheatingTimeMinutes).HasDefaultValue(60);
+                entity.Property(e => e.DefaultCoolingTimeMinutes).HasDefaultValue(240);
+                entity.Property(e => e.DefaultPostProcessingTimeMinutes).HasDefaultValue(90);
+                entity.Property(e => e.SetupTimeBufferMinutes).HasDefaultValue(30);
+                entity.Property(e => e.TI1MachinePriority).HasDefaultValue(5);
+                entity.Property(e => e.TI2MachinePriority).HasDefaultValue(5);
+                entity.Property(e => e.INCMachinePriority).HasDefaultValue(5);
+                entity.Property(e => e.MaxJobsPerMachinePerDay).HasDefaultValue(8);
+                entity.Property(e => e.MinimumTimeBetweenJobsMinutes).HasDefaultValue(15);
+                entity.Property(e => e.AdvanceWarningTimeMinutes).HasDefaultValue(60);
+                entity.Property(e => e.RequiredOperatorCertification).HasDefaultValue("SLS Basic");
+                entity.Property(e => e.AllowConcurrentJobs).HasDefaultValue(true);
+                entity.Property(e => e.QualityCheckRequired).HasDefaultValue(true);
+                entity.Property(e => e.EmergencyOverrideEnabled).HasDefaultValue(true);
+                entity.Property(e => e.NotifyOnScheduleConflicts).HasDefaultValue(true);
+                entity.Property(e => e.NotifyOnMaterialChanges).HasDefaultValue(true);
+                entity.Property(e => e.EnableWeekendOperations).HasDefaultValue(false);
+                entity.Property(e => e.SaturdayOperations).HasDefaultValue(false);
+                entity.Property(e => e.SundayOperations).HasDefaultValue(false);
             });
 
             #endregion

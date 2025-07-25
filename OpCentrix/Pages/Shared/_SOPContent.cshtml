@@ -1,0 +1,630 @@
+@{
+    var category = ViewData["Category"]?.ToString() ?? "overview";
+    var section = ViewData["Section"]?.ToString() ?? "general";
+}
+
+<div class="p-8">
+    @if (category == "overview")
+    {
+        <div class="max-w-4xl">
+            <h1 class="text-3xl font-bold text-gray-900 mb-6">OpCentrix System Overview</h1>
+            
+            <div class="prose prose-blue max-w-none">
+                <h2>System Purpose</h2>
+                <p>OpCentrix is a comprehensive SLS (Selective Laser Sintering) metal printing scheduler designed to optimize production workflows and ensure efficient operations.</p>
+                
+                <h2>Key Features</h2>
+                <ul>
+                    <li><strong>Job Scheduling:</strong> Automated scheduling with priority management</li>
+                    <li><strong>Print Tracking:</strong> Real-time monitoring of print jobs</li>
+                    <li><strong>Parts Management:</strong> Comprehensive catalog and inventory tracking</li>
+                    <li><strong>User Management:</strong> Role-based access control</li>
+                    <li><strong>Quality Control:</strong> Built-in QC workflows and documentation</li>
+                </ul>
+                
+                <h2>User Roles</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 not-prose">
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <h3 class="font-semibold text-blue-900">Administrator</h3>
+                        <p class="text-sm text-blue-700">Full system access, user management, system configuration</p>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <h3 class="font-semibold text-green-900">Scheduler</h3>
+                        <p class="text-sm text-green-700">Job scheduling, priority management, production planning</p>
+                    </div>
+                    <div class="bg-purple-50 p-4 rounded-lg">
+                        <h3 class="font-semibold text-purple-900">Operator</h3>
+                        <p class="text-sm text-purple-700">Print tracking, quality control, job execution</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else if (category == "scheduling")
+    {
+        @if (section == "job-creation")
+        {
+            <div class="max-w-4xl">
+                <h1 class="text-3xl font-bold text-gray-900 mb-6">Job Creation & Scheduling</h1>
+                
+                <div class="prose prose-blue max-w-none">
+                    <h2>Creating New Jobs</h2>
+                    <ol>
+                        <li>Navigate to the Scheduler dashboard</li>
+                        <li>Click "Create New Job" button</li>
+                        <li>Enter job details: name, priority, due date</li>
+                        <li>Select parts to include in the job</li>
+                        <li>Choose appropriate machine and material</li>
+                        <li>Review and confirm job creation</li>
+                    </ol>
+                    
+                    <h2>Job Priority Levels</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 not-prose">
+                        <div class="bg-red-50 p-3 rounded border-l-4 border-red-400">
+                            <div class="font-semibold text-red-900">Critical</div>
+                            <div class="text-sm text-red-700">Emergency repairs</div>
+                        </div>
+                        <div class="bg-orange-50 p-3 rounded border-l-4 border-orange-400">
+                            <div class="font-semibold text-orange-900">High</div>
+                            <div class="text-sm text-orange-700">Customer orders</div>
+                        </div>
+                        <div class="bg-yellow-50 p-3 rounded border-l-4 border-yellow-400">
+                            <div class="font-semibold text-yellow-900">Medium</div>
+                            <div class="text-sm text-yellow-700">Standard production</div>
+                        </div>
+                        <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-400">
+                            <div class="font-semibold text-blue-900">Low</div>
+                            <div class="text-sm text-blue-700">R&D projects</div>
+                        </div>
+                    </div>
+                    
+                    <h2>Best Practices</h2>
+                    <ul>
+                        <li>Always verify part specifications before job creation</li>
+                        <li>Consider material changeover time when scheduling</li>
+                        <li>Group similar parts to optimize build efficiency</li>
+                        <li>Maintain realistic due dates to avoid rush orders</li>
+                    </ul>
+                </div>
+            </div>
+        }
+        else if (section == "material-changeover")
+        {
+            <div class="max-w-4xl">
+                <h1 class="text-3xl font-bold text-gray-900 mb-6">Material Changeover Procedures</h1>
+                
+                <div class="prose prose-blue max-w-none">
+                    <h2>Pre-Changeover Checklist</h2>
+                    <ul>
+                        <li>Complete current print job and cool down</li>
+                        <li>Document remaining material quantity</li>
+                        <li>Verify new material specifications</li>
+                        <li>Check equipment compatibility</li>
+                    </ul>
+                    
+                    <h2>Changeover Process</h2>
+                    <ol>
+                        <li><strong>Safety First:</strong> Ensure machine is powered down and cool</li>
+                        <li><strong>Remove Old Material:</strong> Carefully extract unused powder</li>
+                        <li><strong>Clean System:</strong> Remove contamination and debris</li>
+                        <li><strong>Install New Material:</strong> Follow manufacturer guidelines</li>
+                        <li><strong>System Check:</strong> Verify all parameters are correct</li>
+                        <li><strong>Test Print:</strong> Run calibration print if required</li>
+                    </ol>
+                    
+                    <h2>Time Estimates</h2>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <div class="font-semibold">Same Material Type:</div>
+                                <div class="text-gray-600">30-45 minutes</div>
+                            </div>
+                            <div>
+                                <div class="font-semibold">Different Material:</div>
+                                <div class="text-gray-600">2-3 hours</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (section == "conflict-resolution")
+        {
+            <div class="max-w-4xl">
+                <h1 class="text-3xl font-bold text-gray-900 mb-6">Scheduling Conflict Resolution</h1>
+                
+                <div class="prose prose-blue max-w-none">
+                    <h2>Common Conflicts</h2>
+                    <ul>
+                        <li>Multiple high-priority jobs scheduled simultaneously</li>
+                        <li>Material unavailability for scheduled jobs</li>
+                        <li>Equipment maintenance overlapping with production</li>
+                        <li>Rush orders disrupting planned schedule</li>
+                    </ul>
+                    
+                    <h2>Resolution Process</h2>
+                    <ol>
+                        <li><strong>Identify Conflict:</strong> System will highlight scheduling conflicts</li>
+                        <li><strong>Assess Priority:</strong> Review job priorities and deadlines</li>
+                        <li><strong>Evaluate Options:</strong> Consider rescheduling, resource reallocation</li>
+                        <li><strong>Stakeholder Communication:</strong> Notify affected parties</li>
+                        <li><strong>Implement Solution:</strong> Update schedule and document changes</li>
+                    </ol>
+                    
+                    <h2>Escalation Guidelines</h2>
+                    <div class="bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-400">
+                        <div class="font-semibold text-yellow-900">When to Escalate:</div>
+                        <ul class="mt-2 text-yellow-800">
+                            <li>Conflicts affecting critical deadlines</li>
+                            <li>Resource constraints requiring management approval</li>
+                            <li>Customer satisfaction at risk</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (section == "priority-management")
+        {
+            <div class="max-w-4xl">
+                <h1 class="text-3xl font-bold text-gray-900 mb-6">Priority Management</h1>
+                
+                <div class="prose prose-blue max-w-none">
+                    <h2>Priority Assignment Guidelines</h2>
+                    <p>Proper priority assignment ensures efficient resource utilization and customer satisfaction.</p>
+                    
+                    <h2>Priority Criteria</h2>
+                    <ul>
+                        <li><strong>Customer Requirements:</strong> Contractual deadlines</li>
+                        <li><strong>Business Impact:</strong> Revenue and relationship considerations</li>
+                        <li><strong>Technical Constraints:</strong> Material availability, machine capacity</li>
+                        <li><strong>Operational Efficiency:</strong> Batching opportunities</li>
+                    </ul>
+                    
+                    <h2>Dynamic Priority Adjustment</h2>
+                    <ol>
+                        <li>Review priorities daily during production planning</li>
+                        <li>Adjust based on changing requirements</li>
+                        <li>Document all priority changes</li>
+                        <li>Communicate changes to all stakeholders</li>
+                    </ol>
+                </div>
+            </div>
+        }
+    }
+    else if (category == "production")
+    {
+        @if (section == "print-tracking")
+        {
+            <div class="max-w-4xl">
+                <h1 class="text-3xl font-bold text-gray-900 mb-6">Print Tracking Procedures</h1>
+                
+                <div class="prose prose-blue max-w-none">
+                    <h2>Starting a Print Job</h2>
+                    <ol>
+                        <li>Verify machine is ready and calibrated</li>
+                        <li>Select job from scheduled queue</li>
+                        <li>Confirm material and settings</li>
+                        <li>Start print and update job status</li>
+                        <li>Document start time and operator</li>
+                    </ol>
+                    
+                    <h2>Monitoring During Print</h2>
+                    <ul>
+                        <li>Check machine status every 2 hours</li>
+                        <li>Monitor temperature and layer progress</li>
+                        <li>Document any anomalies or issues</li>
+                        <li>Maintain print log with observations</li>
+                    </ul>
+                    
+                    <h2>Print Completion</h2>
+                    <ol>
+                        <li>Verify print completed successfully</li>
+                        <li>Allow proper cooldown time</li>
+                        <li>Remove and clean parts</li>
+                        <li>Update job status to completed</li>
+                        <li>Move parts to quality control</li>
+                    </ol>
+                    
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <h3 class="text-blue-900 font-semibold">Safety Reminder</h3>
+                        <p class="text-blue-800 text-sm">Always follow proper PPE requirements when handling hot materials and equipment.</p>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (section == "quality-control")
+        {
+            <div class="max-w-4xl">
+                <h1 class="text-3xl font-bold text-gray-900 mb-6">Quality Control Procedures</h1>
+                
+                <div class="prose prose-blue max-w-none">
+                    <h2>Initial Inspection</h2>
+                    <ol>
+                        <li>Visual inspection for defects</li>
+                        <li>Dimensional verification</li>
+                        <li>Surface finish assessment</li>
+                        <li>Documentation of findings</li>
+                    </ol>
+                    
+                    <h2>Quality Standards</h2>
+                    <ul>
+                        <li>Dimensional tolerance: ±0.1mm standard</li>
+                        <li>Surface roughness: Ra 6.3?m maximum</li>
+                        <li>Density: 99%+ of theoretical density</li>
+                        <li>No visible cracks or delamination</li>
+                    </ul>
+                    
+                    <h2>Rejection Criteria</h2>
+                    <div class="bg-red-50 p-4 rounded-lg">
+                        <h3 class="text-red-900 font-semibold">Immediate Rejection</h3>
+                        <ul class="text-red-800 text-sm">
+                            <li>Dimensional errors exceeding tolerance</li>
+                            <li>Visible cracks or structural defects</li>
+                            <li>Contamination or foreign materials</li>
+                            <li>Incomplete printing or layer adhesion issues</li>
+                        </ul>
+                    </div>
+                    
+                    <h2>Documentation Requirements</h2>
+                    <ul>
+                        <li>Complete inspection checklist</li>
+                        <li>Digital photos of parts</li>
+                        <li>Measurement data records</li>
+                        <li>Inspector signature and date</li>
+                    </ul>
+                </div>
+            </div>
+        }
+        else if (section == "machine-setup")
+        {
+            <div class="max-w-4xl">
+                <h1 class="text-3xl font-bold text-gray-900 mb-6">Machine Setup Procedures</h1>
+                
+                <div class="prose prose-blue max-w-none">
+                    <h2>Daily Startup Checklist</h2>
+                    <ol>
+                        <li>Power on main system and laser</li>
+                        <li>Check nitrogen gas pressure</li>
+                        <li>Verify build chamber cleanliness</li>
+                        <li>Calibrate recoater blade</li>
+                        <li>Run system diagnostics</li>
+                    </ol>
+                    
+                    <h2>Pre-Job Setup</h2>
+                    <ul>
+                        <li>Load appropriate material</li>
+                        <li>Set laser parameters for material</li>
+                        <li>Position build platform</li>
+                        <li>Upload and verify part files</li>
+                        <li>Run test patterns if required</li>
+                    </ul>
+                    
+                    <h2>Critical Parameters</h2>
+                    <div class="grid grid-cols-2 gap-4 not-prose">
+                        <div class="bg-gray-50 p-4 rounded">
+                            <h4 class="font-semibold">Laser Settings</h4>
+                            <ul class="text-sm text-gray-600">
+                                <li>Power: Material specific</li>
+                                <li>Speed: 1000-3000 mm/s</li>
+                                <li>Hatch spacing: 0.1-0.2mm</li>
+                            </ul>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded">
+                            <h4 class="font-semibold">Environment</h4>
+                            <ul class="text-sm text-gray-600">
+                                <li>Chamber temp: 35-80°C</li>
+                                <li>Oxygen level: &lt;0.1%</li>
+                                <li>Layer thickness: 20-50?m</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+    else if (category == "admin")
+    {
+        @if (section == "parts-management")
+        {
+            <div class="max-w-4xl">
+                <h1 class="text-3xl font-bold text-gray-900 mb-6">Parts Management</h1>
+                
+                <div class="prose prose-blue max-w-none">
+                    <h2>Adding New Parts</h2>
+                    <ol>
+                        <li>Navigate to Admin ? Parts Management</li>
+                        <li>Click "Add New Part" button</li>
+                        <li>Enter part details and specifications</li>
+                        <li>Upload 3D model files (STL/STP)</li>
+                        <li>Set material requirements</li>
+                        <li>Save and activate part</li>
+                    </ol>
+                    
+                    <h2>Part Categories</h2>
+                    <ul>
+                        <li><strong>Production Parts:</strong> Customer orders</li>
+                        <li><strong>Internal Parts:</strong> Company use</li>
+                        <li><strong>Test Parts:</strong> R&D and calibration</li>
+                        <li><strong>Sample Parts:</strong> Demonstration pieces</li>
+                    </ul>
+                    
+                    <h2>Required Information</h2>
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <ul class="text-blue-800">
+                            <li>Part name and description</li>
+                            <li>Material specification</li>
+                            <li>Dimensional requirements</li>
+                            <li>Estimated print time</li>
+                            <li>Customer information (if applicable)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (section == "user-management")
+        {
+            <div class="max-w-4xl">
+                <h1 class="text-3xl font-bold text-gray-900 mb-6">User Management</h1>
+                
+                <div class="prose prose-blue max-w-none">
+                    <h2>Creating User Accounts</h2>
+                    <ol>
+                        <li>Access Admin ? User Management</li>
+                        <li>Click "Add New User"</li>
+                        <li>Enter user details</li>
+                        <li>Assign appropriate role</li>
+                        <li>Set initial password</li>
+                        <li>Send login credentials to user</li>
+                    </ol>
+                    
+                    <h2>User Roles & Permissions</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 not-prose">
+                        <div class="bg-red-50 p-4 rounded border-l-4 border-red-400">
+                            <h4 class="font-semibold text-red-900">Administrator</h4>
+                            <ul class="text-sm text-red-700 mt-2">
+                                <li>Full system access</li>
+                                <li>User management</li>
+                                <li>System configuration</li>
+                                <li>Backup & restore</li>
+                            </ul>
+                        </div>
+                        <div class="bg-blue-50 p-4 rounded border-l-4 border-blue-400">
+                            <h4 class="font-semibold text-blue-900">Scheduler</h4>
+                            <ul class="text-sm text-blue-700 mt-2">
+                                <li>Job scheduling</li>
+                                <li>Priority management</li>
+                                <li>Production planning</li>
+                                <li>Reports viewing</li>
+                            </ul>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded border-l-4 border-green-400">
+                            <h4 class="font-semibold text-green-900">Operator</h4>
+                            <ul class="text-sm text-green-700 mt-2">
+                                <li>Print tracking</li>
+                                <li>Job status updates</li>
+                                <li>Quality control</li>
+                                <li>Basic reporting</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <h2>Password Policy</h2>
+                    <ul>
+                        <li>Minimum 8 characters</li>
+                        <li>Must include uppercase and lowercase</li>
+                        <li>Must include numbers</li>
+                        <li>Password expiry: 90 days</li>
+                    </ul>
+                </div>
+            </div>
+        }
+        else if (section == "system-settings")
+        {
+            <div class="max-w-4xl">
+                <h1 class="text-3xl font-bold text-gray-900 mb-6">System Settings Configuration</h1>
+                
+                <div class="prose prose-blue max-w-none">
+                    <h2>General Settings</h2>
+                    <ul>
+                        <li>Company information and branding</li>
+                        <li>Time zone configuration</li>
+                        <li>Default language settings</li>
+                        <li>Email notification preferences</li>
+                    </ul>
+                    
+                    <h2>Scheduler Configuration</h2>
+                    <ul>
+                        <li>Default job priorities</li>
+                        <li>Automatic scheduling rules</li>
+                        <li>Material changeover times</li>
+                        <li>Machine capacity settings</li>
+                    </ul>
+                    
+                    <h2>Security Settings</h2>
+                    <div class="bg-yellow-50 p-4 rounded-lg">
+                        <h3 class="text-yellow-900 font-semibold">Important Security Options</h3>
+                        <ul class="text-yellow-800">
+                            <li>Session timeout duration</li>
+                            <li>Failed login attempt limits</li>
+                            <li>Password complexity requirements</li>
+                            <li>Audit log retention period</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (section == "backup-restore")
+        {
+            <div class="max-w-4xl">
+                <h1 class="text-3xl font-bold text-gray-900 mb-6">Backup & Restore Procedures</h1>
+                
+                <div class="prose prose-blue max-w-none">
+                    <h2>Automated Backup Schedule</h2>
+                    <ul>
+                        <li><strong>Daily:</strong> Incremental backup at 2:00 AM</li>
+                        <li><strong>Weekly:</strong> Full backup every Sunday</li>
+                        <li><strong>Monthly:</strong> Archive backup to offsite storage</li>
+                    </ul>
+                    
+                    <h2>Manual Backup Process</h2>
+                    <ol>
+                        <li>Navigate to Admin ? Backup & Restore</li>
+                        <li>Select backup type (Full/Incremental)</li>
+                        <li>Choose backup location</li>
+                        <li>Click "Start Backup"</li>
+                        <li>Verify backup completion</li>
+                    </ol>
+                    
+                    <h2>Restore Procedures</h2>
+                    <div class="bg-red-50 p-4 rounded-lg border-l-4 border-red-400">
+                        <h3 class="text-red-900 font-semibold">?? Critical Warning</h3>
+                        <p class="text-red-800 text-sm">Restoration will overwrite current data. Always verify backup integrity before proceeding.</p>
+                    </div>
+                    
+                    <ol>
+                        <li>Stop all active operations</li>
+                        <li>Select restore point</li>
+                        <li>Confirm restoration process</li>
+                        <li>Wait for completion</li>
+                        <li>Verify system functionality</li>
+                    </ol>
+                </div>
+            </div>
+        }
+    }
+    else if (category == "emergency")
+    {
+        @if (section == "system-failure")
+        {
+            <div class="max-w-4xl">
+                <h1 class="text-3xl font-bold text-red-900 mb-6">?? System Failure Response</h1>
+                
+                <div class="prose prose-red max-w-none">
+                    <div class="bg-red-100 p-4 rounded-lg border-l-4 border-red-500 mb-6">
+                        <h2 class="text-red-900 mt-0">Immediate Actions</h2>
+                        <ol class="text-red-800">
+                            <li><strong>Safety First:</strong> Ensure personnel safety</li>
+                            <li><strong>Isolate Problem:</strong> Stop affected systems</li>
+                            <li><strong>Assess Damage:</strong> Quick damage assessment</li>
+                            <li><strong>Notify Management:</strong> Contact emergency contacts</li>
+                        </ol>
+                    </div>
+                    
+                    <h2>Emergency Contacts</h2>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <ul>
+                            <li><strong>IT Support:</strong> ext. 911 or (555) 123-4567</li>
+                            <li><strong>Maintenance:</strong> ext. 912 or (555) 123-4568</li>
+                            <li><strong>Management:</strong> ext. 900 or (555) 123-4569</li>
+                            <li><strong>Emergency Services:</strong> 911</li>
+                        </ul>
+                    </div>
+                    
+                    <h2>Documentation Requirements</h2>
+                    <ul>
+                        <li>Time and date of incident</li>
+                        <li>Personnel involved</li>
+                        <li>Description of failure</li>
+                        <li>Actions taken</li>
+                        <li>Current system status</li>
+                    </ul>
+                </div>
+            </div>
+        }
+        else if (section == "data-recovery")
+        {
+            <div class="max-w-4xl">
+                <h1 class="text-3xl font-bold text-red-900 mb-6">?? Data Recovery Procedures</h1>
+                
+                <div class="prose prose-red max-w-none">
+                    <h2>Assessment Phase</h2>
+                    <ol>
+                        <li>Determine extent of data loss</li>
+                        <li>Identify last known good backup</li>
+                        <li>Assess system integrity</li>
+                        <li>Estimate recovery time</li>
+                    </ol>
+                    
+                    <h2>Recovery Options</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 not-prose">
+                        <div class="bg-blue-50 p-4 rounded">
+                            <h4 class="font-semibold text-blue-900">Automatic Recovery</h4>
+                            <ul class="text-sm text-blue-700">
+                                <li>System rollback</li>
+                                <li>Database restore</li>
+                                <li>File system recovery</li>
+                            </ul>
+                        </div>
+                        <div class="bg-orange-50 p-4 rounded">
+                            <h4 class="font-semibold text-orange-900">Manual Recovery</h4>
+                            <ul class="text-sm text-orange-700">
+                                <li>Individual file restoration</li>
+                                <li>Partial data recovery</li>
+                                <li>Custom recovery scripts</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <h2>Prevention Measures</h2>
+                    <ul>
+                        <li>Regular backup verification</li>
+                        <li>RAID configuration monitoring</li>
+                        <li>Off-site backup maintenance</li>
+                        <li>Recovery testing quarterly</li>
+                    </ul>
+                </div>
+            </div>
+        }
+        else if (section == "machine-emergency")
+        {
+            <div class="max-w-4xl">
+                <h1 class="text-3xl font-bold text-red-900 mb-6">? Machine Emergency Stop</h1>
+                
+                <div class="prose prose-red max-w-none">
+                    <div class="bg-red-100 p-6 rounded-lg border-2 border-red-500 mb-6">
+                        <h2 class="text-red-900 mt-0 text-xl">EMERGENCY STOP PROCEDURE</h2>
+                        <ol class="text-red-800 font-semibold">
+                            <li>Press RED EMERGENCY STOP button</li>
+                            <li>Turn off laser power at main switch</li>
+                            <li>Close nitrogen supply valve</li>
+                            <li>Evacuate immediate area if necessary</li>
+                        </ol>
+                    </div>
+                    
+                    <h2>When to Use Emergency Stop</h2>
+                    <ul>
+                        <li>Fire or smoke detection</li>
+                        <li>Unusual noise or vibration</li>
+                        <li>Laser safety system failure</li>
+                        <li>Personnel injury</li>
+                        <li>Equipment malfunction</li>
+                    </ul>
+                    
+                    <h2>Post-Emergency Actions</h2>
+                    <ol>
+                        <li>Ensure all personnel are safe</li>
+                        <li>Do not restart equipment</li>
+                        <li>Contact maintenance immediately</li>
+                        <li>Document the incident</li>
+                        <li>Wait for clearance before resuming</li>
+                    </ol>
+                    
+                    <div class="bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-400">
+                        <h3 class="text-yellow-900 font-semibold">Safety Reminder</h3>
+                        <p class="text-yellow-800 text-sm">Never attempt to.restart equipment after an emergency stop without proper inspection and clearance from qualified maintenance personnel.</p>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="max-w-4xl">
+            <div class="text-center py-12">
+                <div class="text-gray-400 text-6xl mb-4">??</div>
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">SOP Content Not Found</h2>
+                <p class="text-gray-600">The requested SOP section is not available. Please select a different category or section.</p>
+            </div>
+        </div>
+    }
+</div>

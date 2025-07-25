@@ -1,0 +1,231 @@
+@page
+@model OpCentrix.Pages.Admin.SOPModel
+@{
+    ViewData["Title"] = "Standard Operating Procedures";
+    Layout = "_AdminLayout";
+}
+
+<div class="min-h-screen bg-gray-50">
+    <!-- Header -->
+    <div class="bg-white shadow-sm border-b border-gray-200 header-actions">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="py-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">Standard Operating Procedures</h1>
+                        <p class="mt-1 text-sm text-gray-500">OpCentrix SLS Metal Printing Scheduler</p>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <button onclick="printSOP()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                            Print Current SOP
+                        </button>
+                        <button onclick="exportAllSOPs()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                            Export All SOPs
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="flex flex-col lg:flex-row gap-8">
+            
+            <!-- Sidebar Navigation -->
+            <div class="lg:w-1/4 sidebar">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-8">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">SOP Categories</h2>
+                    
+                    <!-- Overview -->
+                    <div class="mb-4">
+                        <button onclick="loadSOP('overview', 'general')" 
+                                class="w-full text-left px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-100 
+                                       @(Model.SOPCategory == "overview" ? "bg-blue-100 text-blue-700" : "text-gray-700")">
+                            System Overview
+                        </button>
+                    </div>
+
+                    <!-- Scheduling Operations -->
+                    <div class="mb-4">
+                        <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wide mb-2">Scheduling Operations</h3>
+                        <div class="space-y-1">
+                            <button onclick="loadSOP('scheduling', 'job-creation')" 
+                                    class="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-gray-100 
+                                           @(Model.SOPCategory == "scheduling" && Model.SOPSection == "job-creation" ? "bg-blue-100 text-blue-700" : "text-gray-600")">
+                                Job Creation & Scheduling
+                            </button>
+                            <button onclick="loadSOP('scheduling', 'material-changeover')" 
+                                    class="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-gray-100 
+                                           @(Model.SOPCategory == "scheduling" && Model.SOPSection == "material-changeover" ? "bg-blue-100 text-blue-700" : "text-gray-600")">
+                                Material Changeover
+                            </button>
+                            <button onclick="loadSOP('scheduling', 'conflict-resolution')" 
+                                    class="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-gray-100 
+                                           @(Model.SOPCategory == "scheduling" && Model.SOPSection == "conflict-resolution" ? "bg-blue-100 text-blue-700" : "text-gray-600")">
+                                Conflict Resolution
+                            </button>
+                            <button onclick="loadSOP('scheduling', 'priority-management')" 
+                                    class="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-gray-100 
+                                           @(Model.SOPCategory == "scheduling" && Model.SOPSection == "priority-management" ? "bg-blue-100 text-blue-700" : "text-gray-600")">
+                                Priority Management
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Production Operations -->
+                    <div class="mb-4">
+                        <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wide mb-2">Production Operations</h3>
+                        <div class="space-y-1">
+                            <button onclick="loadSOP('production', 'print-tracking')" 
+                                    class="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-gray-100 
+                                           @(Model.SOPCategory == "production" && Model.SOPSection == "print-tracking" ? "bg-blue-100 text-blue-700" : "text-gray-600")">
+                                Print Tracking
+                            </button>
+                            <button onclick="loadSOP('production', 'quality-control')" 
+                                    class="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-gray-100 
+                                           @(Model.SOPCategory == "production" && Model.SOPSection == "quality-control" ? "bg-blue-100 text-blue-700" : "text-gray-600")">
+                                Quality Control
+                            </button>
+                            <button onclick="loadSOP('production', 'machine-setup')" 
+                                    class="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-gray-100 
+                                           @(Model.SOPCategory == "production" && Model.SOPSection == "machine-setup" ? "bg-blue-100 text-blue-700" : "text-gray-600")">
+                                Machine Setup
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Administration -->
+                    <div class="mb-4">
+                        <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wide mb-2">Administration</h3>
+                        <div class="space-y-1">
+                            <button onclick="loadSOP('admin', 'parts-management')" 
+                                    class="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-gray-100 
+                                           @(Model.SOPCategory == "admin" && Model.SOPSection == "parts-management" ? "bg-blue-100 text-blue-700" : "text-gray-600")">
+                                Parts Management
+                            </button>
+                            <button onclick="loadSOP('admin', 'user-management')" 
+                                    class="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-gray-100 
+                                           @(Model.SOPCategory == "admin" && Model.SOPSection == "user-management" ? "bg-blue-100 text-blue-700" : "text-gray-600")">
+                                User Management
+                            </button>
+                            <button onclick="loadSOP('admin', 'system-settings')" 
+                                    class="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-gray-100 
+                                           @(Model.SOPCategory == "admin" && Model.SOPSection == "system-settings" ? "bg-blue-100 text-blue-700" : "text-gray-600")">
+                                System Settings
+                            </button>
+                            <button onclick="loadSOP('admin', 'backup-restore')" 
+                                    class="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-gray-100 
+                                           @(Model.SOPCategory == "admin" && Model.SOPSection == "backup-restore" ? "bg-blue-100 text-blue-700" : "text-gray-600")">
+                                Backup & Restore
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Emergency Procedures -->
+                    <div class="mb-4">
+                        <h3 class="text-sm font-medium text-red-500 uppercase tracking-wide mb-2">Emergency Procedures</h3>
+                        <div class="space-y-1">
+                            <button onclick="loadSOP('emergency', 'system-failure')" 
+                                    class="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-red-50 text-red-600">
+                                System Failure Response
+                            </button>
+                            <button onclick="loadSOP('emergency', 'data-recovery')" 
+                                    class="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-red-50 text-red-600">
+                                Data Recovery
+                            </button>
+                            <button onclick="loadSOP('emergency', 'machine-emergency')" 
+                                    class="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-red-50 text-red-600">
+                                Machine Emergency Stop
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content Area -->
+            <div class="lg:w-3/4 main-content">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                    <div id="sop-content">
+                        <!-- Default content will be loaded here -->
+                        @await Html.PartialAsync("_SOPContent", new { Category = Model.SOPCategory, Section = Model.SOPSection })
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function loadSOP(category, section) {
+        // Update URL without page reload
+        const newUrl = `/Admin/SOP?category=${category}&section=${section}`;
+        window.history.pushState({category, section}, '', newUrl);
+        
+        // Load new content
+        htmx.ajax('GET', `/Admin/SOP?handler=GetSOPContent&category=${category}&section=${section}`, {
+            target: '#sop-content',
+            swap: 'innerHTML'
+        });
+        
+        // Update active states
+        document.querySelectorAll('button[onclick^="loadSOP"]').forEach(btn => {
+            btn.classList.remove('bg-blue-100', 'text-blue-700');
+            btn.classList.add('text-gray-600');
+        });
+        
+        event.target.classList.add('bg-blue-100', 'text-blue-700');
+        event.target.classList.remove('text-gray-600');
+    }
+
+    function printSOP() {
+        window.print();
+    }
+
+    function exportAllSOPs() {
+        // Create export functionality
+        const link = document.createElement('a');
+        link.href = '/Admin/SOP?handler=ExportAll';
+        link.download = 'OpCentrix_SOPs.txt';
+        link.click();
+    }
+
+    // Load default content on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const category = urlParams.get('category') || 'overview';
+        const section = urlParams.get('section') || 'general';
+        
+        // Set active button
+        const activeButton = document.querySelector(`button[onclick="loadSOP('${category}', '${section}')"]`);
+        if (activeButton) {
+            activeButton.classList.add('bg-blue-100', 'text-blue-700');
+            activeButton.classList.remove('text-gray-600');
+        }
+    });
+</script>
+
+<style>
+    @@media print {
+        .sidebar, .header-actions {
+            display: none !important;
+        }
+        
+        .main-content {
+            width: 100% !important;
+        }
+        
+        .lg\\:w-3\\/4 {
+            width: 100% !important;
+        }
+        
+        body, .bg-gray-50 {
+            background: white !important;
+        }
+        
+        .rounded-lg, .shadow-sm, .border {
+            border: none !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+        }
+    }
+</style>

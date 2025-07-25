@@ -292,7 +292,31 @@
         </div>
     </footer>
 
+    <!-- FIXED SCRIPT LOADING ORDER: jQuery MUST come first -->
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script>
+        // Verify jQuery is loaded before continuing
+        if (typeof jQuery === 'undefined') {
+            console.error('CRITICAL: jQuery failed to load! This will cause validation errors.');
+            document.body.innerHTML += '<div style="position: fixed; top: 0; left: 0; right: 0; background: red; color: white; padding: 10px; text-align: center; z-index: 99999;">ERROR: jQuery failed to load. Please refresh the page.</div>';
+        } else {
+            console.log('✅ jQuery loaded successfully:', jQuery.fn.jquery);
+        }
+    </script>
+    
+    <!-- Load validation plugins AFTER jQuery -->
+    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+    <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+    <script>
+        // Verify validation plugins loaded
+        if (typeof jQuery.validator === 'undefined') {
+            console.error('CRITICAL: jQuery Validation failed to load!');
+        } else {
+            console.log('✅ jQuery Validation loaded successfully');
+        }
+    </script>
+    
+    <!-- Load other scripts AFTER validation -->
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
 
