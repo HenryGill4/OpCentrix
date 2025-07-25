@@ -17,6 +17,9 @@ namespace OpCentrix.Data
         public DbSet<UserSettings> UserSettings { get; set; }
         public DbSet<JobLogEntry> JobLogEntries { get; set; }
         public DbSet<SlsMachine> SlsMachines { get; set; }
+        
+        // FIXED: Add missing MachineDataSnapshot DbSet
+        public DbSet<MachineDataSnapshot> MachineDataSnapshots { get; set; }
 
         // NEW: Print tracking tables for the refactored workflow
         public DbSet<BuildJob> BuildJobs { get; set; }

@@ -125,21 +125,21 @@ namespace OpCentrix.Services
         public string GetStatusMessage()
         {
             if (!string.IsNullOrEmpty(ValidationError))
-                return $"? Database Error: {ValidationError}";
+                return $"ERROR: Database Error: {ValidationError}";
 
             if (!DatabaseConnected)
-                return "? Database Connection Failed";
+                return "ERROR: Database Connection Failed";
 
             if (!HasUsers || !HasMachines)
-                return "?? Missing Essential Data (Users/Machines)";
+                return "WARNING: Missing Essential Data (Users/Machines)";
 
             if (HasSampleData)
-                return "?? Sample Data Detected - Remove for Production";
+                return "WARNING: Sample Data Detected - Remove for Production";
 
             if (RealPartsCount == 0)
-                return "?? Ready for Your Parts - Add Real Manufacturing Data";
+                return "INFO: Ready for Your Parts - Add Real Manufacturing Data";
 
-            return $"? Production Ready - {RealPartsCount} parts, {RealJobsCount} jobs";
+            return $"SUCCESS: Production Ready - {RealPartsCount} parts, {RealJobsCount} jobs";
         }
     }
 }

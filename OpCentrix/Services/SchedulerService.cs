@@ -10,19 +10,21 @@ namespace OpCentrix.Services
         SchedulerPageViewModel GetSchedulerData(string? zoom = null, DateTime? startDate = null);
         bool ValidateJobScheduling(Job job, List<Job> existingJobs, out List<string> errors);
         (int maxLayers, int rowHeight) CalculateMachineRowLayout(string machineId, List<Job> jobs);
-        Task<bool> ValidateSlsJobCompatibilityAsync(Job job, SchedulerContext context);
-        Task<double> CalculateOptimalPowderChangeoverTimeAsync(string machineId, string newMaterial, SchedulerContext context);
-        Task<List<string>> GetMachineCapabilityIssuesAsync(Job job, SchedulerContext context);
-        Task<decimal> CalculateSlsJobCostEstimateAsync(Job job, SchedulerContext context);
-        Task<List<Job>> OptimizeBuildPlatformLayoutAsync(string machineId, DateTime buildDate, SchedulerContext context);
+        Task<bool> ValidateSlsJobCompatibilityAsync(Job job);
+        Task<double> CalculateOptimalPowderChangeoverTimeAsync(string machineId, string newMaterial);
+        Task<List<string>> GetMachineCapabilityIssuesAsync(Job job);
+        Task<decimal> CalculateSlsJobCostEstimateAsync(Job job);
+        Task<List<Job>> OptimizeBuildPlatformLayoutAsync(string machineId, DateTime buildDate);
     }
 
     public class SchedulerService : ISchedulerService
     {
+        private readonly SchedulerContext _context;
         private readonly ILogger<SchedulerService> _logger;
 
-        public SchedulerService(ILogger<SchedulerService> logger)
+        public SchedulerService(SchedulerContext context, ILogger<SchedulerService> logger)
         {
+            _context = context;
             _logger = logger;
         }
 
@@ -167,12 +169,12 @@ namespace OpCentrix.Services
             }
         }
 
-        public async Task<bool> ValidateSlsJobCompatibilityAsync(Job job, SchedulerContext context)
+        public async Task<bool> ValidateSlsJobCompatibilityAsync(Job job)
         {
             try
             {
                 // Get machine configuration
-                var machine = await context.SlsMachines
+                var machine = await _context.SlsMachines
                     .FirstOrDefaultAsync(m => m.MachineId == job.MachineId);
 
                 if (machine == null)
@@ -221,19 +223,19 @@ namespace OpCentrix.Services
             }
         }
 
-        public async Task<double> CalculateOptimalPowderChangeoverTimeAsync(string machineId, string newMaterial, SchedulerContext context)
+        public async Task<double> CalculateOptimalPowderChangeoverTimeAsync(string machineId, string newMaterial)
         {
             try
             {
                 // Get machine current material
-                var machine = await context.SlsMachines
+                var machine = await _context.SlsMachines
                     .FirstOrDefaultAsync(m => m.MachineId == machineId);
 
                 if (machine == null)
                     return 0;
 
                 // Get the last job to determine current material
-                var lastJob = await context.Jobs
+                var lastJob = await _context.Jobs
                     .Where(j => j.MachineId == machineId && j.Status == "Completed")
                     .OrderByDescending(j => j.ActualEnd ?? j.ScheduledEnd)
                     .FirstOrDefaultAsync();
@@ -272,13 +274,13 @@ namespace OpCentrix.Services
             }
         }
 
-        public async Task<List<string>> GetMachineCapabilityIssuesAsync(Job job, SchedulerContext context)
+        public async Task<List<string>> GetMachineCapabilityIssuesAsync(Job job)
         {
             var issues = new List<string>();
 
             try
             {
-                var machine = await context.SlsMachines
+                var machine = await _context.SlsMachines
                     .FirstOrDefaultAsync(m => m.MachineId == job.MachineId);
 
                 if (machine == null)
@@ -337,7 +339,7 @@ namespace OpCentrix.Services
             }
         }
 
-        public async Task<decimal> CalculateSlsJobCostEstimateAsync(Job job, SchedulerContext context)
+        public async Task<decimal> CalculateSlsJobCostEstimateAsync(Job job)
         {
             try
             {
@@ -364,7 +366,7 @@ namespace OpCentrix.Services
                 }
 
                 // Add powder changeover cost if needed
-                var changeoverTime = await CalculateOptimalPowderChangeoverTimeAsync(job.MachineId, job.SlsMaterial, context);
+                var changeoverTime = await CalculateOptimalPowderChangeoverTimeAsync(job.MachineId, job.SlsMaterial);
                 if (changeoverTime > 0)
                 {
                     totalCost += (decimal)(changeoverTime / 60.0) * job.LaborCostPerHour; // Convert minutes to hours
@@ -381,12 +383,12 @@ namespace OpCentrix.Services
             }
         }
 
-        public async Task<List<Job>> OptimizeBuildPlatformLayoutAsync(string machineId, DateTime buildDate, SchedulerContext context)
+        public async Task<List<Job>> OptimizeBuildPlatformLayoutAsync(string machineId, DateTime buildDate)
         {
             try
             {
                 // Get all jobs scheduled for this machine on this date
-                var jobs = await context.Jobs
+                var jobs = await _context.Jobs
                     .Include(j => j.Part)
                     .Where(j => j.MachineId == machineId &&
                                j.ScheduledStart.Date == buildDate.Date)
@@ -398,7 +400,7 @@ namespace OpCentrix.Services
                     return jobs;
 
                 // Get machine build envelope
-                var machine = await context.SlsMachines
+                var machine = await _context.SlsMachines
                     .FirstOrDefaultAsync(m => m.MachineId == machineId);
 
                 if (machine == null)
