@@ -1,8 +1,8 @@
-/* OpCentrix Scheduler - Enhanced 2-Month View CSS */
+﻿/* OpCentrix Scheduler - Enhanced Multi-Zoom CSS with Production-Ready Job Styling */
 
-/* Enhanced Grid Variables for 2-Month View */
+/* Enhanced Grid Variables for All Zoom Levels */
 :root {
-    --scheduler-slot-width: 90px;
+    --scheduler-slot-width: 120px; /* Default - updated by JavaScript */
     --scheduler-machine-label-width: 180px;
     --scheduler-row-min-height: 120px;
     --scheduler-header-height: 70px;
@@ -11,9 +11,20 @@
     --scheduler-today-color: #dbeafe;
     --scheduler-weekend-color: #f9fafb;
     --scheduler-current-time-color: #3b82f6;
+    
+    /* Machine-specific color scheme */
+    --ti1-primary: #8b5cf6;
+    --ti1-secondary: #a855f7;
+    --ti1-light: #e0e7ff;
+    --ti2-primary: #3b82f6;
+    --ti2-secondary: #2563eb;
+    --ti2-light: #dbeafe;
+    --inc-primary: #f59e0b;
+    --inc-secondary: #d97706;
+    --inc-light: #fef3c7;
 }
 
-/* Enhanced Grid Container for 2-Month View */
+/* Enhanced Grid Container for Multi-Zoom Support */
 .scheduler-grid-container {
     display: block;
     width: 100%;
@@ -24,6 +35,38 @@
     overflow: auto;
     max-height: 80vh;
     position: relative;
+}
+
+/* Zoom-specific slot width adjustments */
+.scheduler-grid-container[data-zoom="day"] {
+    --scheduler-slot-width: 120px;
+}
+.scheduler-grid-container[data-zoom="12h"] {
+    --scheduler-slot-width: 100px;
+}
+.scheduler-grid-container[data-zoom="10h"] {
+    --scheduler-slot-width: 90px;
+}
+.scheduler-grid-container[data-zoom="8h"] {
+    --scheduler-slot-width: 85px;
+}
+.scheduler-grid-container[data-zoom="6h"] {
+    --scheduler-slot-width: 80px;
+}
+.scheduler-grid-container[data-zoom="4h"] {
+    --scheduler-slot-width: 75px;
+}
+.scheduler-grid-container[data-zoom="2h"] {
+    --scheduler-slot-width: 70px;
+}
+.scheduler-grid-container[data-zoom="hour"] {
+    --scheduler-slot-width: 65px;
+}
+.scheduler-grid-container[data-zoom="30min"] {
+    --scheduler-slot-width: 50px;
+}
+.scheduler-grid-container[data-zoom="15min"] {
+    --scheduler-slot-width: 30px;
 }
 
 /* Enhanced Header Row */
@@ -39,8 +82,8 @@
 
 /* Machine Column Header */
 .scheduler-grid-header:first-child {
-    width: var(--scheduler-machine-label-width);
-    min-width: var(--scheduler-machine-label-width);
+/*    width: var(--scheduler-machine-label-width);
+    min-width: var(--scheduler-machine-label-width);*/
     background: #f8fafc;
     border-right: 2px solid var(--scheduler-border-color);
     font-weight: 600;
@@ -61,6 +104,21 @@
     min-width: 0;
 }
 
+/* Enhanced Date Headers Container for proper grid alignment */
+.scheduler-date-headers {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: var(--scheduler-slot-width);
+    flex: 1;
+    min-width: 0;
+}
+
+/* Override for day headers to use larger width */
+.scheduler-date-headers .scheduler-grid-header[data-slot="0"] {
+    grid-column: span 1;
+    justify-self: stretch;
+}
+
 /* Individual Date Headers */
 .scheduler-grid-header {
     width: var(--scheduler-slot-width);
@@ -75,6 +133,42 @@
     background: #fafbfc;
     color: #374151;
     position: relative;
+}
+
+/* Day headers (first slot of each day) need more width for day name + date */
+.scheduler-grid-header[data-slot="0"] {
+    min-width: calc(var(--scheduler-slot-width) * 1.2);
+    width: calc(var(--scheduler-slot-width) * 1.2);
+    font-weight: 600;
+    background: #f8fafc;
+}
+
+.scheduler-grid-header[data-slot="0"] .text-center {
+    width: 100%;
+    overflow: hidden;
+}
+
+.scheduler-grid-header[data-slot="0"] .font-bold {
+    font-size: 0.8rem;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.scheduler-grid-header[data-slot="0"] .text-sm {
+    font-size: 0.7rem;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Time slot headers (subsequent slots) can be narrower */
+.scheduler-grid-header:not([data-slot="0"]) {
+    width: var(--scheduler-slot-width);
+    min-width: var(--scheduler-slot-width);
+    font-size: 0.7rem;
 }
 
 /* Today Highlight in Header */
@@ -101,7 +195,7 @@
     background: var(--scheduler-hover-color);
 }
 
-/* Machine Label */
+/* Enhanced Machine Label Styling */
 .scheduler-machine-label {
     width: var(--scheduler-machine-label-width);
     min-width: var(--scheduler-machine-label-width);
@@ -118,23 +212,23 @@
     transition: all 0.15s ease;
 }
 
-/* Machine Label Colors */
-.scheduler-machine-label.ti1 {
-    background: linear-gradient(135deg, #ddd6fe 0%, #e0e7ff 100%);
+/* Machine-Specific Label Colors - Clean and Distinct */
+.scheduler-machine-label.machine-ti1 {
+    background: linear-gradient(135deg, var(--ti1-light) 0%, #e0e7ff 100%);
     color: #5b21b6;
-    border-color: #c4b5fd;
+    border-color: var(--ti1-secondary);
 }
 
-.scheduler-machine-label.ti2 {
-    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+.scheduler-machine-label.machine-ti2 {
+    background: linear-gradient(135deg, var(--ti2-light) 0%, #bfdbfe 100%);
     color: #1e40af;
-    border-color: #93c5fd;
+    border-color: var(--ti2-secondary);
 }
 
-.scheduler-machine-label.inc {
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+.scheduler-machine-label.machine-inc {
+    background: linear-gradient(135deg, var(--inc-light) 0%, #fde68a 100%);
     color: #92400e;
-    border-color: #fbbf24;
+    border-color: var(--inc-secondary);
 }
 
 /* Time Slots Container */
@@ -186,24 +280,6 @@
     border-color: #f1f5f9;
 }
 
-/* Also apply weekend styling to bg-gray-50 class for compatibility */
-.scheduler-grid-cell.bg-gray-50 {
-    background: #fafbfc;
-    border-color: #f1f5f9;
-}
-
-/* Override any Tailwind bg-gray-25 classes that might still exist */
-.scheduler-grid-cell.bg-gray-25 {
-    background: #fafbfc !important;
-    border-color: #f1f5f9 !important;
-}
-
-/* Override Tailwind bg-blue-25 for today cells - remove to make consistent */
-.scheduler-grid-cell.bg-blue-25 {
-    background: #ffffff !important;
-    border-color: #e5e7eb !important;
-}
-
 /* Enhanced off-hours styling for actual off-hours only */
 .scheduler-grid-cell.off-hours {
     background: repeating-linear-gradient(
@@ -223,7 +299,7 @@
     border-color: #f1f5f9 !important;
 }
 
-/* Enhanced Job Blocks */
+/* PRODUCTION-READY JOB BLOCK STYLING - COMPLETE OVERHAUL */
 .job-block {
     position: absolute;
     border-radius: 6px;
@@ -234,64 +310,110 @@
     cursor: pointer;
     transition: all 0.2s ease;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(4px);
+    border: 2px solid rgba(255, 255, 255, 0.3);
     overflow: hidden;
     display: flex;
     align-items: center;
-    min-height: 28px;
+    min-height: 32px;
+    backdrop-filter: blur(2px);
 }
 
 .job-block:hover {
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     z-index: 25 !important;
+    border-color: rgba(255, 255, 255, 0.5);
 }
 
-/* Job Block Status Colors */
+/* JOB STATUS COLOR SYSTEM - Clean and Professional */
 .job-block.status-scheduled {
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+    border-left: 4px solid #4f46e5;
 }
 
 .job-block.status-preheating {
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+    border-left: 4px solid #f59e0b;
 }
 
 .job-block.status-building {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    border-left: 4px solid #047857;
 }
 
 .job-block.status-cooling {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+    border-left: 4px solid #1d4ed8;
 }
 
 .job-block.status-post-processing {
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
+    border-left: 4px solid #6d28d9;
 }
 
 .job-block.status-completed {
-    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%) !important;
+    border-left: 4px solid #15803d;
 }
 
 .job-block.status-on-hold {
-    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%) !important;
+    border-left: 4px solid #374151;
 }
 
 .job-block.status-cancelled {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+    border-left: 4px solid #b91c1c;
 }
 
-/* Machine-Specific Job Block Styling */
-.job-block.ti1 {
-    border-left: 4px solid #a855f7;
+.job-block.status-delayed {
+    background: linear-gradient(135deg, #f97316 0%, #ea580c 100%) !important;
+    border-left: 4px solid #c2410c;
 }
 
-.job-block.ti2 {
-    border-left: 4px solid #3b82f6;
+/* MACHINE-SPECIFIC JOB STYLING - Subtle Accent */
+.job-block.machine-ti1 {
+    border-top: 2px solid var(--ti1-primary);
 }
 
-.job-block.inc {
-    border-left: 4px solid #f59e0b;
+.job-block.machine-ti2 {
+    border-top: 2px solid var(--ti2-primary);
+}
+
+.job-block.machine-inc {
+    border-top: 2px solid var(--inc-primary);
+}
+
+/* PRIORITY INDICATORS - Visual Clarity */
+.job-block.priority-1::after {
+    content: '!';
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    font-size: 10px;
+    font-weight: bold;
+    color: #ef4444;
+    background: white;
+    border-radius: 50%;
+    width: 12px;
+    height: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.job-block.priority-2::after {
+    content: '⚠';
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    font-size: 8px;
+    color: #f59e0b;
+}
+
+.job-block.priority-5 {
+    opacity: 0.8;
 }
 
 /* Enhanced Add Job Button */
@@ -304,10 +426,86 @@
     opacity: 1;
 }
 
-/* Responsive Design for 2-Month View */
+/* Job Block Content Styling */
+.job-block-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 2px;
+    overflow: hidden;
+}
+
+.job-block-title {
+    font-weight: 600;
+    font-size: 0.7rem;
+    line-height: 1.1;
+    margin-bottom: 1px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.job-block-details {
+    font-size: 0.6rem;
+    line-height: 1.1;
+    opacity: 0.9;
+}
+
+.job-block-details > div {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Embedded Scheduler Styles */
+.scheduler-embedded-grid {
+    display: grid;
+    height: fit-content;
+}
+
+.scheduler-embedded-grid .scheduler-grid-header {
+    height: 40px;
+    padding: 4px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-right: 1px solid #e5e7eb;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+/* Fix for embedded scheduler day headers */
+.scheduler-embedded-grid .scheduler-grid-header[data-date] {
+    min-width: 80px;
+    width: 80px;
+}
+
+.scheduler-embedded-grid .scheduler-grid-header .text-center {
+    width: 100%;
+    overflow: hidden;
+}
+
+.scheduler-embedded-grid .scheduler-grid-header .font-bold {
+    font-size: 0.75rem;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.scheduler-embedded-grid .scheduler-grid-header .text-xs {
+    font-size: 0.65rem;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* RESPONSIVE DESIGN FOR ALL ZOOM LEVELS */
 @media (max-width: 1600px) {
     :root {
-        --scheduler-slot-width: 70px;
         --scheduler-machine-label-width: 150px;
     }
     
@@ -315,17 +513,60 @@
         font-size: 0.7rem;
     }
     
+    .scheduler-grid-header[data-slot="0"] {
+        min-width: calc(var(--scheduler-slot-width) * 1.15);
+        width: calc(var(--scheduler-slot-width) * 1.15);
+    }
+    
     .job-block {
         font-size: 0.7rem;
         padding: 3px 6px;
-        min-height: 24px;
+        min-height: 28px;
+    }
+    
+    .job-block-title {
+        font-size: 0.65rem;
+    }
+    
+    .job-block-details {
+        font-size: 0.55rem;
     }
 }
 
 @media (max-width: 1200px) {
     :root {
-        --scheduler-slot-width: 60px;
         --scheduler-machine-label-width: 130px;
+    }
+    
+    .scheduler-grid-container[data-zoom="day"] {
+        --scheduler-slot-width: 100px;
+    }
+    .scheduler-grid-container[data-zoom="12h"] {
+        --scheduler-slot-width: 85px;
+    }
+    .scheduler-grid-container[data-zoom="10h"] {
+        --scheduler-slot-width: 80px;
+    }
+    .scheduler-grid-container[data-zoom="8h"] {
+        --scheduler-slot-width: 75px;
+    }
+    .scheduler-grid-container[data-zoom="6h"] {
+        --scheduler-slot-width: 70px;
+    }
+    .scheduler-grid-container[data-zoom="4h"] {
+        --scheduler-slot-width: 65px;
+    }
+    .scheduler-grid-container[data-zoom="2h"] {
+        --scheduler-slot-width: 60px;
+    }
+    .scheduler-grid-container[data-zoom="hour"] {
+        --scheduler-slot-width: 55px;
+    }
+    .scheduler-grid-container[data-zoom="30min"] {
+        --scheduler-slot-width: 45px;
+    }
+    .scheduler-grid-container[data-zoom="15min"] {
+        --scheduler-slot-width: 28px;
     }
     
     .scheduler-grid-header {
@@ -333,16 +574,28 @@
         padding: 4px;
     }
     
+    .scheduler-grid-header[data-slot="0"] {
+        min-width: calc(var(--scheduler-slot-width) * 1.1);
+        width: calc(var(--scheduler-slot-width) * 1.1);
+    }
+    
     .job-block {
         font-size: 0.65rem;
         padding: 2px 4px;
-        min-height: 20px;
+        min-height: 24px;
+    }
+    
+    .job-block-title {
+        font-size: 0.6rem;
+    }
+    
+    .job-block-details {
+        font-size: 0.5rem;
     }
 }
 
 @media (max-width: 768px) {
     :root {
-        --scheduler-slot-width: 50px;
         --scheduler-machine-label-width: 100px;
         --scheduler-header-height: 50px;
     }
@@ -351,20 +604,106 @@
         max-height: 70vh;
     }
     
+    .scheduler-grid-container[data-zoom="day"] {
+        --scheduler-slot-width: 80px;
+    }
+    .scheduler-grid-container[data-zoom="12h"] {
+        --scheduler-slot-width: 70px;
+    }
+    .scheduler-grid-container[data-zoom="10h"] {
+        --scheduler-slot-width: 65px;
+    }
+    .scheduler-grid-container[data-zoom="8h"] {
+        --scheduler-slot-width: 60px;
+    }
+    .scheduler-grid-container[data-zoom="6h"] {
+        --scheduler-slot-width: 55px;
+    }
+    .scheduler-grid-container[data-zoom="4h"] {
+        --scheduler-slot-width: 50px;
+    }
+    .scheduler-grid-container[data-zoom="2h"] {
+        --scheduler-slot-width: 45px;
+    }
+    .scheduler-grid-container[data-zoom="hour"] {
+        --scheduler-slot-width: 40px;
+    }
+    .scheduler-grid-container[data-zoom="30min"] {
+        --scheduler-slot-width: 35px;
+    }
+    .scheduler-grid-container[data-zoom="15min"] {
+        --scheduler-slot-width: 25px;
+    }
+    
     .scheduler-grid-header {
         font-size: 0.6rem;
         padding: 2px;
     }
     
+    .scheduler-grid-header[data-slot="0"] {
+        min-width: calc(var(--scheduler-slot-width) * 1.05);
+        width: calc(var(--scheduler-slot-width) * 1.05);
+        font-size: 0.65rem;
+    }
+    
     .job-block {
         font-size: 0.6rem;
         padding: 1px 3px;
-        min-height: 18px;
+        min-height: 20px;
+    }
+    
+    .job-block-title {
+        font-size: 0.55rem;
+    }
+    
+    .job-block-details {
+        font-size: 0.45rem;
     }
     
     .scheduler-machine-label {
         font-size: 0.8rem;
     }
+}
+
+/* ENHANCED LOADING STATES */
+.loading-indicator {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 20px 30px;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 500;
+    color: #374151;
+}
+
+.loading-indicator.hidden {
+    display: none;
+}
+
+/* Notification Styles */
+.notification-success {
+    background-color: #10B981 !important;
+}
+
+.notification-error {
+    background-color: #EF4444 !important;
+}
+
+/* Job Tooltip */
+.job-tooltip {
+    background: rgba(17, 24, 39, 0.95) !important;
+    backdrop-filter: blur(4px);
+    border-radius: 6px;
+    font-size: 0.75rem;
+    max-width: 200px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* Performance Optimizations */
@@ -403,29 +742,7 @@
     background: #94a3b8;
 }
 
-/* Enhanced Loading States */
-.loading-indicator {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: white;
-    padding: 20px 30px;
-    border-radius: 8px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-weight: 500;
-    color: #374151;
-}
-
-.loading-indicator.hidden {
-    display: none;
-}
-
-/* Print Styles for 2-Month View */
+/* PRINT STYLES FOR ALL ZOOM LEVELS */
 @media print {
     .scheduler-grid-container {
         max-height: none;
@@ -442,10 +759,15 @@
         background: #666 !important;
         color: white !important;
         box-shadow: none !important;
+        border: 1px solid #333 !important;
     }
     
     .scheduler-machine-label {
         background: #f5f5f5 !important;
         color: #000 !important;
+    }
+    
+    .notification, .loading-indicator {
+        display: none !important;
     }
 }

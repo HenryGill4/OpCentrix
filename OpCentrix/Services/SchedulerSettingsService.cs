@@ -1,21 +1,22 @@
-using OpCentrix.Data;
 using OpCentrix.Models;
+using OpCentrix.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace OpCentrix.Services
 {
-    /// <summary>
-    /// Service for managing scheduler configuration settings
-    /// </summary>
     public interface ISchedulerSettingsService
     {
         Task<SchedulerSettings> GetSettingsAsync();
-        Task<SchedulerSettings> UpdateSettingsAsync(SchedulerSettings settings, string modifiedBy);
-        Task<SchedulerSettings> ResetToDefaultsAsync(string modifiedBy);
-        Task<int> GetChangeoverTimeAsync(string fromMaterial, string toMaterial);
-        Task<int> CalculateChangeoverTimeAsync(string fromMaterial, string toMaterial);
-        Task<bool> IsOperatorAvailableAsync(DateTime startTime, DateTime endTime);
-        Task<int> GetMachinePriorityAsync(string machineId);
+        Task<bool> UpdateSettingsAsync(SchedulerSettings settings);
+        Task<bool> UpdateSettingsAsync(SchedulerSettings settings, string username);
+        Task<bool> IsWeekendOperationAllowedAsync(DateTime date);
+        Task<bool> IsOperatorAvailableAsync(DateTime start, DateTime end);
+        Task<double> GetChangeoverTimeAsync(string fromMaterial, string toMaterial);
+        Task<bool> IsSaturdayOperationAllowedAsync();
+        Task<bool> IsSundayOperationAllowedAsync();
+        Task<SchedulerSettings> GetOrCreateDefaultSettingsAsync();
+        Task<SchedulerSettings> ResetToDefaultsAsync(string username);
     }
 
     public class SchedulerSettingsService : ISchedulerSettingsService
@@ -23,8 +24,8 @@ namespace OpCentrix.Services
         private readonly SchedulerContext _context;
         private readonly ILogger<SchedulerSettingsService> _logger;
         private SchedulerSettings? _cachedSettings;
-        private DateTime _lastCacheUpdate = DateTime.MinValue;
-        private readonly TimeSpan _cacheTimeout = TimeSpan.FromMinutes(5);
+        private DateTime _lastCacheTime = DateTime.MinValue;
+        private readonly TimeSpan _cacheExpiration = TimeSpan.FromMinutes(5);
 
         public SchedulerSettingsService(SchedulerContext context, ILogger<SchedulerSettingsService> logger)
         {
@@ -32,212 +33,70 @@ namespace OpCentrix.Services
             _logger = logger;
         }
 
-        /// <summary>
-        /// Get current scheduler settings (cached for performance)
-        /// </summary>
         public async Task<SchedulerSettings> GetSettingsAsync()
         {
             try
             {
                 // Check cache first
-                if (_cachedSettings != null && DateTime.UtcNow - _lastCacheUpdate < _cacheTimeout)
+                if (_cachedSettings != null && 
+                    DateTime.UtcNow - _lastCacheTime < _cacheExpiration)
                 {
                     return _cachedSettings;
                 }
 
-                // Try to load from database
-                SchedulerSettings? settings = null;
-                try
-                {
-                    settings = await _context.SchedulerSettings.FirstOrDefaultAsync();
-                }
-                catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.Message.Contains("no such table"))
-                {
-                    _logger.LogWarning("SchedulerSettings table does not exist. Attempting to create table manually.");
-                    
-                    // Try to create the table manually using raw SQL
-                    try
-                    {
-                        await CreateSchedulerSettingsTableManuallyAsync();
-                        
-                        // Try to load settings again after manual table creation
-                        settings = await _context.SchedulerSettings.FirstOrDefaultAsync();
-                    }
-                    catch (Exception manualEx)
-                    {
-                        _logger.LogError(manualEx, "Failed to create SchedulerSettings table manually. Using default settings.");
-                    }
-                }
+                var settings = await _context.SchedulerSettings
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync();
 
                 if (settings == null)
                 {
-                    // Create default settings
-                    settings = CreateDefaultSettings();
-                    
-                    try
-                    {
-                        _context.SchedulerSettings.Add(settings);
-                        await _context.SaveChangesAsync();
-                        _logger.LogInformation("Created default scheduler settings");
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Failed to save default settings to database. Using in-memory defaults.");
-                        // Continue with in-memory settings if database save fails
-                    }
+                    _logger.LogWarning("No scheduler settings found in database, creating defaults");
+                    settings = await GetOrCreateDefaultSettingsAsync();
                 }
 
                 // Update cache
                 _cachedSettings = settings;
-                _lastCacheUpdate = DateTime.UtcNow;
+                _lastCacheTime = DateTime.UtcNow;
+
+                _logger.LogDebug("Scheduler settings loaded: EnableWeekendOperations={EnableWeekend}, SaturdayOperations={Saturday}, SundayOperations={Sunday}",
+                    settings.EnableWeekendOperations, settings.SaturdayOperations, settings.SundayOperations);
 
                 return settings;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading scheduler settings");
+                _logger.LogError(ex, "Error loading scheduler settings, using fallback defaults");
+                return CreateFallbackSettings();
+            }
+        }
+
+        public async Task<bool> UpdateSettingsAsync(SchedulerSettings settings)
+        {
+            return await UpdateSettingsAsync(settings, "System");
+        }
+
+        public async Task<bool> UpdateSettingsAsync(SchedulerSettings settings, string username)
+        {
+            try
+            {
+                var existing = await _context.SchedulerSettings.FirstOrDefaultAsync();
                 
-                // Return default settings as fallback
-                var defaultSettings = CreateDefaultSettings();
-                _cachedSettings = defaultSettings;
-                _lastCacheUpdate = DateTime.UtcNow;
-                return defaultSettings;
-            }
-        }
-
-        /// <summary>
-        /// Manually create the SchedulerSettings table using raw SQL
-        /// </summary>
-        private async Task CreateSchedulerSettingsTableManuallyAsync()
-        {
-            try
-            {
-                _logger.LogInformation("Creating SchedulerSettings table manually using raw SQL");
-
-                var createTableSql = @"
-                    CREATE TABLE IF NOT EXISTS ""SchedulerSettings"" (
-                        ""Id"" INTEGER NOT NULL CONSTRAINT ""PK_SchedulerSettings"" PRIMARY KEY AUTOINCREMENT,
-                        ""TitaniumToTitaniumChangeoverMinutes"" INTEGER NOT NULL DEFAULT 30,
-                        ""InconelToInconelChangeoverMinutes"" INTEGER NOT NULL DEFAULT 45,
-                        ""CrossMaterialChangeoverMinutes"" INTEGER NOT NULL DEFAULT 120,
-                        ""DefaultMaterialChangeoverMinutes"" INTEGER NOT NULL DEFAULT 60,
-                        ""DefaultPreheatingTimeMinutes"" INTEGER NOT NULL DEFAULT 60,
-                        ""DefaultCoolingTimeMinutes"" INTEGER NOT NULL DEFAULT 240,
-                        ""DefaultPostProcessingTimeMinutes"" INTEGER NOT NULL DEFAULT 90,
-                        ""SetupTimeBufferMinutes"" INTEGER NOT NULL DEFAULT 30,
-                        ""StandardShiftStart"" TEXT NOT NULL DEFAULT '07:00:00',
-                        ""StandardShiftEnd"" TEXT NOT NULL DEFAULT '15:00:00',
-                        ""EveningShiftStart"" TEXT NOT NULL DEFAULT '15:00:00',
-                        ""EveningShiftEnd"" TEXT NOT NULL DEFAULT '23:00:00',
-                        ""NightShiftStart"" TEXT NOT NULL DEFAULT '23:00:00',
-                        ""NightShiftEnd"" TEXT NOT NULL DEFAULT '07:00:00',
-                        ""EnableWeekendOperations"" INTEGER NOT NULL DEFAULT 0,
-                        ""SaturdayOperations"" INTEGER NOT NULL DEFAULT 0,
-                        ""SundayOperations"" INTEGER NOT NULL DEFAULT 0,
-                        ""TI1MachinePriority"" INTEGER NOT NULL DEFAULT 5,
-                        ""TI2MachinePriority"" INTEGER NOT NULL DEFAULT 5,
-                        ""INCMachinePriority"" INTEGER NOT NULL DEFAULT 5,
-                        ""AllowConcurrentJobs"" INTEGER NOT NULL DEFAULT 1,
-                        ""MaxJobsPerMachinePerDay"" INTEGER NOT NULL DEFAULT 8,
-                        ""RequiredOperatorCertification"" TEXT NOT NULL DEFAULT 'SLS Basic',
-                        ""QualityCheckRequired"" INTEGER NOT NULL DEFAULT 1,
-                        ""MinimumTimeBetweenJobsMinutes"" INTEGER NOT NULL DEFAULT 15,
-                        ""EmergencyOverrideEnabled"" INTEGER NOT NULL DEFAULT 1,
-                        ""NotifyOnScheduleConflicts"" INTEGER NOT NULL DEFAULT 1,
-                        ""NotifyOnMaterialChanges"" INTEGER NOT NULL DEFAULT 1,
-                        ""AdvanceWarningTimeMinutes"" INTEGER NOT NULL DEFAULT 60,
-                        ""CreatedDate"" TEXT NOT NULL DEFAULT (datetime('now')),
-                        ""LastModifiedDate"" TEXT NOT NULL DEFAULT (datetime('now')),
-                        ""CreatedBy"" TEXT NOT NULL DEFAULT 'System',
-                        ""LastModifiedBy"" TEXT NOT NULL DEFAULT 'System',
-                        ""ChangeNotes"" TEXT NOT NULL DEFAULT 'Default settings initialization'
-                    );";
-
-                await _context.Database.ExecuteSqlRawAsync(createTableSql);
-
-                var createIndexSql = @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_SchedulerSettings_Id"" ON ""SchedulerSettings"" (""Id"");";
-                await _context.Database.ExecuteSqlRawAsync(createIndexSql);
-
-                // Insert default record if none exists
-                var insertDefaultSql = @"
-                    INSERT INTO ""SchedulerSettings"" (
-                        ""TitaniumToTitaniumChangeoverMinutes"",
-                        ""InconelToInconelChangeoverMinutes"", 
-                        ""CrossMaterialChangeoverMinutes"",
-                        ""DefaultMaterialChangeoverMinutes"",
-                        ""DefaultPreheatingTimeMinutes"",
-                        ""DefaultCoolingTimeMinutes"",
-                        ""DefaultPostProcessingTimeMinutes"",
-                        ""SetupTimeBufferMinutes"",
-                        ""StandardShiftStart"",
-                        ""StandardShiftEnd"",
-                        ""EveningShiftStart"", 
-                        ""EveningShiftEnd"",
-                        ""NightShiftStart"",
-                        ""NightShiftEnd"",
-                        ""EnableWeekendOperations"",
-                        ""SaturdayOperations"",
-                        ""SundayOperations"",
-                        ""TI1MachinePriority"",
-                        ""TI2MachinePriority"",
-                        ""INCMachinePriority"",
-                        ""AllowConcurrentJobs"",
-                        ""MaxJobsPerMachinePerDay"",
-                        ""RequiredOperatorCertification"",
-                        ""QualityCheckRequired"",
-                        ""MinimumTimeBetweenJobsMinutes"",
-                        ""EmergencyOverrideEnabled"",
-                        ""NotifyOnScheduleConflicts"",
-                        ""NotifyOnMaterialChanges"",
-                        ""AdvanceWarningTimeMinutes"",
-                        ""CreatedBy"",
-                        ""LastModifiedBy"",
-                        ""ChangeNotes""
-                    )
-                    SELECT 30, 45, 120, 60, 60, 240, 90, 30,
-                           '07:00:00', '15:00:00', '15:00:00', '23:00:00', '23:00:00', '07:00:00',
-                           0, 0, 0, 5, 5, 5, 1, 8,
-                           'SLS Basic', 1, 15, 1, 1, 1, 60,
-                           'System', 'System', 'Manual table creation with default settings'
-                    WHERE NOT EXISTS (SELECT 1 FROM ""SchedulerSettings"");";
-
-                await _context.Database.ExecuteSqlRawAsync(insertDefaultSql);
-
-                _logger.LogInformation("SchedulerSettings table created successfully with default data");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to manually create SchedulerSettings table");
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Update scheduler settings
-        /// </summary>
-        public async Task<SchedulerSettings> UpdateSettingsAsync(SchedulerSettings settings, string modifiedBy)
-        {
-            try
-            {
-                var existingSettings = await _context.SchedulerSettings.FirstOrDefaultAsync();
-
-                if (existingSettings == null)
+                if (existing == null)
                 {
-                    // Create new settings
-                    settings.CreatedBy = modifiedBy;
+                    // Create new settings record
+                    settings.Id = 1;
                     settings.CreatedDate = DateTime.UtcNow;
-                    settings.LastModifiedBy = modifiedBy;
+                    settings.CreatedBy = username;
+                    settings.LastModifiedBy = username;
                     settings.LastModifiedDate = DateTime.UtcNow;
-                    
                     _context.SchedulerSettings.Add(settings);
                 }
                 else
                 {
                     // Update existing settings
-                    UpdateSettingsProperties(existingSettings, settings);
-                    existingSettings.LastModifiedBy = modifiedBy;
-                    existingSettings.LastModifiedDate = DateTime.UtcNow;
-                    existingSettings.ChangeNotes = settings.ChangeNotes;
+                    UpdateSettingsEntity(existing, settings);
+                    existing.LastModifiedBy = username;
+                    existing.LastModifiedDate = DateTime.UtcNow;
                 }
 
                 await _context.SaveChangesAsync();
@@ -245,220 +104,351 @@ namespace OpCentrix.Services
                 // Clear cache to force reload
                 _cachedSettings = null;
 
-                _logger.LogInformation("Scheduler settings updated by {ModifiedBy}", modifiedBy);
+                _logger.LogInformation("Scheduler settings updated successfully by {Username}: EnableWeekendOperations={EnableWeekend}, SaturdayOperations={Saturday}, SundayOperations={Sunday}",
+                    username, settings.EnableWeekendOperations, settings.SaturdayOperations, settings.SundayOperations);
 
-                return await GetSettingsAsync();
+                return true;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating scheduler settings");
-                throw;
+                return false;
             }
         }
 
-        /// <summary>
-        /// Reset settings to defaults
-        /// </summary>
-        public async Task<SchedulerSettings> ResetToDefaultsAsync(string modifiedBy)
+        public async Task<SchedulerSettings> ResetToDefaultsAsync(string username)
         {
             try
             {
-                var existingSettings = await _context.SchedulerSettings.FirstOrDefaultAsync();
-
-                if (existingSettings != null)
-                {
-                    _context.SchedulerSettings.Remove(existingSettings);
-                }
-
                 var defaultSettings = CreateDefaultSettings();
-                defaultSettings.CreatedBy = modifiedBy;
-                defaultSettings.LastModifiedBy = modifiedBy;
-                defaultSettings.ChangeNotes = "Reset to default values";
-
-                _context.SchedulerSettings.Add(defaultSettings);
-                await _context.SaveChangesAsync();
-
-                // Clear cache
-                _cachedSettings = null;
-
-                _logger.LogInformation("Scheduler settings reset to defaults by {ModifiedBy}", modifiedBy);
-
+                defaultSettings.LastModifiedBy = username;
+                defaultSettings.ChangeNotes = $"Reset to defaults by {username}";
+                
+                await UpdateSettingsAsync(defaultSettings, username);
                 return defaultSettings;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error resetting scheduler settings");
-                throw;
+                _logger.LogError(ex, "Error resetting scheduler settings to defaults");
+                return CreateFallbackSettings();
             }
         }
 
-        /// <summary>
-        /// Get changeover time between materials
-        /// </summary>
-        public async Task<int> GetChangeoverTimeAsync(string fromMaterial, string toMaterial)
+        public async Task<bool> IsWeekendOperationAllowedAsync(DateTime date)
         {
             try
             {
                 var settings = await GetSettingsAsync();
-                return settings.GetChangeoverTime(fromMaterial, toMaterial);
+                
+                // If weekend operations are disabled globally, no weekend work
+                if (!settings.EnableWeekendOperations)
+                {
+                    var isWeekend = date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday;
+                    _logger.LogDebug("Weekend operations disabled globally. Date {Date} is weekend: {IsWeekend}, allowed: {Allowed}",
+                        date.ToString("yyyy-MM-dd"), isWeekend, !isWeekend);
+                    return !isWeekend;
+                }
+
+                // Weekend operations are enabled, check specific days
+                var dayOfWeek = date.DayOfWeek;
+                bool allowed;
+
+                switch (dayOfWeek)
+                {
+                    case DayOfWeek.Saturday:
+                        allowed = settings.SaturdayOperations;
+                        break;
+                    case DayOfWeek.Sunday:
+                        allowed = settings.SundayOperations;
+                        break;
+                    default:
+                        allowed = true; // Weekdays are always allowed
+                        break;
+                }
+
+                _logger.LogDebug("Weekend operation check for {Date} ({DayOfWeek}): allowed={Allowed}", 
+                    date.ToString("yyyy-MM-dd"), dayOfWeek, allowed);
+
+                return allowed;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting changeover time for materials {FromMaterial} to {ToMaterial}", 
-                    fromMaterial, toMaterial);
-                return 60; // Default fallback
+                _logger.LogError(ex, "Error checking weekend operations for date {Date}", date);
+                // Fail safe: default to weekdays only
+                return date.DayOfWeek != DayOfWeek.Saturday && date.DayOfWeek != DayOfWeek.Sunday;
             }
         }
 
-        /// <summary>
-        /// Calculate changeover time between materials (alias for GetChangeoverTimeAsync)
-        /// </summary>
-        public async Task<int> CalculateChangeoverTimeAsync(string fromMaterial, string toMaterial)
-        {
-            return await GetChangeoverTimeAsync(fromMaterial, toMaterial);
-        }
-
-        /// <summary>
-        /// Check if operator is available during specified time
-        /// </summary>
-        public async Task<bool> IsOperatorAvailableAsync(DateTime startTime, DateTime endTime)
+        public async Task<bool> IsSaturdayOperationAllowedAsync()
         {
             try
             {
                 var settings = await GetSettingsAsync();
-                return settings.IsOperatorAvailable(startTime, endTime);
+                return settings.EnableWeekendOperations && settings.SaturdayOperations;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error checking operator availability for time {StartTime} to {EndTime}", 
-                    startTime, endTime);
-                return true; // Default to available
+                _logger.LogError(ex, "Error checking Saturday operations");
+                return false;
             }
         }
 
-        /// <summary>
-        /// Get machine priority
-        /// </summary>
-        public async Task<int> GetMachinePriorityAsync(string machineId)
+        public async Task<bool> IsSundayOperationAllowedAsync()
         {
             try
             {
                 var settings = await GetSettingsAsync();
-                return settings.GetMachinePriority(machineId);
+                return settings.EnableWeekendOperations && settings.SundayOperations;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting machine priority for {MachineId}", machineId);
-                return 5; // Default priority
+                _logger.LogError(ex, "Error checking Sunday operations");
+                return false;
             }
         }
 
-        #region Private Methods
+        public async Task<bool> IsOperatorAvailableAsync(DateTime start, DateTime end)
+        {
+            try
+            {
+                var settings = await GetSettingsAsync();
+                
+                // Check if start and end times fall within any shift
+                var startTime = start.TimeOfDay;
+                var endTime = end.TimeOfDay;
 
-        /// <summary>
-        /// Create default scheduler settings
-        /// </summary>
-        private SchedulerSettings CreateDefaultSettings()
+                // Check all three shifts
+                bool isInStandardShift = IsTimeInShift(startTime, settings.StandardShiftStart, settings.StandardShiftEnd) &&
+                                        IsTimeInShift(endTime, settings.StandardShiftStart, settings.StandardShiftEnd);
+
+                bool isInEveningShift = IsTimeInShift(startTime, settings.EveningShiftStart, settings.EveningShiftEnd) &&
+                                       IsTimeInShift(endTime, settings.EveningShiftStart, settings.EveningShiftEnd);
+
+                bool isInNightShift = IsTimeInShift(startTime, settings.NightShiftStart, settings.NightShiftEnd) &&
+                                     IsTimeInShift(endTime, settings.NightShiftStart, settings.NightShiftEnd);
+
+                var available = isInStandardShift || isInEveningShift || isInNightShift;
+
+                _logger.LogDebug("Operator availability check: {Start} - {End}, available: {Available}",
+                    start.ToString("yyyy-MM-dd HH:mm"), end.ToString("yyyy-MM-dd HH:mm"), available);
+
+                return available;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking operator availability for {Start} - {End}", start, end);
+                return true; // Default to available if check fails
+            }
+        }
+
+        public async Task<double> GetChangeoverTimeAsync(string fromMaterial, string toMaterial)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(fromMaterial) || string.IsNullOrEmpty(toMaterial))
+                    return 0;
+
+                if (fromMaterial == toMaterial)
+                    return 0;
+
+                var settings = await GetSettingsAsync();
+
+                // Material-specific changeover times
+                var titaniumMaterials = new[] { "Ti-6Al-4V Grade 5", "Ti-6Al-4V ELI Grade 23" };
+                var inconelMaterials = new[] { "Inconel 718", "Inconel 625" };
+
+                bool isFromTitanium = titaniumMaterials.Contains(fromMaterial);
+                bool isToTitanium = titaniumMaterials.Contains(toMaterial);
+                bool isFromInconel = inconelMaterials.Contains(fromMaterial);
+                bool isToInconel = inconelMaterials.Contains(toMaterial);
+
+                double changeoverTime;
+
+                if (isFromTitanium && isToTitanium)
+                {
+                    // Titanium to Titanium
+                    changeoverTime = settings.TitaniumToTitaniumChangeoverMinutes;
+                }
+                else if (isFromInconel && isToInconel)
+                {
+                    // Inconel to Inconel
+                    changeoverTime = settings.InconelToInconelChangeoverMinutes;
+                }
+                else if ((isFromTitanium && isToInconel) || (isFromInconel && isToTitanium))
+                {
+                    // Cross-material changeover (Ti to In or In to Ti)
+                    changeoverTime = settings.CrossMaterialChangeoverMinutes;
+                }
+                else
+                {
+                    // Default changeover for unknown materials
+                    changeoverTime = settings.DefaultMaterialChangeoverMinutes;
+                }
+
+                _logger.LogDebug("Changeover time from {FromMaterial} to {ToMaterial}: {ChangeoverTime} minutes",
+                    fromMaterial, toMaterial, changeoverTime);
+
+                return changeoverTime;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error calculating changeover time from {FromMaterial} to {ToMaterial}", fromMaterial, toMaterial);
+                return 60; // Default 1 hour
+            }
+        }
+
+        public async Task<SchedulerSettings> GetOrCreateDefaultSettingsAsync()
+        {
+            try
+            {
+                var existing = await _context.SchedulerSettings.FirstOrDefaultAsync();
+                if (existing != null)
+                    return existing;
+
+                var defaultSettings = CreateDefaultSettings();
+                
+                _context.SchedulerSettings.Add(defaultSettings);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Created default scheduler settings with weekend operations enabled");
+                return defaultSettings;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating default scheduler settings");
+                return CreateFallbackSettings();
+            }
+        }
+
+        private static bool IsTimeInShift(TimeSpan time, TimeSpan shiftStart, TimeSpan shiftEnd)
+        {
+            if (shiftStart <= shiftEnd)
+            {
+                // Normal shift (e.g., 7:00 - 15:00)
+                return time >= shiftStart && time <= shiftEnd;
+            }
+            else
+            {
+                // Night shift crossing midnight (e.g., 23:00 - 07:00)
+                return time >= shiftStart || time <= shiftEnd;
+            }
+        }
+
+        private static SchedulerSettings CreateDefaultSettings()
         {
             return new SchedulerSettings
             {
-                // Material changeover defaults
+                Id = 1,
+                // CRITICAL FIX: Enable weekend operations by default
+                EnableWeekendOperations = true,
+                SaturdayOperations = true,
+                SundayOperations = true,
+                
+                // Shift times
+                StandardShiftStart = TimeSpan.FromHours(7),   // 7:00 AM
+                StandardShiftEnd = TimeSpan.FromHours(15),    // 3:00 PM
+                EveningShiftStart = TimeSpan.FromHours(15),   // 3:00 PM
+                EveningShiftEnd = TimeSpan.FromHours(23),     // 11:00 PM
+                NightShiftStart = TimeSpan.FromHours(23),     // 11:00 PM
+                NightShiftEnd = TimeSpan.FromHours(7),        // 7:00 AM (next day)
+                
+                // Changeover times
                 TitaniumToTitaniumChangeoverMinutes = 30,
                 InconelToInconelChangeoverMinutes = 45,
                 CrossMaterialChangeoverMinutes = 120,
                 DefaultMaterialChangeoverMinutes = 60,
-
-                // Timing defaults
+                
+                // Processing times
                 DefaultPreheatingTimeMinutes = 60,
                 DefaultCoolingTimeMinutes = 240,
                 DefaultPostProcessingTimeMinutes = 90,
                 SetupTimeBufferMinutes = 30,
-
-                // Operator schedule defaults (24/7 operations)
-                StandardShiftStart = new TimeSpan(7, 0, 0),
-                StandardShiftEnd = new TimeSpan(15, 0, 0),
-                EveningShiftStart = new TimeSpan(15, 0, 0),
-                EveningShiftEnd = new TimeSpan(23, 0, 0),
-                NightShiftStart = new TimeSpan(23, 0, 0),
-                NightShiftEnd = new TimeSpan(7, 0, 0),
-                EnableWeekendOperations = false,
-                SaturdayOperations = false,
-                SundayOperations = false,
-
-                // Machine defaults
+                
+                // Machine priorities
                 TI1MachinePriority = 5,
                 TI2MachinePriority = 5,
                 INCMachinePriority = 5,
-                AllowConcurrentJobs = true,
+                
+                // Job constraints
                 MaxJobsPerMachinePerDay = 8,
-
-                // Quality and safety defaults
-                RequiredOperatorCertification = "SLS Basic",
-                QualityCheckRequired = true,
                 MinimumTimeBetweenJobsMinutes = 15,
+                AdvanceWarningTimeMinutes = 60,
+                
+                // Quality and safety
+                RequiredOperatorCertification = "SLS Basic",
+                AllowConcurrentJobs = true,
+                QualityCheckRequired = true,
                 EmergencyOverrideEnabled = true,
-
-                // Notification defaults
                 NotifyOnScheduleConflicts = true,
                 NotifyOnMaterialChanges = true,
-                AdvanceWarningTimeMinutes = 60,
-
+                
                 // Audit fields
                 CreatedDate = DateTime.UtcNow,
                 LastModifiedDate = DateTime.UtcNow,
                 CreatedBy = "System",
                 LastModifiedBy = "System",
-                ChangeNotes = "Default settings initialization"
+                ChangeNotes = "Default scheduler settings with weekend operations enabled"
             };
         }
 
-        /// <summary>
-        /// Update settings properties from source to target
-        /// </summary>
-        private void UpdateSettingsProperties(SchedulerSettings target, SchedulerSettings source)
+        private static SchedulerSettings CreateFallbackSettings()
         {
-            // Material changeover settings
-            target.TitaniumToTitaniumChangeoverMinutes = source.TitaniumToTitaniumChangeoverMinutes;
-            target.InconelToInconelChangeoverMinutes = source.InconelToInconelChangeoverMinutes;
-            target.CrossMaterialChangeoverMinutes = source.CrossMaterialChangeoverMinutes;
-            target.DefaultMaterialChangeoverMinutes = source.DefaultMaterialChangeoverMinutes;
-
-            // Timing settings
-            target.DefaultPreheatingTimeMinutes = source.DefaultPreheatingTimeMinutes;
-            target.DefaultCoolingTimeMinutes = source.DefaultCoolingTimeMinutes;
-            target.DefaultPostProcessingTimeMinutes = source.DefaultPostProcessingTimeMinutes;
-            target.SetupTimeBufferMinutes = source.SetupTimeBufferMinutes;
-
-            // Operator schedule settings
-            target.StandardShiftStart = source.StandardShiftStart;
-            target.StandardShiftEnd = source.StandardShiftEnd;
-            target.EveningShiftStart = source.EveningShiftStart;
-            target.EveningShiftEnd = source.EveningShiftEnd;
-            target.NightShiftStart = source.NightShiftStart;
-            target.NightShiftEnd = source.NightShiftEnd;
-            target.EnableWeekendOperations = source.EnableWeekendOperations;
-            target.SaturdayOperations = source.SaturdayOperations;
-            target.SundayOperations = source.SundayOperations;
-
-            // Machine settings
-            target.TI1MachinePriority = source.TI1MachinePriority;
-            target.TI2MachinePriority = source.TI2MachinePriority;
-            target.INCMachinePriority = source.INCMachinePriority;
-            target.AllowConcurrentJobs = source.AllowConcurrentJobs;
-            target.MaxJobsPerMachinePerDay = source.MaxJobsPerMachinePerDay;
-
-            // Quality and safety settings
-            target.RequiredOperatorCertification = source.RequiredOperatorCertification;
-            target.QualityCheckRequired = source.QualityCheckRequired;
-            target.MinimumTimeBetweenJobsMinutes = source.MinimumTimeBetweenJobsMinutes;
-            target.EmergencyOverrideEnabled = source.EmergencyOverrideEnabled;
-
-            // Notification settings
-            target.NotifyOnScheduleConflicts = source.NotifyOnScheduleConflicts;
-            target.NotifyOnMaterialChanges = source.NotifyOnMaterialChanges;
-            target.AdvanceWarningTimeMinutes = source.AdvanceWarningTimeMinutes;
+            var fallback = CreateDefaultSettings();
+            // For fallback, be more conservative
+            fallback.EnableWeekendOperations = false;
+            fallback.SaturdayOperations = false;
+            fallback.SundayOperations = false;
+            fallback.ChangeNotes = "Fallback settings due to database error";
+            return fallback;
         }
 
-        #endregion
+        private static void UpdateSettingsEntity(SchedulerSettings existing, SchedulerSettings updated)
+        {
+            // Weekend operations
+            existing.EnableWeekendOperations = updated.EnableWeekendOperations;
+            existing.SaturdayOperations = updated.SaturdayOperations;
+            existing.SundayOperations = updated.SundayOperations;
+            
+            // Shift times
+            existing.StandardShiftStart = updated.StandardShiftStart;
+            existing.StandardShiftEnd = updated.StandardShiftEnd;
+            existing.EveningShiftStart = updated.EveningShiftStart;
+            existing.EveningShiftEnd = updated.EveningShiftEnd;
+            existing.NightShiftStart = updated.NightShiftStart;
+            existing.NightShiftEnd = updated.NightShiftEnd;
+            
+            // Changeover times
+            existing.TitaniumToTitaniumChangeoverMinutes = updated.TitaniumToTitaniumChangeoverMinutes;
+            existing.InconelToInconelChangeoverMinutes = updated.InconelToInconelChangeoverMinutes;
+            existing.CrossMaterialChangeoverMinutes = updated.CrossMaterialChangeoverMinutes;
+            existing.DefaultMaterialChangeoverMinutes = updated.DefaultMaterialChangeoverMinutes;
+            
+            // Processing times
+            existing.DefaultPreheatingTimeMinutes = updated.DefaultPreheatingTimeMinutes;
+            existing.DefaultCoolingTimeMinutes = updated.DefaultCoolingTimeMinutes;
+            existing.DefaultPostProcessingTimeMinutes = updated.DefaultPostProcessingTimeMinutes;
+            existing.SetupTimeBufferMinutes = updated.SetupTimeBufferMinutes;
+            
+            // Machine priorities
+            existing.TI1MachinePriority = updated.TI1MachinePriority;
+            existing.TI2MachinePriority = updated.TI2MachinePriority;
+            existing.INCMachinePriority = updated.INCMachinePriority;
+            
+            // Job constraints
+            existing.MaxJobsPerMachinePerDay = updated.MaxJobsPerMachinePerDay;
+            existing.MinimumTimeBetweenJobsMinutes = updated.MinimumTimeBetweenJobsMinutes;
+            existing.AdvanceWarningTimeMinutes = updated.AdvanceWarningTimeMinutes;
+            
+            // Quality and safety
+            existing.RequiredOperatorCertification = updated.RequiredOperatorCertification;
+            existing.AllowConcurrentJobs = updated.AllowConcurrentJobs;
+            existing.QualityCheckRequired = updated.QualityCheckRequired;
+            existing.EmergencyOverrideEnabled = updated.EmergencyOverrideEnabled;
+            existing.NotifyOnScheduleConflicts = updated.NotifyOnScheduleConflicts;
+            existing.NotifyOnMaterialChanges = updated.NotifyOnMaterialChanges;
+            
+            // Notes
+            existing.ChangeNotes = updated.ChangeNotes ?? "Settings updated";
+        }
     }
 }

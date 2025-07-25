@@ -5,8 +5,8 @@
 @{
     ViewData["Title"] = "Production Scheduler";
     
-    // Enhanced zoom handling with validation
-    var zoomLevels = new[] { "day", "hour", "30min", "15min" };
+    // Enhanced zoom handling with new zoom levels for hourly views
+    var zoomLevels = new[] { "day", "12h", "10h", "8h", "6h", "4h", "2h", "hour", "30min", "15min" };
     var zoomParam = Request.Query["zoom"].FirstOrDefault() ?? "day";
     var zoomIndex = Array.IndexOf(zoomLevels, zoomParam);
     if (zoomIndex < 0) zoomIndex = 0;
@@ -56,7 +56,7 @@
             </button>
         </div>
         
-        <!-- Zoom controls with enhanced UX -->
+        <!-- Enhanced zoom controls with new zoom levels -->
         <div class="flex items-center bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
             <button id="zoomOut" 
                     class="px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -143,10 +143,11 @@
     }
     else
     {
-        <!-- CORRECTED Scheduler Grid Container -->
+        <!-- ENHANCED Scheduler Grid Container -->
         <div class="scheduler-grid-container opcentrix-card" 
              data-zoom="@zoom"
-             data-total-slots="@totalSlots">
+             data-total-slots="@totalSlots"
+             data-slot-minutes="@slotMinutes">
             
             <!-- Header Row -->
             <div class="scheduler-header-row">
@@ -172,7 +173,7 @@
                             var isWeekend = date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday;
                             var headerClass = isFirstSlot ? "scheduler-grid-header font-semibold text-gray-800 border-r bg-white" : "scheduler-grid-header text-xs text-gray-600 border-r bg-gray-50";
                             
-                            // Only very subtle styling for today - no extra highlighting
+                            // Weekend styling for first slot
                             if (isWeekend && isFirstSlot) headerClass += " weekend-header";
                             
                             <div class="@headerClass" data-date="@date.ToString("yyyy-MM-dd")" data-slot="@s">
@@ -181,7 +182,6 @@
                                     <div class="text-center">
                                         <div class="font-bold">@date.ToString("ddd")</div>
                                         <div class="text-sm">@date.ToString("M/d")</div>
-                                        @* Remove the "Today" text to make it consistent with other days *@
                                     </div>
                                 }
                                 else if (slotsPerDay > 1)
@@ -215,7 +215,7 @@
                     <!-- Individual Machine Row -->
                     <div class="machine-row" id="machine-row-@machine" data-machine="@machine">
                         <!-- Machine Label -->
-                        <div class="scheduler-machine-label @machine.ToLower()" 
+                        <div class="scheduler-machine-label machine-@machine.ToLower()" 
                              style="height:@(rowHeight)px;"
                              data-machine="@machine">
                             <div class="flex flex-col items-center justify-center h-full p-2">
@@ -251,10 +251,10 @@
                                         "scheduler-grid-cell", "group", "relative", "cursor-pointer"
                                     };
                                     
-                                    // Only apply very subtle current time indicator, no general "today" styling
+                                    // Cell styling based on time and status
                                     if (isCurrentTimeSlot) cellClasses.Add("current-time-slot");
-                                    else if (isWeekend) cellClasses.Add("weekend"); // Light shading for Sat & Sun only
-                                    else if (isFridayAfterHours || isSaturdayBeforeHours) cellClasses.Add("off-hours"); // Diagonal lines only on specific times
+                                    else if (isWeekend) cellClasses.Add("weekend");
+                                    else if (isFridayAfterHours || isSaturdayBeforeHours) cellClasses.Add("off-hours");
                                     
                                     <div class="@string.Join(" ", cellClasses)" 
                                          style="height:@(rowHeight)px;"
@@ -285,12 +285,18 @@
                                             {
                                                 var leftPct = (100.0 * (leftPosition - currentSlot)).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + "%";
                                                 var widthPct = (100.0 * widthSlots).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + "%";
+                                                var statusColor = job.GetStatusColor();
+                                                var priorityClass = $"priority-{job.Priority}";
+                                                var machineClass = $"machine-{machine.ToLower()}";
+                                                var statusClass = $"status-{job.Status.ToLower().Replace(" ", "-")}";
                                                 
-                                                <div class="absolute top-2 bottom-2 job-block @machine.ToLower() status-@job.Status.ToLower().Replace(" ", "-")"
-                                                     style="left:@leftPct; width:@widthPct; min-width:40px; z-index:10;"
+                                                <div class="absolute top-2 bottom-2 job-block @machineClass @statusClass @priorityClass"
+                                                     style="left:@leftPct; width:@widthPct; min-width:40px; z-index:10; background-color:@statusColor;"
                                                      onclick="event.stopPropagation(); openJobModal('@machine', '@job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")', @job.Id)"
                                                      title="@job.PartNumber - @job.Status (@job.DurationHours.ToString("F1")h)"
-                                                     data-job-id="@job.Id">
+                                                     data-job-id="@job.Id"
+                                                     data-status="@job.Status"
+                                                     data-priority="@job.Priority">
                                                     <partial name="_JobBlock" model="job" />
                                                 </div>
                                             }
@@ -305,12 +311,6 @@
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path>
                                             </svg>
                                         </div>
-                                        
-                                        <!-- Very subtle current time indicator -->
-                                        @if (isCurrentTimeSlot)
-                                        {
-                                            <!-- Remove the animated pulse dot - the CSS ::before will handle this subtly -->
-                                        }
                                     </div>
                                 }
                             }
@@ -335,15 +335,15 @@
 
 @section Scripts {
 <script>
-// OpCentrix Scheduler - Production-Ready JavaScript
-// Comprehensive modal and HTMX handling with robust error management
+// OpCentrix Scheduler - Enhanced Production-Ready JavaScript
+// Comprehensive modal and HTMX handling with robust error management and new zoom levels
 (function() {
     'use strict';
     
     // Application state management
     const SchedulerApp = {
         currentZoom: '@zoom',
-        zoomLevels: ['day', 'hour', '30min', '15min'],
+        zoomLevels: ['day', '12h', '10h', '8h', '6h', '4h', '2h', 'hour', '30min', '15min'],
         isModalOpen: false,
         isLoading: false,
         modalCloseTimeout: null,
@@ -353,6 +353,7 @@
             this.setupEventListeners();
             this.updateGridStyles(this.currentZoom);
             this.setupZoomControls();
+            this.setupJobInteractions();
             this.logDebugInfo();
         },
         
@@ -393,7 +394,7 @@
             });
         },
         
-        // Setup zoom controls
+        // Setup zoom controls with new levels
         setupZoomControls() {
             const zoomInBtn = document.getElementById('zoomIn');
             const zoomOutBtn = document.getElementById('zoomOut');
@@ -403,6 +404,55 @@
             }
             if (zoomOutBtn && !zoomOutBtn.disabled) {
                 zoomOutBtn.addEventListener('click', () => this.changeZoom(-1));
+            }
+        },
+        
+        // Setup job block interactions
+        setupJobInteractions() {
+            // Setup job block hover effects and click handlers
+            document.querySelectorAll('.job-block').forEach(jobBlock => {
+                // Enhanced tooltip
+                const partNumber = jobBlock.getAttribute('title')?.split(' - ')[0] || 'Unknown Part';
+                const status = jobBlock.getAttribute('data-status') || 'Unknown';
+                const priority = jobBlock.getAttribute('data-priority') || '3';
+                
+                jobBlock.addEventListener('mouseenter', (e) => {
+                    this.showJobTooltip(e.target, { partNumber, status, priority });
+                });
+                
+                jobBlock.addEventListener('mouseleave', () => {
+                    this.hideJobTooltip();
+                });
+            });
+        },
+        
+        // Enhanced job tooltip
+        showJobTooltip(element, jobData) {
+            // Remove any existing tooltip
+            this.hideJobTooltip();
+            
+            const tooltip = document.createElement('div');
+            tooltip.className = 'job-tooltip absolute z-50 bg-gray-900 text-white text-xs rounded px-2 py-1 pointer-events-none';
+            tooltip.innerHTML = `
+                <div class="font-semibold">${jobData.partNumber}</div>
+                <div>Status: ${jobData.status}</div>
+                <div>Priority: ${jobData.priority}</div>
+            `;
+            
+            document.body.appendChild(tooltip);
+            
+            // Position tooltip
+            const rect = element.getBoundingClientRect();
+            tooltip.style.left = `${rect.left + window.scrollX}px`;
+            tooltip.style.top = `${rect.bottom + window.scrollY + 5}px`;
+            
+            tooltip.id = 'job-tooltip';
+        },
+        
+        hideJobTooltip() {
+            const tooltip = document.getElementById('job-tooltip');
+            if (tooltip) {
+                tooltip.remove();
             }
         },
         
@@ -433,7 +483,7 @@
             } else if (xhr.status === 200 && target && target.id === 'scheduler-main-content') {
                 // Scheduler content was updated successfully
                 this.showSuccessNotification('Schedule updated successfully!');
-                this.setupGridInteractions();
+                this.setupJobInteractions();
             }
         },
         
@@ -453,19 +503,31 @@
             this.showErrorNotification(errorMessage);
         },
         
-        // Grid style management
+        // Grid style management with new zoom levels
         updateGridStyles(zoom) {
             const root = document.documentElement;
             const slotWidths = { 
                 'day': '120px', 
-                'hour': '80px', 
+                '12h': '100px',
+                '10h': '90px', 
+                '8h': '85px',
+                '6h': '80px',
+                '4h': '75px',
+                '2h': '70px',
+                'hour': '65px', 
                 '30min': '50px', 
                 '15min': '30px' 
             };
-            root.style.setProperty('--slot-width', slotWidths[zoom] || '120px');
+            root.style.setProperty('--scheduler-slot-width', slotWidths[zoom] || '120px');
+            
+            // Update grid container class for responsive behavior
+            const gridContainer = document.querySelector('.scheduler-grid-container');
+            if (gridContainer) {
+                gridContainer.setAttribute('data-zoom', zoom);
+            }
         },
         
-        // Zoom functionality
+        // Enhanced zoom functionality
         changeZoom(direction) {
             const currentIndex = this.zoomLevels.indexOf(this.currentZoom);
             const newIndex = currentIndex + direction;
@@ -475,7 +537,7 @@
                 const url = new URL(window.location);
                 url.searchParams.set('zoom', newZoom);
                 
-                this.showLoadingIndicator('Changing zoom level...');
+                this.showLoadingIndicator(`Changing to ${newZoom} view...`);
                 window.location.href = url.toString();
             }
         },
@@ -512,18 +574,6 @@
             window.location.href = url.toString();
         },
         
-        // Setup grid interactions after content updates
-        setupGridInteractions() {
-            // Re-setup any dynamic interactions that may have been lost
-            const gridCells = document.querySelectorAll('.scheduler-grid-cell');
-            gridCells.forEach(cell => {
-                if (!cell.hasAttribute('data-initialized')) {
-                    cell.setAttribute('data-initialized', 'true');
-                    // Add any additional cell interactions here
-                }
-            });
-        },
-        
         // Loading indicator management
         showLoadingIndicator(message = 'Loading...') {
             const indicator = document.getElementById('loading-indicator');
@@ -558,7 +608,10 @@
                 <text>
                 console.log('=== OpCentrix Scheduler Debug Info ===');
                 console.log('Current zoom:', this.currentZoom);
+                console.log('Available zoom levels:', this.zoomLevels);
                 console.log('Total slots:', @totalSlots);
+                console.log('Slots per day:', @slotsPerDay);
+                console.log('Slot minutes:', @slotMinutes);
                 console.log('Machines:', @Html.Raw(System.Text.Json.JsonSerializer.Serialize(viewModel.Machines)));
                 console.log('Jobs count:', @viewModel.Jobs.Count);
                 console.log('Modal state:', this.isModalOpen);
@@ -671,6 +724,13 @@
                 </button>
             </div>
         `;
+        
+        // Set notification colors
+        if (type === 'success') {
+            notification.style.backgroundColor = '#10B981';
+        } else {
+            notification.style.backgroundColor = '#EF4444';
+        }
         
         document.body.appendChild(notification);
         

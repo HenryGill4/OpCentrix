@@ -11,42 +11,83 @@
         _ => "priority-normal"
     };
     
-    var statusClass = Model.Status?.ToLower().Replace(" ", "-") ?? "";
+    var statusClass = Model.Status?.ToLower().Replace(" ", "-") ?? "scheduled";
     var rushIndicator = Model.IsRushJob ? "??" : "";
-    var statusColor = Model.GetStatusColor();
     var duration = $"{Model.DurationHours:F1}h";
-    var shortPartNumber = Model.PartNumber?.Length > 10 ? Model.PartNumber.Substring(0, 10) + "..." : Model.PartNumber;
+    var shortPartNumber = Model.PartNumber?.Length > 12 ? Model.PartNumber.Substring(0, 12) + "..." : Model.PartNumber;
+    
+    // Clean material display
+    var materialDisplay = Model.SlsMaterial switch
+    {
+        "Ti-6Al-4V Grade 5" => "Ti-6Al-4V",
+        "Ti-6Al-4V ELI Grade 23" => "Ti-ELI",
+        "Inconel 718" => "IN718",
+        "Inconel 625" => "IN625",
+        _ => Model.SlsMaterial?.Substring(0, Math.Min(8, Model.SlsMaterial.Length)) ?? ""
+    };
 }
 
-<div class="job-block-content h-full flex flex-col justify-center p-1 @priorityClass relative overflow-hidden"
-     style="background-color: @statusColor; color: #ffffff;">
+<div class="job-block-content h-full w-full flex flex-col justify-center relative overflow-hidden">
     
-    <div class="job-block-title text-white font-bold text-xs leading-tight">
-        @rushIndicator@shortPartNumber
+    <!-- Part Number and Rush Indicator -->
+    <div class="job-block-title text-white font-bold leading-tight">
+        @if (Model.IsRushJob)
+        {
+            <span class="text-red-300 mr-1">??</span>
+        }
+        @shortPartNumber
+        @if (Model.Priority <= 2)
+        {
+            <span class="text-yellow-300 ml-1">?</span>
+        }
     </div>
     
-    <div class="job-block-details text-white opacity-90 text-xs leading-tight mt-1">
-        <div>Qty: @Model.Quantity</div>
-        @if (Model.DurationHours > 0)
+    <!-- Job Details -->
+    <div class="job-block-details text-white opacity-90 leading-tight mt-1 space-y-0.5">
+        <div class="flex justify-between items-center">
+            <span class="text-xs">Qty: @Model.Quantity</span>
+            @if (Model.DurationHours > 0)
+            {
+                <span class="text-xs">@duration</span>
+            }
+        </div>
+        
+        @if (!string.IsNullOrEmpty(materialDisplay))
         {
-            <div>@duration</div>
+            <div class="text-xs opacity-80 truncate">@materialDisplay</div>
         }
+        
         @if (!string.IsNullOrEmpty(Model.Operator))
         {
-            <div class="truncate">@Model.Operator</div>
+            <div class="text-xs opacity-75 truncate">@Model.Operator</div>
         }
     </div>
     
+    <!-- Status Badge -->
+    <div class="absolute bottom-1 right-1 text-xs opacity-75 bg-black bg-opacity-20 px-1 rounded">
+        @Model.Status?.Substring(0, Math.Min(4, Model.Status.Length))
+    </div>
+    
+    <!-- Priority Indicator for Critical/High Priority -->
     @if (Model.Priority <= 2)
     {
-        <div class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></div>
+        <div class="absolute top-1 right-1">
+            @if (Model.Priority == 1)
+            {
+                <!-- Critical Priority -->
+                <div class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+            }
+            else
+            {
+                <!-- High Priority -->
+                <div class="w-2 h-2 bg-yellow-500 rounded-full"></div>
+            }
+        </div>
     }
     
+    <!-- Rush Job Corner Triangle -->
     @if (Model.IsRushJob)
     {
-        <div class="absolute top-0 left-0 w-0 h-0 border-l-4 border-l-red-600 border-b-4 border-b-transparent"></div>
+        <div class="absolute top-0 left-0 w-0 h-0 border-l-8 border-l-red-500 border-b-8 border-b-transparent opacity-80"></div>
     }
-    
-    <!-- Status indicator at bottom -->
-    <div class="absolute bottom-1 right-1 text-xs opacity-75">@Model.Status</div>
 </div>

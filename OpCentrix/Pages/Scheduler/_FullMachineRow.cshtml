@@ -93,12 +93,18 @@
                         {
                             var leftPct = (100.0 * (leftPosition - currentSlot)).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + "%";
                             var widthPct = (100.0 * widthSlots).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + "%";
-                            
-                            <div class="absolute top-2 bottom-2 job-block @machineId.ToLower() status-@job.Status.ToLower().Replace(" ", "-")"
-                                 style="left:@leftPct; width:@widthPct; min-width:40px; z-index:10;"
+                            var statusColor = job.GetStatusColor();
+                            var priorityClass = $"priority-{job.Priority}";
+                            var machineClass = $"machine-{machineId.ToLower()}";
+                            var statusClass = $"status-{job.Status.ToLower().Replace(" ", "-")}";
+
+                            <div class="absolute top-2 bottom-2 job-block @machineClass @statusClass @priorityClass"
+                                 style="left:@leftPct; width:@widthPct; min-width:40px; z-index:10; background-color:@statusColor;"
                                  onclick="event.stopPropagation(); openJobModal('@machineId', '@job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")', @job.Id)"
                                  title="@job.PartNumber - @job.Status (@job.DurationHours.ToString("F1")h)"
-                                 data-job-id="@job.Id">
+                                 data-job-id="@job.Id"
+                                 data-status="@job.Status"
+                                 data-priority="@job.Priority">
                                 <partial name="_JobBlock" model="job" />
                             </div>
                         }
