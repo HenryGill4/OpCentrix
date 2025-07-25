@@ -18,6 +18,17 @@ namespace OpCentrix.Data
         public DbSet<JobLogEntry> JobLogEntries { get; set; }
         public DbSet<SlsMachine> SlsMachines { get; set; }
 
+        // NEW: Admin Control System tables (Task 2)
+        public DbSet<OperatingShift> OperatingShifts { get; set; }
+        public DbSet<MachineCapability> MachineCapabilities { get; set; }
+        public DbSet<SystemSetting> SystemSettings { get; set; }
+        public DbSet<RolePermission> RolePermissions { get; set; }
+        public DbSet<InspectionCheckpoint> InspectionCheckpoints { get; set; }
+        public DbSet<DefectCategory> DefectCategories { get; set; }
+        public DbSet<ArchivedJob> ArchivedJobs { get; set; }
+        public DbSet<AdminAlert> AdminAlerts { get; set; }
+        public DbSet<FeatureToggle> FeatureToggles { get; set; }
+
         // NEW: Print tracking tables for the refactored workflow
         public DbSet<BuildJob> BuildJobs { get; set; }
         public DbSet<BuildJobPart> BuildJobParts { get; set; }
@@ -450,6 +461,365 @@ namespace OpCentrix.Data
 
                 // Default values
                 entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+            });
+
+            #endregion
+
+            #region OperatingShift Configuration (NEW - Task 2)
+
+            modelBuilder.Entity<OperatingShift>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                // Indexes
+                entity.HasIndex(e => e.DayOfWeek);
+                entity.HasIndex(e => e.IsActive);
+                entity.HasIndex(e => e.IsHoliday);
+                entity.HasIndex(e => e.SpecificDate);
+                entity.HasIndex(e => new { e.DayOfWeek, e.IsActive });
+
+                // Constraints
+                entity.Property(e => e.Description).HasMaxLength(200);
+                entity.Property(e => e.CreatedBy).HasMaxLength(100).HasDefaultValue("System");
+                entity.Property(e => e.LastModifiedBy).HasMaxLength(100).HasDefaultValue("System");
+
+                // Default values
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.IsActive).HasDefaultValue(true);
+                entity.Property(e => e.IsHoliday).HasDefaultValue(false);
+            });
+
+            #endregion
+
+            #region MachineCapability Configuration (NEW - Task 2)
+
+            modelBuilder.Entity<MachineCapability>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                // Indexes
+                entity.HasIndex(e => e.SlsMachineId);
+                entity.HasIndex(e => e.CapabilityType);
+                entity.HasIndex(e => e.IsAvailable);
+                entity.HasIndex(e => new { e.SlsMachineId, e.CapabilityType });
+
+                // Relationships
+                entity.HasOne(e => e.SlsMachine)
+                      .WithMany()
+                      .HasForeignKey(e => e.SlsMachineId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                // Constraints
+                entity.Property(e => e.CapabilityType).HasMaxLength(50);
+                entity.Property(e => e.CapabilityName).HasMaxLength(100);
+                entity.Property(e => e.CapabilityValue).HasMaxLength(500);
+                entity.Property(e => e.Unit).HasMaxLength(20);
+                entity.Property(e => e.Notes).HasMaxLength(1000);
+                entity.Property(e => e.RequiredCertification).HasMaxLength(200);
+                entity.Property(e => e.CreatedBy).HasMaxLength(100).HasDefaultValue("System");
+                entity.Property(e => e.LastModifiedBy).HasMaxLength(100).HasDefaultValue("System");
+
+                // Default values
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.IsAvailable).HasDefaultValue(true);
+                entity.Property(e => e.Priority).HasDefaultValue(3);
+            });
+
+            #endregion
+
+            #region SystemSetting Configuration (NEW - Task 2)
+
+            modelBuilder.Entity<SystemSetting>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                // Indexes
+                entity.HasIndex(e => e.SettingKey).IsUnique();
+                entity.HasIndex(e => e.Category);
+                entity.HasIndex(e => e.IsActive);
+                entity.HasIndex(e => new { e.Category, e.DisplayOrder });
+
+                // Constraints
+                entity.Property(e => e.SettingKey).HasMaxLength(100);
+                entity.Property(e => e.SettingValue).HasMaxLength(2000);
+                entity.Property(e => e.DataType).HasMaxLength(20).HasDefaultValue("String");
+                entity.Property(e => e.Category).HasMaxLength(50).HasDefaultValue("General");
+                entity.Property(e => e.Description).HasMaxLength(500);
+                entity.Property(e => e.DefaultValue).HasMaxLength(500);
+                entity.Property(e => e.ValidationRules).HasMaxLength(200);
+                entity.Property(e => e.CreatedBy).HasMaxLength(100).HasDefaultValue("System");
+                entity.Property(e => e.LastModifiedBy).HasMaxLength(100).HasDefaultValue("System");
+
+                // Default values
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.IsActive).HasDefaultValue(true);
+                entity.Property(e => e.IsReadOnly).HasDefaultValue(false);
+                entity.Property(e => e.RequiresRestart).HasDefaultValue(false);
+                entity.Property(e => e.DisplayOrder).HasDefaultValue(100);
+            });
+
+            #endregion
+
+            #region RolePermission Configuration (NEW - Task 2)
+
+            modelBuilder.Entity<RolePermission>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                // Indexes
+                entity.HasIndex(e => e.RoleName);
+                entity.HasIndex(e => e.PermissionKey);
+                entity.HasIndex(e => e.Category);
+                entity.HasIndex(e => e.IsActive);
+                entity.HasIndex(e => new { e.RoleName, e.PermissionKey }).IsUnique();
+
+                // Constraints
+                entity.Property(e => e.RoleName).HasMaxLength(50);
+                entity.Property(e => e.PermissionKey).HasMaxLength(100);
+                entity.Property(e => e.PermissionLevel).HasMaxLength(20).HasDefaultValue("Read");
+                entity.Property(e => e.Category).HasMaxLength(50).HasDefaultValue("General");
+                entity.Property(e => e.Description).HasMaxLength(500);
+                entity.Property(e => e.Constraints).HasMaxLength(1000).HasDefaultValue("{}");
+                entity.Property(e => e.CreatedBy).HasMaxLength(100).HasDefaultValue("System");
+                entity.Property(e => e.LastModifiedBy).HasMaxLength(100).HasDefaultValue("System");
+
+                // Default values
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.HasPermission).HasDefaultValue(false);
+                entity.Property(e => e.IsActive).HasDefaultValue(true);
+                entity.Property(e => e.Priority).HasDefaultValue(100);
+            });
+
+            #endregion
+
+            #region InspectionCheckpoint Configuration (NEW - Task 2)
+
+            modelBuilder.Entity<InspectionCheckpoint>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                // Indexes
+                entity.HasIndex(e => e.PartId);
+                entity.HasIndex(e => e.InspectionType);
+                entity.HasIndex(e => e.IsActive);
+                entity.HasIndex(e => e.IsRequired);
+                entity.HasIndex(e => new { e.PartId, e.SortOrder });
+
+                // Relationships
+                entity.HasOne(e => e.Part)
+                      .WithMany()
+                      .HasForeignKey(e => e.PartId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                // Constraints
+                entity.Property(e => e.CheckpointName).HasMaxLength(200);
+                entity.Property(e => e.Description).HasMaxLength(1000);
+                entity.Property(e => e.InspectionType).HasMaxLength(50).HasDefaultValue("Visual");
+                entity.Property(e => e.AcceptanceCriteria).HasMaxLength(500);
+                entity.Property(e => e.MeasurementMethod).HasMaxLength(500);
+                entity.Property(e => e.RequiredEquipment).HasMaxLength(500);
+                entity.Property(e => e.RequiredSkills).HasMaxLength(500);
+                entity.Property(e => e.ReferenceDocuments).HasMaxLength(500);
+                entity.Property(e => e.Unit).HasMaxLength(20);
+                entity.Property(e => e.FailureAction).HasMaxLength(500).HasDefaultValue("Hold for review");
+                entity.Property(e => e.SamplingMethod).HasMaxLength(50).HasDefaultValue("All");
+                entity.Property(e => e.Category).HasMaxLength(50).HasDefaultValue("Quality");
+                entity.Property(e => e.Notes).HasMaxLength(1000);
+                entity.Property(e => e.CreatedBy).HasMaxLength(100).HasDefaultValue("System");
+                entity.Property(e => e.LastModifiedBy).HasMaxLength(100).HasDefaultValue("System");
+
+                // Default values
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.SortOrder).HasDefaultValue(100);
+                entity.Property(e => e.IsRequired).HasDefaultValue(true);
+                entity.Property(e => e.IsActive).HasDefaultValue(true);
+                entity.Property(e => e.EstimatedMinutes).HasDefaultValue(5);
+                entity.Property(e => e.SampleSize).HasDefaultValue(1);
+                entity.Property(e => e.Priority).HasDefaultValue(3);
+            });
+
+            #endregion
+
+            #region DefectCategory Configuration (NEW - Task 2)
+
+            modelBuilder.Entity<DefectCategory>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                // Indexes
+                entity.HasIndex(e => e.Name);
+                entity.HasIndex(e => e.Code);
+                entity.HasIndex(e => e.CategoryGroup);
+                entity.HasIndex(e => e.IsActive);
+                entity.HasIndex(e => e.SeverityLevel);
+
+                // Constraints
+                entity.Property(e => e.Name).HasMaxLength(100);
+                entity.Property(e => e.Description).HasMaxLength(500);
+                entity.Property(e => e.Code).HasMaxLength(20);
+                entity.Property(e => e.CategoryGroup).HasMaxLength(50).HasDefaultValue("General");
+                entity.Property(e => e.ApplicableProcesses).HasMaxLength(200);
+                entity.Property(e => e.StandardCorrectiveActions).HasMaxLength(1000);
+                entity.Property(e => e.PreventionMethods).HasMaxLength(1000);
+                entity.Property(e => e.CostImpact).HasMaxLength(20).HasDefaultValue("Medium");
+                entity.Property(e => e.ColorCode).HasMaxLength(7).HasDefaultValue("#6B7280");
+                entity.Property(e => e.Icon).HasMaxLength(50).HasDefaultValue("exclamation-triangle");
+                entity.Property(e => e.CreatedBy).HasMaxLength(100).HasDefaultValue("System");
+                entity.Property(e => e.LastModifiedBy).HasMaxLength(100).HasDefaultValue("System");
+
+                // Default values
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.SeverityLevel).HasDefaultValue(3);
+                entity.Property(e => e.IsActive).HasDefaultValue(true);
+                entity.Property(e => e.RequiresImmediateNotification).HasDefaultValue(false);
+                entity.Property(e => e.AverageResolutionTimeMinutes).HasDefaultValue(30);
+                entity.Property(e => e.SortOrder).HasDefaultValue(100);
+            });
+
+            #endregion
+
+            #region ArchivedJob Configuration (NEW - Task 2)
+
+            modelBuilder.Entity<ArchivedJob>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                // Indexes
+                entity.HasIndex(e => e.OriginalJobId);
+                entity.HasIndex(e => e.MachineId);
+                entity.HasIndex(e => e.PartNumber);
+                entity.HasIndex(e => e.Status);
+                entity.HasIndex(e => e.ArchivedDate);
+                entity.HasIndex(e => e.ArchivedBy);
+                entity.HasIndex(e => new { e.MachineId, e.ScheduledStart });
+
+                // Constraints
+                entity.Property(e => e.MachineId).HasMaxLength(50);
+                entity.Property(e => e.PartNumber).HasMaxLength(50);
+                entity.Property(e => e.PartDescription).HasMaxLength(500);
+                entity.Property(e => e.Status).HasMaxLength(50).HasDefaultValue("Completed");
+                entity.Property(e => e.SlsMaterial).HasMaxLength(100);
+                entity.Property(e => e.PowderLotNumber).HasMaxLength(50);
+                entity.Property(e => e.Operator).HasMaxLength(100);
+                entity.Property(e => e.QualityInspector).HasMaxLength(100);
+                entity.Property(e => e.Supervisor).HasMaxLength(100);
+                entity.Property(e => e.CustomerOrderNumber).HasMaxLength(100);
+                entity.Property(e => e.Notes).HasMaxLength(1000);
+                entity.Property(e => e.HoldReason).HasMaxLength(500);
+                entity.Property(e => e.ProcessParameters).HasMaxLength(2000).HasDefaultValue("{}");
+                entity.Property(e => e.QualityCheckpoints).HasMaxLength(2000).HasDefaultValue("{}");
+                entity.Property(e => e.ArchivedBy).HasMaxLength(100).HasDefaultValue("System");
+                entity.Property(e => e.ArchiveReason).HasMaxLength(500).HasDefaultValue("Cleanup");
+                entity.Property(e => e.OriginalCreatedBy).HasMaxLength(100);
+                entity.Property(e => e.OriginalLastModifiedBy).HasMaxLength(100);
+
+                // Default values
+                entity.Property(e => e.ArchivedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.Priority).HasDefaultValue(3);
+                entity.Property(e => e.Quantity).HasDefaultValue(1);
+
+                // Decimal precision
+                entity.Property(e => e.LaborCostPerHour).HasPrecision(10, 2);
+                entity.Property(e => e.MaterialCostPerKg).HasPrecision(10, 2);
+                entity.Property(e => e.MachineOperatingCostPerHour).HasPrecision(10, 2);
+                entity.Property(e => e.ArgonCostPerHour).HasPrecision(10, 2);
+            });
+
+            #endregion
+
+            #region AdminAlert Configuration (NEW - Task 2)
+
+            modelBuilder.Entity<AdminAlert>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                // Indexes
+                entity.HasIndex(e => e.AlertName);
+                entity.HasIndex(e => e.Category);
+                entity.HasIndex(e => e.TriggerType);
+                entity.HasIndex(e => e.IsActive);
+                entity.HasIndex(e => e.SeverityLevel);
+                entity.HasIndex(e => e.LastTriggered);
+
+                // Constraints
+                entity.Property(e => e.AlertName).HasMaxLength(200);
+                entity.Property(e => e.Description).HasMaxLength(1000);
+                entity.Property(e => e.Category).HasMaxLength(50).HasDefaultValue("System");
+                entity.Property(e => e.TriggerType).HasMaxLength(100);
+                entity.Property(e => e.TriggerConditions).HasMaxLength(2000).HasDefaultValue("{}");
+                entity.Property(e => e.EmailRecipients).HasMaxLength(1000);
+                entity.Property(e => e.EmailSubject).HasMaxLength(200).HasDefaultValue("OpCentrix Alert: {AlertName}");
+                entity.Property(e => e.EmailTemplate).HasMaxLength(2000);
+                entity.Property(e => e.SmsRecipients).HasMaxLength(500);
+                entity.Property(e => e.SmsTemplate).HasMaxLength(160);
+                entity.Property(e => e.EscalationRules).HasMaxLength(1000).HasDefaultValue("{}");
+                entity.Property(e => e.BusinessDays).HasMaxLength(20).HasDefaultValue("1,2,3,4,5");
+                entity.Property(e => e.CreatedBy).HasMaxLength(100).HasDefaultValue("System");
+                entity.Property(e => e.LastModifiedBy).HasMaxLength(100).HasDefaultValue("System");
+
+                // Default values
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.SeverityLevel).HasDefaultValue(3);
+                entity.Property(e => e.IsActive).HasDefaultValue(true);
+                entity.Property(e => e.SendBrowserNotification).HasDefaultValue(true);
+                entity.Property(e => e.SendSms).HasDefaultValue(false);
+                entity.Property(e => e.CooldownMinutes).HasDefaultValue(15);
+                entity.Property(e => e.BusinessHoursOnly).HasDefaultValue(false);
+                entity.Property(e => e.MaxAlertsPerDay).HasDefaultValue(10);
+                entity.Property(e => e.TriggerCount).HasDefaultValue(0);
+                entity.Property(e => e.TriggersToday).HasDefaultValue(0);
+                entity.Property(e => e.LastDailyReset).HasDefaultValueSql("date('now')");
+            });
+
+            #endregion
+
+            #region FeatureToggle Configuration (NEW - Task 2)
+
+            modelBuilder.Entity<FeatureToggle>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                // Indexes
+                entity.HasIndex(e => e.FeatureName).IsUnique();
+                entity.HasIndex(e => e.Category);
+                entity.HasIndex(e => e.IsEnabled);
+                entity.HasIndex(e => e.Environment);
+                entity.HasIndex(e => e.Status);
+                entity.HasIndex(e => e.RequiredRole);
+
+                // Constraints
+                entity.Property(e => e.FeatureName).HasMaxLength(100);
+                entity.Property(e => e.DisplayName).HasMaxLength(200);
+                entity.Property(e => e.Description).HasMaxLength(1000);
+                entity.Property(e => e.Category).HasMaxLength(50).HasDefaultValue("General");
+                entity.Property(e => e.Environment).HasMaxLength(20).HasDefaultValue("All");
+                entity.Property(e => e.RequiredRole).HasMaxLength(50).HasDefaultValue("User");
+                entity.Property(e => e.Dependencies).HasMaxLength(500);
+                entity.Property(e => e.Conflicts).HasMaxLength(500);
+                entity.Property(e => e.Configuration).HasMaxLength(2000).HasDefaultValue("{}");
+                entity.Property(e => e.PerformanceNotes).HasMaxLength(500);
+                entity.Property(e => e.SecurityNotes).HasMaxLength(500);
+                entity.Property(e => e.IntroducedInVersion).HasMaxLength(20);
+                entity.Property(e => e.PlannedRemovalVersion).HasMaxLength(20);
+                entity.Property(e => e.Status).HasMaxLength(20).HasDefaultValue("Experimental");
+                entity.Property(e => e.CreatedBy).HasMaxLength(100).HasDefaultValue("System");
+                entity.Property(e => e.LastModifiedBy).HasMaxLength(100).HasDefaultValue("System");
+
+                // Default values
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.IsEnabled).HasDefaultValue(false);
+                entity.Property(e => e.RolloutPercentage).HasDefaultValue(100);
+                entity.Property(e => e.RequiresRestart).HasDefaultValue(false);
+                entity.Property(e => e.UsageCount).HasDefaultValue(0);
+                entity.Property(e => e.SortOrder).HasDefaultValue(100);
             });
 
             #endregion

@@ -1,4 +1,3 @@
-//Program.cs:
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using OpCentrix.Data;
@@ -7,8 +6,26 @@ using OpCentrix.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using OpCentrix.Authorization;
 using Microsoft.AspNetCore.Authorization;
+using Serilog;
+using Serilog.Events;
+
+// Configure Serilog for global logging (Task 2.5)
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
+    .Enrich.FromLogContext()
+    .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}")
+    .WriteTo.File("logs/opcentrix-.log", 
+        rollingInterval: RollingInterval.Day,
+        outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}",
+        retainedFileCountLimit: 30)
+    .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Use Serilog as the logging provider
+builder.Host.UseSerilog();
 
 // Add services to the container
 builder.Services.AddRazorPages();
@@ -88,6 +105,15 @@ builder.Services.AddScoped<IPrintTrackingService, PrintTrackingService>();
 // Register database validation service
 builder.Services.AddScoped<DatabaseValidationService>();
 
+// NEW: Admin Control System services (Task 2)
+builder.Services.AddScoped<OpCentrix.Services.Admin.IAdminDashboardService, OpCentrix.Services.Admin.AdminDashboardService>();
+builder.Services.AddScoped<OpCentrix.Services.Admin.IAdminJobService, OpCentrix.Services.Admin.AdminJobService>();
+builder.Services.AddScoped<OpCentrix.Services.Admin.ISystemSettingService, OpCentrix.Services.Admin.SystemSettingService>();
+builder.Services.AddScoped<OpCentrix.Services.Admin.IRolePermissionService, OpCentrix.Services.Admin.RolePermissionService>();
+builder.Services.AddScoped<OpCentrix.Services.Admin.IOperatingShiftService, OpCentrix.Services.Admin.OperatingShiftService>();
+builder.Services.AddScoped<OpCentrix.Services.Admin.ILogViewerService, OpCentrix.Services.Admin.LogViewerService>();
+builder.Services.AddScoped<OpCentrix.Services.Admin.IAdminDataSeedingService, OpCentrix.Services.Admin.AdminDataSeedingService>();
+
 // Background services for OPC UA monitoring (if needed in future)
 // builder.Services.AddHostedService<OpcUaMonitoringService>();
 
@@ -138,7 +164,8 @@ app.UseAuthorization();
 app.MapRazorPages();
 
 // Add health check endpoint
-app.MapGet("/health", () => "Healthy");
+app.MapGet("/health", () => "Healthy")
+    .RequireAuthorization("SchedulerAccess");
 
 // Initialize database and seed data
 using (var scope = app.Services.CreateScope())
@@ -148,48 +175,23 @@ using (var scope = app.Services.CreateScope())
     
     try
     {
+        // Initialize database with seeded data
         logger.LogInformation("Initializing database...");
-        
-        var context = services.GetRequiredService<SchedulerContext>();
-        
-        // In development, create database but don't recreate unless explicitly requested
-        if (app.Environment.IsDevelopment())
+        using (var scope = app.Services.CreateScope())
         {
-            logger.LogInformation("Development environment - ensuring database exists...");
-            
-            // Check if user wants to recreate the database
-            var recreateDatabase = Environment.GetEnvironmentVariable("RECREATE_DATABASE");
-            if (recreateDatabase?.ToLower() == "true")
-            {
-                logger.LogInformation("RECREATE_DATABASE=true - recreating database...");
-                await context.Database.EnsureDeletedAsync();
-                await context.Database.EnsureCreatedAsync();
-                logger.LogInformation("Database recreated successfully.");
-            }
-            else
-            {
-                // Just ensure it exists, don't delete existing data
-                await context.Database.EnsureCreatedAsync();
-                logger.LogInformation("Database ensured to exist, preserving existing data.");
-            }
-        }
-        else
-        {
-            // Ensure database is created
+            var context = scope.ServiceProvider.GetRequiredService<SchedulerContext>();
+            var seedingService = scope.ServiceProvider.GetRequiredService<SlsDataSeedingService>();
+            var adminSeedingService = scope.ServiceProvider.GetRequiredService<OpCentrix.Services.Admin.IAdminDataSeedingService>();
+
+            // Ensure database is created and up to date
             await context.Database.EnsureCreatedAsync();
+
+            // Seed initial data
+            await seedingService.SeedDataAsync();
             
-            // Apply any pending migrations
-            if (context.Database.GetPendingMigrations().Any())
-            {
-                logger.LogInformation("Applying database migrations...");
-                await context.Database.MigrateAsync();
-            }
+            // Seed admin control system data (Task 2)
+            await adminSeedingService.SeedAllDefaultDataAsync();
         }
-        
-        // Seed the database with SLS data
-        var seedingService = services.GetRequiredService<SlsDataSeedingService>();
-        await seedingService.SeedDatabaseAsync();
-        
         logger.LogInformation("Database initialization completed successfully");
         logger.LogInformation("?? TIP: Set environment variable RECREATE_DATABASE=true to recreate database on next startup");
         logger.LogInformation("?? Test users available:");

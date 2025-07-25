@@ -1,76 +1,174 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using OpCentrix.Data;
-using OpCentrix.Models;
-using Microsoft.EntityFrameworkCore;
+using OpCentrix.Services.Admin;
+using System.Net.Mime;
 
-namespace OpCentrix.Pages.Admin
+namespace OpCentrix.Pages.Admin;
+
+/// <summary>
+/// Admin page for viewing system logs
+/// Task 2.5: Global Logging and Error Handling
+/// </summary>
+[Authorize(Policy = "AdminOnly")]
+public class LogsModel : PageModel
 {
-    public class LogsModel : PageModel
+    private readonly ILogViewerService _logViewerService;
+    private readonly ILogger<LogsModel> _logger;
+
+    public LogsModel(ILogViewerService logViewerService, ILogger<LogsModel> logger)
     {
-        private readonly SchedulerContext _context;
+        _logViewerService = logViewerService;
+        _logger = logger;
+    }
 
-        public LogsModel(SchedulerContext context)
+    // Properties for the page
+    public List<LogEntry> LogEntries { get; set; } = new();
+    public List<string> LogLevels { get; set; } = new();
+    public List<string> LogFiles { get; set; } = new();
+    public LogStatistics Statistics { get; set; } = new();
+
+    // Filter properties
+    [BindProperty(SupportsGet = true)]
+    public string? LevelFilter { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string? SearchTerm { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public int CurrentPage { get; set; } = 1;
+
+    [BindProperty(SupportsGet = true)]
+    public int PageSize { get; set; } = 50;
+
+    public int TotalPages { get; set; }
+    public bool HasPrevious => CurrentPage > 1;
+    public bool HasNext => CurrentPage < TotalPages;
+
+    public async Task OnGetAsync()
+    {
+        try
         {
-            _context = context;
+            _logger.LogInformation("Loading admin logs page - User: {User}, Page: {Page}, Level: {Level}, Search: {Search}",
+                User.Identity?.Name, CurrentPage, LevelFilter, SearchTerm);
+
+            // Load log data
+            LogEntries = await _logViewerService.GetLogsAsync(CurrentPage, PageSize, LevelFilter, SearchTerm);
+            LogLevels = await _logViewerService.GetLogLevelsAsync();
+            LogFiles = await _logViewerService.GetLogFilesAsync();
+            Statistics = await _logViewerService.GetLogStatisticsAsync();
+
+            // Calculate pagination (simplified since we're reading from files)
+            var totalEntries = Statistics.TotalEntries;
+            TotalPages = (int)Math.Ceiling((double)totalEntries / PageSize);
+
+            _logger.LogInformation("Admin logs page loaded successfully - {EntryCount} entries, {PageCount} pages",
+                LogEntries.Count, TotalPages);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading admin logs page");
+
+            // Initialize with empty data on error
+            LogEntries = new List<LogEntry>();
+            LogLevels = new List<string>();
+            LogFiles = new List<string>();
+            Statistics = new LogStatistics();
+            TotalPages = 1;
+        }
+    }
+
+    public async Task<IActionResult> OnPostClearLogsAsync()
+    {
+        try
+        {
+            _logger.LogWarning("Admin {User} is clearing all log files", User.Identity?.Name);
+
+            var success = await _logViewerService.ClearLogsAsync();
+
+            if (success)
+            {
+                _logger.LogInformation("Log files cleared successfully by {User}", User.Identity?.Name);
+                TempData["Success"] = "All log files have been cleared successfully.";
+            }
+            else
+            {
+                _logger.LogError("Failed to clear log files");
+                TempData["Error"] = "Failed to clear log files. Please check permissions.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error clearing log files");
+            TempData["Error"] = "An error occurred while clearing log files.";
         }
 
-        public List<JobLogEntry> LogEntries { get; set; } = new();
-        public string SearchTerm { get; set; } = string.Empty;
-        public string ActionFilter { get; set; } = string.Empty;
-        public string MachineFilter { get; set; } = string.Empty;
-        public DateTime? FromDate { get; set; }
-        public DateTime? ToDate { get; set; }
-        public int PageNumber { get; set; } = 1;
-        public int PageSize { get; set; } = 50;
-        public int TotalCount { get; set; }
-        public int TotalPages => (int)Math.Ceiling((double)TotalCount / PageSize);
+        return RedirectToPage();
+    }
 
-        public async Task OnGetAsync(string? search, string? action, string? machine, DateTime? from, DateTime? to, int? page)
+    public async Task<IActionResult> OnGetDownloadLogAsync(string fileName)
+    {
+        try
         {
-            SearchTerm = search ?? string.Empty;
-            ActionFilter = action ?? string.Empty;
-            MachineFilter = machine ?? string.Empty;
-            FromDate = from;
-            ToDate = to;
-            PageNumber = page ?? 1;
+            if (string.IsNullOrEmpty(fileName))
+                return BadRequest("File name is required");
 
-            var query = _context.JobLogEntries.AsQueryable();
+            _logger.LogInformation("Admin {User} downloading log file: {FileName}", User.Identity?.Name, fileName);
 
-            // Apply filters
-            if (!string.IsNullOrEmpty(SearchTerm))
-            {
-                query = query.Where(l => l.PartNumber.Contains(SearchTerm) || 
-                                        l.Operator.Contains(SearchTerm) ||
-                                        l.Notes.Contains(SearchTerm));
-            }
+            var content = await _logViewerService.GetLogFileContentAsync(fileName);
+            if (string.IsNullOrEmpty(content))
+                return NotFound("Log file not found");
 
-            if (!string.IsNullOrEmpty(ActionFilter))
-            {
-                query = query.Where(l => l.Action == ActionFilter);
-            }
-
-            if (!string.IsNullOrEmpty(MachineFilter))
-            {
-                query = query.Where(l => l.MachineId == MachineFilter);
-            }
-
-            if (FromDate.HasValue)
-            {
-                query = query.Where(l => l.Timestamp >= FromDate.Value);
-            }
-
-            if (ToDate.HasValue)
-            {
-                query = query.Where(l => l.Timestamp <= ToDate.Value.AddDays(1));
-            }
-
-            TotalCount = await query.CountAsync();
-            
-            LogEntries = await query
-                .OrderByDescending(l => l.Timestamp)
-                .Skip((PageNumber - 1) * PageSize)
-                .Take(PageSize)
-                .ToListAsync();
+            var bytes = System.Text.Encoding.UTF8.GetBytes(content);
+            return File(bytes, "text/plain", fileName);
         }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error downloading log file {FileName}", fileName);
+            return BadRequest("Error downloading log file");
+        }
+    }
+
+    public async Task<IActionResult> OnGetRefreshAsync()
+    {
+        try
+        {
+            _logger.LogInformation("Admin {User} refreshing logs page", User.Identity?.Name);
+            await OnGetAsync();
+            return Page();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error refreshing logs page");
+            TempData["Error"] = "Error refreshing logs.";
+            return Page();
+        }
+    }
+
+    // Helper methods for the view
+    public string GetLogLevelBadgeClass(string level)
+    {
+        return level.ToLower() switch
+        {
+            "information" or "info" => "bg-blue-100 text-blue-800",
+            "warning" or "warn" => "bg-yellow-100 text-yellow-800",
+            "error" => "bg-red-100 text-red-800",
+            "debug" => "bg-gray-100 text-gray-800",
+            "fatal" => "bg-red-200 text-red-900 font-bold",
+            _ => "bg-gray-100 text-gray-600"
+        };
+    }
+
+    public string FormatTimestamp(DateTime timestamp)
+    {
+        return timestamp.ToString("yyyy-MM-dd HH:mm:ss");
+    }
+
+    public string TruncateMessage(string message, int maxLength = 100)
+    {
+        if (string.IsNullOrEmpty(message) || message.Length <= maxLength)
+            return message;
+
+        return message.Substring(0, maxLength) + "...";
     }
 }

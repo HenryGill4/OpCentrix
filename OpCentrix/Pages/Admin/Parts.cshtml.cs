@@ -238,7 +238,7 @@ namespace OpCentrix.Pages.Admin
                 };
 
                 _logger.LogDebug("? [PARTS-{OperationId}] Add part modal prepared with comprehensive defaults", operationId);
-                return Partial("_PartForm", newPart);
+                return Partial("Shared/_PartForm", newPart);
             }
             catch (Exception ex)
             {
@@ -294,7 +294,7 @@ namespace OpCentrix.Pages.Admin
                 _logger.LogDebug("? [PARTS-{OperationId}] Edit part modal prepared for part: {PartNumber}", 
                     operationId, part.PartNumber);
                 
-                return Partial("_PartForm", part);
+                return Partial("Shared/_PartForm", part);
             }
             catch (Exception ex)
             {
@@ -431,7 +431,7 @@ namespace OpCentrix.Pages.Admin
                         operationId, validationErrors.Count);
                     
                     ViewData["ValidationErrors"] = validationErrors;
-                    return Partial("_PartForm", part);
+                    return Partial("Shared/_PartForm", part);
                 }
 
                 var currentUser = User.Identity?.Name ?? "System";
