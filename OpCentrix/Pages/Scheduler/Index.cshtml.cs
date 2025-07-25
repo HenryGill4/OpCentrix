@@ -703,46 +703,46 @@ namespace OpCentrix.Pages.Scheduler
                     _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Job {Action} successfully: {JobId} - {PartNumber}, Scheduled: {Start} - {End}",
                         operationId, logAction, job.Id, job.PartNumber, job.ScheduledStart, job.ScheduledEnd);
 
-                    // **CRITICAL FIX: Return script response to close modal and update machine row**
-                    var script = $@"
-                        <script>
-                            // Close the modal first
-                            setTimeout(() => {{
+                    // **CRITICAL FIX: Return proper HTMX response instead of JavaScript**
+                    
+                    // Add success message to TempData for notification
+                    TempData["SuccessMessage"] = $"Job {logAction.ToLower()} successfully! {job.PartNumber} scheduled for {job.ScheduledStart:MMM dd, HH:mm}";
+                    
+                    // **HTMX RESPONSE: Return combined response that closes modal and refreshes machine row**
+                    var responseHtml = $@"
+                        <!-- Close modal via HTMX -->
+                        <div id=""modal-close-trigger"" 
+                             hx-get=""/Scheduler?handler=CloseModal""
+                             hx-target=""#job-modal-container""
+                             hx-swap=""outerHTML""
+                             hx-trigger=""load"">
+                        </div>
+                        
+                        <!-- Show success notification -->
+                        <div id=""success-notification"" 
+                             hx-get=""/Scheduler?handler=ShowSuccessNotification&message={Uri.EscapeDataString($"Job {logAction.ToLower()} successfully!")}&operationId={operationId}""
+                             hx-target=""#notification-container""
+                             hx-swap=""innerHTML""
+                             hx-trigger=""load delay:200ms"">
+                        </div>
+                        
+                        <!-- Refresh the specific machine row -->
+                        <div id=""machine-row-refresh-trigger""
+                             hx-get=""/Scheduler?handler=MachineRow&machineId={job.MachineId}""
+                             hx-target=""#machine-row-{job.MachineId}""
+                             hx-swap=""outerHTML""
+                             hx-trigger=""load delay:400ms"">
+                        </div>
+                        
+                        <!-- Refresh footer summary -->
+                        <div id=""footer-refresh-trigger""
+                             hx-get=""/Scheduler?handler=FooterSummary""
+                             hx-target=""#footer-summary""
+                             hx-swap=""outerHTML""
+                             hx-trigger=""load delay:600ms"">
+                        </div>";
 
-                                const modal = document.getElementById('job-modal-container');
-                                if (modal) {{
-                                    modal.style.display = 'none';
-                                    modal.classList.add('hidden');
-                                    document.body.style.overflow = '';
-                                    modal.innerHTML = '';
-                                }}
-                            }}, 100);
-                            
-                            // Show success notification with timing info
-                            setTimeout(() => {{
-                                if (window.showSuccessNotification) {{
-                                    window.showSuccessNotification('Job {logAction.ToLower()} successfully! Scheduled: {job.ScheduledStart:MMM dd HH:mm} - {job.ScheduledEnd:MMM dd HH:mm}');
-                                }}
-                            }}, 200);
-                            
-                            // Reload the entire page to show the new job (simpler approach)
-                            setTimeout(() => {{
-                                // Change to the date where the job is scheduled if it's far in the future
-                                const jobDate = new Date('{job.ScheduledStart:yyyy-MM-dd}');
-                                const currentDate = new Date();
-                                const daysDiff = Math.abs((jobDate - currentDate) / (1000 * 60 * 60 * 24));
-                                
-                                if (daysDiff > 60) {{
-                                    // Job is scheduled far in the future, navigate to that date
-                                    window.location.href = '/Scheduler?startDate={job.ScheduledStart:yyyy-MM-dd}';
-                                }} else {{
-                                    // Job is within current view, just reload
-                                    window.location.reload();
-                                }}
-                            }}, 500);
-                        </script>";
-
-                    return Content(script, "text/html");
+                    return Content(responseHtml, "text/html");
                 }
                 catch (Exception transactionEx)
                 {
@@ -1604,6 +1604,48 @@ namespace OpCentrix.Pages.Scheduler
                 // Return minimal error summary
                 return Partial("_FooterSummary", new FooterSummaryViewModel());
             }
+        }
+
+        /// <summary>
+        /// **CRITICAL FIX: Close modal via HTMX response**
+        /// </summary>
+        public IActionResult OnGetCloseModal()
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogDebug("🔄 [SCHEDULER-{OperationId}] Closing modal via HTMX", operationId);
+
+            // Return empty content to remove modal from DOM
+            return Content("", "text/html");
+        }
+
+        /// <summary>
+        /// **CRITICAL FIX: Show success notification via HTMX**
+        /// </summary>
+        public IActionResult OnGetShowSuccessNotification(string message, string operationId)
+        {
+            _logger.LogDebug("🔄 [SCHEDULER-{OperationId}] Showing success notification: {Message}", operationId, message);
+
+            // Return notification HTML
+            var notificationHtml = $@"
+                <div class=""notification notification-success fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in"">
+                    <div class=""flex items-center"">
+                        <svg class=""w-5 h-5 mr-2"" fill=""none"" stroke=""currentColor"" viewBox=""0 0 24 24"">
+                            <path stroke-linecap=""round"" stroke-linejoin=""round"" stroke-width=""2"" d=""M5 13l4 4L19 7""></path>
+                        </svg>
+                        <span>{message}</span>
+                    </div>
+                    <script>
+                        setTimeout(() => {{
+                            const notification = document.querySelector('.notification-success');
+                            if (notification) {{
+                                notification.style.opacity = '0';
+                                setTimeout(() => notification.remove(), 300);
+                            }}
+                        }}, 3000);
+                    </script>
+                </div>";
+
+            return Content(notificationHtml, "text/html");
         }
     }
 }

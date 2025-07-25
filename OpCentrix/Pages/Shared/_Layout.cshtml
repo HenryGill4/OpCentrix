@@ -292,27 +292,82 @@
         </div>
     </footer>
 
-    <!-- FIXED SCRIPT LOADING ORDER: jQuery MUST come first -->
+    <!-- CRITICAL FIX: Improved script loading order with better error handling -->
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script>
-        // Verify jQuery is loaded before continuing
+        // ENHANCED: Better jQuery validation with error recovery
         if (typeof jQuery === 'undefined') {
-            console.error('CRITICAL: jQuery failed to load! This will cause validation errors.');
-            document.body.innerHTML += '<div style="position: fixed; top: 0; left: 0; right: 0; background: red; color: white; padding: 10px; text-align: center; z-index: 99999;">ERROR: jQuery failed to load. Please refresh the page.</div>';
+            console.error('[LAYOUT] CRITICAL: jQuery failed to load! This will cause validation errors.');
+            
+            // Show user-friendly error message
+            var errorDiv = document.createElement('div');
+            errorDiv.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; background: #dc2626; color: white; padding: 12px; text-align: center; z-index: 99999; font-family: sans-serif;';
+            errorDiv.innerHTML = '[ERROR] jQuery failed to load. Form validation may not work. Please refresh the page.';
+            document.body.appendChild(errorDiv);
+            
+            // Attempt to load jQuery from CDN as fallback
+            var jqueryCDN = document.createElement('script');
+            jqueryCDN.src = 'https://code.jquery.com/jquery-3.7.1.min.js';
+            jqueryCDN.onload = function() {
+                console.log('[LAYOUT] jQuery loaded from CDN fallback');
+                errorDiv.style.background = '#059669';
+                errorDiv.innerHTML = '[RECOVERED] jQuery loaded from backup source. Validation should work now.';
+                setTimeout(() => errorDiv.remove(), 3000);
+            };
+            jqueryCDN.onerror = function() {
+                console.error('[LAYOUT] Even CDN fallback failed to load jQuery');
+                errorDiv.innerHTML = '[CRITICAL] jQuery cannot be loaded. Please check your internet connection and refresh.';
+            };
+            document.head.appendChild(jqueryCDN);
         } else {
-            console.log('✅ jQuery loaded successfully:', jQuery.fn.jquery);
+            console.log('[LAYOUT] SUCCESS: jQuery loaded successfully:', jQuery.fn.jquery);
         }
     </script>
     
-    <!-- Load validation plugins AFTER jQuery -->
+    <!-- Load validation plugins AFTER jQuery with error checking -->
     <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+    <script>
+        // ENHANCED: Better validation plugin error handling
+        if (typeof jQuery !== 'undefined') {
+            if (typeof jQuery.validator === 'undefined') {
+                console.error('[LAYOUT] CRITICAL: jQuery Validation plugin failed to load!');
+                
+                // Attempt to load from CDN as fallback
+                var validationCDN = document.createElement('script');
+                validationCDN.src = 'https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/jquery.validate.min.js';
+                validationCDN.onload = function() {
+                    console.log('[LAYOUT] jQuery Validation loaded from CDN fallback');
+                };
+                validationCDN.onerror = function() {
+                    console.error('[LAYOUT] jQuery Validation CDN fallback also failed');
+                };
+                document.head.appendChild(validationCDN);
+            } else {
+                console.log('[LAYOUT] SUCCESS: jQuery Validation loaded successfully');
+            }
+        }
+    </script>
+    
     <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
     <script>
-        // Verify validation plugins loaded
-        if (typeof jQuery.validator === 'undefined') {
-            console.error('CRITICAL: jQuery Validation failed to load!');
-        } else {
-            console.log('✅ jQuery Validation loaded successfully');
+        // ENHANCED: Better unobtrusive validation error handling
+        if (typeof jQuery !== 'undefined' && typeof jQuery.validator !== 'undefined') {
+            if (typeof jQuery.validator.unobtrusive === 'undefined') {
+                console.error('[LAYOUT] CRITICAL: jQuery Unobtrusive Validation failed to load!');
+                
+                // Attempt to load from CDN as fallback
+                var unobtrusiveCDN = document.createElement('script');
+                unobtrusiveCDN.src = 'https://cdn.jsdelivr.net/npm/jquery-validation-unobtrusive@4.0.0/dist/jquery.validate.unobtrusive.min.js';
+                unobtrusiveCDN.onload = function() {
+                    console.log('[LAYOUT] jQuery Unobtrusive Validation loaded from CDN fallback');
+                };
+                unobtrusiveCDN.onerror = function() {
+                    console.error('[LAYOUT] jQuery Unobtrusive Validation CDN fallback also failed');
+                };
+                document.head.appendChild(unobtrusiveCDN);
+            } else {
+                console.log('[LAYOUT] SUCCESS: jQuery Unobtrusive Validation loaded successfully');
+            }
         }
     </script>
     
@@ -420,32 +475,32 @@
             
             // Enhanced logout function with confirmation
             window.performLogout = function() {
-                console.log('🔴 Logout requested by user');
+                console.log('Logout requested by user');
                 
                 // Show confirmation dialog
                 if (confirm('Are you sure you want to logout?\n\nThis will end your current session and you will need to login again.')) {
-                    console.log('🔴 Logout confirmed - redirecting to logout page');
+                    console.log('Logout confirmed - redirecting to logout page');
                     
                     // Clear any local storage data
                     try {
                         localStorage.removeItem('sessionTimeoutMinutes');
                         localStorage.removeItem('edmLogs');
                         localStorage.removeItem('edmLogNumber');
-                        console.log('🧹 Local storage cleared');
+                        console.log('Local storage cleared');
                     } catch (error) {
-                        console.warn('⚠️ Could not clear local storage:', error);
+                        console.warn('Could not clear local storage:', error);
                     }
                     
                     // Clear session timers
                     clearTimeout(sessionTimeoutTimer);
                     clearTimeout(warningTimer);
                     clearInterval(countdownTimer);
-                    console.log('⏰ Session timers cleared');
+                    console.log('Session timers cleared');
                     
                     // Redirect to logout page
                     window.location.href = '/Account/Logout';
                 } else {
-                    console.log('🔴 Logout cancelled by user');
+                    console.log('Logout cancelled by user');
                 }
             };
             
