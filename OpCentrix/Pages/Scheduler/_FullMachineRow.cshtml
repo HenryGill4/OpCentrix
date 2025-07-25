@@ -51,14 +51,18 @@
                     slotTime.Add(TimeSpan.FromMinutes(slotMinutes)) > DateTime.Now.TimeOfDay;
                 var isWeekend = day.DayOfWeek == DayOfWeek.Saturday || day.DayOfWeek == DayOfWeek.Sunday;
                 var isPastWorkHours = slotTime < TimeSpan.FromHours(6) || slotTime >= TimeSpan.FromHours(18);
+                // Only apply diagonal lines to Friday evenings and Saturday mornings (off-hours)
+                var isFridayAfterHours = day.DayOfWeek == DayOfWeek.Friday && slotTime >= TimeSpan.FromHours(18);
+                var isSaturdayBeforeHours = day.DayOfWeek == DayOfWeek.Saturday && slotTime < TimeSpan.FromHours(6);
                 
                 var cellClasses = new List<string> { 
                     "scheduler-grid-cell", "group", "relative", "cursor-pointer"
                 };
                 
-                if (isCurrentTimeSlot) cellClasses.Add("current-time");
+                // Only apply very subtle current time indicator, no general "today" styling
+                if (isCurrentTimeSlot) cellClasses.Add("current-time-slot");
                 else if (isWeekend) cellClasses.Add("weekend");
-                else if (isPastWorkHours) cellClasses.Add("off-hours");
+                else if (isFridayAfterHours || isSaturdayBeforeHours) cellClasses.Add("off-hours");
                 
                 <div class="@string.Join(" ", cellClasses)" 
                      style="height:@(rowHeight)px;"
@@ -110,10 +114,10 @@
                         </svg>
                     </div>
                     
-                    <!-- Time indicator for current slot -->
+                    <!-- Very subtle current time indicator -->
                     @if (isCurrentTimeSlot)
                     {
-                        <div class="absolute top-1 left-1 w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
+                        <!-- Remove the animated pulse dot - the CSS ::before will handle this subtly -->
                     }
                 </div>
             }

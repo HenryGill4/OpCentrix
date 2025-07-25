@@ -158,39 +158,139 @@
                             <small class="text-xs text-gray-500 mt-1">Material options filtered by machine compatibility</small>
                         </div>
 
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label" for="laser-power">Laser Power (W)</label>
-                                <input type="number" name="Job.LaserPowerWatts" id="laser-power" value="@Model.Job.LaserPowerWatts" min="50" max="400" step="1" class="form-input" />
-                            </div>
-                            
-                            <div class="form-group">
-                                <label class="form-label" for="scan-speed">Scan Speed (mm/s)</label>
-                                <input type="number" name="Job.ScanSpeedMmPerSec" id="scan-speed" value="@Model.Job.ScanSpeedMmPerSec" min="100" max="5000" step="10" class="form-input" />
-                            </div>
+                        <div class="form-group">
+                            <label class="form-label" for="powder-usage">Estimated Powder (kg)</label>
+                            <input type="number" name="Job.EstimatedPowderUsageKg" id="powder-usage" 
+                                   value="@Model.Job.EstimatedPowderUsageKg.ToString("F2")" 
+                                   min="0" max="50" step="0.1" class="form-input" 
+                                   data-validation-message="Powder usage must be between 0 and 50 kg" />
+                            <div class="validation-message" id="powder-usage-validation"></div>
                         </div>
 
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label" for="layer-thickness">Layer Thickness (?m)</label>
-                                <input type="number" name="Job.LayerThicknessMicrons" id="layer-thickness" value="@Model.Job.LayerThicknessMicrons" min="20" max="60" step="5" class="form-input" />
-                            </div>
-                            
-                            <div class="form-group">
-                                <label class="form-label" for="hatch-spacing">Hatch Spacing (?m)</label>
-                                <input type="number" name="Job.HatchSpacingMicrons" id="hatch-spacing" value="@Model.Job.HatchSpacingMicrons" min="50" max="200" step="5" class="form-input" />
-                            </div>
-                        </div>
+                        <!-- Advanced Laser Settings Dropdown -->
+                        <div class="advanced-settings-container">
+                            <button type="button" class="advanced-settings-toggle" onclick="toggleAdvancedSettings()" id="advanced-toggle">
+                                <svg class="settings-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                                <span class="settings-text">Advanced Laser Settings</span>
+                                <svg class="chevron-icon" id="chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
 
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label" for="build-temperature">Build Temperature (°C)</label>
-                                <input type="number" name="Job.BuildTemperatureCelsius" id="build-temperature" value="@Model.Job.BuildTemperatureCelsius" min="100" max="300" step="5" class="form-input" />
-                            </div>
-                            
-                            <div class="form-group">
-                                <label class="form-label" for="powder-usage">Estimated Powder (kg)</label>
-                                <input type="number" name="Job.EstimatedPowderUsageKg" id="powder-usage" value="@Model.Job.EstimatedPowderUsageKg.ToString("F2")" min="0" max="50" step="0.1" class="form-input" />
+                            <div class="advanced-settings-content" id="advanced-settings" style="display: none;">
+                                <div class="settings-warning">
+                                    <svg class="w-4 h-4 text-amber-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                    </svg>
+                                    <span class="text-sm text-amber-800">Modify only if you understand SLS laser parameters</span>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label" for="laser-power">
+                                            Laser Power (W)
+                                            <span class="required-asterisk">*</span>
+                                        </label>
+                                        <input type="number" name="Job.LaserPowerWatts" id="laser-power" 
+                                               value="@Model.Job.LaserPowerWatts" 
+                                               min="50" max="400" step="1" class="form-input" 
+                                               required
+                                               data-validation-message="Laser power must be between 50 and 400 watts"
+                                               onchange="validateLaserParameter(this)" />
+                                        <div class="validation-message" id="laser-power-validation"></div>
+                                        <small class="text-xs text-gray-500 mt-1">Typical range: 150-350W for Ti alloys</small>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label class="form-label" for="scan-speed">
+                                            Scan Speed (mm/s)
+                                            <span class="required-asterisk">*</span>
+                                        </label>
+                                        <input type="number" name="Job.ScanSpeedMmPerSec" id="scan-speed" 
+                                               value="@Model.Job.ScanSpeedMmPerSec" 
+                                               min="100" max="5000" step="10" class="form-input" 
+                                               required
+                                               data-validation-message="Scan speed must be between 100 and 5000 mm/s"
+                                               onchange="validateLaserParameter(this)" />
+                                        <div class="validation-message" id="scan-speed-validation"></div>
+                                        <small class="text-xs text-gray-500 mt-1">Typical range: 800-2000 mm/s</small>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label" for="layer-thickness">
+                                            Layer Thickness (μm)
+                                            <span class="required-asterisk">*</span>
+                                        </label>
+                                        <input type="number" name="Job.LayerThicknessMicrons" id="layer-thickness" 
+                                               value="@Model.Job.LayerThicknessMicrons" 
+                                               min="20" max="60" step="5" class="form-input" 
+                                               required
+                                               data-validation-message="Layer thickness must be between 20 and 60 microns"
+                                               onchange="validateLaserParameter(this)" />
+                                        <div class="validation-message" id="layer-thickness-validation"></div>
+                                        <small class="text-xs text-gray-500 mt-1">Standard: 30μm for Ti alloys</small>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label class="form-label" for="hatch-spacing">
+                                            Hatch Spacing (μm)
+                                            <span class="required-asterisk">*</span>
+                                        </label>
+                                        <input type="number" name="Job.HatchSpacingMicrons" id="hatch-spacing" 
+                                               value="@Model.Job.HatchSpacingMicrons" 
+                                               min="50" max="200" step="5" class="form-input" 
+                                               required
+                                               data-validation-message="Hatch spacing must be between 50 and 200 microns"
+                                               onchange="validateLaserParameter(this)" />
+                                        <div class="validation-message" id="hatch-spacing-validation"></div>
+                                        <small class="text-xs text-gray-500 mt-1">Typical: 100-120μm</small>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label" for="build-temperature">
+                                            Build Temperature (°C)
+                                            <span class="required-asterisk">*</span>
+                                        </label>
+                                        <input type="number" name="Job.BuildTemperatureCelsius" id="build-temperature" 
+                                               value="@Model.Job.BuildTemperatureCelsius" 
+                                               min="100" max="300" step="5" class="form-input" 
+                                               required
+                                               data-validation-message="Build temperature must be between 100 and 300°C"
+                                               onchange="validateLaserParameter(this)" />
+                                        <div class="validation-message" id="build-temperature-validation"></div>
+                                        <small class="text-xs text-gray-500 mt-1">Ti alloys: 150-200°C, Inconel: 80-120°C</small>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label class="form-label" for="argon-purity">Argon Purity (%)</label>
+                                        <input type="number" name="Job.ArgonPurityPercent" id="argon-purity" 
+                                               value="@Model.Job.ArgonPurityPercent.ToString("F1")" 
+                                               min="95" max="100" step="0.1" class="form-input" 
+                                               data-validation-message="Argon purity must be between 95% and 100%"
+                                               onchange="validateLaserParameter(this)" />
+                                        <div class="validation-message" id="argon-purity-validation"></div>
+                                        <small class="text-xs text-gray-500 mt-1">Minimum 99.9% recommended</small>
+                                    </div>
+                                </div>
+
+                                <div class="parameter-validation-summary" id="parameter-summary" style="display: none;">
+                                    <div class="flex items-start">
+                                        <svg class="w-4 h-4 text-red-600 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                                        </svg>
+                                        <div>
+                                            <p class="font-medium text-red-800">Parameter Validation Issues:</p>
+                                            <ul class="mt-1 list-disc list-inside text-sm text-red-700" id="validation-issues"></ul>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -205,8 +305,22 @@
                         </div>
                         
                         <div class="form-group">
-                            <label class="form-label" for="operator-input">Operator</label>
-                            <input type="text" name="Job.Operator" id="operator-input" value="@Model.Job.Operator" maxlength="100" class="form-input" placeholder="Enter operator name" />
+                            <label class="form-label required" for="operator-input">Operator</label>
+                            <input type="text" name="Job.Operator" id="operator-input" value="@Model.Job.Operator" maxlength="100" class="form-input" placeholder="Enter operator name" required />
+                            <small class="text-xs text-gray-500 mt-1">Required when operator certification is enabled</small>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label required" for="quality-inspector-input">Quality Inspector</label>
+                            <input type="text" name="Job.QualityInspector" id="quality-inspector-input" value="@Model.Job.QualityInspector" maxlength="100" class="form-input" placeholder="Enter quality inspector name" required />
+                            <small class="text-xs text-gray-500 mt-1">Required when quality checks are enabled</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="supervisor-input">Supervisor</label>
+                            <input type="text" name="Job.Supervisor" id="supervisor-input" value="@Model.Job.Supervisor" maxlength="100" class="form-input" placeholder="Enter supervisor name" />
                         </div>
                     </div>
 
@@ -375,8 +489,8 @@
             }
         },
         
-        // Update job parameters based on selected part
-        updateJobFromPart() {
+        // ENHANCED: Update job parameters and calculate optimal timing
+        async updateJobFromPart() {
             const partSelect = document.getElementById('part-select');
             const selectedOption = partSelect?.options[partSelect.selectedIndex];
             
@@ -386,10 +500,74 @@
             
             console.log('🔧 [JOB-FORM] Updating job from selected part:', selectedOption.text);
             
+            // Show loading indicator for timing calculation
+            this.showTimingCalculation();
+            
+            try {
+                // Get current form values
+                const machineId = document.getElementById('machine-select')?.value || 'TI1';
+                const startInput = document.getElementById('start-input');
+                const preferredStart = startInput?.value || new Date().toISOString();
+                
+                // Call the optimal timing endpoint
+                const response = await fetch(`/Scheduler?handler=OptimalTiming&machineId=${machineId}&partId=${selectedOption.value}&preferredStart=${encodeURIComponent(preferredStart)}`);
+                
+                if (response.ok) {
+                    const timingData = await response.json();
+                    
+                    if (timingData.error) {
+                        console.warn('⚠️ [JOB-FORM] Timing calculation error:', timingData.error);
+                        this.hideTimingCalculation();
+                        this.updateJobFromPartFallback(selectedOption);
+                        return;
+                    }
+                    
+                    // Update form with optimal timing
+                    if (startInput) {
+                        startInput.value = timingData.optimalStart;
+                    }
+                    
+                    const endInput = document.getElementById('end-input');
+                    if (endInput) {
+                        endInput.value = timingData.optimalEnd;
+                    }
+                    
+                    // Show timing message
+                    this.showTimingMessage(timingData.message, timingData.canSchedule);
+                    
+                    console.log('✅ [JOB-FORM] Optimal timing applied:', {
+                        start: timingData.optimalStart,
+                        end: timingData.optimalEnd,
+                        canSchedule: timingData.canSchedule
+                    });
+                } else {
+                    throw new Error('Failed to calculate optimal timing');
+                }
+            } catch (error) {
+                console.error('❌ [JOB-FORM] Error calculating optimal timing:', error);
+                this.updateJobFromPartFallback(selectedOption);
+            } finally {
+                this.hideTimingCalculation();
+            }
+            
+            // Update other job parameters from part data
+            this.updateJobParametersFromPart(selectedOption);
+            this.updateDurationDisplay();
+        },
+        
+        // Fallback method for updating job from part without API call
+        updateJobFromPartFallback(selectedOption) {
+            console.log('🔧 [JOB-FORM] Using fallback method for part update');
+            
             // Get estimated hours and update end time
             const estimatedHours = parseFloat(selectedOption.dataset.estimatedHours) || 8;
             this.updateEndTimeFromHours(estimatedHours);
             
+            this.updateJobParametersFromPart(selectedOption);
+        },
+        
+        // Update job parameters from part data
+        updateJobParametersFromPart(selectedOption) {
             // Update SLS material
             const slsMaterial = selectedOption.dataset.slsMaterial || 'Ti-6Al-4V Grade 5';
             this.updateSelectValue('sls-material', slsMaterial);
@@ -402,13 +580,86 @@
             this.updateInputValue('build-temperature', selectedOption.dataset.buildTemperature, 180);
             this.updateInputValue('powder-usage', selectedOption.dataset.powderUsage, 0.5);
             
+            // CRITICAL FIX: Auto-populate required fields with sensible defaults
+            const operatorInput = document.getElementById('operator-input');
+            const qualityInspectorInput = document.getElementById('quality-inspector-input');
+            
+            if (operatorInput && (!operatorInput.value || operatorInput.value === 'TBD')) {
+                operatorInput.value = 'John Doe'; // Default operator name
+                console.log('✅ [JOB-FORM] Set default operator');
+            }
+            
+            if (qualityInspectorInput && (!qualityInspectorInput.value || qualityInspectorInput.value === 'TBD')) {
+                qualityInspectorInput.value = 'Jane Smith'; // Default QI name  
+                console.log('✅ [JOB-FORM] Set default quality inspector');
+            }
+            
             // Log the part number being selected
             const partNumber = selectedOption.dataset.partNumber;
             if (partNumber) {
                 console.log('✅ [JOB-FORM] Part number selected:', partNumber);
             }
+        },
+        
+        // Show timing calculation in progress
+        showTimingCalculation() {
+            const container = this.getOrCreateTimingMessageContainer();
+            container.innerHTML = `
+                <div class="flex items-center text-blue-600 text-sm">
+                    <svg class="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Calculating optimal schedule...
+                </div>
+            `;
+            container.classList.remove('hidden');
+        },
+        
+        // Hide timing calculation
+        hideTimingCalculation() {
+            const container = document.getElementById('timing-message-container');
+            if (container) {
+                setTimeout(() => {
+                    container.classList.add('hidden');
+                }, 1000); // Keep visible for 1 second to show result
+            }
+        },
+        
+        // Show timing message
+        showTimingMessage(message, isSuccess) {
+            const container = this.getOrCreateTimingMessageContainer();
+            const iconClass = isSuccess ? 'text-green-600' : 'text-amber-600';
+            const icon = isSuccess 
+                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>'
+                : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path>';
             
-            this.updateDurationDisplay();
+            container.innerHTML = `
+                <div class="flex items-start ${iconClass} text-sm">
+                    <svg class="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        ${icon}
+                    </svg>
+                    <span>${message}</span>
+                </div>
+            `;
+            container.classList.remove('hidden');
+        },
+        
+        // Get or create timing message container
+        getOrCreateTimingMessageContainer() {
+            let container = document.getElementById('timing-message-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'timing-message-container';
+                container.className = 'mt-2 p-3 bg-gray-50 border border-gray-200 rounded-md hidden';
+                
+                // Insert after the end time input
+                const endInput = document.getElementById('end-input');
+                if (endInput && endInput.parentNode) {
+                    endInput.parentNode.appendChild(container);
+                }
+            }
+            return container;
         },
         
         // Update input value with fallback
@@ -595,8 +846,26 @@
     
     // Initialize form when loaded
     document.addEventListener('DOMContentLoaded', function() {
+        // Prevent duplicate variable declarations
+        if (window.jobFormInitialized) {
+            return;
+        }
+        window.jobFormInitialized = true;
+        
         // CRITICAL FIX: Initialize machine filtering first
         JobForm.filterPartsByMachine();
+        
+        // CRITICAL FIX: Auto-populate required fields if they're empty or set to defaults
+        const operatorInput = document.getElementById('operator-input');
+        const qualityInspectorInput = document.getElementById('quality-inspector-input');
+        
+        if (operatorInput && (!operatorInput.value || operatorInput.value === 'TBD')) {
+            operatorInput.value = 'John Doe'; // Default operator
+        }
+        
+        if (qualityInspectorInput && (!qualityInspectorInput.value || qualityInspectorInput.value === 'TBD')) {
+            qualityInspectorInput.value = 'Jane Smith'; // Default quality inspector
+        }
         
         // Set up initial state if part is pre-selected
         const partSelect = document.getElementById('part-select');
@@ -630,5 +899,224 @@
         });
     }
     
+    // Toggle advanced settings visibility
+    window.toggleAdvancedSettings = function() {
+        const settingsContent = document.getElementById('advanced-settings');
+        const chevronIcon = document.getElementById('chevron');
+        
+        if (settingsContent) {
+            const isVisible = settingsContent.style.display !== 'none';
+            settingsContent.style.display = isVisible ? 'none' : 'block';
+            
+            // Rotate chevron icon
+            if (chevronIcon) {
+                chevronIcon.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
+            }
+            
+            console.log('🔧 [TOGGLE] Advanced settings:', isVisible ? 'Hidden' : 'Visible');
+        }
+    };
+    
+    // Validate laser parameter inputs
+    window.validateLaserParameter = function(input) {
+        const value = parseFloat(input.value);
+        const min = parseFloat(input.min);
+        const max = parseFloat(input.max);
+        const validationMessageId = input.dataset.validationMessage;
+        
+        let isValid = true;
+        
+        // Check required attribute
+        if (input.hasAttribute('required') && !input.value) {
+            isValid = false;
+            input.classList.add('border-red-500');
+            input.classList.remove('border-gray-300');
+            showValidationMessage(validationMessageId, 'This field is required');
+        } else {
+            input.classList.remove('border-red-500');
+            input.classList.add('border-gray-300');
+        }
+        
+        // Check range
+        if (value < min || value > max) {
+            isValid = false;
+            input.classList.add('border-red-500');
+            input.classList.remove('border-gray-300');
+            showValidationMessage(validationMessageId, `Value must be between ${min} and ${max}`);
+        } else {
+            input.classList.remove('border-red-500');
+            input.classList.add('border-gray-300');
+        }
+        
+        // Update summary validation
+        updateParameterValidationSummary();
+        
+        return isValid;
+    };
+    
+    // Show validation message
+    function showValidationMessage(messageId, message) {
+        const messageElement = document.getElementById(messageId);
+        if (messageElement) {
+            messageElement.textContent = message;
+            messageElement.classList.remove('hidden');
+        }
+    }
+    
+    // Update parameter validation summary
+    function updateParameterValidationSummary() {
+        const summaryContainer = document.getElementById('parameter-summary');
+        const issuesList = document.getElementById('validation-issues');
+        
+        if (!summaryContainer || !issuesList) return;
+        
+        // Clear existing issues
+        issuesList.innerHTML = '';
+        
+        // Check required parameters
+        const requiredParameters = [
+            'laser-power',
+            'scan-speed',
+            'layer-thickness',
+            'hatch-spacing',
+            'build-temperature'
+        ];
+        
+        requiredParameters.forEach(param => {
+            const input = document.getElementById(param);
+            if (input && !validateLaserParameter(input)) {
+                const issueItem = document.createElement('li');
+                issueItem.textContent = `${input.name.replace(/([A-Z])/g, ' $1')}: Invalid value`;
+                issuesList.appendChild(issueItem);
+            }
+        });
+        
+        // Show or hide summary container
+        if (issuesList.childElementCount > 0) {
+            summaryContainer.style.display = 'block';
+        } else {
+            summaryContainer.style.display = 'none';
+        }
+    }
+    
 })();
 </script>
+
+<style>
+/* Advanced Settings Dropdown Styles */
+.advanced-settings-container {
+    margin-top: 1rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    background: #ffffff;
+}
+
+.advanced-settings-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background: #f9fafb;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+    color: #374151;
+}
+
+.advanced-settings-toggle:hover {
+    background: #f3f4f6;
+    color: #1f2937;
+}
+
+.advanced-settings-toggle:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: -2px;
+}
+
+.settings-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-right: 0.5rem;
+    color: #6b7280;
+}
+
+.settings-text {
+    flex: 1;
+    text-align: left;
+    font-size: 0.875rem;
+}
+
+.chevron-icon {
+    width: 1rem;
+    height: 1rem;
+    transition: transform 0.2s ease;
+    color: #6b7280;
+}
+
+.chevron-icon.rotated {
+    transform: rotate(180deg);
+}
+
+.advanced-settings-content {
+    padding: 1rem;
+    border-top: 1px solid #e5e7eb;
+    background: #ffffff;
+    animation: slideDown 0.3s ease;
+}
+
+.advanced-settings-content.hidden {
+    display: none !important;
+}
+
+/* Enhanced form input styles for validation */
+.form-input.error {
+    border-color: #dc2626;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.form-input.success {
+    border-color: #059669;
+    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+}
+
+.form-input.warning {
+    border-color: #d97706;
+    box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.1);
+}
+
+/* Animation keyframes for dropdown */
+@@keyframes slideDown {
+    0% {
+        opacity: 0;
+        max-height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+    100% {
+        opacity: 1;
+        max-height: 500px;
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+    }
+}
+
+/* Responsive adjustments */
+@@media (max-width: 768px) {
+    .advanced-settings-content {
+        padding: 0.75rem;
+    }
+    
+    .settings-warning {
+        flex-direction: column;
+        align-items: flex-start;
+        text-align: left;
+    }
+    
+    .settings-warning svg {
+        margin-bottom: 0.25rem;
+        margin-right: 0;
+    }
+}

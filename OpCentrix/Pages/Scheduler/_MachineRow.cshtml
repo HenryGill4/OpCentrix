@@ -53,16 +53,19 @@
                     slotTime.Add(TimeSpan.FromMinutes(Model.SlotMinutes)) > DateTime.Now.TimeOfDay;
                 var isWeekend = day.DayOfWeek == DayOfWeek.Saturday || day.DayOfWeek == DayOfWeek.Sunday;
                 var isPastWorkHours = slotTime < TimeSpan.FromHours(6) || slotTime >= TimeSpan.FromHours(18);
+                // Only apply diagonal lines to Friday evenings and Saturday mornings (off-hours)
+                var isFridayAfterHours = day.DayOfWeek == DayOfWeek.Friday && slotTime >= TimeSpan.FromHours(18);
+                var isSaturdayBeforeHours = day.DayOfWeek == DayOfWeek.Saturday && slotTime < TimeSpan.FromHours(6);
                 
                 var cellClasses = new List<string> { 
                     "scheduler-grid-cell", "group", "border-r", "border-gray-100", 
                     "relative", "cursor-pointer", "transition-colors", "duration-200" 
                 };
                 
-                if (isCurrentTimeSlot) cellClasses.Add("bg-blue-100 border-blue-300");
-                else if (isToday) cellClasses.Add("bg-blue-25");
-                else if (isWeekend) cellClasses.Add("bg-gray-50");
-                else if (isPastWorkHours) cellClasses.Add("bg-gray-25");
+                // Only apply very subtle current time indicator, no general "today" styling
+                if (isCurrentTimeSlot) cellClasses.Add("current-time-slot");
+                else if (isWeekend) cellClasses.Add("weekend"); // Light shading for Sat & Sun only
+                else if (isFridayAfterHours || isSaturdayBeforeHours) cellClasses.Add("off-hours"); // Diagonal lines only on specific times
                 
                 <div class="@string.Join(" ", cellClasses)" 
                      style="min-height:@rowHeightPx;"
@@ -80,10 +83,10 @@
                         </svg>
                     </div>
                     
-                    <!-- Time indicator for current slot -->
+                    <!-- Very subtle current time indicator -->
                     @if (isCurrentTimeSlot)
                     {
-                        <div class="absolute top-1 left-1 w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
+                        <!-- Remove the animated pulse dot - the CSS ::before will handle this subtly -->
                     }
                 </div>
             }

@@ -53,27 +53,19 @@ namespace OpCentrix.Services
                 }
                 catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.Message.Contains("no such table"))
                 {
-                    _logger.LogWarning("SchedulerSettings table does not exist. Creating table and using default settings.");
+                    _logger.LogWarning("SchedulerSettings table does not exist. Attempting to create table manually.");
                     
-                    // Ensure database is created and migrations are applied
+                    // Try to create the table manually using raw SQL
                     try
                     {
-                        await _context.Database.EnsureCreatedAsync();
+                        await CreateSchedulerSettingsTableManuallyAsync();
                         
-                        // Try to apply pending migrations
-                        var pendingMigrations = await _context.Database.GetPendingMigrationsAsync();
-                        if (pendingMigrations.Any())
-                        {
-                            _logger.LogInformation("Applying {MigrationCount} pending migrations", pendingMigrations.Count());
-                            await _context.Database.MigrateAsync();
-                        }
-                        
-                        // Try to load settings again after migration
+                        // Try to load settings again after manual table creation
                         settings = await _context.SchedulerSettings.FirstOrDefaultAsync();
                     }
-                    catch (Exception migrationEx)
+                    catch (Exception manualEx)
                     {
-                        _logger.LogError(migrationEx, "Failed to apply migrations. Using default settings.");
+                        _logger.LogError(manualEx, "Failed to create SchedulerSettings table manually. Using default settings.");
                     }
                 }
 
@@ -110,6 +102,113 @@ namespace OpCentrix.Services
                 _cachedSettings = defaultSettings;
                 _lastCacheUpdate = DateTime.UtcNow;
                 return defaultSettings;
+            }
+        }
+
+        /// <summary>
+        /// Manually create the SchedulerSettings table using raw SQL
+        /// </summary>
+        private async Task CreateSchedulerSettingsTableManuallyAsync()
+        {
+            try
+            {
+                _logger.LogInformation("Creating SchedulerSettings table manually using raw SQL");
+
+                var createTableSql = @"
+                    CREATE TABLE IF NOT EXISTS ""SchedulerSettings"" (
+                        ""Id"" INTEGER NOT NULL CONSTRAINT ""PK_SchedulerSettings"" PRIMARY KEY AUTOINCREMENT,
+                        ""TitaniumToTitaniumChangeoverMinutes"" INTEGER NOT NULL DEFAULT 30,
+                        ""InconelToInconelChangeoverMinutes"" INTEGER NOT NULL DEFAULT 45,
+                        ""CrossMaterialChangeoverMinutes"" INTEGER NOT NULL DEFAULT 120,
+                        ""DefaultMaterialChangeoverMinutes"" INTEGER NOT NULL DEFAULT 60,
+                        ""DefaultPreheatingTimeMinutes"" INTEGER NOT NULL DEFAULT 60,
+                        ""DefaultCoolingTimeMinutes"" INTEGER NOT NULL DEFAULT 240,
+                        ""DefaultPostProcessingTimeMinutes"" INTEGER NOT NULL DEFAULT 90,
+                        ""SetupTimeBufferMinutes"" INTEGER NOT NULL DEFAULT 30,
+                        ""StandardShiftStart"" TEXT NOT NULL DEFAULT '07:00:00',
+                        ""StandardShiftEnd"" TEXT NOT NULL DEFAULT '15:00:00',
+                        ""EveningShiftStart"" TEXT NOT NULL DEFAULT '15:00:00',
+                        ""EveningShiftEnd"" TEXT NOT NULL DEFAULT '23:00:00',
+                        ""NightShiftStart"" TEXT NOT NULL DEFAULT '23:00:00',
+                        ""NightShiftEnd"" TEXT NOT NULL DEFAULT '07:00:00',
+                        ""EnableWeekendOperations"" INTEGER NOT NULL DEFAULT 0,
+                        ""SaturdayOperations"" INTEGER NOT NULL DEFAULT 0,
+                        ""SundayOperations"" INTEGER NOT NULL DEFAULT 0,
+                        ""TI1MachinePriority"" INTEGER NOT NULL DEFAULT 5,
+                        ""TI2MachinePriority"" INTEGER NOT NULL DEFAULT 5,
+                        ""INCMachinePriority"" INTEGER NOT NULL DEFAULT 5,
+                        ""AllowConcurrentJobs"" INTEGER NOT NULL DEFAULT 1,
+                        ""MaxJobsPerMachinePerDay"" INTEGER NOT NULL DEFAULT 8,
+                        ""RequiredOperatorCertification"" TEXT NOT NULL DEFAULT 'SLS Basic',
+                        ""QualityCheckRequired"" INTEGER NOT NULL DEFAULT 1,
+                        ""MinimumTimeBetweenJobsMinutes"" INTEGER NOT NULL DEFAULT 15,
+                        ""EmergencyOverrideEnabled"" INTEGER NOT NULL DEFAULT 1,
+                        ""NotifyOnScheduleConflicts"" INTEGER NOT NULL DEFAULT 1,
+                        ""NotifyOnMaterialChanges"" INTEGER NOT NULL DEFAULT 1,
+                        ""AdvanceWarningTimeMinutes"" INTEGER NOT NULL DEFAULT 60,
+                        ""CreatedDate"" TEXT NOT NULL DEFAULT (datetime('now')),
+                        ""LastModifiedDate"" TEXT NOT NULL DEFAULT (datetime('now')),
+                        ""CreatedBy"" TEXT NOT NULL DEFAULT 'System',
+                        ""LastModifiedBy"" TEXT NOT NULL DEFAULT 'System',
+                        ""ChangeNotes"" TEXT NOT NULL DEFAULT 'Default settings initialization'
+                    );";
+
+                await _context.Database.ExecuteSqlRawAsync(createTableSql);
+
+                var createIndexSql = @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_SchedulerSettings_Id"" ON ""SchedulerSettings"" (""Id"");";
+                await _context.Database.ExecuteSqlRawAsync(createIndexSql);
+
+                // Insert default record if none exists
+                var insertDefaultSql = @"
+                    INSERT INTO ""SchedulerSettings"" (
+                        ""TitaniumToTitaniumChangeoverMinutes"",
+                        ""InconelToInconelChangeoverMinutes"", 
+                        ""CrossMaterialChangeoverMinutes"",
+                        ""DefaultMaterialChangeoverMinutes"",
+                        ""DefaultPreheatingTimeMinutes"",
+                        ""DefaultCoolingTimeMinutes"",
+                        ""DefaultPostProcessingTimeMinutes"",
+                        ""SetupTimeBufferMinutes"",
+                        ""StandardShiftStart"",
+                        ""StandardShiftEnd"",
+                        ""EveningShiftStart"", 
+                        ""EveningShiftEnd"",
+                        ""NightShiftStart"",
+                        ""NightShiftEnd"",
+                        ""EnableWeekendOperations"",
+                        ""SaturdayOperations"",
+                        ""SundayOperations"",
+                        ""TI1MachinePriority"",
+                        ""TI2MachinePriority"",
+                        ""INCMachinePriority"",
+                        ""AllowConcurrentJobs"",
+                        ""MaxJobsPerMachinePerDay"",
+                        ""RequiredOperatorCertification"",
+                        ""QualityCheckRequired"",
+                        ""MinimumTimeBetweenJobsMinutes"",
+                        ""EmergencyOverrideEnabled"",
+                        ""NotifyOnScheduleConflicts"",
+                        ""NotifyOnMaterialChanges"",
+                        ""AdvanceWarningTimeMinutes"",
+                        ""CreatedBy"",
+                        ""LastModifiedBy"",
+                        ""ChangeNotes""
+                    )
+                    SELECT 30, 45, 120, 60, 60, 240, 90, 30,
+                           '07:00:00', '15:00:00', '15:00:00', '23:00:00', '23:00:00', '07:00:00',
+                           0, 0, 0, 5, 5, 5, 1, 8,
+                           'SLS Basic', 1, 15, 1, 1, 1, 60,
+                           'System', 'System', 'Manual table creation with default settings'
+                    WHERE NOT EXISTS (SELECT 1 FROM ""SchedulerSettings"");";
+
+                await _context.Database.ExecuteSqlRawAsync(insertDefaultSql);
+
+                _logger.LogInformation("SchedulerSettings table created successfully with default data");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to manually create SchedulerSettings table");
+                throw;
             }
         }
 

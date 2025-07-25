@@ -1,5 +1,4 @@
-﻿
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using OpCentrix.Models;
@@ -388,12 +387,24 @@ namespace OpCentrix.Pages.Scheduler
                 // Use UTC for all default date/time values
                 var now = DateTime.UtcNow;
                 
-                // Create initial job with temporary values
+                // CRITICAL FIX: Use a more reasonable default start time (next business day at 7 AM)
+                var defaultStart = now.Date.AddDays(1);
+                if (defaultStart.DayOfWeek == DayOfWeek.Saturday)
+                    defaultStart = defaultStart.AddDays(2); // Skip to Monday
+                else if (defaultStart.DayOfWeek == DayOfWeek.Sunday)
+                    defaultStart = defaultStart.AddDays(1); // Skip to Monday
+                
+                defaultStart = defaultStart.AddHours(7); // 7 AM start
+                
+                // Use the provided startDate if it's reasonable, otherwise use default
+                var jobStartTime = startDate > now ? startDate : defaultStart;
+                
+                // Create initial job with sensible values
                 var job = new Job
                 {
                     MachineId = machineId,
-                    ScheduledStart = startDate, // This will be automatically adjusted
-                    ScheduledEnd = startDate.AddHours(8), // This will be recalculated
+                    ScheduledStart = jobStartTime,
+                    ScheduledEnd = jobStartTime.AddHours(8), // This will be recalculated
                     CreatedDate = now,
                     LastModifiedDate = now,
                     Status = "Scheduled",
@@ -401,6 +412,12 @@ namespace OpCentrix.Pages.Scheduler
                     Quantity = 1,
                     PartNumber = "00-0000", // TEMP: Valid format, will be overwritten when part is selected
                     EstimatedHours = 8.0, // Default 8-hour job
+                    
+                    // CRITICAL FIX: Set required fields for validation
+                    Operator = "John Doe", // Default operator name
+                    QualityInspector = "Jane Smith", // Default quality inspector name
+                    Supervisor = User.Identity?.Name ?? "System", // Default to current user
+                    
                     // SLS-specific defaults
                     SlsMaterial = "Ti-6Al-4V Grade 5",
                     LaserPowerWatts = 200,
@@ -413,11 +430,12 @@ namespace OpCentrix.Pages.Scheduler
                     RequiresArgonPurge = true,
                     RequiresPreheating = true,
                     RequiresPowderSieving = true,
+                    RequiresPostProcessing = true,
                     DensityPercentage = 99.5
                 };
 
-                _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Created new job defaults for machine {MachineId}",
-                    operationId, machineId);
+                _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Created new job defaults for machine {MachineId} starting {StartTime}",
+                    operationId, machineId, jobStartTime);
 
                 return job;
             }
@@ -439,20 +457,41 @@ namespace OpCentrix.Pages.Scheduler
                 _logger.LogDebug("🕒 [SCHEDULER-{OperationId}] Calculating optimal timing for job on machine {MachineId}",
                     operationId, job.MachineId);
 
-                // Get all existing jobs for conflict checking
+                // Get all existing jobs for conflict checking (but limit to near-term)
+                var searchStartDate = DateTime.UtcNow.Date;
+                var searchEndDate = searchStartDate.AddDays(30); // Only look 30 days ahead for better scheduling
+                
                 var existingJobs = await _context.Jobs
                     .Where(j => j.MachineId == job.MachineId && 
-                               j.ScheduledStart >= DateTime.UtcNow.Date.AddDays(-1)) // Include recent jobs for material changeover
+                               j.ScheduledStart >= searchStartDate &&
+                               j.ScheduledStart <= searchEndDate)
                     .AsNoTracking()
                     .ToListAsync();
 
-                // Calculate next available start time
+                // Calculate next available start time within a reasonable timeframe
+                var preferredStart = job.ScheduledStart > DateTime.UtcNow ? job.ScheduledStart : DateTime.UtcNow.Date.AddDays(1).AddHours(7);
+                
                 var optimalStartTime = await _schedulerService.CalculateNextAvailableStartTimeAsync(
                     job.MachineId, 
-                    job.ScheduledStart, 
+                    preferredStart, 
                     job.EstimatedHours, 
                     job.SlsMaterial, 
                     existingJobs);
+
+                // If the calculated time is too far in the future, use a nearer time
+                if ((optimalStartTime - DateTime.UtcNow).TotalDays > 14)
+                {
+                    _logger.LogWarning("🕒 [SCHEDULER-{OperationId}] Calculated time too far out ({OptimalTime}), using nearer time", 
+                        operationId, optimalStartTime);
+                    
+                    // Find next available business day within 7 days
+                    var nearerStart = DateTime.UtcNow.Date.AddDays(1).AddHours(7);
+                    while (nearerStart.DayOfWeek == DayOfWeek.Saturday || nearerStart.DayOfWeek == DayOfWeek.Sunday)
+                    {
+                        nearerStart = nearerStart.AddDays(1);
+                    }
+                    optimalStartTime = nearerStart;
+                }
 
                 // Update job timing
                 job.ScheduledStart = optimalStartTime;
@@ -470,7 +509,11 @@ namespace OpCentrix.Pages.Scheduler
                 _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error calculating optimal job timing: {ErrorMessage}",
                     operationId, ex.Message);
                 
-                // Fallback to original timing if calculation fails
+                // Fallback to reasonable default timing if calculation fails
+                var fallbackStart = DateTime.UtcNow.Date.AddDays(1).AddHours(7);
+                job.ScheduledStart = fallbackStart;
+                job.ScheduledEnd = fallbackStart.AddHours(job.EstimatedHours);
+                
                 return job;
             }
         }
@@ -565,7 +608,7 @@ namespace OpCentrix.Pages.Scheduler
                     return await CreateValidationErrorAsync(job, string.Join("; ", validationErrors), operationId);
                 }
 
-                // Get part information with detailed logging BEFORE validation
+                // Get part information with detailed logging
                 _logger.LogDebug("🔧 [SCHEDULER-{OperationId}] Looking up part with ID: {PartId}", operationId, job.PartId);
                 var part = await _context.Parts.FindAsync(job.PartId);
                 if (part == null)
@@ -663,34 +706,40 @@ namespace OpCentrix.Pages.Scheduler
                     // **CRITICAL FIX: Return script response to close modal and update machine row**
                     var script = $@"
                         <script>
-                            // Close the modal
-                            if (window.closeJobModal) {{
-                                window.closeJobModal();
-                            }} else {{
+                            // Close the modal first
+                            setTimeout(() => {{
+
                                 const modal = document.getElementById('job-modal-container');
                                 if (modal) {{
                                     modal.style.display = 'none';
                                     modal.classList.add('hidden');
                                     document.body.style.overflow = '';
+                                    modal.innerHTML = '';
                                 }}
-                            }}
+                            }}, 100);
                             
                             // Show success notification with timing info
-                            if (window.showSuccessNotification) {{
-                                window.showSuccessNotification('Job {logAction.ToLower()} successfully! Scheduled: {job.ScheduledStart:MMM dd HH:mm} - {job.ScheduledEnd:MMM dd HH:mm}');
-                            }}
+                            setTimeout(() => {{
+                                if (window.showSuccessNotification) {{
+                                    window.showSuccessNotification('Job {logAction.ToLower()} successfully! Scheduled: {job.ScheduledStart:MMM dd HH:mm} - {job.ScheduledEnd:MMM dd HH:mm}');
+                                }}
+                            }}, 200);
                             
-                            // Trigger machine row update via HTMX
-                            htmx.ajax('GET', '/Scheduler?handler=GetMachineRow&machineId={job.MachineId}', {{
-                                target: '#machine-row-{job.MachineId}',
-                                swap: 'outerHTML'
-                            }});
-                            
-                            // Update footer summary
-                            htmx.ajax('GET', '/Scheduler?handler=GetFooterSummary', {{
-                                target: '#footer-summary',
-                                swap: 'innerHTML'
-                            }});
+                            // Reload the entire page to show the new job (simpler approach)
+                            setTimeout(() => {{
+                                // Change to the date where the job is scheduled if it's far in the future
+                                const jobDate = new Date('{job.ScheduledStart:yyyy-MM-dd}');
+                                const currentDate = new Date();
+                                const daysDiff = Math.abs((jobDate - currentDate) / (1000 * 60 * 60 * 24));
+                                
+                                if (daysDiff > 60) {{
+                                    // Job is scheduled far in the future, navigate to that date
+                                    window.location.href = '/Scheduler?startDate={job.ScheduledStart:yyyy-MM-dd}';
+                                }} else {{
+                                    // Job is within current view, just reload
+                                    window.location.reload();
+                                }}
+                            }}, 500);
                         </script>";
 
                     return Content(script, "text/html");
@@ -899,6 +948,14 @@ namespace OpCentrix.Pages.Scheduler
             existingJob.RequiresPreheating = formJob.RequiresPreheating;
             existingJob.RequiresPowderSieving = formJob.RequiresPowderSieving;
             existingJob.DensityPercentage = formJob.DensityPercentage;
+            
+            // CRITICAL FIX: Include the new required fields
+            existingJob.Operator = formJob.Operator;
+            existingJob.QualityInspector = formJob.QualityInspector;
+            existingJob.Supervisor = formJob.Supervisor;
+            existingJob.CustomerOrderNumber = formJob.CustomerOrderNumber;
+            existingJob.Notes = formJob.Notes;
+            existingJob.IsRushJob = formJob.IsRushJob;
         }
 
         private async Task<PartialViewResult> CreateValidationErrorAsync(Job job, string errorMessage, string operationId)
@@ -1349,6 +1406,203 @@ namespace OpCentrix.Pages.Scheduler
             {
                 var daysOut = (nextAvailable.Date - requestedDate.Date).Days;
                 return $"📆 Machine is busy for the next {daysOut} day(s). Next available: {nextAvailable:MMM dd} at {nextAvailable:HH:mm}.";
+            }
+        }
+
+        /// <summary>
+        /// Get optimal timing for a job based on part selection
+        /// </summary>
+        public async Task<IActionResult> OnGetOptimalTimingAsync(string machineId, int partId, string preferredStart)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogDebug("🕒 [SCHEDULER-{OperationId}] Calculating optimal timing for part {PartId} on machine {MachineId}",
+                operationId, partId, machineId);
+
+            try
+            {
+                // Parse preferred start time
+                if (!DateTime.TryParse(preferredStart, out var startDate))
+                {
+                    startDate = DateTime.UtcNow.Date.AddHours(8); // Default to 8 AM today
+                }
+
+                // Get part information
+                var part = await _context.Parts.FindAsync(partId);
+                if (part == null)
+                {
+                    return new JsonResult(new { error = "Part not found" });
+                }
+
+                // Get existing jobs for conflict checking
+                var existingJobs = await _context.Jobs
+                    .Where(j => j.MachineId == machineId)
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                // Calculate optimal start time
+                var optimalStart = await _schedulerService.CalculateNextAvailableStartTimeAsync(
+                    machineId, startDate, part.EstimatedHours, part.SlsMaterial, existingJobs);
+
+                // Calculate end time with all processing steps
+                var tempJob = new Job
+                {
+                    MachineId = machineId,
+                    PartId = partId,
+                    ScheduledStart = optimalStart,
+                    EstimatedHours = part.EstimatedHours,
+                    SlsMaterial = part.SlsMaterial,
+                    RequiresPreheating = true, // Default to true since Part model doesn't have this field
+                    RequiresPostProcessing = true, // Default to true since Part model doesn't have this field
+                    PreheatingTimeMinutes = part.PreheatingTimeMinutes,
+                    CoolingTimeMinutes = part.CoolingTimeMinutes,
+                    PostProcessingTimeMinutes = part.PostProcessingTimeMinutes
+                };
+
+                var optimalEnd = await _schedulerService.CalculateJobEndTimeWithSettingsAsync(tempJob);
+
+                // Check for conflicts at the calculated time
+                var (canSchedule, reason, suggestedTime) = await _schedulerService.CheckSchedulingConflict(
+                    machineId, optimalStart, part.EstimatedHours, part.SlsMaterial, existingJobs);
+
+                var timingInfo = new
+                {
+                    partId = partId,
+                    partNumber = part.PartNumber,
+                    machineId = machineId,
+                    preferredStart = preferredStart,
+                    optimalStart = optimalStart.ToString("yyyy-MM-ddTHH:mm"),
+                    optimalEnd = optimalEnd.ToString("yyyy-MM-ddTHH:mm"),
+                    duration = part.EstimatedHours,
+                    material = part.SlsMaterial,
+                    canSchedule = canSchedule,
+                    conflictReason = canSchedule ? null : reason,
+                    suggestedTime = canSchedule ? null : suggestedTime.ToString("yyyy-MM-ddTHH:mm"),
+                    message = canSchedule 
+                        ? $"✅ Optimal time calculated: {optimalStart:MMM dd, HH:mm} - {optimalEnd:MMM dd, HH:mm}"
+                        : $"⚠️ Conflict detected: {reason}. Suggested: {suggestedTime:MMM dd, HH:mm}"
+                };
+
+                _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Optimal timing calculated: {OptimalStart} - {OptimalEnd}",
+                    operationId, optimalStart, optimalEnd);
+
+                return new JsonResult(timingInfo);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error calculating optimal timing: {ErrorMessage}",
+                    operationId, ex.Message);
+
+                return new JsonResult(new
+                {
+                    error = "Unable to calculate optimal timing",
+                    message = "Please try again or contact support"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Get updated machine row HTML after job changes
+        /// </summary>
+        public async Task<IActionResult> OnGetMachineRowAsync(string machineId)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogDebug("🔄 [SCHEDULER-{OperationId}] Getting updated machine row for {MachineId}", operationId, machineId);
+
+            try
+            {
+                // Get the current scheduler data
+                ViewModel = _schedulerService.GetSchedulerData();
+                
+                // Load jobs for this machine
+                var queryStartDate = ViewModel.StartDate.AddDays(-1);
+                var queryEndDate = ViewModel.StartDate.AddDays(ViewModel.Dates.Count + 1);
+
+                var machineJobs = await _context.Jobs
+                    .Include(j => j.Part)
+                    .Where(j => j.MachineId == machineId && 
+                               j.ScheduledStart < queryEndDate && 
+                               j.ScheduledEnd > queryStartDate)
+                    .OrderBy(j => j.ScheduledStart)
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                // Calculate row height
+                var (_, rowHeight) = _schedulerService.CalculateMachineRowLayout(machineId, machineJobs);
+
+                // Create partial model for the machine row
+                var machineRowModel = new {
+                    MachineId = machineId,
+                    Dates = ViewModel.Dates,
+                    Jobs = machineJobs,
+                    RowHeight = rowHeight,
+                    SlotsPerDay = ViewModel.SlotsPerDay,
+                    SlotMinutes = ViewModel.SlotMinutes,
+                    JobCount = machineJobs.Count,
+                    TotalHours = machineJobs.Sum(j => j.DurationHours)
+                };
+
+                _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Machine row updated: {JobCount} jobs, {Height}px",
+                    operationId, machineJobs.Count, rowHeight);
+
+                return Partial("_FullMachineRow", machineRowModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error getting machine row for {MachineId}: {ErrorMessage}",
+                    operationId, machineId, ex.Message);
+                
+                // Return error message in machine row format
+                return Content($"<div class='error-message'>Error loading machine {machineId}: {ex.Message}</div>", "text/html");
+            }
+        }
+
+        /// <summary>
+        /// Get updated footer summary after job changes
+        /// </summary>
+        public async Task<IActionResult> OnGetFooterSummaryAsync()
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogDebug("🔄 [SCHEDULER-{OperationId}] Getting updated footer summary", operationId);
+
+            try
+            {
+                // Get the current scheduler data
+                ViewModel = _schedulerService.GetSchedulerData();
+
+                // Load all current jobs for summary
+                var queryStartDate = ViewModel.StartDate.AddDays(-1);
+                var queryEndDate = ViewModel.StartDate.AddDays(ViewModel.Dates.Count + 1);
+
+                var allJobs = await _context.Jobs
+                    .Where(j => j.ScheduledStart < queryEndDate && j.ScheduledEnd > queryStartDate)
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                // Generate updated summary
+                Summary = new FooterSummaryViewModel
+                {
+                    MachineHours = ViewModel.Machines.ToDictionary(
+                        m => m,
+                        m => allJobs.Where(j => j.MachineId == m).Sum(j => j.DurationHours)
+                    ),
+                    JobCounts = ViewModel.Machines.ToDictionary(
+                        m => m,
+                        m => allJobs.Count(j => j.MachineId == m)
+                    )
+                };
+
+                _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Footer summary updated: {TotalJobs} total jobs",
+                    operationId, Summary.TotalJobs);
+
+                return Partial("_FooterSummary", Summary);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error getting footer summary: {ErrorMessage}",
+                    operationId, ex.Message);
+                
+                // Return minimal error summary
+                return Partial("_FooterSummary", new FooterSummaryViewModel());
             }
         }
     }

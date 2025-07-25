@@ -644,11 +644,11 @@ namespace OpCentrix.Services
         {
             return zoom switch
             {
-                "day" => (7, 1, 1440),      // 7 days, 1 slot per day (24 hours)
-                "hour" => (3, 24, 60),      // 3 days, 24 slots per day (1 hour each)
-                "30min" => (2, 48, 30),     // 2 days, 48 slots per day (30 minutes each)
-                "15min" => (1, 96, 15),     // 1 day, 96 slots per day (15 minutes each)
-                _ => (7, 1, 1440)           // Default to day view
+                "day" => (56, 1, 1440),     // Exactly 8 weeks (56 days), 1 slot per day (24 hours)
+                "hour" => (14, 24, 60),     // 2 weeks, 24 slots per day (1 hour each)
+                "30min" => (7, 48, 30),     // 1 week, 48 slots per day (30 minutes each)
+                "15min" => (3, 96, 15),     // 3 days, 96 slots per day (15 minutes each)
+                _ => (56, 1, 1440)          // Default to 8-week day view
             };
         }
 
@@ -822,6 +822,16 @@ namespace OpCentrix.Services
         }
 
         /// <summary>
+        /// Check if a time falls within any configured shift
+        /// </summary>
+        private bool IsTimeInAnyShift(TimeSpan time, SchedulerSettings settings)
+        {
+            return IsTimeInShift(time, settings.StandardShiftStart, settings.StandardShiftEnd) ||
+                   IsTimeInShift(time, settings.EveningShiftStart, settings.EveningShiftEnd) ||
+                   IsTimeInShift(time, settings.NightShiftStart, settings.NightShiftEnd);
+        }
+
+        /// <summary>
         /// Calculate the next available start time for a new job on the specified machine
         /// Automatically finds the earliest possible start time considering existing jobs and constraints
         /// </summary>
@@ -831,56 +841,44 @@ namespace OpCentrix.Services
             {
                 var settings = await _settingsService.GetSettingsAsync();
                 
-                // Start from the preferred date or today, whichever is later
-                var startingDate = preferredDate.Date >= DateTime.UtcNow.Date ? preferredDate.Date : DateTime.UtcNow.Date;
-                
-                // If it's the same day and we're past the current time, start from current time
-                var earliestPossibleStart = startingDate == DateTime.UtcNow.Date && DateTime.UtcNow.TimeOfDay > TimeSpan.FromHours(6)
-                    ? DateTime.UtcNow.AddMinutes(30) // Add 30 minute buffer from current time
-                    : startingDate.Add(settings.StandardShiftStart); // Start at beginning of standard shift
+                // Step 1: Determine the earliest possible start time based on multiple factors
+                var earliestPossibleStart = await DetermineEarliestPossibleStartTime(machineId, preferredDate, material, existingJobs, settings);
                 
                 var currentSearchTime = earliestPossibleStart;
-                var maxSearchDays = 30; // Search up to 30 days ahead
+                var maxSearchDays = 90; // Search up to 90 days ahead
                 var searchedDays = 0;
                 
-                _logger.LogDebug("Searching for next available start time for machine {MachineId} starting from {StartTime}", 
+                _logger.LogDebug("Enhanced search for next available start time for machine {MachineId} starting from {StartTime}", 
                     machineId, currentSearchTime);
 
                 while (searchedDays < maxSearchDays)
                 {
                     // Check if weekend operations are allowed for this date
-                    var isWeekendAllowed = await IsWeekendOperationAllowedAsync(currentSearchTime);
-                    if (!isWeekendAllowed && (currentSearchTime.DayOfWeek == DayOfWeek.Saturday || currentSearchTime.DayOfWeek == DayOfWeek.Sunday))
+                    if (!await IsValidOperatingDay(currentSearchTime, settings))
                     {
-                        // Skip to Monday if weekend operations not allowed
-                        currentSearchTime = GetNextMonday(currentSearchTime).Add(settings.StandardShiftStart);
-                        searchedDays += currentSearchTime.DayOfWeek == DayOfWeek.Saturday ? 2 : 1;
+                        currentSearchTime = GetNextValidOperatingDay(currentSearchTime, settings);
+                        searchedDays += GetDaysToNextValidDay(currentSearchTime);
                         continue;
                     }
 
                     // Adjust to valid shift hours if needed
-                    currentSearchTime = AdjustToShiftHours(currentSearchTime, settings);
+                    currentSearchTime = AdjustToNearestShiftStart(currentSearchTime, settings);
 
-                    // Get all existing jobs for this machine that could conflict
-                    var potentialConflicts = existingJobs
-                        .Where(j => j.MachineId == machineId &&
-                                   j.ScheduledEnd > currentSearchTime &&
-                                   j.ScheduledStart < currentSearchTime.AddHours(estimatedDurationHours + 2)) // Add 2-hour buffer
-                        .OrderBy(j => j.ScheduledStart)
-                        .ToList();
+                    // Get jobs that could conflict with our search window
+                    var potentialConflicts = GetRelevantConflictingJobs(machineId, currentSearchTime, estimatedDurationHours, existingJobs);
 
-                    // Try to find a slot in the current day
-                    var availableSlot = await FindAvailableSlotInDay(currentSearchTime, estimatedDurationHours, material, potentialConflicts, settings);
+                    // Try to find a slot in the current day, considering all constraints
+                    var availableSlot = await FindOptimalSlotInDay(currentSearchTime, estimatedDurationHours, material, potentialConflicts, settings);
                     
                     if (availableSlot.HasValue)
                     {
-                        _logger.LogInformation("Found next available start time for machine {MachineId}: {StartTime} (searched {Days} days)", 
+                        _logger.LogInformation("Found optimal start time for machine {MachineId}: {StartTime} (searched {Days} days)", 
                             machineId, availableSlot.Value, searchedDays);
                         return availableSlot.Value;
                     }
 
                     // Move to next day
-                    currentSearchTime = currentSearchTime.Date.AddDays(1).Add(settings.StandardShiftStart);
+                    currentSearchTime = GetNextOperatingDayStart(currentSearchTime, settings);
                     searchedDays++;
                 }
 
@@ -900,89 +898,321 @@ namespace OpCentrix.Services
         }
 
         /// <summary>
-        /// Find an available time slot within a specific day
+        /// Determine the earliest possible start time considering last job, current time, and preferences
         /// </summary>
-        private async Task<DateTime?> FindAvailableSlotInDay(DateTime dayStart, double durationHours, string material, 
+        private async Task<DateTime> DetermineEarliestPossibleStartTime(string machineId, DateTime preferredDate, string material, List<Job> existingJobs, SchedulerSettings settings)
+        {
+            var now = DateTime.UtcNow;
+            var preferredStart = preferredDate > now ? preferredDate : now;
+
+            // Get the last completed or in-progress job on this machine
+            var lastJob = existingJobs
+                .Where(j => j.MachineId == machineId)
+                .OrderByDescending(j => j.ScheduledEnd)
+                .FirstOrDefault();
+
+            if (lastJob == null)
+            {
+                // No previous jobs, can start at preferred time or next shift
+                return preferredStart.Date < now.Date 
+                    ? now.Date.Add(settings.StandardShiftStart)
+                    : AdjustToNearestShiftStart(preferredStart, settings);
+            }
+
+            // Calculate minimum start time based on last job end time
+            var minimumStartAfterLastJob = await CalculateMinimumStartTimeAfterJob(lastJob, material, settings);
+
+            // If the last job ends after our preferred start, we must wait
+            if (minimumStartAfterLastJob > preferredStart)
+            {
+                _logger.LogDebug("Adjusting start time from {PreferredStart} to {MinimumStart} due to last job ending at {LastJobEnd}",
+                    preferredStart, minimumStartAfterLastJob, lastJob.ScheduledEnd);
+                return minimumStartAfterLastJob;
+            }
+
+            // If we're scheduling for today and it's past the preferred time, start from now + buffer
+            if (preferredStart.Date == now.Date && preferredStart < now)
+            {
+                var nowPlusBuffer = now.AddMinutes(settings.SetupTimeBufferMinutes);
+                return Math.Max(minimumStartAfterLastJob.Ticks, nowPlusBuffer.Ticks) > preferredStart.Ticks
+                    ? new DateTime(Math.Max(minimumStartAfterLastJob.Ticks, nowPlusBuffer.Ticks))
+                    : preferredStart;
+            }
+
+            return preferredStart;
+        }
+
+        /// <summary>
+        /// Calculate the minimum start time after a previous job, including changeover and gap requirements
+        /// </summary>
+        private async Task<DateTime> CalculateMinimumStartTimeAfterJob(Job previousJob, string newMaterial, SchedulerSettings settings)
+        {
+            var minimumStart = previousJob.ScheduledEnd;
+
+            // Add minimum time between jobs
+            minimumStart = minimumStart.AddMinutes(settings.MinimumTimeBetweenJobsMinutes);
+
+            // Add material changeover time if materials are different
+            if (previousJob.SlsMaterial != newMaterial)
+            {
+                var changeoverTime = await _settingsService.GetChangeoverTimeAsync(previousJob.SlsMaterial, newMaterial);
+                minimumStart = minimumStart.AddMinutes(changeoverTime);
+                
+                _logger.LogDebug("Added changeover time from {FromMaterial} to {ToMaterial}: {ChangeoverMinutes} minutes",
+                    previousJob.SlsMaterial, newMaterial, changeoverTime);
+            }
+
+            // Ensure the start time falls within shift hours
+            return AdjustToNearestShiftStart(minimumStart, settings);
+        }
+
+        /// <summary>
+        /// Check if a given date allows operations based on weekend settings
+        /// </summary>
+        private async Task<bool> IsValidOperatingDay(DateTime date, SchedulerSettings settings)
+        {
+            if (date.DayOfWeek == DayOfWeek.Saturday)
+                return settings.EnableWeekendOperations && settings.SaturdayOperations;
+            
+            if (date.DayOfWeek == DayOfWeek.Sunday)
+                return settings.EnableWeekendOperations && settings.SundayOperations;
+            
+            return true; // Weekdays are always valid
+        }
+
+        /// <summary>
+        /// Get the next valid operating day based on weekend settings
+        /// </summary>
+        private DateTime GetNextValidOperatingDay(DateTime currentDate, SchedulerSettings settings)
+        {
+            var nextDay = currentDate.Date.AddDays(1);
+            
+            while (!IsValidOperatingDay(nextDay, settings).Result)
+            {
+                nextDay = nextDay.AddDays(1);
+            }
+            
+            return nextDay.Add(settings.StandardShiftStart);
+        }
+
+        /// <summary>
+        /// Calculate how many days to skip to reach the next valid operating day
+        /// </summary>
+        private int GetDaysToNextValidDay(DateTime currentDate)
+        {
+            if (currentDate.DayOfWeek == DayOfWeek.Saturday)
+                return 2; // Skip to Monday
+            if (currentDate.DayOfWeek == DayOfWeek.Sunday)
+                return 1; // Skip to Monday
+            return 1; // Normal next day
+        }
+
+        /// <summary>
+        /// Adjust time to the nearest shift start, considering all three shifts
+        /// </summary>
+        private DateTime AdjustToNearestShiftStart(DateTime proposedTime, SchedulerSettings settings)
+        {
+            var timeOfDay = proposedTime.TimeOfDay;
+            var date = proposedTime.Date;
+
+            // Check if already within a shift (with small buffer)
+            if (IsTimeInAnyShift(timeOfDay, settings))
+            {
+                return proposedTime;
+            }
+
+            // Find the next shift start
+            var shiftStarts = new[]
+            {
+                new { Time = settings.StandardShiftStart, Name = "Standard" },
+                new { Time = settings.EveningShiftStart, Name = "Evening" },
+                new { Time = settings.NightShiftStart, Name = "Night" }
+            }.OrderBy(s => s.Time).ToList();
+
+            // Find next shift start on the same day
+            var nextShiftToday = shiftStarts
+                .Where(s => s.Time > timeOfDay)
+                .FirstOrDefault();
+
+            if (nextShiftToday != null)
+            {
+                var result = date.Add(nextShiftToday.Time);
+                _logger.LogDebug("Adjusted time from {Original} to {Adjusted} ({ShiftName} shift start)",
+                    proposedTime, result, nextShiftToday.Name);
+                return result;
+            }
+
+            // No more shifts today, go to first shift tomorrow
+            var tomorrowStart = date.AddDays(1).Add(settings.StandardShiftStart);
+            _logger.LogDebug("Adjusted time from {Original} to {Adjusted} (next day standard shift)",
+                proposedTime, tomorrowStart);
+            return tomorrowStart;
+        }
+
+        /// <summary>
+        /// Get the start of the next operating day
+        /// </summary>
+        private DateTime GetNextOperatingDayStart(DateTime currentDate, SchedulerSettings settings)
+        {
+            var nextDay = currentDate.Date.AddDays(1);
+            
+            // Skip weekends if not allowed
+            while (!IsValidOperatingDay(nextDay, settings).Result)
+            {
+                nextDay = nextDay.AddDays(1);
+            }
+            
+            return nextDay.Add(settings.StandardShiftStart);
+        }
+
+        /// <summary>
+        /// Get jobs that could potentially conflict with our time window (optimized query)
+        /// </summary>
+        private List<Job> GetRelevantConflictingJobs(string machineId, DateTime searchStart, double durationHours, List<Job> existingJobs)
+        {
+            var searchEnd = searchStart.AddHours(durationHours);
+            var bufferHours = 4; // Look 4 hours before and after for context
+            
+            return existingJobs
+                .Where(j => j.MachineId == machineId &&
+                           j.ScheduledEnd >= searchStart.AddHours(-bufferHours) &&
+                           j.ScheduledStart <= searchEnd.AddHours(bufferHours))
+                .OrderBy(j => j.ScheduledStart)
+                .ToList();
+        }
+
+        /// <summary>
+        /// Find an optimal time slot within a specific day with enhanced logic
+        /// </summary>
+        private async Task<DateTime?> FindOptimalSlotInDay(DateTime dayStart, double durationHours, string material, 
             List<Job> existingJobs, SchedulerSettings settings)
         {
             try
             {
-                var currentTime = dayStart;
-                var endOfDay = dayStart.Date.Add(settings.NightShiftEnd > settings.StandardShiftStart 
-                    ? settings.NightShiftEnd 
-                    : TimeSpan.FromHours(23)); // End of work day
-
-                // If night shift crosses midnight, extend to next day
-                if (settings.NightShiftEnd < settings.NightShiftStart)
-                {
-                    endOfDay = dayStart.Date.AddDays(1).Add(settings.NightShiftEnd);
-                }
-
+                var shifts = GetDayShifts(dayStart, settings);
                 var durationTimeSpan = TimeSpan.FromHours(durationHours);
-                var timeIncrement = TimeSpan.FromMinutes(30); // Check every 30 minutes
 
-                while (currentTime.Add(durationTimeSpan) <= endOfDay)
+                // Try each shift in order of preference
+                foreach (var shift in shifts)
                 {
-                    // Check if this time slot is available
-                    if (await IsTimeSlotAvailable(currentTime, durationTimeSpan, material, existingJobs, settings))
+                    var slotInShift = await FindSlotInShift(shift.Start, shift.End, durationTimeSpan, material, existingJobs, settings);
+                    if (slotInShift.HasValue)
                     {
-                        return currentTime;
+                        _logger.LogDebug("Found slot in {ShiftName} shift: {StartTime}", shift.Name, slotInShift.Value);
+                        return slotInShift.Value;
                     }
-
-                    currentTime = currentTime.Add(timeIncrement);
                 }
 
-                return null; // No slot available in this day
+                return null; // No slot available in any shift this day
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error finding available slot in day starting {DayStart}", dayStart);
+                _logger.LogError(ex, "Error finding optimal slot in day starting {DayStart}", dayStart);
                 return null;
             }
         }
 
         /// <summary>
-        /// Check if a specific time slot is available for scheduling
+        /// Get all shifts for a given day
         /// </summary>
-        private async Task<bool> IsTimeSlotAvailable(DateTime startTime, TimeSpan duration, string material, 
+        private List<(DateTime Start, DateTime End, string Name)> GetDayShifts(DateTime date, SchedulerSettings settings)
+        {
+            var day = date.Date;
+            var shifts = new List<(DateTime Start, DateTime End, string Name)>();
+
+            // Standard shift
+            shifts.Add((
+                day.Add(settings.StandardShiftStart),
+                day.Add(settings.StandardShiftEnd),
+                "Standard"
+            ));
+
+            // Evening shift
+            shifts.Add((
+                day.Add(settings.EveningShiftStart),
+                day.Add(settings.EveningShiftEnd),
+                "Evening"
+            ));
+
+            // Night shift (may cross midnight)
+            var nightStart = day.Add(settings.NightShiftStart);
+            var nightEnd = settings.NightShiftEnd < settings.NightShiftStart
+                ? day.AddDays(1).Add(settings.NightShiftEnd)  // Crosses midnight
+                : day.Add(settings.NightShiftEnd);
+            
+            shifts.Add((nightStart, nightEnd, "Night"));
+
+            return shifts.Where(s => s.Start < s.End).ToList(); // Filter out invalid shifts
+        }
+
+        /// <summary>
+        /// Find a slot within a specific shift
+        /// </summary>
+        private async Task<DateTime?> FindSlotInShift(DateTime shiftStart, DateTime shiftEnd, TimeSpan duration, 
+            string material, List<Job> existingJobs, SchedulerSettings settings)
+        {
+            var currentTime = shiftStart;
+            var timeIncrement = TimeSpan.FromMinutes(15); // Check every 15 minutes for better precision
+            
+            while (currentTime.Add(duration) <= shiftEnd)
+            {
+                if (await IsTimeSlotAvailableEnhanced(currentTime, duration, material, existingJobs, settings))
+                {
+                    return currentTime;
+                }
+                
+                currentTime = currentTime.Add(timeIncrement);
+            }
+            
+            return null;
+        }
+
+        /// <summary>
+        /// Enhanced time slot availability check with better conflict resolution
+        /// </summary>
+        private async Task<bool> IsTimeSlotAvailableEnhanced(DateTime startTime, TimeSpan duration, string material, 
             List<Job> existingJobs, SchedulerSettings settings)
         {
             try
             {
                 var endTime = startTime.Add(duration);
 
-                // Check for overlaps with existing jobs
-                var hasOverlap = existingJobs.Any(job => 
-                    job.ScheduledStart < endTime && job.ScheduledEnd > startTime);
+                // Check for direct overlaps
+                var directOverlaps = existingJobs.Where(job => 
+                    job.ScheduledStart < endTime && job.ScheduledEnd > startTime).ToList();
 
-                if (hasOverlap)
-                    return false;
-
-                // Check if time is within valid shift hours
-                if (!IsTimeInAnyShift(startTime.TimeOfDay, settings) || 
-                    !IsTimeInAnyShift(endTime.TimeOfDay, settings))
+                if (directOverlaps.Any())
                 {
+                    _logger.LogTrace("Direct overlap found at {StartTime} with jobs: {JobList}",
+                        startTime, string.Join(", ", directOverlaps.Select(j => j.PartNumber)));
                     return false;
                 }
 
-                // Check for material changeover requirements
+                // Check previous job for changeover requirements
                 var previousJob = existingJobs
                     .Where(j => j.ScheduledEnd <= startTime)
                     .OrderByDescending(j => j.ScheduledEnd)
                     .FirstOrDefault();
 
-                if (previousJob != null && previousJob.SlsMaterial != material)
+                if (previousJob != null)
                 {
-                    var changeoverTime = await _settingsService.GetChangeoverTimeAsync(previousJob.SlsMaterial, material);
-                    var minimumGap = TimeSpan.FromMinutes(Math.Max(changeoverTime, settings.MinimumTimeBetweenJobsMinutes));
+                    var requiredGap = TimeSpan.FromMinutes(settings.MinimumTimeBetweenJobsMinutes);
                     
-                    if (startTime < previousJob.ScheduledEnd.Add(minimumGap))
+                    if (previousJob.SlsMaterial != material)
                     {
+                        var changeoverTime = await _settingsService.GetChangeoverTimeAsync(previousJob.SlsMaterial, material);
+                        requiredGap = TimeSpan.FromMinutes(Math.Max(changeoverTime, settings.MinimumTimeBetweenJobsMinutes));
+                    }
+                    
+                    if (startTime < previousJob.ScheduledEnd.Add(requiredGap))
+                    {
+                        _logger.LogTrace("Insufficient gap after previous job at {StartTime}. Required: {RequiredGap}, Available: {AvailableGap}",
+                            startTime, requiredGap, startTime - previousJob.ScheduledEnd);
                         return false;
                     }
                 }
 
-                // Check minimum time between jobs
+                // Check next job for changeover requirements
                 var nextJob = existingJobs
                     .Where(j => j.ScheduledStart >= endTime)
                     .OrderBy(j => j.ScheduledStart)
@@ -990,18 +1220,18 @@ namespace OpCentrix.Services
 
                 if (nextJob != null)
                 {
-                    var gapToNext = nextJob.ScheduledStart - endTime;
                     var requiredGap = TimeSpan.FromMinutes(settings.MinimumTimeBetweenJobsMinutes);
                     
-                    // If different materials, add changeover time
                     if (nextJob.SlsMaterial != material)
                     {
                         var changeoverTime = await _settingsService.GetChangeoverTimeAsync(material, nextJob.SlsMaterial);
-                        requiredGap = requiredGap.Add(TimeSpan.FromMinutes(changeoverTime));
+                        requiredGap = TimeSpan.FromMinutes(Math.Max(changeoverTime, settings.MinimumTimeBetweenJobsMinutes));
                     }
-
-                    if (gapToNext < requiredGap)
+                    
+                    if (nextJob.ScheduledStart < endTime.Add(requiredGap))
                     {
+                        _logger.LogTrace("Insufficient gap before next job at {StartTime}. Required: {RequiredGap}, Available: {AvailableGap}",
+                            startTime, requiredGap, nextJob.ScheduledStart - endTime);
                         return false;
                     }
                 }
@@ -1010,31 +1240,9 @@ namespace OpCentrix.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error checking if time slot is available at {StartTime}", startTime);
+                _logger.LogError(ex, "Error checking enhanced time slot availability at {StartTime}", startTime);
                 return false;
             }
-        }
-
-        /// <summary>
-        /// Check if a time falls within any configured shift
-        /// </summary>
-        private bool IsTimeInAnyShift(TimeSpan time, SchedulerSettings settings)
-        {
-            return IsTimeInShift(time, settings.StandardShiftStart, settings.StandardShiftEnd) ||
-                   IsTimeInShift(time, settings.EveningShiftStart, settings.EveningShiftEnd) ||
-                   IsTimeInShift(time, settings.NightShiftStart, settings.NightShiftEnd);
-        }
-
-        /// <summary>
-        /// Get next Monday from a given date
-        /// </summary>
-        private DateTime GetNextMonday(DateTime date)
-        {
-            var daysUntilMonday = ((int)DayOfWeek.Monday - (int)date.DayOfWeek + 7) % 7;
-            if (daysUntilMonday == 0 && date.DayOfWeek != DayOfWeek.Monday)
-                daysUntilMonday = 7;
-            
-            return date.Date.AddDays(daysUntilMonday);
         }
 
         /// <summary>
@@ -1104,6 +1312,18 @@ namespace OpCentrix.Services
                 var fallbackTime = proposedStart.Date.AddDays(1).AddHours(8);
                 return (false, "Error checking availability", fallbackTime);
             }
+        }
+
+        /// <summary>
+        /// Get next Monday from a given date
+        /// </summary>
+        private DateTime GetNextMonday(DateTime date)
+        {
+            var daysUntilMonday = ((int)DayOfWeek.Monday - (int)date.DayOfWeek + 7) % 7;
+            if (daysUntilMonday == 0 && date.DayOfWeek != DayOfWeek.Monday)
+                daysUntilMonday = 7;
+            
+            return date.Date.AddDays(daysUntilMonday);
         }
         #endregion
     }

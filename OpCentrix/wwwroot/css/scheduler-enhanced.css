@@ -1,0 +1,451 @@
+/* OpCentrix Scheduler - Enhanced 2-Month View CSS */
+
+/* Enhanced Grid Variables for 2-Month View */
+:root {
+    --scheduler-slot-width: 90px;
+    --scheduler-machine-label-width: 180px;
+    --scheduler-row-min-height: 120px;
+    --scheduler-header-height: 70px;
+    --scheduler-border-color: #e5e7eb;
+    --scheduler-hover-color: #f3f4f6;
+    --scheduler-today-color: #dbeafe;
+    --scheduler-weekend-color: #f9fafb;
+    --scheduler-current-time-color: #3b82f6;
+}
+
+/* Enhanced Grid Container for 2-Month View */
+.scheduler-grid-container {
+    display: block;
+    width: 100%;
+    border: 1px solid var(--scheduler-border-color);
+    border-radius: 8px;
+    background: white;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    overflow: auto;
+    max-height: 80vh;
+    position: relative;
+}
+
+/* Enhanced Header Row */
+.scheduler-header-row {
+    display: flex;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: white;
+    border-bottom: 2px solid var(--scheduler-border-color);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Machine Column Header */
+.scheduler-grid-header:first-child {
+    width: var(--scheduler-machine-label-width);
+    min-width: var(--scheduler-machine-label-width);
+    background: #f8fafc;
+    border-right: 2px solid var(--scheduler-border-color);
+    font-weight: 600;
+    color: #1e40af;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--scheduler-header-height);
+    position: sticky;
+    left: 0;
+    z-index: 31;
+}
+
+/* Date Headers Container */
+.scheduler-date-headers {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+}
+
+/* Individual Date Headers */
+.scheduler-grid-header {
+    width: var(--scheduler-slot-width);
+    min-width: var(--scheduler-slot-width);
+    height: var(--scheduler-header-height);
+    border-right: 1px solid var(--scheduler-border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 500;
+    background: #fafbfc;
+    color: #374151;
+    position: relative;
+}
+
+/* Today Highlight in Header */
+.scheduler-grid-header.bg-blue-50 {
+    background: var(--scheduler-today-color) !important;
+    color: #1e40af !important;
+    font-weight: 600;
+}
+
+/* Machine Rows Container */
+.machine-rows-container {
+    display: block;
+}
+
+/* Individual Machine Row */
+.machine-row {
+    display: flex;
+    border-bottom: 1px solid var(--scheduler-border-color);
+    transition: background-color 0.15s ease;
+    position: relative;
+}
+
+.machine-row:hover {
+    background: var(--scheduler-hover-color);
+}
+
+/* Machine Label */
+.scheduler-machine-label {
+    width: var(--scheduler-machine-label-width);
+    min-width: var(--scheduler-machine-label-width);
+    border-right: 2px solid var(--scheduler-border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    position: sticky;
+    left: 0;
+    z-index: 20;
+    font-weight: 600;
+    color: #374151;
+    transition: all 0.15s ease;
+}
+
+/* Machine Label Colors */
+.scheduler-machine-label.ti1 {
+    background: linear-gradient(135deg, #ddd6fe 0%, #e0e7ff 100%);
+    color: #5b21b6;
+    border-color: #c4b5fd;
+}
+
+.scheduler-machine-label.ti2 {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    color: #1e40af;
+    border-color: #93c5fd;
+}
+
+.scheduler-machine-label.inc {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #92400e;
+    border-color: #fbbf24;
+}
+
+/* Time Slots Container */
+.time-slots-container {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+}
+
+/* Individual Grid Cells */
+.scheduler-grid-cell {
+    width: var(--scheduler-slot-width);
+    min-width: var(--scheduler-slot-width);
+    border-right: 1px solid var(--scheduler-border-color);
+    position: relative;
+    transition: all 0.15s ease;
+    cursor: pointer;
+}
+
+/* Grid Cell States */
+.scheduler-grid-cell:hover {
+    background: rgba(99, 102, 241, 0.05);
+    box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.2);
+}
+
+/* Very subtle current time indicator - barely noticeable */
+.scheduler-grid-cell.current-time-slot {
+    background: #f8fafc;
+    border-left: 2px solid #e2e8f0;
+    position: relative;
+}
+
+/* Small time indicator dot for current slot */
+.scheduler-grid-cell.current-time-slot::before {
+    content: '';
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 6px;
+    height: 6px;
+    background: #3b82f6;
+    border-radius: 50%;
+    opacity: 0.6;
+}
+
+/* Very light shading for weekends (Saturday & Sunday) */
+.scheduler-grid-cell.weekend {
+    background: #fafbfc;
+    border-color: #f1f5f9;
+}
+
+/* Also apply weekend styling to bg-gray-50 class for compatibility */
+.scheduler-grid-cell.bg-gray-50 {
+    background: #fafbfc;
+    border-color: #f1f5f9;
+}
+
+/* Override any Tailwind bg-gray-25 classes that might still exist */
+.scheduler-grid-cell.bg-gray-25 {
+    background: #fafbfc !important;
+    border-color: #f1f5f9 !important;
+}
+
+/* Override Tailwind bg-blue-25 for today cells - remove to make consistent */
+.scheduler-grid-cell.bg-blue-25 {
+    background: #ffffff !important;
+    border-color: #e5e7eb !important;
+}
+
+/* Enhanced off-hours styling for actual off-hours only */
+.scheduler-grid-cell.off-hours {
+    background: repeating-linear-gradient(
+        45deg,
+        #f9fafb,
+        #f9fafb 6px,
+        #e5e7eb 6px,
+        #e5e7eb 12px
+    ) !important;
+    border-color: #d1d5db !important;
+}
+
+/* Weekend header styling */
+.scheduler-grid-header.weekend-header {
+    background: #fafbfc !important;
+    color: #64748b !important;
+    border-color: #f1f5f9 !important;
+}
+
+/* Enhanced Job Blocks */
+.job-block {
+    position: absolute;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(4px);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    min-height: 28px;
+}
+
+.job-block:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 25 !important;
+}
+
+/* Job Block Status Colors */
+.job-block.status-scheduled {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+}
+
+.job-block.status-preheating {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.job-block.status-building {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.job-block.status-cooling {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.job-block.status-post-processing {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+}
+
+.job-block.status-completed {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+}
+
+.job-block.status-on-hold {
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+}
+
+.job-block.status-cancelled {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+/* Machine-Specific Job Block Styling */
+.job-block.ti1 {
+    border-left: 4px solid #a855f7;
+}
+
+.job-block.ti2 {
+    border-left: 4px solid #3b82f6;
+}
+
+.job-block.inc {
+    border-left: 4px solid #f59e0b;
+}
+
+/* Enhanced Add Job Button */
+.scheduler-grid-cell .opacity-0 {
+    opacity: 0;
+    transition: all 0.2s ease;
+}
+
+.scheduler-grid-cell:hover .opacity-0 {
+    opacity: 1;
+}
+
+/* Responsive Design for 2-Month View */
+@media (max-width: 1600px) {
+    :root {
+        --scheduler-slot-width: 70px;
+        --scheduler-machine-label-width: 150px;
+    }
+    
+    .scheduler-grid-header {
+        font-size: 0.7rem;
+    }
+    
+    .job-block {
+        font-size: 0.7rem;
+        padding: 3px 6px;
+        min-height: 24px;
+    }
+}
+
+@media (max-width: 1200px) {
+    :root {
+        --scheduler-slot-width: 60px;
+        --scheduler-machine-label-width: 130px;
+    }
+    
+    .scheduler-grid-header {
+        font-size: 0.65rem;
+        padding: 4px;
+    }
+    
+    .job-block {
+        font-size: 0.65rem;
+        padding: 2px 4px;
+        min-height: 20px;
+    }
+}
+
+@media (max-width: 768px) {
+    :root {
+        --scheduler-slot-width: 50px;
+        --scheduler-machine-label-width: 100px;
+        --scheduler-header-height: 50px;
+    }
+    
+    .scheduler-grid-container {
+        max-height: 70vh;
+    }
+    
+    .scheduler-grid-header {
+        font-size: 0.6rem;
+        padding: 2px;
+    }
+    
+    .job-block {
+        font-size: 0.6rem;
+        padding: 1px 3px;
+        min-height: 18px;
+    }
+    
+    .scheduler-machine-label {
+        font-size: 0.8rem;
+    }
+}
+
+/* Performance Optimizations */
+.scheduler-grid-container {
+    will-change: scroll-position;
+    contain: layout style paint;
+}
+
+.machine-row {
+    contain: layout style;
+}
+
+.job-block {
+    contain: layout style paint;
+    will-change: transform;
+}
+
+/* Scroll Indicators */
+.scheduler-grid-container::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+}
+
+.scheduler-grid-container::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+
+.scheduler-grid-container::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+    border: 2px solid #f1f5f9;
+}
+
+.scheduler-grid-container::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Enhanced Loading States */
+.loading-indicator {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 20px 30px;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 500;
+    color: #374151;
+}
+
+.loading-indicator.hidden {
+    display: none;
+}
+
+/* Print Styles for 2-Month View */
+@media print {
+    .scheduler-grid-container {
+        max-height: none;
+        overflow: visible;
+        box-shadow: none;
+        border: 1px solid #000;
+    }
+    
+    .scheduler-grid-cell:hover {
+        background: transparent !important;
+    }
+    
+    .job-block {
+        background: #666 !important;
+        color: white !important;
+        box-shadow: none !important;
+    }
+    
+    .scheduler-machine-label {
+        background: #f5f5f5 !important;
+        color: #000 !important;
+    }
+}

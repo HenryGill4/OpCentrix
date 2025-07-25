@@ -22,6 +22,7 @@
 
 @section Styles {
     <link rel="stylesheet" href="~/css/scheduler-modal.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/scheduler-enhanced.css" asp-append-version="true" />
 }
 
 <!-- Enhanced scheduler header -->
@@ -168,9 +169,11 @@
                             var isFirstSlot = s == 0;
                             var slotTime = slotTimes[s];
                             var isToday = date.Date == DateTime.Today;
+                            var isWeekend = date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday;
                             var headerClass = isFirstSlot ? "scheduler-grid-header font-semibold text-gray-800 border-r bg-white" : "scheduler-grid-header text-xs text-gray-600 border-r bg-gray-50";
                             
-                            if (isToday && isFirstSlot) headerClass += " bg-blue-50 text-blue-800 border-blue-200";
+                            // Only very subtle styling for today - no extra highlighting
+                            if (isWeekend && isFirstSlot) headerClass += " weekend-header";
                             
                             <div class="@headerClass" data-date="@date.ToString("yyyy-MM-dd")" data-slot="@s">
                                 @if (isFirstSlot)
@@ -178,10 +181,7 @@
                                     <div class="text-center">
                                         <div class="font-bold">@date.ToString("ddd")</div>
                                         <div class="text-sm">@date.ToString("M/d")</div>
-                                        @if (isToday)
-                                        {
-                                            <div class="text-xs text-blue-600 font-semibold">Today</div>
-                                        }
+                                        @* Remove the "Today" text to make it consistent with other days *@
                                     </div>
                                 }
                                 else if (slotsPerDay > 1)
@@ -243,14 +243,18 @@
                                         slotTime.Add(TimeSpan.FromMinutes(slotMinutes)) > DateTime.Now.TimeOfDay;
                                     var isWeekend = day.DayOfWeek == DayOfWeek.Saturday || day.DayOfWeek == DayOfWeek.Sunday;
                                     var isPastWorkHours = slotTime < TimeSpan.FromHours(6) || slotTime >= TimeSpan.FromHours(18);
+                                    // Only apply diagonal lines to Friday evenings and Saturday mornings (off-hours)
+                                    var isFridayAfterHours = day.DayOfWeek == DayOfWeek.Friday && slotTime >= TimeSpan.FromHours(18);
+                                    var isSaturdayBeforeHours = day.DayOfWeek == DayOfWeek.Saturday && slotTime < TimeSpan.FromHours(6);
                                     
                                     var cellClasses = new List<string> { 
                                         "scheduler-grid-cell", "group", "relative", "cursor-pointer"
                                     };
                                     
-                                    if (isCurrentTimeSlot) cellClasses.Add("current-time");
-                                    else if (isWeekend) cellClasses.Add("weekend");
-                                    else if (isPastWorkHours) cellClasses.Add("off-hours");
+                                    // Only apply very subtle current time indicator, no general "today" styling
+                                    if (isCurrentTimeSlot) cellClasses.Add("current-time-slot");
+                                    else if (isWeekend) cellClasses.Add("weekend"); // Light shading for Sat & Sun only
+                                    else if (isFridayAfterHours || isSaturdayBeforeHours) cellClasses.Add("off-hours"); // Diagonal lines only on specific times
                                     
                                     <div class="@string.Join(" ", cellClasses)" 
                                          style="height:@(rowHeight)px;"
@@ -302,10 +306,10 @@
                                             </svg>
                                         </div>
                                         
-                                        <!-- Time indicator for current slot -->
+                                        <!-- Very subtle current time indicator -->
                                         @if (isCurrentTimeSlot)
                                         {
-                                            <div class="absolute top-1 left-1 w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
+                                            <!-- Remove the animated pulse dot - the CSS ::before will handle this subtly -->
                                         }
                                     </div>
                                 }

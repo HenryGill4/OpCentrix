@@ -56,7 +56,7 @@
                 {
                     var isToday = date.Date == DateTime.Today;
                     var headerClass = "scheduler-grid-header text-xs font-semibold text-gray-800 border-r bg-white";
-                    if (isToday) headerClass += " bg-blue-50 text-blue-800 border-blue-200";
+                    // Remove today highlighting to make it consistent
                     
                     <div class="@headerClass" data-date="@date.ToString("yyyy-MM-dd")">
                         <div class="text-center">
@@ -96,8 +96,8 @@
                             "scheduler-grid-cell", "group", "relative", "border-r", "border-b", "border-gray-100"
                         };
                         
-                        if (isToday) cellClasses.Add("current-day");
-                        else if (isWeekend) cellClasses.Add("weekend");
+                        // Remove today highlighting, only keep weekend styling
+                        if (isWeekend) cellClasses.Add("weekend");
                         
                         <div class="@string.Join(" ", cellClasses)" 
                              style="height:80px;"
@@ -123,10 +123,10 @@
                                 </div>
                             }
                             
-                            <!-- Current time indicator -->
+                            <!-- Very subtle current time indicator -->
                             @if (isToday)
                             {
-                                <div class="absolute top-1 right-1 w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
+                                <div class="absolute top-1 right-1 w-2 h-2 bg-blue-600 rounded-full opacity-50"></div>
                             }
                         </div>
                     }
@@ -180,12 +180,12 @@
     
     .job-block {
         border-radius: 4px;
-        background-color: #3B82F6;
+
         box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     }
     
     .job-block.ti1, .job-block.ti2 {
-        background-color: #3B82F6; /* Blue for titanium */
+
     }
     
     .job-block.inc {
@@ -212,7 +212,8 @@
         background-color: #f9fafb;
     }
     
-    .current-day {
+    /* Remove current-day styling to make all days consistent */
+    /* .current-day {
         background-color: rgba(59, 130, 246, 0.05);
-    }
+    } */
 </style>
