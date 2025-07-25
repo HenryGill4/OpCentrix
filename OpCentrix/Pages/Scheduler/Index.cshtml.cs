@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
+using OpCentrix.Services.Admin;
 
 namespace OpCentrix.Pages.Scheduler
 {
@@ -19,15 +20,17 @@ namespace OpCentrix.Pages.Scheduler
     {
         private readonly SchedulerContext _context;
         private readonly ISchedulerService _schedulerService;
+        private readonly IMachineManagementService _machineService;
         private readonly ILogger<IndexModel> _logger;
 
         public SchedulerPageViewModel ViewModel { get; set; } = new();
         public FooterSummaryViewModel Summary { get; set; } = new();
 
-        public IndexModel(SchedulerContext context, ISchedulerService schedulerService, ILogger<IndexModel> logger)
+        public IndexModel(SchedulerContext context, ISchedulerService schedulerService, IMachineManagementService machineService, ILogger<IndexModel> logger)
         {
             _context = context;
             _schedulerService = schedulerService;
+            _machineService = machineService;
             _logger = logger;
         }
 
@@ -91,18 +94,17 @@ namespace OpCentrix.Pages.Scheduler
 
                 _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Found {JobCount} jobs for embedded view", operationId, jobs.Count);
 
-                // Get available machines
-                var machines = await _context.SlsMachines
-                    .Where(m => m.IsActive)
+                // Get available machines dynamically from machine management service
+                var machines = (await _machineService.GetActiveMachinesAsync())
                     .Select(m => m.MachineId)
                     .OrderBy(m => m)
-                    .ToListAsync();
+                    .ToList();
 
-                // Fallback to default machines if none in database
+                // No fallback to hardcoded machines - if no machines are configured, that's an admin issue
                 if (!machines.Any())
                 {
-                    machines = new List<string> { "TI1", "TI2", "INC" };
-                    _logger.LogWarning("🔧 [SCHEDULER-{OperationId}] No machines found in database, using defaults", operationId);
+                    _logger.LogWarning("🔧 [SCHEDULER-{OperationId}] No active machines found in system - admin should configure machines", operationId);
+                    machines = new List<string>(); // Empty list - admin needs to add machines
                 }
 
                 // Create proper EmbeddedSchedulerViewModel instead of anonymous object
@@ -266,15 +268,17 @@ namespace OpCentrix.Pages.Scheduler
                 {
                     StartDate = startDate ?? DateTime.UtcNow.Date,
                     Dates = new List<DateTime> { DateTime.UtcNow.Date },
-                    Machines = new List<string> { "TI1", "TI2", "INC" },
+                    Machines = (await _machineService.GetActiveMachinesAsync()).Select(m => m.MachineId).ToList(),
                     Jobs = new List<Job>(),
-                    MachineRowHeights = new Dictionary<string, int>
-                    {
-                        { "TI1", 160 },
-                        { "TI2", 160 },
-                        { "INC", 160 }
-                    }
+                    MachineRowHeights = new Dictionary<string, int>()
                 };
+                
+                // Set default heights for available machines
+                foreach (var machine in ViewModel.Machines)
+                {
+                    ViewModel.MachineRowHeights[machine] = 160;
+                }
+                
                 Summary = new FooterSummaryViewModel();
             }
         }
@@ -909,12 +913,12 @@ namespace OpCentrix.Pages.Scheduler
                     job.SlsMaterial = "Ti-6Al-4V Grade 5"; // Default
                 }
 
-                // Ensure machine ID is valid
-                var validMachines = new[] { "TI1", "TI2", "INC" };
+                // Ensure machine ID is valid by checking against active machines
+                var validMachines = (await _machineService.GetActiveMachinesAsync()).Select(m => m.MachineId).ToList();
                 if (!validMachines.Contains(job.MachineId))
                 {
-                    _logger.LogWarning("⚠️ [SCHEDULER-{OperationId}] Invalid machine ID: {MachineId}, using default", operationId, job.MachineId);
-                    job.MachineId = "TI1"; // Default
+                    _logger.LogWarning("⚠️ [SCHEDULER-{OperationId}] Invalid machine ID: {MachineId}, using first available machine", operationId, job.MachineId);
+                    job.MachineId = validMachines.FirstOrDefault() ?? "NONE"; // Use first available or "NONE" if no machines
                 }
 
                 // Calculate EstimatedHours from time difference

@@ -405,24 +405,27 @@ namespace OpCentrix.Pages.Admin
                         operationId, part.Description.Length);
                 }
 
-                // CRITICAL FIX: Check for duplicate part numbers with proper error handling
-                try
+                // Task 7: Admin Override Validation
+                if (part.AdminEstimatedHoursOverride.HasValue)
                 {
-                    var duplicateExists = await _context.Parts
-                        .AnyAsync(p => p.PartNumber == part.PartNumber && p.Id != part.Id);
-                    
-                    if (duplicateExists)
+                    if (part.AdminEstimatedHoursOverride.Value <= 0 || part.AdminEstimatedHoursOverride.Value > 200)
                     {
-                        validationErrors.Add($"Part Number '{part.PartNumber}' already exists. Please use a different part number.");
-                        _logger.LogWarning("?? [PARTS-{OperationId}] Validation failed: Duplicate part number '{PartNumber}'", 
-                            operationId, part.PartNumber);
+                        validationErrors.Add("Admin override duration must be between 0.25 and 200 hours");
+                        _logger.LogWarning("?? [PARTS-{OperationId}] Validation failed: Invalid override duration: {Hours}", 
+                            operationId, part.AdminEstimatedHoursOverride.Value);
                     }
-                }
-                catch (Exception dupCheckEx)
-                {
-                    _logger.LogError(dupCheckEx, "? [PARTS-{OperationId}] Error checking for duplicate part number: {ErrorMessage}", 
-                        operationId, dupCheckEx.Message);
-                    validationErrors.Add("Unable to verify part number uniqueness. Please try again.");
+                    
+                    if (string.IsNullOrWhiteSpace(part.AdminOverrideReason))
+                    {
+                        validationErrors.Add("Override reason is required when admin override duration is set");
+                        _logger.LogWarning("?? [PARTS-{OperationId}] Validation failed: Missing override reason", operationId);
+                    }
+                    else if (part.AdminOverrideReason.Length > 500)
+                    {
+                        validationErrors.Add("Override reason cannot exceed 500 characters");
+                        _logger.LogWarning("?? [PARTS-{OperationId}] Validation failed: Override reason too long: {Length}", 
+                            operationId, part.AdminOverrideReason.Length);
+                    }
                 }
 
                 if (validationErrors.Any())
@@ -450,6 +453,16 @@ namespace OpCentrix.Pages.Admin
                     // Set calculated fields with safe conversions
                     part.AvgDuration = $"{part.EstimatedHours:F1}h";
                     part.AvgDurationDays = (int)Math.Ceiling(Math.Max(part.EstimatedHours / 8, 1));
+                    
+                    // Task 7: Set admin override metadata for new parts
+                    if (part.AdminEstimatedHoursOverride.HasValue)
+                    {
+                        part.AdminOverrideBy = currentUser;
+                        part.AdminOverrideDate = now;
+                        part.AdminOverrideReason = part.AdminOverrideReason?.Trim() ?? string.Empty;
+                        _logger.LogInformation("? [PARTS-{OperationId}] New part created with admin override: {Hours}h by {User} - {Reason}", 
+                            operationId, part.AdminEstimatedHoursOverride.Value, currentUser, part.AdminOverrideReason);
+                    }
                     
                     // CRITICAL FIX: Ensure all required fields have values
                     part.IsActive = part.IsActive; // Keep user selection
@@ -496,32 +509,32 @@ namespace OpCentrix.Pages.Admin
                     existingPart.AvgDuration = $"{part.EstimatedHours:F1}h";
                     existingPart.AvgDurationDays = (int)Math.Ceiling(Math.Max(part.EstimatedHours / 8, 1));
                     
-                    // Update dimensional properties with safe assignments
-                    existingPart.WeightGrams = part.WeightGrams;
-                    existingPart.LengthMm = part.LengthMm;
-                    existingPart.WidthMm = part.WidthMm;
-                    existingPart.HeightMm = part.HeightMm;
-                    existingPart.VolumeMm3 = part.VolumeMm3;
-                    existingPart.PowderRequirementKg = part.PowderRequirementKg;
+                    // Task 7: Update admin override fields
+                    var overrideChanged = false;
+                    if (existingPart.AdminEstimatedHoursOverride != part.AdminEstimatedHoursOverride)
+                    {
+                        overrideChanged = true;
+                        changes.Add($"AdminOverride: {existingPart.AdminEstimatedHoursOverride?.ToString("F1") ?? "None"} -> {part.AdminEstimatedHoursOverride?.ToString("F1") ?? "None"}");
+                    }
                     
-                    // Update process parameters
-                    existingPart.RecommendedLaserPower = part.RecommendedLaserPower;
-                    existingPart.RecommendedScanSpeed = part.RecommendedScanSpeed;
-                    existingPart.RecommendedLayerThickness = part.RecommendedLayerThickness;
-                    existingPart.RecommendedHatchSpacing = part.RecommendedHatchSpacing;
-                    existingPart.RecommendedBuildTemperature = part.RecommendedBuildTemperature;
-                    existingPart.RequiredArgonPurity = part.RequiredArgonPurity;
-                    existingPart.MaxOxygenContent = part.MaxOxygenContent;
+                    existingPart.AdminEstimatedHoursOverride = part.AdminEstimatedHoursOverride;
+                    existingPart.AdminOverrideReason = part.AdminOverrideReason?.Trim() ?? string.Empty;
                     
-                    // Update time parameters
-                    existingPart.PreheatingTimeMinutes = part.PreheatingTimeMinutes;
-                    existingPart.CoolingTimeMinutes = part.CoolingTimeMinutes;
-                    existingPart.PostProcessingTimeMinutes = part.PostProcessingTimeMinutes;
-                    
-                    // Update cost parameters
-                    existingPart.MaterialCostPerKg = part.MaterialCostPerKg;
-                    existingPart.StandardLaborCostPerHour = part.StandardLaborCostPerHour;
-                    existingPart.SetupCost = part.SetupCost;
+                    // Set admin override metadata when override is applied
+                    if (part.AdminEstimatedHoursOverride.HasValue && (overrideChanged || string.IsNullOrEmpty(existingPart.AdminOverrideBy)))
+                    {
+                        existingPart.AdminOverrideBy = currentUser;
+                        existingPart.AdminOverrideDate = now;
+                        _logger.LogInformation("? [PARTS-{OperationId}] Admin override applied: {Hours}h by {User} - {Reason}", 
+                            operationId, part.AdminEstimatedHoursOverride.Value, currentUser, part.AdminOverrideReason);
+                    }
+                    else if (!part.AdminEstimatedHoursOverride.HasValue)
+                    {
+                        // Clear override metadata when override is removed
+                        existingPart.AdminOverrideBy = string.Empty;
+                        existingPart.AdminOverrideDate = null;
+                        _logger.LogInformation("? [PARTS-{OperationId}] Admin override removed by {User}", operationId, currentUser);
+                    }
 
                     existingPart.LastModifiedDate = now;
                     existingPart.LastModifiedBy = currentUser;

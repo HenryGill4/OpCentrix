@@ -76,7 +76,7 @@
                                     <option value="@part.Id" 
                                             selected="@(Model.Job.PartId == part.Id)"
                                             data-part-number="@part.PartNumber"
-                                            data-estimated-hours="@part.EstimatedHours.ToString("F1")"
+                                            data-estimated-hours="@(part.HasAdminOverride ? part.EffectiveDurationHours.ToString("F1") : part.EstimatedHours.ToString("F1"))"
                                             data-sls-material="@part.SlsMaterial"
                                             data-material-type="@(part.SlsMaterial?.Contains("Ti-6Al-4V") == true ? "Titanium" : part.SlsMaterial?.Contains("Inconel") == true ? "Inconel" : "Other")"
                                             data-laser-power="@part.RecommendedLaserPower"

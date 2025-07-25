@@ -154,16 +154,16 @@
                         Duration & Time Estimates
                     </h3>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                         <div>
                             <label asp-for="EstimatedHours" class="block text-sm font-medium text-gray-700 mb-1">
-                                Estimated Duration (Hours) <span class="text-red-500">*</span>
+                                Standard Duration (Hours) <span class="text-red-500">*</span>
                             </label>
                             <input asp-for="EstimatedHours" type="number" step="0.25" min="0.25" max="200" 
                                    placeholder="8.5" onchange="updateDurationDisplay()" required
                                    class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500" />
                             <span asp-validation-for="EstimatedHours" class="text-red-500 text-sm"></span>
-                            <p class="text-xs text-gray-500 mt-1">Total manufacturing time including setup</p>
+                            <p class="text-xs text-gray-500 mt-1">Default manufacturing time</p>
                         </div>
                         
                         <div>
@@ -178,6 +178,71 @@
                             <input asp-for="AvgDurationDays" id="durationDays" type="number" readonly
                                    class="w-full border border-gray-300 rounded-lg p-2 bg-gray-50 text-gray-600" />
                             <p class="text-xs text-gray-500 mt-1">Whole days (auto-calculated)</p>
+                        </div>
+                    </div>
+
+                    <!-- Task 7: Admin Duration Override Section -->
+                    <div class="border-t border-yellow-200 pt-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="text-md font-semibold text-yellow-800 flex items-center">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                                </svg>
+                                Admin Duration Override
+                            </h4>
+                            <span class="text-xs text-yellow-600 bg-yellow-100 px-2 py-1 rounded-full">
+                                @(Model.HasAdminOverride ? "Override Active" : "No Override")
+                            </span>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label asp-for="AdminEstimatedHoursOverride" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Override Duration (Hours)
+                                </label>
+                                <input asp-for="AdminEstimatedHoursOverride" type="number" step="0.25" min="0.25" max="200" 
+                                       placeholder="Leave empty for no override" onchange="updateOverrideDisplay()"
+                                       class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500" />
+                                <span asp-validation-for="AdminEstimatedHoursOverride" class="text-red-500 text-sm"></span>
+                                <p class="text-xs text-gray-500 mt-1">Overrides standard duration when set</p>
+                            </div>
+                            
+                            <div>
+                                <label asp-for="AdminOverrideReason" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Override Reason
+                                </label>
+                                <input asp-for="AdminOverrideReason" type="text" maxlength="500" 
+                                       placeholder="Reason for duration override..."
+                                       class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500" />
+                                <span asp-validation-for="AdminOverrideReason" class="text-red-500 text-sm"></span>
+                                <p class="text-xs text-gray-500 mt-1">Required when override is set</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Override Status Display -->
+                        <div id="overrideStatus" class="mt-3 p-3 rounded-lg @(Model.HasAdminOverride ? "bg-orange-50 border border-orange-200" : "hidden")">
+                            <div class="flex items-start space-x-2">
+                                <svg class="w-5 h-5 text-orange-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 6.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                                </svg>
+                                <div>
+                                    <p class="text-sm font-medium text-orange-800">Duration Override Active</p>
+                                    @if (Model.HasAdminOverride)
+                                    {
+                                        <p class="text-xs text-orange-600 mt-1">
+                                            Effective Duration: @Model.EffectiveDurationHours.ToString("F1") hours
+                                            @if (!string.IsNullOrEmpty(Model.AdminOverrideBy))
+                                            {
+                                                <br />Override by: @Model.AdminOverrideBy
+                                            }
+                                            @if (Model.AdminOverrideDate.HasValue)
+                                            {
+                                                <br />Override date: @Model.AdminOverrideDate.Value.ToString("yyyy-MM-dd HH:mm")
+                                            }
+                                        </p>
+                                    }
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -589,6 +654,68 @@
                 return true;
             } catch (error) {
                 console.error('❌ [FORM] Error updating duration display:', error);
+                return false;
+            }
+        };
+
+        // Task 7: Admin Override Display Update
+        window.updateOverrideDisplay = function() {
+            console.log('🔧 [FORM] updateOverrideDisplay called');
+            
+            const overrideInput = document.querySelector('input[name="AdminEstimatedHoursOverride"]');
+            const overrideReasonInput = document.querySelector('input[name="AdminOverrideReason"]');
+            const overrideStatus = document.getElementById('overrideStatus');
+            
+            if (!overrideInput) {
+                console.error('❌ [FORM] Override input not found');
+                return false;
+            }
+            
+            try {
+                const overrideHours = parseFloat(overrideInput.value) || 0;
+                const hasOverride = overrideHours > 0;
+                
+                console.log('🔧 [FORM] Override processing:', {
+                    overrideHours,
+                    hasOverride
+                });
+                
+                // Show/hide override status section
+                if (overrideStatus) {
+                    if (hasOverride) {
+                        overrideStatus.classList.remove('hidden');
+                        overrideStatus.className = 'mt-3 p-3 rounded-lg bg-orange-50 border border-orange-200';
+                        
+                        // Update status text
+                        const statusText = overrideStatus.querySelector('p:last-child');
+                        if (statusText) {
+                            statusText.innerHTML = `Effective Duration: ${overrideHours.toFixed(1)} hours<br />
+                                                   <span class="text-orange-500">⚠️ This will override the standard ${document.querySelector('input[name="EstimatedHours"]')?.value || '0'} hour estimate</span>`;
+                        }
+                    } else {
+                        overrideStatus.classList.add('hidden');
+                    }
+                }
+                
+                // Make override reason required when override is set
+                if (overrideReasonInput) {
+                    if (hasOverride) {
+                        overrideReasonInput.setAttribute('required', 'required');
+                        overrideReasonInput.placeholder = 'Reason for override is required';
+                        overrideReasonInput.classList.add('border-orange-300', 'focus:ring-orange-500', 'focus:border-orange-500');
+                        overrideReasonInput.classList.remove('border-gray-300', 'focus:ring-yellow-500', 'focus:border-yellow-500');
+                    } else {
+                        overrideReasonInput.removeAttribute('required');
+                        overrideReasonInput.placeholder = 'Reason for duration override...';
+                        overrideReasonInput.classList.remove('border-orange-300', 'focus:ring-orange-500', 'focus:border-orange-500');
+                        overrideReasonInput.classList.add('border-gray-300', 'focus:ring-yellow-500', 'focus:border-yellow-500');
+                    }
+                }
+                
+                console.log('✅ [FORM] Override display updated');
+                return true;
+            } catch (error) {
+                console.error('❌ [FORM] Error updating override display:', error);
                 return false;
             }
         };

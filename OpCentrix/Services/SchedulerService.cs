@@ -2,12 +2,14 @@ using OpCentrix.Models;
 using OpCentrix.Models.ViewModels;
 using OpCentrix.Data;
 using Microsoft.EntityFrameworkCore;
+using OpCentrix.Services.Admin;
 
 namespace OpCentrix.Services
 {
     public interface ISchedulerService
     {
         SchedulerPageViewModel GetSchedulerData(string? zoom = null, DateTime? startDate = null);
+        Task<SchedulerPageViewModel> GetSchedulerDataAsync(string? zoom = null, DateTime? startDate = null);
         bool ValidateJobScheduling(Job job, List<Job> existingJobs, out List<string> errors);
         (int maxLayers, int rowHeight) CalculateMachineRowLayout(string machineId, List<Job> jobs);
         Task<bool> ValidateSlsJobCompatibilityAsync(Job job, SchedulerContext context);
@@ -60,6 +62,13 @@ namespace OpCentrix.Services
                 Jobs = new List<Job>(), // Will be populated by controller
                 MachineRowHeights = new Dictionary<string, int>()
             };
+        }
+
+        public async Task<SchedulerPageViewModel> GetSchedulerDataAsync(string? zoom = null, DateTime? startDate = null)
+        {
+            // For now, delegate to the synchronous version
+            // In a real implementation, this would use async database calls
+            return await Task.FromResult(GetSchedulerData(zoom, startDate));
         }
 
         public bool ValidateJobScheduling(Job job, List<Job> existingJobs, out List<string> errors)

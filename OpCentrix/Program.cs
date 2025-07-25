@@ -116,6 +116,7 @@ builder.Services.AddScoped<OpCentrix.Services.Admin.IOperatingShiftService, OpCe
 builder.Services.AddScoped<OpCentrix.Services.Admin.ILogViewerService, OpCentrix.Services.Admin.LogViewerService>();
 builder.Services.AddScoped<OpCentrix.Services.Admin.IAdminDataSeedingService, OpCentrix.Services.Admin.AdminDataSeedingService>();
 builder.Services.AddScoped<OpCentrix.Services.Admin.ISystemConfigurationService, OpCentrix.Services.Admin.SystemConfigurationService>();
+builder.Services.AddScoped<OpCentrix.Services.Admin.IMachineManagementService, OpCentrix.Services.Admin.MachineManagementService>();
 
 // Background services for OPC UA monitoring (if needed in future)
 // builder.Services.AddHostedService<OpcUaMonitoringService>();

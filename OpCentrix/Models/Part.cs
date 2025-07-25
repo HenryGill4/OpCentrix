@@ -22,14 +22,6 @@ namespace OpCentrix.Models
         [StringLength(100)]
         public string Material { get; set; } = "Ti-6Al-4V Grade 5";
         
-        // Duration estimates
-        [StringLength(50)]
-        public string AvgDuration { get; set; } = "8h 0m";
-        public int AvgDurationDays { get; set; } = 1;
-        
-        [Range(0.1, 200.0)]
-        public double EstimatedHours { get; set; } = 8.0;
-        
         #region SLS-Specific Manufacturing Properties
         
         // SLS Material Specifications
@@ -350,6 +342,41 @@ namespace OpCentrix.Models
         public double TotalProcessTimeHours => 
             (SetupTimeMinutes + PreheatingTimeMinutes + (EstimatedHours * 60) + 
              CoolingTimeMinutes + PostProcessingTimeMinutes) / 60.0;
+        
+        #endregion
+        
+        #region Duration and Time Management Enhanced
+        
+        // Duration estimates
+        [StringLength(50)]
+        public string AvgDuration { get; set; } = "8h 0m";
+        public int AvgDurationDays { get; set; } = 1;
+        
+        [Range(0.1, 200.0)]
+        public double EstimatedHours { get; set; } = 8.0;
+        
+        // Task 7: Admin Duration Override System
+        [Range(0.1, 200.0)]
+        public double? AdminEstimatedHoursOverride { get; set; }
+        
+        [StringLength(500)]
+        public string AdminOverrideReason { get; set; } = string.Empty;
+        
+        [StringLength(100)]
+        public string AdminOverrideBy { get; set; } = string.Empty;
+        
+        public DateTime? AdminOverrideDate { get; set; }
+        
+        public bool HasAdminOverride => AdminEstimatedHoursOverride.HasValue;
+        
+        // Computed property to get the effective duration (override takes precedence)
+        [NotMapped]
+        public double EffectiveDurationHours => AdminEstimatedHoursOverride ?? EstimatedHours;
+        
+        [NotMapped]
+        public string EffectiveDurationDisplay => HasAdminOverride 
+            ? $"{EffectiveDurationHours:F1}h (Override)" 
+            : $"{EstimatedHours:F1}h";
         
         #endregion
         

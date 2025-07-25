@@ -65,6 +65,8 @@ namespace OpCentrix.Services
             if (await _context.SlsMachines.AnyAsync())
                 return;
 
+            _logger.LogInformation("Seeding initial SLS machines with dynamic configuration...");
+
             var machines = new List<SlsMachine>
             {
                 new SlsMachine
@@ -145,7 +147,169 @@ namespace OpCentrix.Services
             };
 
             await _context.SlsMachines.AddRangeAsync(machines);
+            await _context.SaveChangesAsync();
+
             _logger.LogInformation("Seeded {Count} SLS machines with basic configuration", machines.Count);
+
+            // Seed basic machine capabilities for each machine
+            await SeedMachineCapabilitiesAsync();
+        }
+
+        /// <summary>
+        /// Seeds machine capabilities for existing machines
+        /// </summary>
+        private async Task SeedMachineCapabilitiesAsync()
+        {
+            // Only seed if no capabilities exist
+            if (await _context.MachineCapabilities.AnyAsync())
+                return;
+
+            _logger.LogInformation("Seeding machine capabilities...");
+
+            var machines = await _context.SlsMachines.ToListAsync();
+            var capabilities = new List<MachineCapability>();
+
+            foreach (var machine in machines)
+            {
+                // Common capabilities for all machines
+                capabilities.AddRange(new[]
+                {
+                    new MachineCapability
+                    {
+                        MachineId = machine.MachineId,
+                        CapabilityName = "Laser Power Control",
+                        CapabilityType = "Process Parameter",
+                        ValueType = "Number",
+                        MinValue = 100,
+                        MaxValue = machine.MaxLaserPowerWatts,
+                        DefaultValue = 200,
+                        Unit = "W",
+                        Description = "Laser power control range for printing",
+                        IsRequired = true,
+                        IsActive = true,
+                        CreatedBy = "System",
+                        LastModifiedBy = "System",
+                        CreatedDate = DateTime.UtcNow,
+                        LastModifiedDate = DateTime.UtcNow
+                    },
+                    new MachineCapability
+                    {
+                        MachineId = machine.MachineId,
+                        CapabilityName = "Scan Speed Control",
+                        CapabilityType = "Process Parameter",
+                        ValueType = "Number",
+                        MinValue = 500,
+                        MaxValue = machine.MaxScanSpeedMmPerSec,
+                        DefaultValue = 1200,
+                        Unit = "mm/s",
+                        Description = "Scan speed control for laser",
+                        IsRequired = true,
+                        IsActive = true,
+                        CreatedBy = "System",
+                        LastModifiedBy = "System",
+                        CreatedDate = DateTime.UtcNow,
+                        LastModifiedDate = DateTime.UtcNow
+                    },
+                    new MachineCapability
+                    {
+                        MachineId = machine.MachineId,
+                        CapabilityName = "Layer Thickness Control",
+                        CapabilityType = "Process Parameter",
+                        ValueType = "Number",
+                        MinValue = machine.MinLayerThicknessMicrons,
+                        MaxValue = machine.MaxLayerThicknessMicrons,
+                        DefaultValue = 30,
+                        Unit = "µm",
+                        Description = "Layer thickness control for printing",
+                        IsRequired = true,
+                        IsActive = true,
+                        CreatedBy = "System",
+                        LastModifiedBy = "System",
+                        CreatedDate = DateTime.UtcNow,
+                        LastModifiedDate = DateTime.UtcNow
+                    },
+                    new MachineCapability
+                    {
+                        MachineId = machine.MachineId,
+                        CapabilityName = "Build Temperature Control",
+                        CapabilityType = "Process Parameter",
+                        ValueType = "Number",
+                        MinValue = 150,
+                        MaxValue = 250,
+                        DefaultValue = 180,
+                        Unit = "°C",
+                        Description = "Build platform temperature control",
+                        IsRequired = true,
+                        IsActive = true,
+                        CreatedBy = "System",
+                        LastModifiedBy = "System",
+                        CreatedDate = DateTime.UtcNow,
+                        LastModifiedDate = DateTime.UtcNow
+                    },
+                    new MachineCapability
+                    {
+                        MachineId = machine.MachineId,
+                        CapabilityName = "Oxygen Control",
+                        CapabilityType = "Quality Metric",
+                        ValueType = "Number",
+                        MinValue = 0,
+                        MaxValue = 100,
+                        DefaultValue = 25,
+                        Unit = "ppm",
+                        Description = "Oxygen level monitoring and control",
+                        IsRequired = true,
+                        IsActive = true,
+                        CreatedBy = "System",
+                        LastModifiedBy = "System",
+                        CreatedDate = DateTime.UtcNow,
+                        LastModifiedDate = DateTime.UtcNow
+                    }
+                });
+
+                // Material-specific capabilities
+                if (machine.SupportedMaterials.Contains("Ti-6Al-4V"))
+                {
+                    capabilities.Add(new MachineCapability
+                    {
+                        MachineId = machine.MachineId,
+                        CapabilityName = "Titanium Processing",
+                        CapabilityType = "Material Property",
+                        ValueType = "Boolean",
+                        DefaultValue = 1,
+                        Description = "Capability to process titanium alloys",
+                        IsRequired = false,
+                        IsActive = true,
+                        CreatedBy = "System",
+                        LastModifiedBy = "System",
+                        CreatedDate = DateTime.UtcNow,
+                        LastModifiedDate = DateTime.UtcNow
+                    });
+                }
+
+                if (machine.SupportedMaterials.Contains("Inconel"))
+                {
+                    capabilities.Add(new MachineCapability
+                    {
+                        MachineId = machine.MachineId,
+                        CapabilityName = "Inconel Processing",
+                        CapabilityType = "Material Property",
+                        ValueType = "Boolean",
+                        DefaultValue = 1,
+                        Description = "Capability to process Inconel super alloys",
+                        IsRequired = false,
+                        IsActive = true,
+                        CreatedBy = "System",
+                        LastModifiedBy = "System",
+                        CreatedDate = DateTime.UtcNow,
+                        LastModifiedDate = DateTime.UtcNow
+                    });
+                }
+            }
+
+            await _context.MachineCapabilities.AddRangeAsync(capabilities);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Seeded {Count} machine capabilities", capabilities.Count);
         }
 
         public async Task SeedPartsAsync()
@@ -184,7 +348,7 @@ namespace OpCentrix.Services
                     PartNumber = "14-5397",
                     Description = "Aerospace Bracket - Complex Geometry",
                     Material = "Ti-6Al-4V ELI Grade 23",
-                    SlsMaterial = "Ti-6Al-4V ELI Grade 23",
+                    SslMaterial = "Ti-6Al-4V ELI Grade 23",
                     EstimatedHours = 8.75,
                     WeightGrams = 156.2,
                     LengthMm = 124.5,
@@ -210,7 +374,7 @@ namespace OpCentrix.Services
                     PartNumber = "14-5398",
                     Description = "Medical Implant - Hip Cup Prototype",
                     Material = "Ti-6Al-4V ELI Grade 23",
-                    SlsMaterial = "Ti-6Al-4V ELI Grade 23",
+                    SslMaterial = "Ti-6Al-4V ELI Grade 23",
                     EstimatedHours = 6.25,
                     WeightGrams = 89.5,
                     LengthMm = 65.0,
@@ -238,7 +402,7 @@ namespace OpCentrix.Services
                     PartNumber = "14-5399",
                     Description = "Inconel Heat Exchanger Component",
                     Material = "Inconel 718",
-                    SlsMaterial = "Inconel 718",
+                    SslMaterial = "Inconel 718",
                     EstimatedHours = 15.5,
                     WeightGrams = 387.2,
                     LengthMm = 156.8,
@@ -266,7 +430,7 @@ namespace OpCentrix.Services
                     PartNumber = "14-5400",
                     Description = "Automotive Prototype - Lightweight Bracket",
                     Material = "Ti-6Al-4V Grade 5",
-                    SlsMaterial = "Ti-6Al-4V Grade 5",
+                    SslMaterial = "Ti-6Al-4V Grade 5",
                     EstimatedHours = 4.75,
                     WeightGrams = 67.3,
                     LengthMm = 98.2,
@@ -289,7 +453,7 @@ namespace OpCentrix.Services
                     PartNumber = "14-5401",
                     Description = "Inconel 625 Valve Body",
                     Material = "Inconel 625",
-                    SlsMaterial = "Inconel 625",
+                    SslMaterial = "Inconel 625",
                     EstimatedHours = 18.25,
                     WeightGrams = 456.8,
                     LengthMm = 134.6,
@@ -317,7 +481,7 @@ namespace OpCentrix.Services
                     PartNumber = "14-5402",
                     Description = "Titanium Drone Frame Component",
                     Material = "Ti-6Al-4V Grade 5",
-                    SlsMaterial = "Ti-6Al-4V Grade 5",
+                    SslMaterial = "Ti-6Al-4V Grade 5",
                     EstimatedHours = 3.5,
                     WeightGrams = 34.2,
                     LengthMm = 156.4,
@@ -340,7 +504,7 @@ namespace OpCentrix.Services
                     PartNumber = "14-5403",
                     Description = "Medical Surgical Tool - Custom Design",
                     Material = "Ti-6Al-4V ELI Grade 23",
-                    SlsMaterial = "Ti-6Al-4V ELI Grade 23",
+                    SslMaterial = "Ti-6Al-4V ELI Grade 23",
                     EstimatedHours = 2.75,
                     WeightGrams = 28.7,
                     LengthMm = 187.3,
@@ -384,7 +548,7 @@ namespace OpCentrix.Services
                     PartNumber = "10-0001",
                     Description = "Standard Titanium Component",
                     Material = "Ti-6Al-4V Grade 5",
-                    SlsMaterial = "Ti-6Al-4V Grade 5",
+                    SslMaterial = "Ti-6Al-4V Grade 5",
                     EstimatedHours = 8.0,
                     AvgDuration = "8.0h",
                     AvgDurationDays = 1,
@@ -413,7 +577,7 @@ namespace OpCentrix.Services
                     PartNumber = "10-0002",
                     Description = "Standard Inconel Component",
                     Material = "Inconel 718",
-                    SlsMaterial = "Inconel 718",
+                    SslMaterial = "Inconel 718",
                     EstimatedHours = 12.0,
                     AvgDuration = "12.0h",
                     AvgDurationDays = 2,
@@ -549,18 +713,29 @@ namespace OpCentrix.Services
             if (!parts.Any())
                 return;
 
+            // Get machines dynamically from database instead of hardcoded array
+            var machines = await _context.SlsMachines
+                .Where(m => m.IsActive && m.IsAvailableForScheduling)
+                .Select(m => m.MachineId)
+                .ToListAsync();
+
+            if (!machines.Any())
+            {
+                _logger.LogWarning("No active machines available for job seeding");
+                return;
+            }
+
             var jobs = new List<Job>();
             var random = new Random(42); // Fixed seed for reproducible data
 
             // Create jobs for the next 14 days
             var startDate = DateTime.Today;
-            var machines = new[] { "TI1", "TI2", "INC" };
 
             for (int day = 0; day < 14; day++)
             {
                 var currentDate = startDate.AddDays(day);
 
-                foreach (var machine in machines)
+                foreach (var machineId in machines)
                 {
                     // Skip weekends occasionally
                     if ((currentDate.DayOfWeek == DayOfWeek.Saturday || currentDate.DayOfWeek == DayOfWeek.Sunday)
@@ -573,10 +748,16 @@ namespace OpCentrix.Services
 
                     for (int j = 0; j < jobCount; j++)
                     {
-                        // Select appropriate parts for machine
-                        var availableParts = machine == "INC"
-                            ? parts.Where(p => p.SlsMaterial.Contains("Inconel")).ToList()
-                            : parts.Where(p => p.SlsMaterial.Contains("Ti-6Al-4V")).ToList();
+                        // Get machine details for material compatibility
+                        var machine = await _context.SlsMachines
+                            .FirstOrDefaultAsync(m => m.MachineId == machineId);
+
+                        if (machine == null) continue;
+
+                        // Select appropriate parts for machine based on supported materials
+                        var availableParts = parts.Where(p => 
+                            machine.SupportedMaterials.Contains(p.SlsMaterial, StringComparison.OrdinalIgnoreCase))
+                            .ToList();
 
                         if (!availableParts.Any())
                             continue;
@@ -594,7 +775,7 @@ namespace OpCentrix.Services
 
                         var job = new Job
                         {
-                            MachineId = machine,
+                            MachineId = machineId,
                             PartId = selectedPart.Id,
                             PartNumber = selectedPart.PartNumber,
                             ScheduledStart = currentTime,
@@ -603,7 +784,7 @@ namespace OpCentrix.Services
                             Quantity = random.Next(1, 6),
                             Status = DetermineJobStatus(currentTime, scheduledEnd),
                             Priority = random.Next(1, 6),
-                            SlsMaterial = selectedPart.SlsMaterial,
+                            SslMaterial = selectedPart.SslMaterial,
                             LaserPowerWatts = selectedPart.RecommendedLaserPower + random.Next(-20, 21),
                             ScanSpeedMmPerSec = selectedPart.RecommendedScanSpeed + random.Next(-100, 101),
                             LayerThicknessMicrons = 30 + random.Next(-5, 6),
@@ -648,7 +829,10 @@ namespace OpCentrix.Services
             }
 
             await _context.Jobs.AddRangeAsync(jobs);
-            _logger.LogInformation("Seeded {Count} SLS jobs", jobs.Count);
+            await _context.SaveChangesAsync();
+            
+            _logger.LogInformation("Seeded {Count} SLS jobs across {MachineCount} machines", 
+                jobs.Count, machines.Count);
         }
 
         /// <summary>

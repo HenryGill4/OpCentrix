@@ -96,8 +96,23 @@
                                 </span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                <div>@part.AvgDuration</div>
-                                <div class="text-xs text-gray-500">@part.EstimatedHours hrs</div>
+                                @if (part.HasAdminOverride)
+                                {
+                                    <div class="flex items-center space-x-2">
+                                        <div>
+                                            <div class="font-medium text-orange-700">@part.EffectiveDurationDisplay</div>
+                                            <div class="text-xs text-gray-500">Standard: @part.EstimatedHours hrs</div>
+                                        </div>
+                                        <svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Admin Override Active">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                                        </svg>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div>@part.AvgDuration</div>
+                                    <div class="text-xs text-gray-500">@part.EstimatedHours hrs</div>
+                                }
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                 <div>Material: @part.MaterialCostPerKg.ToString("C")</div>
