@@ -474,6 +474,9 @@ public class AdminDataSeedingService : IAdminDataSeedingService
             await SeedDefaultOperatingShiftsAsync();
             await SeedDefaultDefectCategoriesAsync();
 
+            // NEW: Seed stage permissions for multi-stage scheduling
+            await SeedStagePermissionsAsync();
+
             // NEW: Seed default machines if none exist
             await SeedDefaultMachinesIfNoneExistAsync();
 
@@ -650,6 +653,190 @@ public class AdminDataSeedingService : IAdminDataSeedingService
         {
             _logger.LogError(ex, "? Error seeding materials");
             throw;
+        }
+    }
+
+    /// <summary>
+    /// Seed stage permissions for multi-stage scheduling (Task 11)
+    /// </summary>
+    private async Task SeedStagePermissionsAsync()
+    {
+        try
+        {
+            var stagePermissions = new List<RolePermission>();
+
+            // Define stage permissions for each role
+            var adminStagePermissions = new[]
+            {
+                "Stages.View", "Stages.Create", "Stages.Edit", "Stages.Delete",
+                "Stages.Start", "Stages.Complete", "Stages.Reschedule",
+                "Stages.ManagePermissions", "Stages.ViewAllDepartments",
+                "Stages.AssignOperators", "Stages.AssignMachines",
+                
+                // Department-specific permissions for Admin
+                "Department.Printing.View", "Department.Printing.Edit", "Department.Printing.Start", "Department.Printing.Complete",
+                "Department.EDM.View", "Department.EDM.Edit", "Department.EDM.Start", "Department.EDM.Complete",
+                "Department.Cerakoting.View", "Department.Cerakoting.Edit", "Department.Cerakoting.Start", "Department.Cerakoting.Complete",
+                "Department.Assembly.View", "Department.Assembly.Edit", "Department.Assembly.Start", "Department.Assembly.Complete",
+                "Department.Inspection.View", "Department.Inspection.Edit", "Department.Inspection.Start", "Department.Inspection.Complete",
+                "Department.Shipping.View", "Department.Shipping.Edit", "Department.Shipping.Start", "Department.Shipping.Complete"
+            };
+
+            foreach (var permission in adminStagePermissions)
+            {
+                stagePermissions.Add(new RolePermission
+                {
+                    RoleName = "Admin",
+                    PermissionKey = permission,
+                    HasPermission = true,
+                    PermissionLevel = "Admin",
+                    Category = "Stages",
+                    Description = $"Admin access to {permission}",
+                    IsActive = true,
+                    Priority = 1,
+                    CreatedBy = "System"
+                });
+            }
+
+            // Manager permissions - can view and manage most departments
+            var managerStagePermissions = new[]
+            {
+                "Stages.View", "Stages.Create", "Stages.Edit", "Stages.Start", "Stages.Complete", "Stages.Reschedule",
+                "Department.Printing.View", "Department.Printing.Edit", "Department.Printing.Start", "Department.Printing.Complete",
+                "Department.EDM.View", "Department.EDM.Edit", "Department.EDM.Start", "Department.EDM.Complete",
+                "Department.Cerakoting.View", "Department.Cerakoting.Edit", "Department.Cerakoting.Start", "Department.Cerakoting.Complete",
+                "Department.Assembly.View", "Department.Assembly.Edit", "Department.Assembly.Start", "Department.Assembly.Complete",
+                "Department.Inspection.View", "Department.Inspection.Edit", "Department.Inspection.Start", "Department.Inspection.Complete"
+            };
+
+            foreach (var permission in managerStagePermissions)
+            {
+                stagePermissions.Add(new RolePermission
+                {
+                    RoleName = "Manager",
+                    PermissionKey = permission,
+                    HasPermission = true,
+                    PermissionLevel = "Write",
+                    Category = "Stages",
+                    Description = $"Manager access to {permission}",
+                    IsActive = true,
+                    Priority = 2,
+                    CreatedBy = "System"
+                });
+            }
+
+            // Supervisor permissions - department-specific
+            var supervisorStagePermissions = new[]
+            {
+                "Stages.View", "Stages.Edit", "Stages.Start", "Stages.Complete",
+                "Department.Printing.View", "Department.Printing.Edit", "Department.Printing.Start", "Department.Printing.Complete",
+                "Department.Assembly.View", "Department.Assembly.Edit", "Department.Assembly.Start", "Department.Assembly.Complete"
+            };
+
+            foreach (var permission in supervisorStagePermissions)
+            {
+                stagePermissions.Add(new RolePermission
+                {
+                    RoleName = "Supervisor",
+                    PermissionKey = permission,
+                    HasPermission = true,
+                    PermissionLevel = "Write",
+                    Category = "Stages",
+                    Description = $"Supervisor access to {permission}",
+                    IsActive = true,
+                    Priority = 3,
+                    CreatedBy = "System"
+                });
+            }
+
+            // Printing Specialist permissions
+            var printingSpecialistPermissions = new[]
+            {
+                "Stages.View", "Department.Printing.View", "Department.Printing.Edit", 
+                "Department.Printing.Start", "Department.Printing.Complete"
+            };
+
+            foreach (var permission in printingSpecialistPermissions)
+            {
+                stagePermissions.Add(new RolePermission
+                {
+                    RoleName = "PrintingSpecialist",
+                    PermissionKey = permission,
+                    HasPermission = true,
+                    PermissionLevel = "Write",
+                    Category = "Stages",
+                    Description = $"Printing specialist access to {permission}",
+                    IsActive = true,
+                    Priority = 4,
+                    CreatedBy = "System"
+                });
+            }
+
+            // Coating Specialist permissions
+            var coatingSpecialistPermissions = new[]
+            {
+                "Stages.View", "Department.Cerakoting.View", "Department.Cerakoting.Edit", 
+                "Department.Cerakoting.Start", "Department.Cerakoting.Complete"
+            };
+
+            foreach (var permission in coatingSpecialistPermissions)
+            {
+                stagePermissions.Add(new RolePermission
+                {
+                    RoleName = "CoatingSpecialist",
+                    PermissionKey = permission,
+                    HasPermission = true,
+                    PermissionLevel = "Write",
+                    Category = "Stages",
+                    Description = $"Coating specialist access to {permission}",
+                    IsActive = true,
+                    Priority = 5,
+                    CreatedBy = "System"
+                });
+            }
+
+            // Operator permissions - view only
+            var operatorStagePermissions = new[]
+            {
+                "Stages.View"
+            };
+
+            foreach (var permission in operatorStagePermissions)
+            {
+                stagePermissions.Add(new RolePermission
+                {
+                    RoleName = "Operator",
+                    PermissionKey = permission,
+                    HasPermission = true,
+                    PermissionLevel = "Read",
+                    Category = "Stages",
+                    Description = $"Operator access to {permission}",
+                    IsActive = true,
+                    Priority = 6,
+                    CreatedBy = "System"
+                });
+            }
+
+            // Add all permissions to database if they don't exist
+            foreach (var permission in stagePermissions)
+            {
+                var exists = await _context.RolePermissions
+                    .AnyAsync(p => p.RoleName == permission.RoleName && p.PermissionKey == permission.PermissionKey);
+
+                if (!exists)
+                {
+                    _context.RolePermissions.Add(permission);
+                    _logger.LogDebug("Added stage permission: {Role} - {Permission}", 
+                        permission.RoleName, permission.PermissionKey);
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Stage permissions seeded successfully - {Count} permissions added", stagePermissions.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error seeding stage permissions");
         }
     }
 }

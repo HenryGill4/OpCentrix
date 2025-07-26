@@ -1,0 +1,316 @@
+@page
+@model OpCentrix.Pages.Admin.StagesModel
+@{
+    ViewData["Title"] = "Stage Management";
+    Layout = "~/Pages/Admin/Shared/_AdminLayout.cshtml";
+}
+
+<div class="flex-1 relative z-0 flex overflow-hidden">
+    <main class="flex-1 relative z-0 overflow-y-auto focus:outline-none xl:order-last">
+        <!-- Header -->
+        <div class="bg-white shadow">
+            <div class="px-4 sm:px-6 lg:max-w-6xl lg:mx-auto lg:px-8">
+                <div class="py-6 md:flex md:items-center md:justify-between lg:border-t lg:border-gray-200">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center">
+                            <div>
+                                <div class="flex items-center">
+                                    <h1 class="ml-3 text-2xl font-bold leading-7 text-gray-900 sm:truncate">
+                                        Multi-Stage Job Management
+                                    </h1>
+                                </div>
+                                <dl class="mt-6 flex flex-col sm:ml-3 sm:mt-1 sm:flex-row sm:flex-wrap">
+                                    <dt class="sr-only">Departments</dt>
+                                    <dd class="flex items-center text-sm text-gray-500 font-medium capitalize sm:mr-6">
+                                        <svg class="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4a2 2 0 00-2-2H6zm1 2a1 1 0 000 2h6a1 1 0 100-2H7zm6 7a1 1 0 011 1v3a1 1 0 11-2 0v-3a1 1 0 011-1zm-3 3a1 1 0 100 2h.01a1 1 0 100-2H10zm-4 1a1 1 0 011-1h.01a1 1 0 110 2H7a1 1 0 01-1-1zm1-4a1 1 0 100 2h.01a1 1 0 100-2H7zm2 0a1 1 0 100 2h.01a1 1 0 100-2H9zm2 0a1 1 0 100 2h.01a1 1 0 100-2H11z" clip-rule="evenodd"></path>
+                                        </svg>
+                                        @Model.Departments.Count Departments Available
+                                    </dd>
+                                    <dt class="sr-only">Active Stages</dt>
+                                    <dd class="flex items-center text-sm text-gray-500 font-medium sm:mr-6">
+                                        <svg class="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+                                        </svg>
+                                        @Model.Stages.Count Active Stages
+                                    </dd>
+                                    @if (Model.OverdueStages.Any())
+                                    {
+                                        <dt class="sr-only">Overdue</dt>
+                                        <dd class="flex items-center text-sm text-red-600 font-medium">
+                                            <svg class="flex-shrink-0 mr-1.5 h-5 w-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                                            </svg>
+                                            @Model.OverdueStages.Count Overdue
+                                        </dd>
+                                    }
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-6 flex space-x-3 md:mt-0 md:ml-4">
+                        <button type="button" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                onclick="refreshStages()">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                            Refresh
+                        </button>
+                        
+                        <button type="button" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                onclick="showCreateStageModal()">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Create Stage
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="bg-gray-50 border-b border-gray-200">
+            <div class="px-4 py-4 sm:px-6 lg:max-w-6xl lg:mx-auto lg:px-8">
+                <form method="get" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                    <div>
+                        <label for="selectedDepartment" class="block text-sm font-medium text-gray-700">Department</label>
+                        <select asp-for="SelectedDepartment" id="selectedDepartment" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                            <option value="">All Departments</option>
+                            @foreach (var dept in Model.Departments)
+                            {
+                                <option value="@dept">@dept</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="selectedStatus" class="block text-sm font-medium text-gray-700">Status</label>
+                        <select asp-for="SelectedStatus" id="selectedStatus" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                            <option value="">All Statuses</option>
+                            <option value="Scheduled">Scheduled</option>
+                            <option value="Ready">Ready</option>
+                            <option value="In-Progress">In-Progress</option>
+                            <option value="Completed">Completed</option>
+                            <option value="On-Hold">On-Hold</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="startDate" class="block text-sm font-medium text-gray-700">Start Date</label>
+                        <input asp-for="StartDate" type="date" id="startDate" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                    </div>
+
+                    <div>
+                        <label for="endDate" class="block text-sm font-medium text-gray-700">End Date</label>
+                        <input asp-for="EndDate" type="date" id="endDate" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                    </div>
+
+                    <div class="flex items-end">
+                        <button type="submit" class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                            Filter
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        @if (Model.StatusCounts.Any() || Model.DepartmentUtilization.Any())
+        {
+            <div class="px-4 py-6 sm:px-6 lg:max-w-6xl lg:mx-auto lg:px-8">
+                <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                    <!-- Status Statistics -->
+                    @foreach (var status in Model.StatusCounts)
+                    {
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="p-5">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <div class="w-8 h-8 rounded-md flex items-center justify-center" style="background-color: @GetStatusColor(status.Key);">
+                                            <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dl>
+                                            <dt class="text-sm font-medium text-gray-500 truncate">@status.Key</dt>
+                                            <dd class="text-lg font-medium text-gray-900">@status.Value</dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <!-- Main Content -->
+        <div class="px-4 py-6 sm:px-6 lg:max-w-6xl lg:mx-auto lg:px-8">
+            @if (!Model.Stages.Any())
+            {
+                <div class="text-center py-12">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                    </svg>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900">No stages found</h3>
+                    <p class="mt-1 text-sm text-gray-500">
+                        @if (!string.IsNullOrEmpty(Model.SelectedDepartment) || !string.IsNullOrEmpty(Model.SelectedStatus))
+                        {
+                            <span>Try adjusting your filters or</span>
+                        }
+                        else
+                        {
+                            <span>Get started by</span>
+                        }
+                        creating a new stage.
+                    </p>
+                    <div class="mt-6">
+                        <button type="button" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                onclick="showCreateStageModal()">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Create Stage
+                        </button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="space-y-6">
+                    @foreach (var stage in Model.Stages)
+                    {
+                        <partial name="~/Pages/Scheduler/_StageView.cshtml" model="stage" />
+                    }
+                </div>
+            }
+        </div>
+    </main>
+</div>
+
+@section Scripts {
+    <script>
+        function refreshStages() {
+            window.location.reload();
+        }
+
+        function showCreateStageModal() {
+            alert('Create stage modal not yet implemented. This would open a modal for creating new stages.');
+        }
+
+        async function startStage(stageId) {
+            try {
+                const response = await fetch('@Url.Page("/Admin/Stages", "StartStage")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body: JSON.stringify({ stageId: stageId })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('Stage started successfully', 'success');
+                    refreshStages();
+                } else {
+                    showNotification(result.message || 'Failed to start stage', 'error');
+                }
+            } catch (error) {
+                console.error('Error starting stage:', error);
+                showNotification('An error occurred while starting the stage', 'error');
+            }
+        }
+
+        async function completeStage(stageId, actualCost = null) {
+            try {
+                const response = await fetch('@Url.Page("/Admin/Stages", "CompleteStage")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body: JSON.stringify({ stageId: stageId, actualCost: actualCost })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('Stage completed successfully', 'success');
+                    refreshStages();
+                } else {
+                    showNotification(result.message || 'Failed to complete stage', 'error');
+                }
+            } catch (error) {
+                console.error('Error completing stage:', error);
+                showNotification('An error occurred while completing the stage', 'error');
+            }
+        }
+
+        async function updateProgress(stageId, progressPercent) {
+            try {
+                const response = await fetch('@Url.Page("/Admin/Stages", "UpdateProgress")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body: JSON.stringify({ stageId: stageId, progressPercent: progressPercent })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('Progress updated successfully', 'success');
+                    refreshStages();
+                } else {
+                    showNotification(result.message || 'Failed to update progress', 'error');
+                }
+            } catch (error) {
+                console.error('Error updating progress:', error);
+                showNotification('An error occurred while updating progress', 'error');
+            }
+        }
+
+        function showNotification(message, type) {
+            // Simple notification implementation
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 px-4 py-2 rounded-md shadow-lg z-50 ${
+                type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+            }`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+    </script>
+}
+
+@functions {
+    private string GetStatusColor(string status)
+    {
+        return status.ToLower() switch
+        {
+            "scheduled" => "#3B82F6",
+            "ready" => "#10B981",
+            "in-progress" => "#F59E0B",
+            "completed" => "#059669",
+            "on-hold" => "#F97316",
+            "cancelled" => "#6B7280",
+            "delayed" => "#EF4444",
+            "blocked" => "#DC2626",
+            _ => "#9CA3AF"
+        };
+    }
+}
