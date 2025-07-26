@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using OpCentrix.Data;
@@ -6,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace OpCentrix.Pages.Admin
 {
+    [Authorize(Policy = "AdminOnly")]
     public class JobsModel : PageModel
     {
         private readonly SchedulerContext _context;

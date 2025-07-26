@@ -210,3 +210,14 @@ public class OpCentrixWebApplicationFactory : WebApplicationFactory<Program>
         }
     }
 }
+
+/// <summary>
+/// Extension methods for HTTP response testing - shared across all test classes
+/// </summary>
+public static class HttpResponseExtensions
+{
+    public static bool IsRedirectionResult(this HttpResponseMessage response)
+    {
+        return (int)response.StatusCode >= 300 && (int)response.StatusCode < 400;
+    }
+}
