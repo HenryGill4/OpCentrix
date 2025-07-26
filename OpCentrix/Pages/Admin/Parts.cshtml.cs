@@ -315,6 +315,41 @@ namespace OpCentrix.Pages.Admin
             }
         }
 
+        public async Task<IActionResult> OnGetCheckDuplicateAsync(string partNumber, int currentId = 0)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogDebug("?? [PARTS-{OperationId}] Checking duplicate for part number: {PartNumber} (excluding ID: {CurrentId})", 
+                operationId, partNumber, currentId);
+
+            try
+            {
+                if (string.IsNullOrWhiteSpace(partNumber))
+                {
+                    return Content("false");
+                }
+
+                // Clean and standardize part number
+                var cleanPartNumber = partNumber.Trim().ToUpperInvariant();
+
+                // Check if part number exists (excluding current part if editing)
+                var isDuplicate = await _context.Parts
+                    .AnyAsync(p => p.PartNumber == cleanPartNumber && p.Id != currentId);
+
+                _logger.LogDebug("? [PARTS-{OperationId}] Duplicate check result: {IsDuplicate} for part number: {PartNumber}", 
+                    operationId, isDuplicate, cleanPartNumber);
+
+                return Content(isDuplicate.ToString().ToLower());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "? [PARTS-{OperationId}] Error checking duplicate part number: {ErrorMessage}", 
+                    operationId, ex.Message);
+                
+                // Return false on error to allow form submission (server-side validation will catch it)
+                return Content("false");
+            }
+        }
+
         public async Task<IActionResult> OnPostSaveAsync([FromForm] Part part)
         {
             var operationId = Guid.NewGuid().ToString("N")[..8];
@@ -391,6 +426,20 @@ namespace OpCentrix.Pages.Admin
                     validationErrors.Add("Part Number cannot exceed 50 characters");
                     _logger.LogWarning("?? [PARTS-{OperationId}] Validation failed: Part number too long: {Length}", 
                         operationId, part.PartNumber.Length);
+                }
+                else
+                {
+                    // CRITICAL FIX: Check for duplicate part numbers
+                    var existingPart = await _context.Parts
+                        .Where(p => p.PartNumber == part.PartNumber && p.Id != part.Id)
+                        .FirstOrDefaultAsync();
+                    
+                    if (existingPart != null)
+                    {
+                        validationErrors.Add($"Part Number '{part.PartNumber}' already exists (ID: {existingPart.Id})");
+                        _logger.LogWarning("?? [PARTS-{OperationId}] Validation failed: Duplicate part number: {PartNumber}", 
+                            operationId, part.PartNumber);
+                    }
                 }
 
                 if (string.IsNullOrWhiteSpace(part.Description))
@@ -509,6 +558,32 @@ namespace OpCentrix.Pages.Admin
                     existingPart.AvgDuration = $"{part.EstimatedHours:F1}h";
                     existingPart.AvgDurationDays = (int)Math.Ceiling(Math.Max(part.EstimatedHours / 8, 1));
                     
+                    // Update all other fields
+                    existingPart.Industry = part.Industry;
+                    existingPart.Application = part.Application;
+                    existingPart.PartCategory = part.PartCategory;
+                    existingPart.PartClass = part.PartClass;
+                    existingPart.IsActive = part.IsActive;
+                    existingPart.LengthMm = part.LengthMm;
+                    existingPart.WidthMm = part.WidthMm;
+                    existingPart.HeightMm = part.HeightMm;
+                    existingPart.WeightGrams = part.WeightGrams;
+                    existingPart.VolumeMm3 = part.VolumeMm3;
+                    existingPart.PowderRequirementKg = part.PowderRequirementKg;
+                    existingPart.RecommendedLaserPower = part.RecommendedLaserPower;
+                    existingPart.RecommendedScanSpeed = part.RecommendedScanSpeed;
+                    existingPart.RecommendedBuildTemperature = part.RecommendedBuildTemperature;
+                    existingPart.RecommendedLayerThickness = part.RecommendedLayerThickness;
+                    existingPart.RecommendedHatchSpacing = part.RecommendedHatchSpacing;
+                    existingPart.RequiredArgonPurity = part.RequiredArgonPurity;
+                    existingPart.MaxOxygenContent = part.MaxOxygenContent;
+                    existingPart.PreheatingTimeMinutes = part.PreheatingTimeMinutes;
+                    existingPart.CoolingTimeMinutes = part.CoolingTimeMinutes;
+                    existingPart.PostProcessingTimeMinutes = part.PostProcessingTimeMinutes;
+                    existingPart.MaterialCostPerKg = part.MaterialCostPerKg;
+                    existingPart.StandardLaborCostPerHour = part.StandardLaborCostPerHour;
+                    existingPart.SetupCost = part.SetupCost;
+                    
                     // Task 7: Update admin override fields
                     var overrideChanged = false;
                     if (existingPart.AdminEstimatedHoursOverride != part.AdminEstimatedHoursOverride)
@@ -542,19 +617,23 @@ namespace OpCentrix.Pages.Admin
                     _logger.LogDebug("? [PARTS-{OperationId}] Part updated successfully", operationId);
                 }
 
-                // CRITICAL FIX: Ensure navigation properties are not loaded by default
-                // This prevents loading related entities unintentionally, keeping the context clean
-                _context.Entry(part).State = EntityState.Detached;
-                
                 await _context.SaveChangesAsync();
                 _logger.LogInformation("? [PARTS-{OperationId}] Part saved successfully: Id={PartId}, PartNumber='{PartNumber}'", 
                     operationId, part.Id, part.PartNumber);
                 
                 return Content($@"
                     <script>
-                        console.log('Part saved successfully (ID: {operationId})');
+                        console.log('? Part saved successfully (ID: {operationId})');
                         if (typeof hideModal === 'function') {{ hideModal(); }}
-                        if (typeof refreshPartsGrid === 'function') {{ refreshPartsGrid(); }}
+                        if (typeof refreshPartsGrid === 'function') {{ 
+                            refreshPartsGrid(); 
+                        }} else {{ 
+                            console.log('?? Refreshing page...'); 
+                            window.location.reload(); 
+                        }}
+                        if (typeof showSuccessNotification === 'function') {{
+                            showSuccessNotification('Part saved successfully: {part.PartNumber}', 4000);
+                        }}
                     </script>
                 ", "text/html");
             }
@@ -602,6 +681,100 @@ namespace OpCentrix.Pages.Admin
                             showErrorNotification('Unexpected error saving part (ID: {operationId}): {ex.Message}', 8000);
                         }} else {{
                             alert('Unexpected error saving part (ID: {operationId}): {ex.Message}');
+                        }}
+                    </script>
+                ", "text/html");
+            }
+        }
+
+        public async Task<IActionResult> OnPostDeleteAsync(int id)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("??? [PARTS-{OperationId}] Processing part deletion: ID={PartId}", operationId, id);
+
+            try
+            {
+                if (id <= 0)
+                {
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Invalid part ID for deletion: {PartId}", operationId, id);
+                    return Content($@"
+                        <script>
+                            console.error('Invalid part ID for deletion (ID: {operationId}): {id}');
+                            if (typeof showErrorNotification === 'function') {{
+                                showErrorNotification('Invalid part ID for deletion (ID: {operationId})', 6000);
+                            }}
+                        </script>
+                    ", "text/html");
+                }
+
+                var part = await _context.Parts.FindAsync(id);
+                if (part == null)
+                {
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Part not found for deletion: ID {PartId}", operationId, id);
+                    return Content($@"
+                        <script>
+                            console.error('Part not found for deletion (ID: {operationId}): {id}');
+                            if (typeof showErrorNotification === 'function') {{
+                                showErrorNotification('Part not found for deletion (ID: {operationId})', 6000);
+                            }}
+                        </script>
+                    ", "text/html");
+                }
+
+                // Check if part is being used in active jobs
+                var activeJobsCount = await _context.Jobs
+                    .Where(j => j.PartNumber == part.PartNumber)
+                    .CountAsync();
+
+                if (activeJobsCount > 0)
+                {
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Cannot delete part {PartNumber}: {JobCount} active jobs exist", 
+                        operationId, part.PartNumber, activeJobsCount);
+                    
+                    return Content($@"
+                        <script>
+                            console.error('Cannot delete part (ID: {operationId}): Part is used in {activeJobsCount} active jobs');
+                            if (typeof showErrorNotification === 'function') {{
+                                showErrorNotification('Cannot delete part: It is used in {activeJobsCount} active jobs. Please complete or cancel those jobs first.', 8000);
+                            }} else {{
+                                alert('Cannot delete part: It is used in {activeJobsCount} active jobs. Please complete or cancel those jobs first.');
+                            }}
+                        </script>
+                    ", "text/html");
+                }
+
+                // Log the deletion
+                _logger.LogInformation("??? [PARTS-{OperationId}] Deleting part: {PartNumber} (ID: {PartId})", 
+                    operationId, part.PartNumber, part.Id);
+
+                _context.Parts.Remove(part);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("? [PARTS-{OperationId}] Part deleted successfully: {PartNumber} (ID: {PartId})", 
+                    operationId, part.PartNumber, part.Id);
+
+                return Content($@"
+                    <script>
+                        console.log('? Part deleted successfully (ID: {operationId}): {part.PartNumber}');
+                        if (typeof showSuccessNotification === 'function') {{
+                            showSuccessNotification('Part deleted successfully: {part.PartNumber}', 4000);
+                        }}
+                        // Refresh the page to show updated parts list
+                        window.location.reload();
+                    </script>
+                ", "text/html");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "? [PARTS-{OperationId}] Error deleting part: {ErrorMessage}", operationId, ex.Message);
+                
+                return Content($@"
+                    <script>
+                        console.error('Error deleting part (ID: {operationId}): {ex.Message}');
+                        if (typeof showErrorNotification === 'function') {{
+                            showErrorNotification('Error deleting part (ID: {operationId}): {ex.Message}', 8000);
+                        }} else {{
+                            alert('Error deleting part (ID: {operationId}): {ex.Message}');
                         }}
                     </script>
                 ", "text/html");

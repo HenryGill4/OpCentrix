@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpCentrix.Data;
 using OpCentrix.Services;
+using OpCentrix.Models;
 
 namespace OpCentrix.Tests;
 
@@ -12,7 +13,7 @@ namespace OpCentrix.Tests;
 /// Test application factory for OpCentrix integration tests
 /// Provides a test environment with in-memory database and proper service configuration
 /// </summary>
-public class OpCentrixWebApplicationFactory : WebApplicationFactory<OpCentrix.Program>
+public class OpCentrixWebApplicationFactory : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -29,16 +30,10 @@ public class OpCentrixWebApplicationFactory : WebApplicationFactory<OpCentrix.Pr
             services.AddDbContext<SchedulerContext>(options =>
             {
                 options.UseInMemoryDatabase("TestDatabase");
+                options.EnableSensitiveDataLogging();
             });
 
-            // Ensure authentication service is registered
-            services.AddScoped<IAuthenticationService, AuthenticationService>();
-
-            // Add other required services for testing
-            services.AddScoped<ISchedulerService, SchedulerService>();
-            services.AddScoped<SlsDataSeedingService>();
-
-            // Build the service provider
+            // Build the service provider to initialize test data
             var serviceProvider = services.BuildServiceProvider();
 
             // Create the database and seed test data
@@ -91,7 +86,7 @@ public class OpCentrixWebApplicationFactory : WebApplicationFactory<OpCentrix.Pr
 
             foreach (var testUser in testUsers)
             {
-                var user = new OpCentrix.Models.User
+                var user = new User
                 {
                     Username = testUser.Username,
                     PasswordHash = authService.HashPassword(testUser.Password),
@@ -124,42 +119,83 @@ public class OpCentrixWebApplicationFactory : WebApplicationFactory<OpCentrix.Pr
     {
         try
         {
-            // Add test machines
+            // Add test machines - using correct property names
             if (!context.Machines.Any())
             {
                 var testMachines = new[]
                 {
-                    new OpCentrix.Models.Machine { Name = "TI1", Type = "3D Printer", Description = "Test Printer 1", IsActive = true },
-                    new OpCentrix.Models.Machine { Name = "TI2", Type = "3D Printer", Description = "Test Printer 2", IsActive = true },
-                    new OpCentrix.Models.Machine { Name = "INC", Type = "Incubator", Description = "Test Incubator", IsActive = true }
+                    new Machine 
+                    { 
+                        Name = "TI1", 
+                        MachineName = "TI1", 
+                        MachineId = "TI1",
+                        MachineType = "SLS", 
+                        MachineModel = "TruPrint 3000",
+                        IsActive = true, 
+                        Department = "Printing",
+                        Status = "Idle",
+                        SerialNumber = "TP3000-001"
+                    },
+                    new Machine 
+                    { 
+                        Name = "TI2", 
+                        MachineName = "TI2", 
+                        MachineId = "TI2",
+                        MachineType = "SLS", 
+                        MachineModel = "TruPrint 3000",
+                        IsActive = true, 
+                        Department = "Printing",
+                        Status = "Idle",
+                        SerialNumber = "TP3000-002"
+                    },
+                    new Machine 
+                    { 
+                        Name = "INC", 
+                        MachineName = "INC", 
+                        MachineId = "INC",
+                        MachineType = "PostProcessing", 
+                        MachineModel = "Incubator",
+                        IsActive = true, 
+                        Department = "PostProcessing",
+                        Status = "Idle",
+                        SerialNumber = "INC-001"
+                    }
                 };
 
                 context.Machines.AddRange(testMachines);
                 logger.LogInformation("Added {Count} test machines", testMachines.Length);
             }
 
-            // Add test parts
+            // Add test parts - using correct property names  
             if (!context.Parts.Any())
             {
                 var testParts = new[]
                 {
-                    new OpCentrix.Models.Part
+                    new Part
                     {
                         PartNumber = "TEST001",
+                        Name = "Test Part 1",
                         Description = "Test Part 1",
-                        Material = "Steel",
-                        EstimatedPrintTimeHours = 4.5m,
-                        EstimatedSupportRemovalHours = 1.0m,
-                        IsActive = true
+                        Material = "Ti-6Al-4V Grade 5",
+                        SlsMaterial = "Ti-6Al-4V Grade 5",
+                        EstimatedHours = 4.5,
+                        PostProcessingTimeMinutes = 60,
+                        IsActive = true,
+                        PartCategory = "Prototype",
+                        ProcessType = "SLS Metal"
                     },
-                    new OpCentrix.Models.Part
+                    new Part
                     {
-                        PartNumber = "TEST002",
+                        PartNumber = "TEST002", 
+                        Name = "Test Part 2",
                         Description = "Test Part 2",
-                        Material = "Aluminum",
-                        EstimatedPrintTimeHours = 6.0m,
-                        EstimatedSupportRemovalHours = 1.5m,
-                        IsActive = true
+                        Material = "Ti-6Al-4V Grade 5",
+                        SlsMaterial = "Ti-6Al-4V Grade 5",
+                        EstimatedHours = 6.0,
+                        PostProcessingTimeMinutes = 90,
+                        IsActive = true,
+                        PartCategory = "Prototype", 
+                        ProcessType = "SLS Metal"
                     }
                 };
 

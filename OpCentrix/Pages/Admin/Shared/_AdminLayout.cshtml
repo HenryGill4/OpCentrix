@@ -450,8 +450,10 @@
         // Enhanced modal functions
         window.showModal = function(content) {
             const container = document.getElementById('modal-container');
-            const modalContent = container.querySelector('div');
-            modalContent.innerHTML = content;
+            const modalContent = container.querySelector('.modal-content');
+            if (typeof content === 'string') {
+                modalContent.innerHTML = content;
+            }
             container.classList.remove('hidden');
             container.classList.add('flex');
             document.body.style.overflow = 'hidden';
@@ -461,7 +463,24 @@
             const container = document.getElementById('modal-container');
             container.classList.add('hidden');
             container.classList.remove('flex');
-            document.body.style.overflow = 'auto';
+            container.querySelector('.modal-content').innerHTML = '';
+            document.body.style.overflow = '';
+        };
+        
+        // CRITICAL FIX: Add missing refreshPartsGrid function
+        window.refreshPartsGrid = function() {
+            console.log('? [ADMIN] Refreshing parts grid...');
+            // Simply reload the page to show the updated parts list
+            window.location.reload();
+        };
+        
+        // Enhanced Parts-specific functions
+        window.showSuccessNotification = function(message, duration = 4000) {
+            showNotification(message, 'success', duration);
+        };
+        
+        window.showErrorNotification = function(message, duration = 8000) {
+            showNotification(message, 'error', duration);
         };
         
         // Job modal functions
