@@ -5,18 +5,19 @@ using OpCentrix.Models;
 namespace OpCentrix.Services.Admin;
 
 /// <summary>
-/// Service for managing SLS machines and their capabilities
-/// Task 6: Machine Status and Dynamic Machine Management
+/// Service for managing machines and their capabilities (ALL machine types)
+/// Task 6: Machine Status and Dynamic Machine Management - UPDATED
 /// </summary>
 public interface IMachineManagementService
 {
     // Machine CRUD operations
-    Task<List<SlsMachine>> GetAllMachinesAsync();
-    Task<List<SlsMachine>> GetActiveMachinesAsync();
-    Task<SlsMachine?> GetMachineByIdAsync(int id);
-    Task<SlsMachine?> GetMachineByMachineIdAsync(string machineId);
-    Task<bool> CreateMachineAsync(SlsMachine machine);
-    Task<bool> UpdateMachineAsync(SlsMachine machine);
+    Task<List<Machine>> GetAllMachinesAsync();
+    Task<List<Machine>> GetActiveMachinesAsync();
+    Task<List<Machine>> GetMachinesByTypeAsync(string machineType);
+    Task<Machine?> GetMachineByIdAsync(int id);
+    Task<Machine?> GetMachineByMachineIdAsync(string machineId);
+    Task<bool> CreateMachineAsync(Machine machine);
+    Task<bool> UpdateMachineAsync(Machine machine);
     Task<bool> DeleteMachineAsync(int id);
 
     // Machine status operations
@@ -25,24 +26,29 @@ public interface IMachineManagementService
     Task<Dictionary<string, string>> GetMachineStatusesAsync();
 
     // Machine capability operations
-    Task<List<MachineCapability>> GetMachineCapabilitiesAsync(string machineId);
+    Task<List<MachineCapability>> GetMachineCapabilitiesAsync(int machineId);
     Task<bool> AddMachineCapabilityAsync(MachineCapability capability);
     Task<bool> UpdateMachineCapabilityAsync(MachineCapability capability);
     Task<bool> RemoveMachineCapabilityAsync(int capabilityId);
 
     // Machine validation and compatibility
     Task<bool> CanMachineProcessPartAsync(string machineId, int partId);
-    Task<List<SlsMachine>> GetCompatibleMachinesForPartAsync(int partId);
+    Task<List<Machine>> GetCompatibleMachinesForPartAsync(int partId);
     Task<bool> IsMachineIdUniqueAsync(string machineId, int? excludeId = null);
 
     // Machine statistics and utilization
     Task<Dictionary<string, object>> GetMachineStatisticsAsync();
     Task<double> GetMachineUtilizationAsync(string machineId, DateTime fromDate, DateTime toDate);
-    Task<List<SlsMachine>> GetMachinesRequiringMaintenanceAsync();
+    Task<List<Machine>> GetMachinesRequiringMaintenanceAsync();
+
+    // Machine type operations
+    Task<List<string>> GetSupportedMachineTypesAsync();
+    Task<List<string>> GetAvailableMachineIdsAsync(string? machineType = null);
 }
 
 /// <summary>
 /// Implementation of machine management service
+/// UPDATED: Now works with generic Machine model instead of SlsMachine
 /// </summary>
 public class MachineManagementService : IMachineManagementService
 {
@@ -57,74 +63,101 @@ public class MachineManagementService : IMachineManagementService
 
     #region Machine CRUD Operations
 
-    public async Task<List<SlsMachine>> GetAllMachinesAsync()
+    public async Task<List<Machine>> GetAllMachinesAsync()
     {
         try
         {
-            return await _context.SlsMachines
-                .OrderBy(m => m.MachineId)
+            return await _context.Machines
+                .Include(m => m.Capabilities)
+                .OrderBy(m => m.MachineType)
+                .ThenBy(m => m.MachineId)
                 .ToListAsync();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving all machines");
-            return new List<SlsMachine>();
+            return new List<Machine>();
         }
     }
 
-    public async Task<List<SlsMachine>> GetActiveMachinesAsync()
+    public async Task<List<Machine>> GetActiveMachinesAsync()
     {
         try
         {
-            return await _context.SlsMachines
+            return await _context.Machines
+                .Include(m => m.Capabilities)
                 .Where(m => m.IsActive && m.IsAvailableForScheduling)
                 .OrderBy(m => m.Priority)
+                .ThenBy(m => m.MachineType)
                 .ThenBy(m => m.MachineId)
                 .ToListAsync();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving active machines");
-            return new List<SlsMachine>();
+            return new List<Machine>();
         }
     }
 
-    public async Task<SlsMachine?> GetMachineByIdAsync(int id)
+    public async Task<List<Machine>> GetMachinesByTypeAsync(string machineType)
     {
         try
         {
-            return await _context.SlsMachines
+            return await _context.Machines
+                .Include(m => m.Capabilities)
+                .Where(m => m.MachineType == machineType)
+                .OrderBy(m => m.Priority)
+                .ThenBy(m => m.MachineId)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving machines by type: {MachineType}", machineType);
+            return new List<Machine>();
+        }
+    }
+
+    public async Task<Machine?> GetMachineByIdAsync(int id)
+    {
+        try
+        {
+            return await _context.Machines
+                .Include(m => m.Capabilities)
                 .Include(m => m.CurrentJob)
                 .FirstOrDefaultAsync(m => m.Id == id);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving machine by ID {MachineId}", id);
+            _logger.LogError(ex, "Error retrieving machine by ID: {MachineId}", id);
             return null;
         }
     }
 
-    public async Task<SlsMachine?> GetMachineByMachineIdAsync(string machineId)
+    public async Task<Machine?> GetMachineByMachineIdAsync(string machineId)
     {
         try
         {
-            return await _context.SlsMachines
+            return await _context.Machines
+                .Include(m => m.Capabilities)
                 .Include(m => m.CurrentJob)
                 .FirstOrDefaultAsync(m => m.MachineId == machineId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving machine by machine ID {MachineId}", machineId);
+            _logger.LogError(ex, "Error retrieving machine by machine ID: {MachineId}", machineId);
             return null;
         }
     }
 
-    public async Task<bool> CreateMachineAsync(SlsMachine machine)
+    public async Task<bool> CreateMachineAsync(Machine machine)
     {
         try
         {
             // Validate machine ID uniqueness
-            if (!await IsMachineIdUniqueAsync(machine.MachineId))
+            var existingMachine = await _context.Machines
+                .FirstOrDefaultAsync(m => m.MachineId == machine.MachineId);
+
+            if (existingMachine != null)
             {
                 _logger.LogWarning("Cannot create machine - Machine ID {MachineId} already exists", machine.MachineId);
                 return false;
@@ -132,74 +165,76 @@ public class MachineManagementService : IMachineManagementService
 
             machine.CreatedDate = DateTime.UtcNow;
             machine.LastModifiedDate = DateTime.UtcNow;
+            machine.LastStatusUpdate = DateTime.UtcNow;
 
-            _context.SlsMachines.Add(machine);
+            _context.Machines.Add(machine);
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Machine created successfully: {MachineId} ({MachineName})", 
-                machine.MachineId, machine.MachineName);
+            _logger.LogInformation("Created new machine: {MachineId} - {MachineName} ({MachineType})", 
+                machine.MachineId, machine.MachineName, machine.MachineType);
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating machine {MachineId}", machine.MachineId);
+            _logger.LogError(ex, "Error creating machine: {MachineId}", machine.MachineId);
             return false;
         }
     }
 
-    public async Task<bool> UpdateMachineAsync(SlsMachine machine)
+    public async Task<bool> UpdateMachineAsync(Machine machine)
     {
         try
         {
-            var existingMachine = await _context.SlsMachines.FindAsync(machine.Id);
+            var existingMachine = await _context.Machines.FindAsync(machine.Id);
             if (existingMachine == null)
             {
-                _logger.LogWarning("Cannot update machine - Machine ID {Id} not found", machine.Id);
+                _logger.LogWarning("Cannot update machine - Machine with ID {Id} not found", machine.Id);
                 return false;
             }
 
-            // Validate machine ID uniqueness if it's being changed
-            if (existingMachine.MachineId != machine.MachineId && 
-                !await IsMachineIdUniqueAsync(machine.MachineId, machine.Id))
+            // Check if machine ID is unique (excluding current machine)
+            if (existingMachine.MachineId != machine.MachineId)
             {
-                _logger.LogWarning("Cannot update machine - Machine ID {MachineId} already exists", machine.MachineId);
-                return false;
+                var duplicateMachine = await _context.Machines
+                    .FirstOrDefaultAsync(m => m.MachineId == machine.MachineId && m.Id != machine.Id);
+
+                if (duplicateMachine != null)
+                {
+                    _logger.LogWarning("Cannot update machine - Machine ID {MachineId} already exists", machine.MachineId);
+                    return false;
+                }
             }
 
             // Update properties
             existingMachine.MachineId = machine.MachineId;
             existingMachine.MachineName = machine.MachineName;
+            existingMachine.MachineType = machine.MachineType;
             existingMachine.MachineModel = machine.MachineModel;
             existingMachine.SerialNumber = machine.SerialNumber;
             existingMachine.Location = machine.Location;
-            existingMachine.SupportedMaterials = machine.SupportedMaterials;
-            existingMachine.CurrentMaterial = machine.CurrentMaterial;
             existingMachine.Status = machine.Status;
             existingMachine.IsActive = machine.IsActive;
             existingMachine.IsAvailableForScheduling = machine.IsAvailableForScheduling;
             existingMachine.Priority = machine.Priority;
-            existingMachine.BuildLengthMm = machine.BuildLengthMm;
-            existingMachine.BuildWidthMm = machine.BuildWidthMm;
-            existingMachine.BuildHeightMm = machine.BuildHeightMm;
-            existingMachine.MaxLaserPowerWatts = machine.MaxLaserPowerWatts;
-            existingMachine.MaxScanSpeedMmPerSec = machine.MaxScanSpeedMmPerSec;
-            existingMachine.MinLayerThicknessMicrons = machine.MinLayerThicknessMicrons;
-            existingMachine.MaxLayerThicknessMicrons = machine.MaxLayerThicknessMicrons;
+            existingMachine.SupportedMaterials = machine.SupportedMaterials;
+            existingMachine.CurrentMaterial = machine.CurrentMaterial;
+            existingMachine.TechnicalSpecifications = machine.TechnicalSpecifications;
             existingMachine.MaintenanceIntervalHours = machine.MaintenanceIntervalHours;
             existingMachine.OpcUaEndpointUrl = machine.OpcUaEndpointUrl;
             existingMachine.OpcUaEnabled = machine.OpcUaEnabled;
-            existingMachine.LastModifiedBy = machine.LastModifiedBy;
+            existingMachine.CommunicationSettings = machine.CommunicationSettings;
             existingMachine.LastModifiedDate = DateTime.UtcNow;
+            existingMachine.LastModifiedBy = machine.LastModifiedBy;
 
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Machine updated successfully: {MachineId} ({MachineName})", 
-                machine.MachineId, machine.MachineName);
+            _logger.LogInformation("Updated machine: {MachineId} - {MachineName} ({MachineType})", 
+                machine.MachineId, machine.MachineName, machine.MachineType);
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating machine {MachineId}", machine.MachineId);
+            _logger.LogError(ex, "Error updating machine: {MachineId}", machine.MachineId);
             return false;
         }
     }
@@ -208,47 +243,49 @@ public class MachineManagementService : IMachineManagementService
     {
         try
         {
-            var machine = await _context.SlsMachines
-                .Include(m => m.CurrentJob)
-                .FirstOrDefaultAsync(m => m.Id == id);
-
+            var machine = await _context.Machines.FindAsync(id);
             if (machine == null)
             {
-                _logger.LogWarning("Cannot delete machine - Machine ID {Id} not found", id);
+                _logger.LogWarning("Cannot delete machine - Machine with ID {Id} not found", id);
                 return false;
             }
 
-            // Check for active jobs
-            var hasActiveJobs = await _context.Jobs
-                .AnyAsync(j => j.MachineId == machine.MachineId && 
-                              j.Status != "Completed" && j.Status != "Cancelled");
+            // Check if machine has associated capabilities
+            var capabilityCount = await _context.MachineCapabilities
+                .Where(mc => mc.MachineId == id)
+                .CountAsync();
 
-            if (hasActiveJobs)
+            if (capabilityCount > 0)
+            {
+                // Remove associated capabilities first
+                var capabilities = await _context.MachineCapabilities
+                    .Where(mc => mc.MachineId == id)
+                    .ToListAsync();
+
+                _context.MachineCapabilities.RemoveRange(capabilities);
+            }
+
+            // Check if machine has current jobs
+            var hasCurrentJobs = await _context.Jobs
+                .AnyAsync(j => j.MachineId == machine.MachineId && 
+                              (j.Status == "Scheduled" || j.Status == "Building" || j.Status == "Running"));
+
+            if (hasCurrentJobs)
             {
                 _logger.LogWarning("Cannot delete machine {MachineId} - has active jobs", machine.MachineId);
                 return false;
             }
 
-            // Remove related capabilities
-            var capabilities = await _context.MachineCapabilities
-                .Where(mc => mc.MachineId == machine.MachineId)
-                .ToListAsync();
-
-            if (capabilities.Any())
-            {
-                _context.MachineCapabilities.RemoveRange(capabilities);
-            }
-
-            _context.SlsMachines.Remove(machine);
+            _context.Machines.Remove(machine);
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Machine deleted successfully: {MachineId} ({MachineName})", 
-                machine.MachineId, machine.MachineName);
+            _logger.LogInformation("Deleted machine: {MachineId} - {MachineName} ({MachineType})", 
+                machine.MachineId, machine.MachineName, machine.MachineType);
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting machine ID {MachineId}", id);
+            _logger.LogError(ex, "Error deleting machine with ID: {Id}", id);
             return false;
         }
     }
@@ -322,7 +359,7 @@ public class MachineManagementService : IMachineManagementService
     {
         try
         {
-            return await _context.SlsMachines
+            return await _context.Machines
                 .ToDictionaryAsync(m => m.MachineId, m => m.Status);
         }
         catch (Exception ex)
@@ -336,19 +373,19 @@ public class MachineManagementService : IMachineManagementService
 
     #region Machine Capability Operations
 
-    public async Task<List<MachineCapability>> GetMachineCapabilitiesAsync(string machineId)
+    public async Task<List<MachineCapability>> GetMachineCapabilitiesAsync(int machineId)
     {
         try
         {
             return await _context.MachineCapabilities
-                .Where(c => c.SlsMachineId == machineId && c.IsAvailable) // Fixed property name
+                .Where(c => c.MachineId == machineId && c.IsAvailable)
                 .OrderBy(c => c.Priority)
                 .ThenBy(c => c.CapabilityType)
                 .ToListAsync();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving machine capabilities for machine {MachineId}", machineId);
+            _logger.LogError(ex, "Error retrieving machine capabilities for machine ID {MachineId}", machineId);
             return new List<MachineCapability>();
         }
     }
@@ -359,19 +396,19 @@ public class MachineManagementService : IMachineManagementService
         {
             capability.CreatedDate = DateTime.UtcNow;
             capability.LastModifiedDate = DateTime.UtcNow;
-            capability.IsActive = true;
 
             _context.MachineCapabilities.Add(capability);
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Machine capability added: {MachineId} - {CapabilityName}", 
+            _logger.LogInformation("Machine capability added: MachineId {MachineId} - {CapabilityName}", 
                 capability.MachineId, capability.CapabilityName);
+
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error adding capability {CapabilityName} to machine {MachineId}", 
-                capability.CapabilityName, capability.MachineId);
+            _logger.LogError(ex, "Error adding machine capability for MachineId {MachineId}", 
+                capability.MachineId);
             return false;
         }
     }
@@ -382,9 +419,12 @@ public class MachineManagementService : IMachineManagementService
         {
             var existing = await _context.MachineCapabilities.FindAsync(capability.Id);
             if (existing == null)
+            {
+                _logger.LogWarning("Cannot update capability - Capability with ID {Id} not found", capability.Id);
                 return false;
+            }
 
-            // Update with correct property names
+            // Update properties
             existing.CapabilityType = capability.CapabilityType;
             existing.CapabilityName = capability.CapabilityName;
             existing.CapabilityValue = capability.CapabilityValue;
@@ -400,13 +440,14 @@ public class MachineManagementService : IMachineManagementService
 
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Machine capability {CapabilityId} updated for machine {MachineId}", 
-                capability.Id, capability.SlsMachineId);
+            _logger.LogInformation("Updated machine capability: {CapabilityName} for MachineId {MachineId}", 
+                capability.CapabilityName, capability.MachineId);
+
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating machine capability {CapabilityId}", capability.Id);
+            _logger.LogError(ex, "Error updating machine capability with ID: {Id}", capability.Id);
             return false;
         }
     }
@@ -417,21 +458,22 @@ public class MachineManagementService : IMachineManagementService
         {
             var capability = await _context.MachineCapabilities.FindAsync(capabilityId);
             if (capability == null)
+            {
+                _logger.LogWarning("Cannot remove capability - Capability with ID {Id} not found", capabilityId);
                 return false;
+            }
 
-            // Soft delete by marking as unavailable
-            capability.IsAvailable = false;
-            capability.LastModifiedDate = DateTime.UtcNow;
-
+            _context.MachineCapabilities.Remove(capability);
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Machine capability {CapabilityId} deleted from machine {MachineId}", 
-                capabilityId, capability.SlsMachineId);
+            _logger.LogInformation("Removed machine capability: {CapabilityName} for MachineId {MachineId}", 
+                capability.CapabilityName, capability.MachineId);
+
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting machine capability {CapabilityId}", capabilityId);
+            _logger.LogError(ex, "Error removing machine capability with ID: {Id}", capabilityId);
             return false;
         }
     }
@@ -450,31 +492,31 @@ public class MachineManagementService : IMachineManagementService
             if (machine == null || part == null)
                 return false;
 
+            // Check basic compatibility
             return machine.CanAccommodatePart(part);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking compatibility for machine {MachineId} and part {PartId}", 
-                machineId, partId);
+            _logger.LogError(ex, "Error checking machine-part compatibility: {MachineId} - {PartId}", machineId, partId);
             return false;
         }
     }
 
-    public async Task<List<SlsMachine>> GetCompatibleMachinesForPartAsync(int partId)
+    public async Task<List<Machine>> GetCompatibleMachinesForPartAsync(int partId)
     {
         try
         {
             var part = await _context.Parts.FindAsync(partId);
             if (part == null)
-                return new List<SlsMachine>();
+                return new List<Machine>();
 
             var machines = await GetActiveMachinesAsync();
             return machines.Where(m => m.CanAccommodatePart(part)).ToList();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error finding compatible machines for part {PartId}", partId);
-            return new List<SlsMachine>();
+            _logger.LogError(ex, "Error finding compatible machines for part: {PartId}", partId);
+            return new List<Machine>();
         }
     }
 
@@ -482,16 +524,18 @@ public class MachineManagementService : IMachineManagementService
     {
         try
         {
-            var query = _context.SlsMachines.Where(m => m.MachineId.ToLower() == machineId.ToLower());
+            var query = _context.Machines.Where(m => m.MachineId == machineId);
             
             if (excludeId.HasValue)
+            {
                 query = query.Where(m => m.Id != excludeId.Value);
+            }
 
             return !await query.AnyAsync();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking machine ID uniqueness for {MachineId}", machineId);
+            _logger.LogError(ex, "Error checking machine ID uniqueness: {MachineId}", machineId);
             return false;
         }
     }
@@ -504,36 +548,25 @@ public class MachineManagementService : IMachineManagementService
     {
         try
         {
-            var totalMachines = await _context.SlsMachines.CountAsync();
-            var activeMachines = await _context.SlsMachines.CountAsync(m => m.IsActive);
-            var availableMachines = await _context.SlsMachines.CountAsync(m => m.IsAvailableForScheduling);
-            var buildingMachines = await _context.SlsMachines.CountAsync(m => m.Status == "Building");
-            var maintenanceMachines = await _context.SlsMachines.CountAsync(m => m.Status == "Maintenance");
-            var offlineMachines = await _context.SlsMachines.CountAsync(m => m.Status == "Offline");
-
-            var avgUtilization = await _context.SlsMachines
-                .Where(m => m.IsActive)
-                .AverageAsync(m => (double?)m.AverageUtilizationPercent) ?? 0;
-
-            var statusBreakdown = await _context.SlsMachines
-                .GroupBy(m => m.Status)
-                .ToDictionaryAsync(g => g.Key, g => g.Count());
-
-            return new Dictionary<string, object>
+            var machines = await _context.Machines.ToListAsync();
+            
+            var stats = new Dictionary<string, object>
             {
-                ["TotalMachines"] = totalMachines,
-                ["ActiveMachines"] = activeMachines,
-                ["AvailableMachines"] = availableMachines,
-                ["BuildingMachines"] = buildingMachines,
-                ["MaintenanceMachines"] = maintenanceMachines,
-                ["OfflineMachines"] = offlineMachines,
-                ["AverageUtilization"] = Math.Round(avgUtilization, 1),
-                ["StatusBreakdown"] = statusBreakdown
+                ["TotalMachines"] = machines.Count,
+                ["ActiveMachines"] = machines.Count(m => m.IsActive),
+                ["OfflineMachines"] = machines.Count(m => m.Status == "Offline"),
+                ["AverageUtilization"] = machines.Any() ? machines.Average(m => m.AverageUtilizationPercent) : 0,
+                ["StatusStatistics"] = machines.GroupBy(m => m.Status)
+                    .ToDictionary(g => g.Key, g => g.Count()),
+                ["TypeStatistics"] = machines.GroupBy(m => m.MachineType)
+                    .ToDictionary(g => g.Key, g => g.Count())
             };
+
+            return stats;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error calculating machine statistics");
+            _logger.LogError(ex, "Error retrieving machine statistics");
             return new Dictionary<string, object>();
         }
     }
@@ -546,28 +579,88 @@ public class MachineManagementService : IMachineManagementService
             if (machine == null)
                 return 0;
 
-            return machine.CalculateUtilizationPercent(fromDate, toDate);
+            // Calculate utilization based on scheduled jobs
+            var totalPeriodHours = (toDate - fromDate).TotalHours;
+            if (totalPeriodHours <= 0)
+                return 0;
+
+            // FIXED: Calculate job hours using TimeSpan instead of EF.Functions.DateDiffHour
+            var jobs = await _context.Jobs
+                .Where(j => j.MachineId == machineId &&
+                           j.ScheduledStart >= fromDate &&
+                           j.ScheduledEnd <= toDate)
+                .Select(j => new { j.ScheduledStart, j.ScheduledEnd })
+                .ToListAsync();
+
+            var jobHours = jobs.Sum(j => (j.ScheduledEnd - j.ScheduledStart).TotalHours);
+
+            return Math.Round((jobHours / totalPeriodHours) * 100, 2);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error calculating utilization for machine {MachineId}", machineId);
+            _logger.LogError(ex, "Error calculating machine utilization for {MachineId}", machineId);
             return 0;
         }
     }
 
-    public async Task<List<SlsMachine>> GetMachinesRequiringMaintenanceAsync()
+    public async Task<List<Machine>> GetMachinesRequiringMaintenanceAsync()
     {
         try
         {
-            return await _context.SlsMachines
-                .Where(m => m.IsActive && m.HoursSinceLastMaintenance >= m.MaintenanceIntervalHours)
-                .OrderBy(m => m.Priority)
+            return await _context.Machines
+                .Where(m => m.IsActive && m.RequiresMaintenance)
+                .OrderByDescending(m => m.HoursSinceLastMaintenance)
                 .ToListAsync();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving machines requiring maintenance");
-            return new List<SlsMachine>();
+            return new List<Machine>();
+        }
+    }
+
+    #endregion
+
+    #region Machine Type Operations
+
+    public async Task<List<string>> GetSupportedMachineTypesAsync()
+    {
+        try
+        {
+            return await _context.Machines
+                .Select(m => m.MachineType)
+                .Distinct()
+                .OrderBy(type => type)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving supported machine types");
+            return new List<string> { "SLS", "EDM", "CNC", "Coating", "Assembly", "Inspection" };
+        }
+    }
+
+    public async Task<List<string>> GetAvailableMachineIdsAsync(string? machineType = null)
+    {
+        try
+        {
+            var query = _context.Machines
+                .Where(m => m.IsActive && m.IsAvailableForScheduling);
+
+            if (!string.IsNullOrEmpty(machineType))
+            {
+                query = query.Where(m => m.MachineType == machineType);
+            }
+
+            return await query
+                .Select(m => m.MachineId)
+                .OrderBy(id => id)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving available machine IDs for type: {MachineType}", machineType);
+            return new List<string>();
         }
     }
 

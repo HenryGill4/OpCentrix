@@ -30,7 +30,7 @@ namespace OpCentrix.Models
         public string SlsMaterial { get; set; } = "Ti-6Al-4V Grade 5";
         
         [StringLength(100)]
-        public string PowderSpecification { get; set; } = "15-45 μm particle size";
+        public string PowderSpecification { get; set; } = "15-45 micron particle size";
         
         [Range(0, 50)]
         public double PowderRequirementKg { get; set; } = 0.5;

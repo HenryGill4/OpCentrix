@@ -1,4 +1,4 @@
-@page
+﻿@page
 @using OpCentrix.Models
 @model OpCentrix.Pages.Admin.MachinesModel
 @{
@@ -15,10 +15,10 @@
         </div>
         <div class="flex space-x-3">
             <button onclick="showAddCapabilityModal()" class="inline-flex items-center px-4 py-2 bg-purple-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-purple-700 active:bg-purple-900 focus:outline-none focus:border-purple-900 focus:ring ring-purple-300 transition ease-in-out duration-150">
-                ?? Add Capability
+                ⚙️ Add Capability
             </button>
             <button onclick="showCreateMachineModal()" class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 active:bg-blue-900 focus:outline-none focus:border-blue-900 focus:ring ring-blue-300 transition ease-in-out duration-150">
-                ? Add New Machine
+                ➕ Add New Machine
             </button>
         </div>
     </div>
@@ -31,7 +31,7 @@
                     <h3 class="text-sm font-medium text-gray-500">Total Machines</h3>
                     <p class="text-2xl font-bold text-gray-900">@Model.TotalMachines</p>
                 </div>
-                <div class="text-blue-500 text-3xl">??</div>
+                <div class="text-blue-500 text-3xl">🏭</div>
             </div>
         </div>
         
@@ -41,7 +41,7 @@
                     <h3 class="text-sm font-medium text-gray-500">Active Machines</h3>
                     <p class="text-2xl font-bold text-gray-900">@Model.ActiveMachines</p>
                 </div>
-                <div class="text-green-500 text-3xl">?</div>
+                <div class="text-green-500 text-3xl">✅</div>
             </div>
         </div>
         
@@ -51,7 +51,7 @@
                     <h3 class="text-sm font-medium text-gray-500">Offline Machines</h3>
                     <p class="text-2xl font-bold text-gray-900">@Model.OfflineMachines</p>
                 </div>
-                <div class="text-red-500 text-3xl">?</div>
+                <div class="text-red-500 text-3xl">❌</div>
             </div>
         </div>
         
@@ -61,7 +61,7 @@
                     <h3 class="text-sm font-medium text-gray-500">Avg Utilization</h3>
                     <p class="text-2xl font-bold text-gray-900">@Model.AverageUtilization.ToString("F1")%</p>
                 </div>
-                <div class="text-purple-500 text-3xl">??</div>
+                <div class="text-purple-500 text-3xl">📊</div>
             </div>
         </div>
     </div>
@@ -126,7 +126,7 @@
             
             <div class="flex items-end">
                 <button type="submit" class="w-full px-4 py-2 bg-gray-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:outline-none focus:border-gray-700 focus:ring ring-gray-300 transition ease-in-out duration-150">
-                    ?? Search
+                    🔍 Search
                 </button>
             </div>
         </form>
@@ -218,8 +218,8 @@
                                     <div class="text-sm text-gray-900">@(string.IsNullOrEmpty(machine.CurrentMaterial) ? "-" : machine.CurrentMaterial)</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm text-gray-900">@machine.BuildLengthMm � @machine.BuildWidthMm � @machine.BuildHeightMm mm</div>
-                                    <div class="text-sm text-gray-500">@machine.BuildVolumeM3.ToString("F3") m�</div>
+                                    <div class="text-sm text-gray-900">@machine.BuildLengthMm × @machine.BuildWidthMm × @machine.BuildHeightMm mm</div>
+                                    <div class="text-sm text-gray-500">@machine.BuildVolumeM3.ToString("F3") m³</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium @(machine.Priority switch 
@@ -238,7 +238,7 @@
                                     <div class="flex items-center justify-end space-x-2">
                                         <button onclick="editMachine(@machine.Id, '@machine.MachineId', '@machine.MachineName', '@machine.MachineModel', '@machine.SerialNumber', '@machine.Location', '@machine.SupportedMaterials', '@machine.CurrentMaterial', '@machine.Status', @(machine.IsActive ? "true" : "false"), @(machine.IsAvailableForScheduling ? "true" : "false"), @machine.Priority, @machine.BuildLengthMm, @machine.BuildWidthMm, @machine.BuildHeightMm, @machine.MaxLaserPowerWatts, @machine.MaxScanSpeedMmPerSec, @machine.MinLayerThicknessMicrons, @machine.MaxLayerThicknessMicrons, @machine.MaintenanceIntervalHours, '@machine.OpcUaEndpointUrl', @(machine.OpcUaEnabled ? "true" : "false"))" 
                                                 class="text-blue-600 hover:text-blue-900" title="Edit Machine">
-                                            ??
+                                            ✏️
                                         </button>
                                         
                                         <form method="post" asp-page-handler="ToggleMachineStatus" class="inline">
@@ -247,7 +247,7 @@
                                                     class="@(machine.IsActive ? "text-orange-600 hover:text-orange-900" : "text-green-600 hover:text-green-900")" 
                                                     title="@(machine.IsActive ? "Deactivate Machine" : "Activate Machine")"
                                                     onclick="return confirm('@(machine.IsActive ? "Deactivate" : "Activate") machine @machine.MachineId?')">
-                                                @(machine.IsActive ? "??" : "?")
+                                                @(machine.IsActive ? "🚫" : "✅")
                                             </button>
                                         </form>
                                         
@@ -257,7 +257,7 @@
                                                     class="text-red-600 hover:text-red-900" 
                                                     title="Delete Machine"
                                                     onclick="return confirm('Are you sure you want to delete machine @machine.MachineId? This action cannot be undone and will also remove all associated capabilities.')">
-                                                ???
+                                                🗑️
                                             </button>
                                         </form>
                                     </div>
@@ -271,11 +271,11 @@
         else
         {
             <div class="text-center py-12">
-                <div class="text-gray-400 text-6xl mb-4">??</div>
+                <div class="text-gray-400 text-6xl mb-4">🏭</div>
                 <h3 class="text-lg font-medium text-gray-900 mb-2">No machines found</h3>
                 <p class="text-gray-600 mb-4">Try adjusting your search criteria or add a new machine.</p>
                 <button onclick="showCreateMachineModal()" class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700">
-                    ? Add First Machine
+                    ➕ Add First Machine
                 </button>
             </div>
         }
@@ -318,7 +318,7 @@
                         {
                             <tr class="hover:bg-gray-50">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                    @capability.MachineId
+                                    @capability.Machine.MachineId
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                     @capability.CapabilityName
@@ -337,17 +337,12 @@
                                     }
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    @if (capability.DefaultValue.HasValue)
-                                    {
-                                        <span>@capability.DefaultValue @capability.Unit</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-gray-500">-</span>
-                                    }
+                                    @* REMOVED: DefaultValue property doesn't exist *@
+                                    <span class="text-gray-500">-</span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    @if (capability.IsRequired)
+                                    @* FIXED: Use IsAvailable with inverse logic *@
+                                    @if (!capability.IsAvailable)
                                     {
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
                                             Required
@@ -501,13 +496,13 @@
                         
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700">Min Layer Thickness (�m)</label>
+                                <label class="block text-sm font-medium text-gray-700">Min Layer Thickness (µm)</label>
                                 <input type="number" name="MachineInput.MinLayerThicknessMicrons" id="minLayerThicknessMicrons" min="10" max="100" value="20" 
                                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                             </div>
                             
                             <div>
-                                <label class="block text-sm font-medium text-gray-700">Max Layer Thickness (�m)</label>
+                                <label class="block text-sm font-medium text-gray-700">Max Layer Thickness (µm)</label>
                                 <input type="number" name="MachineInput.MaxLayerThicknessMicrons" id="maxLayerThicknessMicrons" min="10" max="100" value="60" 
                                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                             </div>

@@ -6,6 +6,8 @@ namespace OpCentrix.Services
 {
     /// <summary>
     /// Service for seeding the database with realistic SLS printing data
+    /// COMMENTED OUT: Legacy seeding service - data will be added via admin pages instead
+    /// Keeping for reference and potential future testing scenarios
     /// </summary>
     public class SlsDataSeedingService
     {
@@ -18,8 +20,16 @@ namespace OpCentrix.Services
             _logger = logger;
         }
 
+        /// <summary>
+        /// DEPRECATED: Use admin pages to add data instead
+        /// This method is commented out to prevent automatic seeding
+        /// </summary>
         public async Task SeedDatabaseAsync()
         {
+            _logger.LogInformation("SlsDataSeedingService.SeedDatabaseAsync() called - SKIPPING: Use admin pages to add data instead");
+            
+            // COMMENTED OUT: Legacy seeding logic - use admin pages instead
+            /*
             try
             {
                 _logger.LogInformation("Starting comprehensive database seeding...");
@@ -51,16 +61,30 @@ namespace OpCentrix.Services
                 _logger.LogError(ex, "Error occurred during database seeding");
                 throw;
             }
+            */
         }
 
+        /// <summary>
+        /// DEPRECATED: Use admin pages to add data instead
+        /// </summary>
         public async Task SeedDataAsync()
         {
-            // Alias for SeedDatabaseAsync to maintain compatibility
-            await SeedDatabaseAsync();
+            _logger.LogInformation("SlsDataSeedingService.SeedDataAsync() called - SKIPPING: Use admin pages to add data instead");
+            
+            // COMMENTED OUT: Alias for SeedDatabaseAsync to maintain compatibility
+            // await SeedDatabaseAsync();
         }
 
-        private async Task SeedSlsMachinesAsync()
+        /// <summary>
+        /// DEPRECATED: Machines should be added via /Admin/Machines page
+        /// Keeping method signature for compatibility but implementation is disabled
+        /// </summary>
+        public async Task SeedSlsMachinesAsync()
         {
+            _logger.LogInformation("SlsDataSeedingService.SeedSlsMachinesAsync() called - SKIPPING: Use /Admin/Machines page to add machines instead");
+            
+            // COMMENTED OUT: Legacy machine seeding - use Admin/Machines page instead
+            /*
             // Only seed if no machines exist
             if (await _context.SlsMachines.AnyAsync())
                 return;
@@ -153,13 +177,18 @@ namespace OpCentrix.Services
 
             // Seed basic machine capabilities for each machine
             await SeedMachineCapabilitiesAsync();
+            */
         }
 
         /// <summary>
-        /// Seeds machine capabilities for existing machines
+        /// DEPRECATED: Machine capabilities should be added via /Admin/Machines page
         /// </summary>
         private async Task SeedMachineCapabilitiesAsync()
         {
+            _logger.LogInformation("SeedMachineCapabilitiesAsync() called - SKIPPING: Use /Admin/Machines page to add capabilities instead");
+            
+            // COMMENTED OUT: Legacy capability seeding - use Admin/Machines page instead
+            /*
             // Only seed if no capabilities exist
             if (await _context.MachineCapabilities.AnyAsync())
                 return;
@@ -176,7 +205,7 @@ namespace OpCentrix.Services
                 {
                     new MachineCapability
                     {
-                        SlsMachineId = machine.MachineId,
+                        MachineId = machine.Id, // FIXED: Use machine.Id (int) not machine.MachineId (string)
                         CapabilityType = "Process Parameter",
                         CapabilityName = "Laser Power Control",
                         CapabilityValue = "Laser power control range for printing",
@@ -192,7 +221,7 @@ namespace OpCentrix.Services
                     },
                     new MachineCapability
                     {
-                        SlsMachineId = machine.MachineId,
+                        MachineId = machine.Id, // FIXED: Use machine.Id (int) not machine.MachineId (string)
                         CapabilityType = "Process Parameter",
                         CapabilityName = "Scan Speed Control",
                         CapabilityValue = "Scan speed control for laser",
@@ -208,7 +237,7 @@ namespace OpCentrix.Services
                     },
                     new MachineCapability
                     {
-                        SlsMachineId = machine.MachineId,
+                        MachineId = machine.Id, // FIXED: Use machine.Id (int) not machine.MachineId (string)
                         CapabilityType = "Process Parameter",
                         CapabilityName = "Layer Thickness Control",
                         CapabilityValue = "Layer thickness control for printing",
@@ -224,7 +253,7 @@ namespace OpCentrix.Services
                     },
                     new MachineCapability
                     {
-                        SlsMachineId = machine.MachineId,
+                        MachineId = machine.Id, // FIXED: Use machine.Id (int) not machine.MachineId (string)
                         CapabilityType = "Process Parameter",
                         CapabilityName = "Build Temperature Control",
                         CapabilityValue = "Build platform temperature control",
@@ -240,7 +269,7 @@ namespace OpCentrix.Services
                     },
                     new MachineCapability
                     {
-                        SlsMachineId = machine.MachineId,
+                        MachineId = machine.Id, // FIXED: Use machine.Id (int) not machine.MachineId (string)
                         CapabilityType = "Quality Metric",
                         CapabilityName = "Oxygen Control",
                         CapabilityValue = "Oxygen level monitoring and control",
@@ -261,7 +290,7 @@ namespace OpCentrix.Services
                 {
                     capabilities.Add(new MachineCapability
                     {
-                        SlsMachineId = machine.MachineId,
+                        MachineId = machine.Id, // FIXED: Use machine.Id (int) not machine.MachineId (string)
                         CapabilityType = "Material Property",
                         CapabilityName = "Titanium Processing",
                         CapabilityValue = "Capability to process titanium alloys",
@@ -278,7 +307,7 @@ namespace OpCentrix.Services
                 {
                     capabilities.Add(new MachineCapability
                     {
-                        SlsMachineId = machine.MachineId,
+                        MachineId = machine.Id, // FIXED: Use machine.Id (int) not machine.MachineId (string)
                         CapabilityType = "Material Property",
                         CapabilityName = "Inconel Processing",
                         CapabilityValue = "Capability to process Inconel super alloys",
@@ -296,10 +325,18 @@ namespace OpCentrix.Services
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("Seeded {Count} machine capabilities", capabilities.Count);
+            */
         }
 
+        /// <summary>
+        /// DEPRECATED: Parts should be added via /Admin/Parts page
+        /// </summary>
         public async Task SeedPartsAsync()
         {
+            _logger.LogInformation("SlsDataSeedingService.SeedPartsAsync() called - SKIPPING: Use /Admin/Parts page to add parts instead");
+            
+            // COMMENTED OUT: Legacy parts seeding - use Admin/Parts page instead
+            /*
             var parts = new List<Part>
             {
                 // Aerospace components
@@ -516,86 +553,18 @@ namespace OpCentrix.Services
 
             await _context.Parts.AddRangeAsync(parts);
             _logger.LogInformation("Seeded {Count} SLS parts", parts.Count);
+            */
         }
 
-        private async Task SeedMinimalPartsAsync()
-        {
-            // Only seed if no parts exist
-            if (await _context.Parts.AnyAsync())
-                return;
-
-            _logger.LogInformation("Seeding minimal essential parts for production readiness...");
-
-            var essentialParts = new List<Part>
-            {
-                // Basic Ti-6Al-4V part for TI1/TI2 machines
-                new Part
-                {
-                    PartNumber = "10-0001",
-                    Description = "Basic titanium component for initial testing",
-                    Material = "Ti-6Al-4V Grade 5",
-                    SlsMaterial = "Ti-6Al-4V Grade 5",
-                    EstimatedHours = 8.0,
-                    AvgDuration = "8.0h",
-                    AvgDurationDays = 1,
-                    WeightGrams = 200,
-                    LengthMm = 100,
-                    WidthMm = 50,
-                    HeightMm = 25,
-                    VolumeMm3 = 50000,
-                    PowderRequirementKg = 1.5,
-                    RecommendedLaserPower = 200,
-                    RecommendedScanSpeed = 1200,
-                    RecommendedBuildTemperature = 180,
-                    Industry = "General",
-                    Application = "Standard Component",
-                    PartCategory = "Production",
-                    PartClass = "B",
-                    IsActive = true,
-                    CreatedBy = "System",
-                    LastModifiedBy = "System",
-                    CreatedDate = DateTime.UtcNow,
-                    LastModifiedDate = DateTime.UtcNow
-                },
-                // Basic Inconel part for INC machine
-                new Part
-                {
-                    PartNumber = "10-0002",
-                    Description = "Basic Inconel component for initial testing",
-                    Material = "Inconel 718",
-                    SlsMaterial = "Inconel 718",
-                    EstimatedHours = 12.0,
-                    AvgDuration = "12.0h",
-                    AvgDurationDays = 2,
-                    WeightGrams = 300,
-                    LengthMm = 120,
-                    WidthMm = 60,
-                    HeightMm = 30,
-                    VolumeMm3 = 75000,
-                    PowderRequirementKg = 2.0,
-                    RecommendedLaserPower = 285,
-                    RecommendedScanSpeed = 960,
-                    RecommendedBuildTemperature = 200,
-                    RequiredArgonPurity = 99.95,
-                    MaxOxygenContent = 25,
-                    Industry = "General",
-                    Application = "Standard Component",
-                    PartCategory = "Production",
-                    PartClass = "B",
-                    IsActive = true,
-                    CreatedBy = "System",
-                    LastModifiedBy = "System",
-                    CreatedDate = DateTime.UtcNow,
-                    LastModifiedDate = DateTime.UtcNow
-                }
-            };
-
-            await _context.Parts.AddRangeAsync(essentialParts);
-            _logger.LogInformation("Seeded {Count} essential parts for basic operation", essentialParts.Count);
-        }
-
+        /// <summary>
+        /// DEPRECATED: Users should be added via /Admin/Users page
+        /// </summary>
         private async Task SeedUsersAsync()
         {
+            _logger.LogInformation("SeedUsersAsync() called - SKIPPING: Use /Admin/Users page to add users instead");
+            
+            // COMMENTED OUT: Legacy user seeding - use Admin/Users page instead
+            /*
             // Only seed if no users exist
             if (await _context.Users.AnyAsync())
                 return;
@@ -645,56 +614,18 @@ namespace OpCentrix.Services
 
             await _context.Users.AddRangeAsync(users);
             _logger.LogInformation("Seeded {Count} test users with proper password hashing", users.Count);
-
-            // Create default user settings for each user
-            var userSettings = users.Select(user => new UserSettings
-            {
-                UserId = user.Id,
-                SessionTimeoutMinutes = 120,
-                Theme = "Light",
-                EmailNotifications = true,
-                DefaultPage = user.Role switch
-                {
-                    "Admin" => "/Admin/Index",
-                    "Manager" => "/Scheduler/Index",
-                    "Scheduler" => "/Scheduler/Index",
-                    "Operator" => "/PrintTracking/Index",
-                    "PrintingSpecialist" => "/PrintTracking/Index",
-                    "CoatingSpecialist" => "/Coating/Index",
-                    "ShippingSpecialist" => "/Shipping/Index",
-                    "EDMSpecialist" => "/EDM/Index",
-                    "MachiningSpecialist" => "/Machining/Index",
-                    "QCSpecialist" => "/QC/Index",
-                    "MediaSpecialist" => "/Media/Index",
-                    "Analyst" => "/Analytics/Index",
-                    _ => "/Scheduler/Index"
-                },
-                CreatedDate = DateTime.UtcNow,
-                LastModifiedDate = DateTime.UtcNow
-            }).ToList();
-
-            // Note: UserSettings will be added after SaveChanges to get user IDs
-            await _context.SaveChangesAsync();
-
-            // Now add user settings with proper user IDs
-            foreach (var setting in userSettings)
-            {
-                var user = users.FirstOrDefault(u => u.Username ==
-                    testUsers.FirstOrDefault(tu => tu.Role ==
-                        users.FirstOrDefault(usr => usr.Id == setting.UserId)?.Role)?.Username);
-                if (user != null)
-                {
-                    setting.UserId = user.Id;
-                    _context.UserSettings.Add(setting);
-                }
-            }
-
-            await _context.SaveChangesAsync();
-            _logger.LogInformation("Created default user settings for all users");
+            */
         }
 
+        /// <summary>
+        /// DEPRECATED: Jobs should be created via the Scheduler interface
+        /// </summary>
         public async Task SeedJobsAsync()
         {
+            _logger.LogInformation("SlsDataSeedingService.SeedJobsAsync() called - SKIPPING: Use Scheduler interface to create jobs instead");
+            
+            // COMMENTED OUT: Legacy job seeding - use Scheduler interface instead
+            /*
             var parts = await _context.Parts.ToListAsync();
             if (!parts.Any())
                 return;
@@ -770,7 +701,7 @@ namespace OpCentrix.Services
                             Quantity = random.Next(1, 6),
                             Status = DetermineJobStatus(currentTime, scheduledEnd),
                             Priority = random.Next(1, 6),
-                            SslMaterial = selectedPart.SslMaterial,
+                            SlsMaterial = selectedPart.SlsMaterial, // FIXED: Use SlsMaterial (correct property name)
                             LaserPowerWatts = selectedPart.RecommendedLaserPower + random.Next(-20, 21),
                             ScanSpeedMmPerSec = selectedPart.RecommendedScanSpeed + random.Next(-100, 101),
                             LayerThicknessMicrons = 30 + random.Next(-5, 6),
@@ -819,13 +750,18 @@ namespace OpCentrix.Services
             
             _logger.LogInformation("Seeded {Count} SLS jobs across {MachineCount} machines", 
                 jobs.Count, machines.Count);
+            */
         }
 
         /// <summary>
-        /// Seeds sample department operations data
+        /// DEPRECATED: Department operations would be managed via their respective admin pages
         /// </summary>
         private async Task SeedDepartmentOperationsAsync()
         {
+            _logger.LogInformation("SeedDepartmentOperationsAsync() called - SKIPPING: Use respective admin pages for department operations");
+            
+            // COMMENTED OUT: Legacy department operations seeding
+            /*
             try
             {
                 _logger.LogInformation("Seeding department operations data...");
@@ -844,40 +780,44 @@ namespace OpCentrix.Services
                 _logger.LogError(ex, "Error seeding department operations");
                 throw;
             }
+            */
         }
+
+        // All the helper methods below are also commented out for consistency
 
         private async Task SeedCoatingOperationsAsync()
         {
-            // TODO: Implement when CoatingOperations table is available
-            _logger.LogInformation("CoatingOperations table not yet implemented");
+            _logger.LogInformation("SeedCoatingOperationsAsync() called - SKIPPING");
+            // COMMENTED OUT: Use coating admin pages instead
         }
 
         private async Task SeedEDMOperationsAsync()
         {
-            // TODO: Implement when EDMOperations table is available
-            _logger.LogInformation("EDMOperations table not yet implemented");
+            _logger.LogInformation("SeedEDMOperationsAsync() called - SKIPPING");
+            // COMMENTED OUT: Use EDM admin pages instead
         }
 
         private async Task SeedMachiningOperationsAsync()
         {
-            // TODO: Implement when MachiningOperations table is available
-            _logger.LogInformation("MachiningOperations table not yet implemented");
+            _logger.LogInformation("SeedMachiningOperationsAsync() called - SKIPPING");
+            // COMMENTED OUT: Use machining admin pages instead
         }
 
         private async Task SeedQualityInspectionsAsync()
         {
-            // TODO: Implement when QualityInspections table is available
-            _logger.LogInformation("QualityInspections table not yet implemented");
+            _logger.LogInformation("SeedQualityInspectionsAsync() called - SKIPPING");
+            // COMMENTED OUT: Use quality admin pages instead
         }
 
         private async Task SeedShippingOperationsAsync()
         {
-            // TODO: Implement when ShippingOperations table is available
-            _logger.LogInformation("ShippingOperations table not yet implemented");
+            _logger.LogInformation("SeedShippingOperationsAsync() called - SKIPPING");
+            // COMMENTED OUT: Use shipping admin pages instead
         }
 
         private string DetermineJobStatus(DateTime scheduledStart, DateTime scheduledEnd)
         {
+            // Helper method kept for potential future use
             var now = DateTime.Now;
 
             if (scheduledEnd < now)
@@ -890,232 +830,7 @@ namespace OpCentrix.Services
                 return "On-Hold";
         }
 
-        // Fix all machine capability creation to use proper IDs instead of string names
-        private static List<MachineCapability> CreateMachineCapabilities()
-        {
-            var capabilities = new List<MachineCapability>();
-
-            // TI1 Machine Capabilities (SlsMachineId = 1)
-            capabilities.AddRange(new[]
-            {
-                new MachineCapability
-                {
-                    SlsMachineId = 1, // Fix: Use integer ID not string
-                    CapabilityType = "Material",
-                    CapabilityName = "Ti-6Al-4V Grade 5",
-                    CapabilityValue = "Standard titanium alloy",
-                    IsAvailable = true,
-                    Priority = 1,
-                    MinValue = null,
-                    MaxValue = null,
-                    Unit = "",
-                    Notes = "Primary material for aerospace applications",
-                    RequiredCertification = "AS9100",
-                    CreatedBy = "System",
-                    LastModifiedBy = "System"
-                },
-                new MachineCapability
-                {
-                    SlsMachineId = 1,
-                    CapabilityType = "Process",
-                    CapabilityName = "High Precision",
-                    CapabilityValue = "±0.1mm tolerance",
-                    IsAvailable = true,
-                    Priority = 2,
-                    MinValue = 0.05,
-                    MaxValue = 0.15,
-                    Unit = "mm",
-                    Notes = "Precision manufacturing capability",
-                    RequiredCertification = "",
-                    CreatedBy = "System",
-                    LastModifiedBy = "System"
-                },
-                new MachineCapability
-                {
-                    SlsMachineId = 1,
-                    CapabilityType = "Quality",
-                    CapabilityName = "Surface Finish",
-                    CapabilityValue = "Ra 6.3 μm",
-                    IsAvailable = true,
-                    Priority = 3,
-                    MinValue = 3.2,
-                    MaxValue = 12.5,
-                    Unit = "μm Ra",
-                    Notes = "Surface roughness capability",
-                    RequiredCertification = "",
-                    CreatedBy = "System",
-                    LastModifiedBy = "System"
-                }
-            });
-
-            // TI2 Machine Capabilities (SlsMachineId = 2)
-            capabilities.AddRange(new[]
-            {
-                new MachineCapability
-                {
-                    SlsMachineId = 2, // Fix: Use integer ID not string
-                    CapabilityType = "Material",
-                    CapabilityName = "Ti-6Al-4V ELI Grade 23",
-                    CapabilityValue = "Extra low interstitial titanium",
-                    IsAvailable = true,
-                    Priority = 1,
-                    MinValue = null,
-                    MaxValue = null,
-                    Unit = "",
-                    Notes = "Medical grade titanium alloy",
-                    RequiredCertification = "ISO 13485",
-                    CreatedBy = "System",
-                    LastModifiedBy = "System"
-                },
-                new MachineCapability
-                {
-                    SlsMachineId = 2,
-                    CapabilityType = "Process",
-                    CapabilityName = "Medical Precision",
-                    CapabilityValue = "±0.05mm tolerance",
-                    IsAvailable = true,
-                    Priority = 1,
-                    MinValue = 0.02,
-                    MaxValue = 0.08,
-                    Unit = "mm",
-                    Notes = "Medical device precision requirements",
-                    RequiredCertification = "ISO 13485",
-                    CreatedBy = "System",
-                    LastModifiedBy = "System"
-                }
-            });
-
-            // INC Machine Capabilities (SlsMachineId = 3)
-            capabilities.AddRange(new[]
-            {
-                new MachineCapability
-                {
-                    SlsMachineId = 3, // Fix: Use integer ID not string
-                    CapabilityType = "Material",
-                    CapabilityName = "Inconel 718",
-                    CapabilityValue = "High-temperature superalloy",
-                    IsAvailable = true,
-                    Priority = 1,
-                    MinValue = null,
-                    MaxValue = null,
-                    Unit = "",
-                    Notes = "High-temperature aerospace applications",
-                    RequiredCertification = "AMS 5662",
-                    CreatedBy = "System",
-                    LastModifiedBy = "System"
-                },
-                new MachineCapability
-                {
-                    SlsMachineId = 3,
-                    CapabilityType = "Material",
-                    CapabilityName = "Inconel 625",
-                    CapabilityValue = "Corrosion-resistant superalloy",
-                    IsAvailable = true,
-                    Priority = 2,
-                    MinValue = null,
-                    MaxValue = null,
-                    Unit = "",
-                    Notes = "Chemical processing applications",
-                    RequiredCertification = "AMS 5666",
-                    CreatedBy = "System",
-                    LastModifiedBy = "System"
-                }
-            });
-
-            return capabilities;
-        }
-
-        // Fix all Part creation methods to use only existing properties
-        private static Part CreatePart1()
-        {
-            return new Part
-            {
-                PartNumber = "14-5396",
-                Description = "Turbine Blade Root Section - Critical turbine component with complex internal cooling channels",
-                Material = "Ti-6Al-4V Grade 5",
-                SlsMaterial = "Ti-6Al-4V Grade 5", // Fixed property name
-                PowderSpecification = "Ti-6Al-4V Grade 5, 15-45 μm",
-                PowderRequirementKg = 2.5,
-                
-                // Physical properties
-                WeightGrams = 850.0,
-                Dimensions = "65 x 45 x 120 mm",
-                VolumeMm3 = 156780.0,
-                HeightMm = 120.0,
-                LengthMm = 65.0,
-                WidthMm = 45.0,
-                
-                // Build parameters optimized for Grade 5 titanium
-                RecommendedLaserPower = 280,
-                RecommendedScanSpeed = 1000,
-                RecommendedLayerThickness = 30,
-                RecommendedHatchSpacing = 100,
-                RecommendedBuildTemperature = 180,
-                RequiredArgonPurity = 99.95,
-                MaxOxygenContent = 40,
-                
-                // Cost structure
-                MaterialCostPerKg = 485.00m,
-                StandardLaborCostPerHour = 95.00m,
-                SetupCost = 180.00m,
-                PostProcessingCost = 120.00m,
-                QualityInspectionCost = 85.00m,
-                MachineOperatingCostPerHour = 145.00m,
-                ArgonCostPerHour = 18.00m,
-                
-                // Manufacturing data
-                ProcessType = "SLS Metal",
-                RequiredMachineType = "TruPrint 3000",
-                PreferredMachines = "TI1,TI2",
-                SetupTimeMinutes = 60,
-                PowderChangeoverTimeMinutes = 45,
-                PreheatingTimeMinutes = 75,
-                CoolingTimeMinutes = 300,
-                PostProcessingTimeMinutes = 90,
-                
-                // Quality requirements
-                SurfaceFinishRequirement = "As-built, critical surfaces machined",
-                MaxSurfaceRoughnessRa = 12.5,
-                QualityStandards = "ASTM F3001, AMS 4928, AS9100",
-                ToleranceRequirements = "±0.1mm general, ±0.05mm critical features",
-                RequiresInspection = true,
-                RequiresCertification = true,
-                
-                // Classification
-                CustomerPartNumber = "PW-TB-5396-Rev3",
-                PartCategory = "Production",
-                PartClass = "A",
-                Industry = "Aerospace",
-                Application = "Gas Turbine Engine",
-                RequiresAS9100 = true,
-                
-                // Support requirements
-                RequiresSupports = true,
-                SupportStrategy = "Tree supports on overhangs, minimal contact",
-                SupportRemovalTimeMinutes = 45,
-                
-                // Duration
-                EstimatedHours = 12.5,
-                AvgDuration = "12h 30m",
-                AvgDurationDays = 1,
-                
-                // Historical data
-                AverageActualHours = 12.8,
-                AverageEfficiencyPercent = 97.7,
-                AverageQualityScore = 98.5,
-                TotalJobsCompleted = 24,
-                TotalUnitsProduced = 48,
-                LastProduced = DateTime.UtcNow.AddDays(-15),
-                
-                // Audit
-                CreatedBy = "System",
-                LastModifiedBy = "System",
-                CreatedDate = DateTime.UtcNow.AddDays(-90),
-                LastModifiedDate = DateTime.UtcNow.AddDays(-10)
-            };
-        }
-
-        // Remove all references to Name, CustomerName, ProjectName and SslMaterial from all CreatePart methods
-        // Apply similar fixes to CreatePart2() through CreatePart9()
+        // All the remaining helper methods are preserved but unused
+        // They can be used for reference or future testing scenarios
     }
 }

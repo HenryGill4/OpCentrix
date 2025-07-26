@@ -4,8 +4,9 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace OpCentrix.Models;
 
 /// <summary>
-/// Represents machine capabilities and configurations
+/// Represents machine capabilities and configurations for any machine type
 /// Links machines to their supported materials, processes, and operational parameters
+/// Task 6: Machine Status and Dynamic Machine Management - REDESIGNED
 /// </summary>
 public class MachineCapability
 {
@@ -13,25 +14,25 @@ public class MachineCapability
     public int Id { get; set; }
 
     /// <summary>
-    /// Reference to the machine
+    /// Reference to the machine (FIXED: Generic Machine instead of SlsMachine)
     /// </summary>
     [Required]
-    public int SlsMachineId { get; set; }
+    public int MachineId { get; set; }
 
     /// <summary>
-    /// Navigation property to SlsMachine
+    /// Navigation property to Machine (FIXED: Generic Machine)
     /// </summary>
-    public virtual SlsMachine SlsMachine { get; set; } = null!;
+    public virtual Machine Machine { get; set; } = null!;
 
     /// <summary>
-    /// Capability type (e.g., "Material", "Process", "Quality")
+    /// Capability type (e.g., "Material", "Process", "Quality", "Tooling")
     /// </summary>
     [Required]
     [StringLength(50)]
     public string CapabilityType { get; set; } = string.Empty;
 
     /// <summary>
-    /// Capability name (e.g., "Ti-6Al-4V Grade 5", "High Precision")
+    /// Capability name (e.g., "Ti-6Al-4V Grade 5", "High Precision", "Wire EDM")
     /// </summary>
     [Required]
     [StringLength(100)]
@@ -132,12 +133,53 @@ public class MachineCapability
                 return $"{MinValue} - {MaxValue} {Unit}".Trim();
 
             if (MinValue.HasValue)
-                return $"? {MinValue} {Unit}".Trim();
+                return $">= {MinValue} {Unit}".Trim();
 
             if (MaxValue.HasValue)
-                return $"? {MaxValue} {Unit}".Trim();
+                return $"<= {MaxValue} {Unit}".Trim();
 
             return CapabilityValue;
         }
+    }
+
+    /// <summary>
+    /// Helper property for machine type-specific capability validation
+    /// </summary>
+    [NotMapped]
+    public bool IsValidForMachineType => Machine?.MachineType switch
+    {
+        "SLS" => IsValidForSls(),
+        "EDM" => IsValidForEdm(),
+        "CNC" => IsValidForCnc(),
+        "Coating" => IsValidForCoating(),
+        _ => true // Generic capabilities are always valid
+    };
+
+    private bool IsValidForSls()
+    {
+        // SLS-specific capability validation
+        var validTypes = new[] { "Material", "Process Parameter", "Quality Metric", "Build Configuration" };
+        return validTypes.Contains(CapabilityType, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private bool IsValidForEdm()
+    {
+        // EDM-specific capability validation
+        var validTypes = new[] { "Material", "Tooling", "Process Parameter", "Surface Finish" };
+        return validTypes.Contains(CapabilityType, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private bool IsValidForCnc()
+    {
+        // CNC-specific capability validation
+        var validTypes = new[] { "Material", "Tooling", "Spindle Speed", "Feed Rate", "Accuracy" };
+        return validTypes.Contains(CapabilityType, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private bool IsValidForCoating()
+    {
+        // Coating-specific capability validation
+        var validTypes = new[] { "Coating Type", "Substrate Material", "Thickness Range", "Curing Process" };
+        return validTypes.Contains(CapabilityType, StringComparer.OrdinalIgnoreCase);
     }
 }

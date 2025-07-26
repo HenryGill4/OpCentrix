@@ -8,10 +8,11 @@ namespace OpCentrix.Services
 {
     public interface ISchedulerService
     {
+        // ADDED: Synchronous method for backward compatibility
         SchedulerPageViewModel GetSchedulerData(string? zoom = null, DateTime? startDate = null);
         Task<SchedulerPageViewModel> GetSchedulerDataAsync(string? zoom = null, DateTime? startDate = null);
         bool ValidateJobScheduling(Job job, List<Job> existingJobs, out List<string> errors);
-        Task<(bool IsValid, List<string> Errors)> ValidateJobSchedulingAsync(Job job, List<Job> existingJobs); // Task 8: Fixed async signature
+        Task<(bool IsValid, List<string> Errors)> ValidateJobSchedulingAsync(Job job, List<Job> existingJobs);
         (int maxLayers, int rowHeight) CalculateMachineRowLayout(string machineId, List<Job> jobs);
         Task<bool> ValidateSlsJobCompatibilityAsync(Job job, SchedulerContext context);
         Task<double> CalculateOptimalPowderChangeoverTimeAsync(string machineId, string newMaterial, SchedulerContext context);
@@ -24,54 +25,134 @@ namespace OpCentrix.Services
     {
         private readonly ILogger<SchedulerService> _logger;
         private readonly IOperatingShiftService _operatingShiftService;
+        private readonly IMachineManagementService _machineManagementService;
         
-        public SchedulerService(ILogger<SchedulerService> logger, IOperatingShiftService operatingShiftService)
+        public SchedulerService(
+            ILogger<SchedulerService> logger, 
+            IOperatingShiftService operatingShiftService,
+            IMachineManagementService machineManagementService)
         {
             _logger = logger;
             _operatingShiftService = operatingShiftService;
+            _machineManagementService = machineManagementService;
         }
 
+        // ADDED: Synchronous method for backward compatibility
         public SchedulerPageViewModel GetSchedulerData(string? zoom = null, DateTime? startDate = null)
         {
-            // Validate and set zoom level
-            var validZooms = new[] { "day", "hour", "30min", "15min" };
-            if (!validZooms.Contains(zoom))
-                zoom = "day";
-
-            // UPDATED: Start from UTC today instead of server local time
-            var start = startDate ?? DateTime.UtcNow.Date;
-
-            // Define SLS machine configuration
-            var machines = new List<string> { "TI1", "TI2", "INC" };
-
-            // Calculate view parameters based on zoom
-            var (dateCount, slotsPerDay, slotMinutes) = GetZoomParameters(zoom);
-
-            // Generate date range starting from UTC today
-            var dates = Enumerable.Range(0, dateCount)
-                .Select(i => start.AddDays(i))
-                .ToList();
-
-            _logger.LogInformation("Generated scheduler data for {MachineCount} machines, {DateCount} days starting {StartDate}, zoom: {Zoom}", 
-                machines.Count, dateCount, start.ToString("yyyy-MM-dd"), zoom);
-
-            return new SchedulerPageViewModel
+            try
             {
-                StartDate = start,
-                Dates = dates,
-                Machines = machines,
-                SlotsPerDay = slotsPerDay,
-                SlotMinutes = slotMinutes,
-                Jobs = new List<Job>(), // Will be populated by controller
-                MachineRowHeights = new Dictionary<string, int>()
-            };
+                // Validate and set zoom level
+                var validZooms = new[] { "day", "hour", "30min", "15min" };
+                if (!validZooms.Contains(zoom))
+                    zoom = "day";
+
+                // Start from UTC today instead of server local time
+                var start = startDate ?? DateTime.UtcNow.Date;
+
+                // Calculate view parameters based on zoom
+                var (dateCount, slotsPerDay, slotMinutes) = GetZoomParameters(zoom);
+
+                // Generate date range starting from UTC today
+                var dates = Enumerable.Range(0, dateCount)
+                    .Select(i => start.AddDays(i))
+                    .ToList();
+
+                // For synchronous method, return basic structure with empty machines list
+                // This will be populated by the async version or controller
+                _logger.LogInformation("Generated basic scheduler data for {DateCount} days starting {StartDate}, zoom: {Zoom}", 
+                    dateCount, start.ToString("yyyy-MM-dd"), zoom);
+
+                return new SchedulerPageViewModel
+                {
+                    StartDate = start,
+                    Dates = dates,
+                    Machines = new List<string>(), // Will be populated by async method or controller
+                    SlotsPerDay = slotsPerDay,
+                    SlotMinutes = slotMinutes,
+                    Jobs = new List<Job>(), // Will be populated by controller
+                    MachineRowHeights = new Dictionary<string, int>()
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating basic scheduler data");
+                
+                // Return fallback data structure
+                return new SchedulerPageViewModel
+                {
+                    StartDate = DateTime.UtcNow.Date,
+                    Dates = new List<DateTime> { DateTime.UtcNow.Date },
+                    Machines = new List<string>(),
+                    SlotsPerDay = 1,
+                    SlotMinutes = 1440,
+                    Jobs = new List<Job>(),
+                    MachineRowHeights = new Dictionary<string, int>()
+                };
+            }
         }
 
         public async Task<SchedulerPageViewModel> GetSchedulerDataAsync(string? zoom = null, DateTime? startDate = null)
         {
-            // For now, delegate to the synchronous version
-            // In a real implementation, this would use async database calls
-            return await Task.FromResult(GetSchedulerData(zoom, startDate));
+            try
+            {
+                // Validate and set zoom level
+                var validZooms = new[] { "day", "hour", "30min", "15min" };
+                if (!validZooms.Contains(zoom))
+                    zoom = "day";
+
+                // Start from UTC today instead of server local time
+                var start = startDate ?? DateTime.UtcNow.Date;
+
+                // UPDATED: Get machines dynamically from database instead of hardcoded list
+                var activeMachines = await _machineManagementService.GetActiveMachinesAsync();
+                var machineIds = activeMachines.Select(m => m.MachineId).ToList();
+
+                // Fallback to empty list if no machines configured yet
+                if (!machineIds.Any())
+                {
+                    _logger.LogWarning("No active machines found in database");
+                    machineIds = new List<string>();
+                }
+
+                // Calculate view parameters based on zoom
+                var (dateCount, slotsPerDay, slotMinutes) = GetZoomParameters(zoom);
+
+                // Generate date range starting from UTC today
+                var dates = Enumerable.Range(0, dateCount)
+                    .Select(i => start.AddDays(i))
+                    .ToList();
+
+                _logger.LogInformation("Generated scheduler data for {MachineCount} machines, {DateCount} days starting {StartDate}, zoom: {Zoom}", 
+                    machineIds.Count, dateCount, start.ToString("yyyy-MM-dd"), zoom);
+
+                return new SchedulerPageViewModel
+                {
+                    StartDate = start,
+                    Dates = dates,
+                    Machines = machineIds,
+                    SlotsPerDay = slotsPerDay,
+                    SlotMinutes = slotMinutes,
+                    Jobs = new List<Job>(), // Will be populated by controller
+                    MachineRowHeights = new Dictionary<string, int>()
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating scheduler data");
+                
+                // Return fallback data structure
+                return new SchedulerPageViewModel
+                {
+                    StartDate = DateTime.UtcNow.Date,
+                    Dates = new List<DateTime> { DateTime.UtcNow.Date },
+                    Machines = new List<string>(),
+                    SlotsPerDay = 1,
+                    SlotMinutes = 1440,
+                    Jobs = new List<Job>(),
+                    MachineRowHeights = new Dictionary<string, int>()
+                };
+            }
         }
 
         public bool ValidateJobScheduling(Job job, List<Job> existingJobs, out List<string> errors)
@@ -140,6 +221,21 @@ namespace OpCentrix.Services
                 if (job.Quantity <= 0)
                 {
                     errors.Add("Quantity must be greater than zero");
+                }
+
+                // Validate machine exists and is available
+                var machine = await _machineManagementService.GetMachineByMachineIdAsync(job.MachineId);
+                if (machine == null)
+                {
+                    errors.Add($"Machine '{job.MachineId}' not found");
+                }
+                else if (!machine.IsActive)
+                {
+                    errors.Add($"Machine '{job.MachineId}' is not active");
+                }
+                else if (!machine.IsAvailableForScheduling)
+                {
+                    errors.Add($"Machine '{job.MachineId}' is not available for scheduling");
                 }
 
                 // SLS-specific validation
@@ -238,9 +334,8 @@ namespace OpCentrix.Services
         {
             try
             {
-                // Get machine configuration
-                var machine = await context.SlsMachines
-                    .FirstOrDefaultAsync(m => m.MachineId == job.MachineId);
+                // Get machine configuration using the machine management service
+                var machine = await _machineManagementService.GetMachineByMachineIdAsync(job.MachineId);
 
                 if (machine == null)
                 {
@@ -249,7 +344,7 @@ namespace OpCentrix.Services
                 }
 
                 // Check material compatibility
-                if (!machine.SupportsMaterial(job.SlsMaterial))
+                if (!machine.SupportedMaterials.Contains(job.SlsMaterial, StringComparison.OrdinalIgnoreCase))
                 {
                     _logger.LogWarning("Machine {MachineId} does not support material {Material}", 
                         job.MachineId, job.SlsMaterial);
@@ -264,18 +359,22 @@ namespace OpCentrix.Services
                     return false;
                 }
 
-                // Check process parameter compatibility
-                if (job.LaserPowerWatts > machine.MaxLaserPowerWatts)
+                // Check machine capabilities for SLS-specific parameters
+                var capabilities = await _machineManagementService.GetMachineCapabilitiesAsync(machine.Id);
+                var laserPowerCapability = capabilities.FirstOrDefault(c => c.CapabilityType == "LaserPower");
+                var scanSpeedCapability = capabilities.FirstOrDefault(c => c.CapabilityType == "ScanSpeed");
+
+                if (laserPowerCapability != null && !laserPowerCapability.IsValueInRange(job.LaserPowerWatts))
                 {
-                    _logger.LogWarning("Job {PartNumber} requires laser power {Power}W, machine {MachineId} max is {MaxPower}W", 
-                        job.PartNumber, job.LaserPowerWatts, job.MachineId, machine.MaxLaserPowerWatts);
+                    _logger.LogWarning("Job {PartNumber} laser power {Power}W outside machine {MachineId} capability range", 
+                        job.PartNumber, job.LaserPowerWatts, job.MachineId);
                     return false;
                 }
 
-                if (job.ScanSpeedMmPerSec > machine.MaxScanSpeedMmPerSec)
+                if (scanSpeedCapability != null && !scanSpeedCapability.IsValueInRange(job.ScanSpeedMmPerSec))
                 {
-                    _logger.LogWarning("Job {PartNumber} requires scan speed {Speed}mm/s, machine {MachineId} max is {MaxSpeed}mm/s", 
-                        job.PartNumber, job.ScanSpeedMmPerSec, job.MachineId, machine.MaxScanSpeedMmPerSec);
+                    _logger.LogWarning("Job {PartNumber} scan speed {Speed}mm/s outside machine {MachineId} capability range", 
+                        job.PartNumber, job.ScanSpeedMmPerSec, job.MachineId);
                     return false;
                 }
 
@@ -292,9 +391,8 @@ namespace OpCentrix.Services
         {
             try
             {
-                // Get machine current material
-                var machine = await context.SlsMachines
-                    .FirstOrDefaultAsync(m => m.MachineId == machineId);
+                // Get machine current material using machine management service
+                var machine = await _machineManagementService.GetMachineByMachineIdAsync(machineId);
 
                 if (machine == null)
                     return 0;
@@ -345,8 +443,7 @@ namespace OpCentrix.Services
 
             try
             {
-                var machine = await context.SlsMachines
-                    .FirstOrDefaultAsync(m => m.MachineId == job.MachineId);
+                var machine = await _machineManagementService.GetMachineByMachineIdAsync(job.MachineId);
 
                 if (machine == null)
                 {
@@ -354,35 +451,37 @@ namespace OpCentrix.Services
                     return issues;
                 }
 
-                // Check build envelope
-                if (job.Part != null)
+                // Check part accommodation
+                if (job.Part != null && !machine.CanAccommodatePart(job.Part))
                 {
-                    if (job.Part.LengthMm > machine.BuildLengthMm)
-                        issues.Add($"Part length ({job.Part.LengthMm}mm) exceeds machine build length ({machine.BuildLengthMm}mm)");
-                    
-                    if (job.Part.WidthMm > machine.BuildWidthMm)
-                        issues.Add($"Part width ({job.Part.WidthMm}mm) exceeds machine build width ({machine.BuildWidthMm}mm)");
-                    
-                    if (job.Part.HeightMm > machine.BuildHeightMm)
-                        issues.Add($"Part height ({job.Part.HeightMm}mm) exceeds machine build height ({machine.BuildHeightMm}mm)");
+                    issues.Add($"Part dimensions exceed machine build envelope");
                 }
 
                 // Check material support
-                if (!machine.SupportsMaterial(job.SlsMaterial))
+                if (!machine.SupportedMaterials.Contains(job.SlsMaterial, StringComparison.OrdinalIgnoreCase))
                     issues.Add($"Machine does not support material: {job.SlsMaterial}");
 
-                // Check process parameters
-                if (job.LaserPowerWatts > machine.MaxLaserPowerWatts)
-                    issues.Add($"Required laser power ({job.LaserPowerWatts}W) exceeds machine maximum ({machine.MaxLaserPowerWatts}W)");
-
-                if (job.ScanSpeedMmPerSec > machine.MaxScanSpeedMmPerSec)
-                    issues.Add($"Required scan speed ({job.ScanSpeedMmPerSec}mm/s) exceeds machine maximum ({machine.MaxScanSpeedMmPerSec}mm/s)");
-
-                if (job.LayerThicknessMicrons < machine.MinLayerThicknessMicrons)
-                    issues.Add($"Required layer thickness ({job.LayerThicknessMicrons}?m) below machine minimum ({machine.MinLayerThicknessMicrons}?m)");
-
-                if (job.LayerThicknessMicrons > machine.MaxLayerThicknessMicrons)
-                    issues.Add($"Required layer thickness ({job.LayerThicknessMicrons}?m) above machine maximum ({machine.MaxLayerThicknessMicrons}?m)");
+                // Check machine capabilities
+                var capabilities = await _machineManagementService.GetMachineCapabilitiesAsync(machine.Id);
+                
+                foreach (var capability in capabilities)
+                {
+                    switch (capability.CapabilityType.ToLower())
+                    {
+                        case "laserpower":
+                            if (!capability.IsValueInRange(job.LaserPowerWatts))
+                                issues.Add($"Laser power ({job.LaserPowerWatts}W) outside machine range {capability.RangeDisplay}");
+                            break;
+                        case "scanspeed":
+                            if (!capability.IsValueInRange(job.ScanSpeedMmPerSec))
+                                issues.Add($"Scan speed ({job.ScanSpeedMmPerSec}mm/s) outside machine range {capability.RangeDisplay}");
+                            break;
+                        case "layerthickness":
+                            if (!capability.IsValueInRange(job.LayerThicknessMicrons))
+                                issues.Add($"Layer thickness ({job.LayerThicknessMicrons}?m) outside machine range {capability.RangeDisplay}");
+                            break;
+                    }
+                }
 
                 // Check machine availability
                 if (!machine.IsActive)
@@ -465,8 +564,7 @@ namespace OpCentrix.Services
                     return jobs;
 
                 // Get machine build envelope
-                var machine = await context.SlsMachines
-                    .FirstOrDefaultAsync(m => m.MachineId == machineId);
+                var machine = await _machineManagementService.GetMachineByMachineIdAsync(machineId);
 
                 if (machine == null)
                     return jobs;
@@ -493,12 +591,6 @@ namespace OpCentrix.Services
         }
 
         #region Private Helper Methods
-
-        private DateTime GetMondayOfCurrentWeek()
-        {
-            // UPDATED: Start from UTC today instead of Monday of current week
-            return DateTime.UtcNow.Date;
-        }
 
         private (int dateCount, int slotsPerDay, int slotMinutes) GetZoomParameters(string zoom)
         {

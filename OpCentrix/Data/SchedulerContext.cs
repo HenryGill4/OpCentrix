@@ -16,6 +16,11 @@ namespace OpCentrix.Data
         public DbSet<User> Users { get; set; }
         public DbSet<UserSettings> UserSettings { get; set; }
         public DbSet<JobLogEntry> JobLogEntries { get; set; }
+        
+        // UPDATED: Generic Machine instead of SlsMachine (Task 6)
+        public DbSet<Machine> Machines { get; set; }
+
+        // Legacy SlsMachine table - DEPRECATED: Will be removed after migration
         public DbSet<SlsMachine> SlsMachines { get; set; }
 
         // NEW: Admin Control System tables (Task 2)
@@ -352,7 +357,7 @@ namespace OpCentrix.Data
                 // Relationships
                 entity.HasOne(e => e.SlsMachine)
                       .WithMany()
-                      .HasForeignKey(e => e.SlsMachineId)
+                      .HasForeignKey(e => e.MachineId)
                       .OnDelete(DeleteBehavior.Cascade);
 
                 // String length constraints
@@ -499,15 +504,15 @@ namespace OpCentrix.Data
                 entity.HasKey(e => e.Id);
 
                 // Indexes
-                entity.HasIndex(e => e.SlsMachineId);
+                entity.HasIndex(e => e.MachineId);
                 entity.HasIndex(e => e.CapabilityType);
                 entity.HasIndex(e => e.IsAvailable);
-                entity.HasIndex(e => new { e.SlsMachineId, e.CapabilityType });
+                entity.HasIndex(e => new { e.MachineId, e.CapabilityType });
 
                 // Relationships
-                entity.HasOne(e => e.SlsMachine)
+                entity.HasOne(e => e.Machine)
                       .WithMany()
-                      .HasForeignKey(e => e.SlsMachineId)
+                      .HasForeignKey(e => e.MachineId)
                       .OnDelete(DeleteBehavior.Cascade);
 
                 // Constraints
@@ -628,9 +633,7 @@ namespace OpCentrix.Data
                 entity.Property(e => e.FailureAction).HasMaxLength(500).HasDefaultValue("Hold for review");
                 entity.Property(e => e.SamplingMethod).HasMaxLength(50).HasDefaultValue("All");
                 entity.Property(e => e.Category).HasMaxLength(50).HasDefaultValue("Quality");
-                entity.Property(e => e.Notes).HasMaxLength(1000);
-                entity.Property(e => e.CreatedBy).HasMaxLength(100).HasDefaultValue("System");
-                entity.Property(e => e.LastModifiedBy).HasMaxLength(100).HasDefaultValue("System");
+                entity.Property(e => e.Notes).HasMaxLength(1000).HasDefaultValue("");
 
                 // Default values
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
@@ -710,8 +713,8 @@ namespace OpCentrix.Data
                 entity.Property(e => e.QualityInspector).HasMaxLength(100);
                 entity.Property(e => e.Supervisor).HasMaxLength(100);
                 entity.Property(e => e.CustomerOrderNumber).HasMaxLength(100);
-                entity.Property(e => e.Notes).HasMaxLength(1000);
-                entity.Property(e => e.HoldReason).HasMaxLength(500);
+                entity.Property(e => e.Notes).HasMaxLength(1000).HasDefaultValue("");
+                entity.Property(e => e.HoldReason).HasMaxLength(500).HasDefaultValue("");
                 entity.Property(e => e.ProcessParameters).HasMaxLength(2000).HasDefaultValue("{}");
                 entity.Property(e => e.QualityCheckpoints).HasMaxLength(2000).HasDefaultValue("{}");
                 entity.Property(e => e.ArchivedBy).HasMaxLength(100).HasDefaultValue("System");
@@ -1148,8 +1151,9 @@ namespace OpCentrix.Data
                 var userCount = await Users.CountAsync();
                 var partCount = await Parts.CountAsync();
                 var jobCount = await Jobs.CountAsync();
+                var machineCount = await Machines.CountAsync(); // UPDATED: Use generic Machines
 
-                return (true, $"Healthy - {userCount} users, {partCount} parts, {jobCount} jobs");
+                return (true, $"Healthy - {userCount} users, {partCount} parts, {jobCount} jobs, {machineCount} machines");
             }
             catch (Exception ex)
             {

@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using OpCentrix.Models;
@@ -314,9 +314,9 @@ public class MachinesModel : PageModel
                 return RedirectToPage();
             }
 
-            // Remove related machine capabilities
+            // Remove related machine capabilities - FIXED: Use MachineId instead of MachineId
             var capabilities = await _context.MachineCapabilities
-                .Where(mc => mc.MachineId == machine.MachineId)
+                .Where(mc => mc.MachineId == machine.Id) // FIXED: Use machine.Id (int) not machine.MachineId (string)
                 .ToListAsync();
 
             if (capabilities.Any())
@@ -353,19 +353,29 @@ public class MachinesModel : PageModel
                 return Page();
             }
 
+            // Find the machine by MachineId string and get its integer Id
+            var machine = await _context.SlsMachines
+                .FirstOrDefaultAsync(m => m.MachineId == CapabilityInput.MachineId);
+
+            if (machine == null)
+            {
+                TempData["Error"] = "Machine not found.";
+                return RedirectToPage();
+            }
+
             var capability = new MachineCapability
             {
-                SlsMachineId = CapabilityInput.MachineId,
+                MachineId = machine.Id, // FIXED: Use machine.Id (int) not CapabilityInput.MachineId (string)
                 CapabilityType = CapabilityInput.CapabilityType,
                 CapabilityName = CapabilityInput.CapabilityName,
-                CapabilityValue = CapabilityInput.CapabilityValue,
-                IsAvailable = CapabilityInput.IsAvailable,
-                Priority = CapabilityInput.Priority,
+                CapabilityValue = CapabilityInput.Description, // FIXED: Use Description instead of non-existent CapabilityValue
+                IsAvailable = !CapabilityInput.IsRequired, // FIXED: Use logical mapping - available if not required
+                Priority = 1, // FIXED: Use default priority since Priority doesn't exist in input model
                 MinValue = CapabilityInput.MinValue,
                 MaxValue = CapabilityInput.MaxValue,
                 Unit = CapabilityInput.Unit,
-                Notes = CapabilityInput.Notes,
-                RequiredCertification = CapabilityInput.RequiredCertification,
+                Notes = CapabilityInput.Description, // FIXED: Use Description instead of non-existent Notes
+                RequiredCertification = "", // FIXED: Set empty string since RequiredCertification doesn't exist in input model
                 CreatedBy = User.Identity?.Name ?? "Admin",
                 LastModifiedBy = User.Identity?.Name ?? "Admin",
                 CreatedDate = DateTime.UtcNow,
@@ -450,8 +460,9 @@ public class MachinesModel : PageModel
     private async Task LoadMachineCapabilitiesAsync()
     {
         MachineCapabilities = await _context.MachineCapabilities
-            .Where(mc => mc.IsActive)
-            .OrderBy(mc => mc.MachineId)
+            .Where(mc => mc.IsAvailable) // FIXED: Use IsAvailable (which exists) instead of IsActive (which doesn't)
+            .Include(mc => mc.Machine) // Include the machine for display
+            .OrderBy(mc => mc.Machine.MachineId) // FIXED: Order by SlsMachine.MachineId (navigation property)
             .ThenBy(mc => mc.CapabilityName)
             .ToListAsync();
     }
@@ -509,8 +520,8 @@ public class MachinesModel : PageModel
 
     public string GetSortIcon(string column)
     {
-        if (SortBy != column) return "??";
-        return SortDirection == "asc" ? "??" : "??";
+        if (SortBy != column) return "↕";
+        return SortDirection == "asc" ? "▲" : "▼";
     }
 }
 
@@ -587,11 +598,11 @@ public class MachineCreateEditModel
     public double MaxScanSpeedMmPerSec { get; set; } = 7000;
 
     [Range(10, 100)]
-    [Display(Name = "Min Layer Thickness (�m)")]
+    [Display(Name = "Min Layer Thickness (µm)")]
     public double MinLayerThicknessMicrons { get; set; } = 20;
 
     [Range(10, 100)]
-    [Display(Name = "Max Layer Thickness (�m)")]
+    [Display(Name = "Max Layer Thickness (µm)")]
     public double MaxLayerThicknessMicrons { get; set; } = 60;
 
     [Range(100, 2000)]

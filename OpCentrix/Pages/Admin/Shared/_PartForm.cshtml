@@ -233,11 +233,13 @@
                                             Effective Duration: @Model.EffectiveDurationHours.ToString("F1") hours
                                             @if (!string.IsNullOrEmpty(Model.AdminOverrideBy))
                                             {
-                                                <br />Override by: @Model.AdminOverrideBy
+                                                <br />
+                                                <text>Override by: @Model.AdminOverrideBy</text>
                                             }
                                             @if (Model.AdminOverrideDate.HasValue)
                                             {
-                                                <br />Override date: @Model.AdminOverrideDate.Value.ToString("yyyy-MM-dd HH:mm")
+                                                <br />
+                                                <text>Override date: @Model.AdminOverrideDate.Value.ToString("yyyy-MM-dd HH:mm")</text>
                                             }
                                         </p>
                                     }
