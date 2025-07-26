@@ -1,51 +1,56 @@
 ﻿@model OpCentrix.Models.Part
 
-<div class="modal-header">
-    <h2 class="text-xl font-bold text-gray-900">
-        @(Model.Id == 0 ? "Add New Part" : $"Edit Part: {Model.PartNumber}")
-    </h2>
-    <button type="button" onclick="hideModal()" class="text-gray-400 hover:text-gray-600">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-        </svg>
-    </button>
-</div>
-
-<!-- Display validation errors if any -->
-@if (ViewData["ValidationErrors"] is List<string> errors && errors.Any())
-{
-    <div class="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-        <div class="flex">
-            <svg class="w-5 h-5 text-red-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
-            </svg>
-            <div>
-                <h3 class="text-sm font-medium text-red-800">Please correct the following errors:</h3>
-                <ul class="mt-2 text-sm text-red-700">
-                    @foreach (var error in errors)
-                    {
-                        <li>• @error</li>
-                    }
-                </ul>
-            </div>
-        </div>
-    </div>
-}
-
 <form id="partForm" method="post" 
+      action="/Admin/Parts?handler=Save"
       hx-post="/Admin/Parts?handler=Save" 
+      hx-trigger="submit"
       hx-target="#modal-container .modal-content" 
       hx-swap="innerHTML"
-      hx-on::before-request="console.log('🎯 [FORM] Submitting part form'); showFormLoading();"
-      hx-on::after-swap="console.log('🎯 [FORM] Form response received, checking response...'); handleFormResponse(event);"
-      hx-on::response-error="console.error('❌ [FORM] Submission error:', event.detail); showErrorNotification('Form submission failed. Please try again.');"
+      hx-on::before-request="console.log('🎯 [FORM] Submitting part form to:', event.detail.elt.getAttribute('hx-post') || event.detail.elt.action); console.log('🎯 [FORM] Form data:', new FormData(event.detail.elt)); OpCentrixAdmin.Loading.show(document.getElementById('submitBtn'));"
+      hx-on::after-swap="console.log('🎯 [FORM] Form response received'); handlePartFormResponse(event);"
+      hx-on::response-error="console.error('❌ [FORM] Submission error:', event.detail); OpCentrixAdmin.Alert.error('Form submission failed. Please try again.');"
       enctype="application/x-www-form-urlencoded">
     
+    <!-- Modal Header -->
+    <div class="flex items-center justify-between p-6 border-b border-gray-200">
+        <h2 class="text-xl font-bold text-gray-900">
+            @(Model.Id == 0 ? "Add New Part" : $"Edit Part: {Model.PartNumber}")
+        </h2>
+        <button type="button" onclick="OpCentrixAdmin.Modal.hide('modal-container')" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Display validation errors if any -->
+    @if (ViewData["ValidationErrors"] is List<string> errors && errors.Any())
+    {
+        <div class="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div class="flex">
+                <svg class="w-5 h-5 text-red-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                </svg>
+                <div>
+                    <h3 class="text-sm font-medium text-red-800">Please correct the following errors:</h3>
+                    <ul class="mt-2 text-sm text-red-700">
+                        @foreach (var error in errors)
+                        {
+                            <li>• @error</li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </div>
+    }
+
     <input type="hidden" asp-for="Id" />
     <input type="hidden" asp-for="CreatedDate" />
     <input type="hidden" asp-for="CreatedBy" />
+    <input type="hidden" name="handler" value="Save" />
+    @Html.AntiForgeryToken()
     
-    <div class="modal-body">
+    <div class="p-6 max-h-[70vh] overflow-y-auto">
         <!-- Basic Information Section -->
         <div class="bg-blue-50 rounded-lg p-4 mb-6">
             <h3 class="text-lg font-semibold text-blue-900 mb-4 flex items-center">
@@ -61,7 +66,7 @@
                         Part Number <span class="text-red-500">*</span>
                     </label>
                     <input asp-for="PartNumber" type="text" placeholder="XX-XXXX (e.g., 14-5396)" required
-                           onblur="validatePartNumber(this.value)"
+                           onblur="window.validatePartNumber && window.validatePartNumber(this.value)"
                            class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
                     <span asp-validation-for="PartNumber" class="text-red-500 text-sm"></span>
                     <div id="partNumberValidation" class="text-xs mt-1 hidden"></div>
@@ -98,7 +103,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Material Type</label>
-                    <select asp-for="Material" id="materialSelect" onchange="updateSlsMaterial()" 
+                    <select asp-for="Material" id="materialSelect" onchange="window.updateSlsMaterial && window.updateSlsMaterial()" 
                             class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-green-500 focus:border-green-500">
                         <option value="">Select material...</option>
                         <optgroup label="Titanium Alloys">
@@ -158,7 +163,7 @@
                         Standard Duration (Hours) <span class="text-red-500">*</span>
                     </label>
                     <input asp-for="EstimatedHours" type="number" step="0.25" min="0.25" max="200" 
-                           placeholder="8.5" onchange="updateDurationDisplay()" required
+                           placeholder="8.5" onchange="window.updateDurationDisplay && window.updateDurationDisplay()" required
                            class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500" />
                     <span asp-validation-for="EstimatedHours" class="text-red-500 text-sm"></span>
                     <p class="text-xs text-gray-500 mt-1">Default manufacturing time</p>
@@ -199,7 +204,7 @@
                             Override Duration (Hours)
                         </label>
                         <input asp-for="AdminEstimatedHoursOverride" type="number" step="0.25" min="0.25" max="200" 
-                               placeholder="Leave empty for no override" onchange="updateOverrideDisplay()"
+                               placeholder="Leave empty for no override" onchange="window.updateOverrideDisplay && window.updateOverrideDisplay()"
                                class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500" />
                         <span asp-validation-for="AdminEstimatedHoursOverride" class="text-red-500 text-sm"></span>
                         <p class="text-xs text-gray-500 mt-1">Overrides standard duration when set</p>
@@ -243,73 +248,6 @@
                             }
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Physical Dimensions Section -->
-        <div class="bg-purple-50 rounded-lg p-4 mb-6">
-            <h3 class="text-lg font-semibold text-purple-900 mb-4 flex items-center">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
-                </svg>
-                Physical Dimensions & Weight
-            </h3>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
-                    <label asp-for="LengthMm" class="block text-sm font-medium text-gray-700 mb-1">Length (mm)</label>
-                    <input asp-for="LengthMm" type="number" step="0.1" min="0" placeholder="100.0 (optional)" 
-                           class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500" />
-                </div>
-                
-                <div>
-                    <label asp-for="WidthMm" class="block text-sm font-medium text-gray-700 mb-1">Width (mm)</label>
-                    <input asp-for="WidthMm" type="number" step="0.1" min="0" placeholder="50.0 (optional)" 
-                           class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500" />
-                </div>
-                
-                <div>
-                    <label asp-for="HeightMm" class="block text-sm font-medium text-gray-700 mb-1">Height (mm)</label>
-                    <input asp-for="HeightMm" type="number" step="0.1" min="0" placeholder="25.0 (optional)" 
-                           class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500" />
-                </div>
-                
-                <div>
-                    <label asp-for="WeightGrams" class="block text-sm font-medium text-gray-700 mb-1">Weight (g)</label>
-                    <input asp-for="WeightGrams" type="number" step="0.1" min="0" placeholder="200.0 (optional)" 
-                           class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500" />
-                </div>
-            </div>
-        </div>
-
-        <!-- Manufacturing Parameters Section -->
-        <div class="bg-indigo-50 rounded-lg p-4 mb-6">
-            <h3 class="text-lg font-semibold text-indigo-900 mb-4 flex items-center">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                </svg>
-                SLS Manufacturing Parameters
-            </h3>
-            
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                    <label asp-for="RecommendedLaserPower" class="block text-sm font-medium text-gray-700 mb-1">Laser Power (W)</label>
-                    <input asp-for="RecommendedLaserPower" type="number" step="1" min="0" max="400" placeholder="200 (optional)" 
-                           class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
-                </div>
-                
-                <div>
-                    <label asp-for="RecommendedScanSpeed" class="block text-sm font-medium text-gray-700 mb-1">Scan Speed (mm/s)</label>
-                    <input asp-for="RecommendedScanSpeed" type="number" step="10" min="0" max="2000" placeholder="1200 (optional)" 
-                           class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
-                </div>
-                
-                <div>
-                    <label asp-for="RecommendedBuildTemperature" class="block text-sm font-medium text-gray-700 mb-1">Build Temp (°C)</label>
-                    <input asp-for="RecommendedBuildTemperature" type="number" step="5" min="0" max="300" placeholder="180 (optional)" 
-                           class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
                 </div>
             </div>
         </div>
@@ -417,30 +355,63 @@
         </div>
     </div>
 
-    <div class="modal-footer">
-        <button type="button" onclick="hideModal()" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition">
+    <!-- Modal Footer -->
+    <div class="flex items-center justify-end px-6 py-4 border-t border-gray-200 space-x-3">
+        <button type="button" onclick="OpCentrixAdmin.Modal.hide('modal-container')" 
+                class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition">
             Cancel
         </button>
         <button type="submit" id="submitBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-            <span id="submitText">@(Model.Id == 0 ? "Create Part" : "Update Part")</span>
-            <span id="submitSpinner" class="hidden ml-2">
-                <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+            <span class="submit-text">@(Model.Id == 0 ? "Create Part" : "Update Part")</span>
+            <span class="submit-loading hidden ml-2">
+                <svg class="animate-spin h-4 w-4 text-white inline" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
+                Saving...
             </span>
         </button>
     </div>
 </form>
 
 <script>
-    // Part Form functions - Enhanced and Fixed
+    // Part Form functions - Enhanced and Fixed for New Modal System
     (function() {
         'use strict';
         
         console.log('🔧 [FORM] Part form script loading...');
+
+        // Handle form response after HTMX submission
+        window.handlePartFormResponse = function(event) {
+            console.log('🔧 [FORM] Form response handler called');
+            
+            const response = event.detail.xhr.responseText;
+            
+            // Check if response contains validation errors
+            if (response.includes('ValidationErrors') || response.includes('text-red-500')) {
+                console.log('🔧 [FORM] Validation errors found - keeping modal open');
+                OpCentrixAdmin.Loading.hide(document.getElementById('submitBtn'));
+                return;
+            }
+            
+            // Check if response contains success script
+            if (response.includes('<script>') && response.includes('Part saved successfully')) {
+                console.log('✅ [FORM] Success script response received - executing');
+                
+                // Extract part number for better messaging
+                const partNumberMatch = response.match(/Part saved successfully: ([^']+)/);
+                const partNumber = partNumberMatch ? partNumberMatch[1] : 'Part';
+                
+                // Execute success handling
+                OpCentrixAdmin.Parts.handleFormSuccess(partNumber, @Model.Id != 0);
+                return;
+            }
+            
+            console.log('🔧 [FORM] Standard response handled - form content updated');
+            OpCentrixAdmin.Loading.hide(document.getElementById('submitBtn'));
+        };
         
-        // Global function overrides for this form
+        // GLOBAL FUNCTION DEFINITIONS - Available for inline event handlers
         window.updateSlsMaterial = function() {
             console.log('🔧 [FORM] updateSlsMaterial called');
             
@@ -524,27 +495,17 @@
             
             // Update form fields with material-specific defaults
             const updates = [
-                { id: 'RecommendedLaserPower', value: defaults.laserPower, name: 'Laser Power' },
-                { id: 'RecommendedScanSpeed', value: defaults.scanSpeed, name: 'Scan Speed' },
-                { id: 'RecommendedBuildTemperature', value: defaults.buildTemperature, name: 'Build Temperature' },
-                { id: 'MaterialCostPerKg', value: defaults.materialCost, name: 'Material Cost' },
-                { id: 'EstimatedHours', value: defaults.estimatedHours, name: 'Estimated Hours' }
+                { id: 'EstimatedHours', value: defaults.estimatedHours, name: 'Estimated Hours' },
+                { id: 'MaterialCostPerKg', value: defaults.materialCost, name: 'Material Cost' }
             ];
             
             let updateCount = 0;
             updates.forEach(update => {
                 const element = document.getElementById(update.id) || document.querySelector(`input[name="${update.id}"]`);
-                if (element) {
-                    // Only update if field is empty or has default value
-                    if (!element.value || 
-                        (update.id === 'EstimatedHours' && (element.value === '8' || element.value === '8.0')) ||
-                        (update.id === 'RecommendedLaserPower' && element.value === '200') ||
-                        (update.id === 'MaterialCostPerKg' && element.value === '450')) {
-                        
-                        element.value = update.value;
-                        updateCount++;
-                        console.log(`✅ [FORM] Updated ${update.name} to: ${update.value}`);
-                    }
+                if (element && (!element.value || element.value === '8' || element.value === '450')) {
+                    element.value = update.value;
+                    updateCount++;
+                    console.log(`✅ [FORM] Updated ${update.name} to: ${update.value}`);
                 }
             });
             
@@ -660,77 +621,7 @@
             }
         };
         
-        // Form loading state management
-        window.showFormLoading = function() {
-            console.log('🔧 [FORM] Form loading handler called');
-            
-            const submitBtn = document.getElementById('submitBtn');
-            const submitText = document.getElementById('submitText');
-            const submitSpinner = document.getElementById('submitSpinner');
-            
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                console.log('🔧 [FORM] Submit button disabled');
-            }
-            if (submitText) {
-                submitText.textContent = 'Saving...';
-                console.log('🔧 [FORM] Submit text updated');
-            }
-            if (submitSpinner) {
-                submitSpinner.classList.remove('hidden');
-                console.log('🔧 [FORM] Spinner shown');
-            }
-        };
-        
-        // Form response handler
-        window.handleFormResponse = function(event) {
-            console.log('🔧 [FORM] Form response handler called');
-            
-            const submitBtn = document.getElementById('submitBtn');
-            const submitText = document.getElementById('submitText');
-            const submitSpinner = document.getElementById('submitSpinner');
-            
-            // Reset button state
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                console.log('🔧 [FORM] Submit button re-enabled');
-            }
-            if (submitText) {
-                submitText.textContent = '@(Model.Id == 0 ? "Create Part" : "Update Part")';
-                console.log('🔧 [FORM] Submit text reset');
-            }
-            if (submitSpinner) {
-                submitSpinner.classList.add('hidden');
-                console.log('🔧 [FORM] Spinner hidden');
-            }
-            
-            // Check response type
-            const response = event.detail.xhr.responseText;
-            
-            if (response.includes('ValidationErrors')) {
-                console.log('🔧 [FORM] Validation errors found - keeping modal open');
-                return;
-            }
-            
-            if (response.includes('<script>')) {
-                console.log('✅ [FORM] Success script response received - executing');
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = response;
-                const scripts = tempDiv.querySelectorAll('script');
-                scripts.forEach(script => {
-                    try {
-                        eval(script.textContent);
-                    } catch (error) {
-                        console.error('❌ [FORM] Script execution error:', error);
-                    }
-                });
-                return;
-            }
-            
-            console.log('🔧 [FORM] Standard response handled - this might be new form content');
-        };
-        
-        // Part number validation
+        // Part number validation - GLOBALLY AVAILABLE
         window.validatePartNumber = async function(partNumber) {
             console.log('🔧 [FORM] Validating part number:', partNumber);
             
@@ -803,6 +694,52 @@
         function initializeForm() {
             console.log('🔧 [FORM] Initializing part form...');
             
+            // Add fallback form submission handler
+            const form = document.getElementById('partForm');
+            if (form) {
+                // Add a fallback submit handler that doesn't rely on HTMX
+                form.addEventListener('submit', function(e) {
+                    console.log('🔧 [FORM] Form submit event triggered');
+                    
+                    // Check if HTMX is handling this
+                    const hasHtmx = form.hasAttribute('hx-post');
+                    if (hasHtmx) {
+                        console.log('🔧 [FORM] HTMX should handle this submission');
+                        return; // Let HTMX handle it
+                    }
+                    
+                    // Fallback: handle manually
+                    console.log('🔧 [FORM] Using fallback submission handler');
+                    e.preventDefault();
+                    
+                    const formData = new FormData(form);
+                    formData.set('handler', 'Save'); // Ensure handler is set
+                    
+                    fetch('/Admin/Parts?handler=Save', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.text())
+                    .then(html => {
+                        console.log('✅ [FORM] Fallback submission successful');
+                        if (html.includes('Part saved successfully')) {
+                            console.log('✅ [FORM] Part saved - closing modal and refreshing');
+                            if (typeof OpCentrixAdmin !== 'undefined' && OpCentrixAdmin.Modal) {
+                                OpCentrixAdmin.Modal.hide('modal-container');
+                            }
+                            setTimeout(() => { window.location.reload(); }, 1500);
+                        } else {
+                            // Update modal content with response (likely validation errors)
+                            document.querySelector('#modal-container .modal-content').innerHTML = html;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('❌ [FORM] Fallback submission failed:', error);
+                        alert('Error saving part: ' + error.message);
+                    });
+                });
+            }
+            
             // Wait a bit for elements to be available
             setTimeout(() => {
                 // Test and update initial values
@@ -825,6 +762,9 @@
                 if (hoursInput && hoursInput.value) {
                     updateDurationDisplay();
                 }
+                
+                // Update override display if override is set
+                updateOverrideDisplay();
                 
                 console.log('✅ [FORM] Form initialization complete');
             }, 100);

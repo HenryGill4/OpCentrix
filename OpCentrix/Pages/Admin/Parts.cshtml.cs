@@ -353,8 +353,8 @@ namespace OpCentrix.Pages.Admin
         public async Task<IActionResult> OnPostSaveAsync([FromForm] Part part)
         {
             var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogInformation("?? [PARTS-{OperationId}] Processing part save: Id={PartId}, PartNumber='{PartNumber}', Description='{Description}'", 
-                operationId, part.Id, part.PartNumber, part.Description);
+            _logger.LogInformation("?? [PARTS-{OperationId}] OnPostSaveAsync called - Processing part save: Id={PartId}, PartNumber='{PartNumber}', Description='{Description}'", 
+                operationId, part?.Id ?? -1, part?.PartNumber ?? "NULL", part?.Description ?? "NULL");
 
             try
             {
@@ -623,16 +623,18 @@ namespace OpCentrix.Pages.Admin
                 
                 return Content($@"
                     <script>
-                        console.log('? Part saved successfully (ID: {operationId})');
-                        if (typeof hideModal === 'function') {{ hideModal(); }}
-                        if (typeof refreshPartsGrid === 'function') {{ 
-                            refreshPartsGrid(); 
-                        }} else {{ 
-                            console.log('?? Refreshing page...'); 
-                            window.location.reload(); 
+                        console.log('? Part saved successfully (ID: {operationId}): {part.PartNumber}');
+                        if (typeof OpCentrixAdmin !== 'undefined' && OpCentrixAdmin.Parts && OpCentrixAdmin.Parts.handleFormSuccess) {{
+                            OpCentrixAdmin.Parts.handleFormSuccess('{part.PartNumber}', {(part.Id != 0).ToString().ToLower()});
+                        }} else {{
+                            console.log('?? Refreshing page - OpCentrixAdmin.Parts not available'); 
+                            if (typeof OpCentrixAdmin !== 'undefined' && OpCentrixAdmin.Modal && OpCentrixAdmin.Modal.hide) {{
+                                OpCentrixAdmin.Modal.hide('modal-container');
+                            }}
+                            setTimeout(() => {{ window.location.reload(); }}, 1500);
                         }}
-                        if (typeof showSuccessNotification === 'function') {{
-                            showSuccessNotification('Part saved successfully: {part.PartNumber}', 4000);
+                        if (typeof OpCentrixAdmin !== 'undefined' && OpCentrixAdmin.Alert && OpCentrixAdmin.Alert.success) {{
+                            OpCentrixAdmin.Alert.success('Part saved successfully: {part.PartNumber}', 4000);
                         }}
                     </script>
                 ", "text/html");
@@ -811,6 +813,53 @@ namespace OpCentrix.Pages.Admin
             }
             
             return Math.Round(value, 2); // Round to prevent precision issues
+        }
+
+        public async Task<IActionResult> OnPostAsync()
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogWarning("?? [PARTS-{OperationId}] Default OnPostAsync called - no specific handler found. Request details:", operationId);
+            _logger.LogWarning("?? [PARTS-{OperationId}] - QueryString: {QueryString}", operationId, Request.QueryString.ToString());
+            _logger.LogWarning("?? [PARTS-{OperationId}] - Method: {Method}", operationId, Request.Method);
+            _logger.LogWarning("?? [PARTS-{OperationId}] - ContentType: {ContentType}", operationId, Request.ContentType);
+            
+            // Log form data
+            if (Request.HasFormContentType)
+            {
+                foreach (var key in Request.Form.Keys)
+                {
+                    _logger.LogDebug("?? [PARTS-{OperationId}] - Form[{Key}]: {Value}", operationId, key, Request.Form[key]);
+                }
+            }
+
+            // Check if this is a Save request that fell through
+            if (Request.Query.ContainsKey("handler") && Request.Query["handler"] == "Save")
+            {
+                _logger.LogWarning("?? [PARTS-{OperationId}] Save handler request detected in default POST - redirecting", operationId);
+                
+                // Try to extract part data from form
+                var part = new Part();
+                await TryUpdateModelAsync(part);
+                
+                return await OnPostSaveAsync(part);
+            }
+
+            // Also check if form has handler field
+            if (Request.HasFormContentType && Request.Form.ContainsKey("handler") && Request.Form["handler"] == "Save")
+            {
+                _logger.LogWarning("?? [PARTS-{OperationId}] Save handler detected in form data - redirecting", operationId);
+                
+                // Try to extract part data from form
+                var part = new Part();
+                await TryUpdateModelAsync(part);
+                
+                return await OnPostSaveAsync(part);
+            }
+
+            // Load the parts page as fallback
+            _logger.LogInformation("?? [PARTS-{OperationId}] Falling back to regular page load", operationId);
+            await OnGetAsync();
+            return Page();
         }
     }
 }

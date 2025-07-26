@@ -5,20 +5,212 @@
     Layout = "~/Pages/Admin/Shared/_AdminLayout.cshtml";
 }
 
+<!-- Parts JavaScript - Load immediately to ensure functions are available -->
+<script>
+// Parts Page Management - Load immediately for onclick handlers
+(function() {
+    'use strict';
+    
+    // Function to initialize Parts functions
+    function initializeParts() {
+        if (!window.OpCentrixAdmin) {
+            console.log('? [PARTS] OpCentrixAdmin not ready yet, retrying...');
+            setTimeout(initializeParts, 100); // Retry in 100ms
+            return;
+        }
+
+        // Initialize parts management
+        window.OpCentrixAdmin.Parts = window.OpCentrixAdmin.Parts || {};
+
+        /**
+         * Show add part modal
+         */
+        window.OpCentrixAdmin.Parts.showAddModal = async function() {
+            const operationId = window.OpCentrixAdmin.generateOperationId();
+            console.log(`?? [PARTS-${operationId}] Opening add part modal`);
+
+            try {
+                // Show loading in modal container
+                const modalContainer = document.getElementById('modal-container');
+                if (!modalContainer) {
+                    throw new Error('Modal container not found');
+                }
+                
+                const modalContent = modalContainer.querySelector('.modal-content');
+                if (!modalContent) {
+                    throw new Error('Modal content container not found');
+                }
+                
+                modalContent.innerHTML = `
+                    <div class="flex items-center justify-center p-12">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <span class="ml-3 text-gray-600">Loading form...</span>
+                    </div>
+                `;
+                
+                window.OpCentrixAdmin.Modal.show('modal-container');
+
+                // Load the form content
+                const response = await fetch('/Admin/Parts?handler=Add');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const htmlContent = await response.text();
+                modalContent.innerHTML = htmlContent;
+
+                console.log(`? [PARTS-${operationId}] Add part modal loaded successfully`);
+
+            } catch (error) {
+                console.error(`? [PARTS-${operationId}] Error loading add part modal:`, error);
+                window.OpCentrixAdmin.Alert.error(`Failed to load add part form: ${error.message}`);
+                window.OpCentrixAdmin.Modal.hide('modal-container');
+            }
+        };
+
+        /**
+         * Show edit part modal
+         */
+        window.OpCentrixAdmin.Parts.showEditModal = async function(partId) {
+            const operationId = window.OpCentrixAdmin.generateOperationId();
+            console.log(`?? [PARTS-${operationId}] Opening edit part modal for ID: ${partId}`);
+
+            try {
+                if (!partId || partId <= 0) {
+                    throw new Error(`Invalid part ID: ${partId}`);
+                }
+
+                // Show loading in modal container
+                const modalContainer = document.getElementById('modal-container');
+                if (!modalContainer) {
+                    throw new Error('Modal container not found');
+                }
+                
+                const modalContent = modalContainer.querySelector('.modal-content');
+                if (!modalContent) {
+                    throw new Error('Modal content container not found');
+                }
+                
+                modalContent.innerHTML = `
+                    <div class="flex items-center justify-center p-12">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <span class="ml-3 text-gray-600">Loading part data...</span>
+                    </div>
+                `;
+                
+                window.OpCentrixAdmin.Modal.show('modal-container');
+
+                // Load the form content
+                const response = await fetch(`/Admin/Parts?handler=Edit&id=${partId}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const htmlContent = await response.text();
+                modalContent.innerHTML = htmlContent;
+
+                console.log(`? [PARTS-${operationId}] Edit part modal loaded successfully for ID: ${partId}`);
+
+            } catch (error) {
+                console.error(`? [PARTS-${operationId}] Error loading edit part modal:`, error);
+                window.OpCentrixAdmin.Alert.error(`Failed to load edit part form: ${error.message}`);
+                window.OpCentrixAdmin.Modal.hide('modal-container');
+            }
+        };
+
+        /**
+         * Delete part with confirmation
+         */
+        window.OpCentrixAdmin.Parts.deletePart = function(partId, partNumber) {
+            const operationId = window.OpCentrixAdmin.generateOperationId();
+            console.log(`??? [PARTS-${operationId}] Delete request for part: ${partNumber} (ID: ${partId})`);
+
+            const confirmed = window.OpCentrixAdmin.Confirm.delete(partNumber, async () => {
+                try {
+                    console.log(`?? [PARTS-${operationId}] Proceeding with delete for part: ${partNumber}`);
+
+                    // Create form data for CSRF token
+                    const formData = new FormData();
+                    const token = document.querySelector('input[name="__RequestVerificationToken"]');
+                    if (token) {
+                        formData.append('__RequestVerificationToken', token.value);
+                    }
+
+                    const response = await fetch(`/Admin/Parts?handler=Delete&id=${partId}`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    const result = await response.text();
+                    
+                    // Check if response contains error
+                    if (result.includes('error') || result.includes('Error')) {
+                        throw new Error('Server returned an error response');
+                    }
+
+                    console.log(`? [PARTS-${operationId}] Part deleted successfully: ${partNumber}`);
+                    window.OpCentrixAdmin.Alert.success(`Part "${partNumber}" deleted successfully`);
+                    
+                    // Refresh the page to update the parts list
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+
+                } catch (error) {
+                    console.error(`? [PARTS-${operationId}] Error deleting part:`, error);
+                    window.OpCentrixAdmin.Alert.error(`Failed to delete part "${partNumber}": ${error.message}`);
+                }
+            });
+
+            if (!confirmed) {
+                console.log(`? [PARTS-${operationId}] User cancelled delete for part: ${partNumber}`);
+            }
+        };
+
+        /**
+         * Handle successful form submission
+         */
+        window.OpCentrixAdmin.Parts.handleFormSuccess = function(partNumber, isEdit = false) {
+            const operationId = window.OpCentrixAdmin.generateOperationId();
+            const action = isEdit ? 'updated' : 'created';
+            
+            console.log(`? [PARTS-${operationId}] Part ${action} successfully: ${partNumber}`);
+            
+            window.OpCentrixAdmin.Modal.hide('modal-container');
+            window.OpCentrixAdmin.Alert.success(`Part "${partNumber}" ${action} successfully`);
+            
+            // Refresh the page to update the parts list
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        };
+
+        console.log('? [PARTS] Parts management functions loaded and available');
+    }
+
+    // Start initialization process
+    initializeParts();
+
+})();
+</script>
+
 <div class="mb-6">
     <div class="flex justify-between items-center">
         <div>
             <h1 class="text-2xl font-bold text-gray-900">Manage Parts</h1>
             <p class="text-gray-600 mt-1">Create, edit, and manage manufacturing parts</p>
         </div>
-        <button hx-get="/Admin/Parts?handler=Add" 
-                hx-target="#modal-container .modal-content"
-                hx-swap="innerHTML"
-                hx-on::before-request="console.log('?? [HTMX] Starting request to create new part');"
-                hx-on::after-swap="console.log('?? [HTMX] Content loaded, checking for showModal function...'); if (typeof showModal === 'function') { console.log('?? [HTMX] showModal function found, calling it...'); setTimeout(() => showModal(), 50); } else { console.error('? [HTMX] showModal function not found!'); }"
-                hx-on::response-error="console.error('? [HTMX] Response error:', event.detail); showErrorNotification('Error loading form. Please try again.');"
-                class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">
-            + Add New Part
+        <button type="button"
+                onclick="OpCentrixAdmin.Parts.showAddModal()"
+                class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Add New Part
         </button>
     </div>
 </div>
@@ -77,7 +269,7 @@
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
             </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
+            <tbody class="bg-white divide-y divide-gray-200" id="parts-table-body">
                 @if (Model.Parts.Any())
                 {
                     @foreach (var part in Model.Parts)
@@ -134,25 +326,16 @@
                                 }
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                                <button hx-get="/Admin/Parts?handler=Edit&id=@part.Id" 
-                                        hx-target="#modal-container .modal-content"
-                                        hx-swap="innerHTML"
-                                        hx-on::before-request="console.log('?? [HTMX] Starting edit request for part ID:', @part.Id);"
-                                        hx-on::after-swap="console.log('?? [HTMX] Edit content loaded, checking for showModal function...'); if (typeof showModal === 'function') { console.log('?? [HTMX] showModal function found, calling it...'); setTimeout(() => showModal(), 50); } else { console.error('? [HTMX] showModal function not found!'); }"
-                                        hx-on::response-error="console.error('? [HTMX] Edit error:', event.detail); showErrorNotification('Error loading edit form. Please try again.');"
+                                <button type="button" 
+                                        onclick="OpCentrixAdmin.Parts.showEditModal(@part.Id)"
                                         class="text-blue-600 hover:text-blue-900 transition">
                                     Edit
                                 </button>
-                                <form style="display: inline;"
-                                      hx-post="/Admin/Parts?handler=Delete&id=@part.Id"
-                                      hx-confirm="Are you sure you want to delete this part? This cannot be undone."
-                                      hx-on::after-request="console.log('?? [PARTS] Delete response received:', event.detail.xhr.status); if(event.detail.xhr.status === 200) { console.log('? [PARTS] Delete success'); window.location.reload(); } else { console.error('? [PARTS] Delete failed:', event.detail.xhr.status); }"
-                                      hx-on::response-error="console.error('?? [PARTS] Delete error:', event.detail); showNotification('Error deleting part. Please try again.', 'error');">
-                                    @Html.AntiForgeryToken()
-                                    <button type="submit" class="text-red-600 hover:text-red-900 transition">
-                                        Delete
-                                    </button>
-                                </form>
+                                <button type="button" 
+                                        onclick="OpCentrixAdmin.Parts.deletePart(@part.Id, '@part.PartNumber')"
+                                        class="text-red-600 hover:text-red-900 transition">
+                                    Delete
+                                </button>
                             </td>
                         </tr>
                     }
@@ -218,4 +401,55 @@
             </div>
         </div>
     </div>
+}
+
+@section Scripts {
+    <script>
+        // HTMX Integration for Parts Forms - runs after DOM is ready
+        (function() {
+            'use strict';
+
+            /**
+             * Setup HTMX integration for parts forms
+             */
+            function setupHTMXIntegration() {
+                // Listen for successful form submissions in modal
+                document.addEventListener('htmx:afterRequest', function(event) {
+                    if (event.target.closest('#modal-container') && event.detail.successful) {
+                        const response = event.detail.xhr.responseText;
+                        
+                        // Check if response is a script (success response)
+                        if (response.includes('<script>') && response.includes('Part saved successfully')) {
+                            // Extract part number from response for better messaging
+                            const partNumberMatch = response.match(/Part saved successfully: ([^']+)/);
+                            const partNumber = partNumberMatch ? partNumberMatch[1] : 'Part';
+                            
+                            OpCentrixAdmin.Parts.handleFormSuccess(partNumber, true);
+                        }
+                    }
+                });
+
+                // Handle form errors
+                document.addEventListener('htmx:responseError', function(event) {
+                    if (event.target.closest('#modal-container')) {
+                        console.error('HTMX form submission error:', event.detail);
+                        OpCentrixAdmin.Alert.error('Form submission failed. Please try again.');
+                        
+                        // Hide any loading states
+                        OpCentrixAdmin.Loading.hideAll();
+                    }
+                });
+            }
+
+            // Initialize when DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', setupHTMXIntegration);
+            } else {
+                setupHTMXIntegration();
+            }
+
+            console.log('? [PARTS] HTMX integration initialized successfully');
+
+        })();
+    </script>
 }

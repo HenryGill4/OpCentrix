@@ -12,13 +12,13 @@
             <p class="text-gray-600 mt-2">Electrical Discharge Machining Log & Documentation</p>
         </div>
         <div class="flex space-x-3">
-            <button onclick="viewStoredLogs()" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition">
+            <button onclick="SafeExecute.call('viewStoredLogs')" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition">
                 ?? View Stored Logs (<span id="logCount">0</span>)
             </button>
-            <button onclick="clearForm()" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition">
+            <button onclick="SafeExecute.call('clearForm')" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition">
                 Clear Form
             </button>
-            <button onclick="generatePrintout()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+            <button onclick="SafeExecute.call('generatePrintout')" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
                 Generate EDM Log
             </button>
         </div>
@@ -197,7 +197,7 @@
                     <select id="tolerance" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition text-lg">
                         <option value="">Select Status</option>
                         <option value="? Within Tolerance">? Within Tolerance</option>
-                        <option value="? Close to Limit">? Close to Limit</option>
+                        <option value="?? Close to Limit">?? Close to Limit</option>
                         <option value="? Out of Tolerance">? Out of Tolerance</option>
                     </select>
                 </div>
@@ -243,13 +243,13 @@
                 </div>
             </div>
             <div class="no-print flex space-x-3">
-                <button onclick="printAndStore()" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition text-lg font-semibold">
+                <button onclick="SafeExecute.call('printAndStore')" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition text-lg font-semibold">
                     <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
                     </svg>
                     Print & Store Log
                 </button>
-                <button onclick="hidePrintSection()" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition">
+                <button onclick="SafeExecute.call('hidePrintSection')" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition">
                     Close Preview
                 </button>
             </div>
@@ -391,7 +391,7 @@
         <div class="mt-3">
             <div class="flex items-center justify-between pb-4 border-b">
                 <h3 class="text-lg font-semibold text-gray-900">Stored EDM Logs</h3>
-                <button onclick="closeStoredLogsModal()" class="text-gray-400 hover:text-gray-600">
+                <button onclick="SafeExecute.call('closeStoredLogsModal')" class="text-gray-400 hover:text-gray-600">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
@@ -496,258 +496,489 @@
 </style>
 
 <script>
-    // Enhanced EDM Log Management with Local Storage and Usage Tracking
-    let edmLogStorage = {
-        logs: [],
-        currentLogNumber: 1,
-        
-        init() {
-            this.loadFromStorage();
-            this.updateStats();
-            this.updateLogNumber();
-        },
-        
-        loadFromStorage() {
+    // **ENHANCED ERROR LOGGING FOR EDM PAGE**
+    console.log('?? [EDM] Loading EDM Operations page with enhanced error logging...');
+
+    // Safe execution wrapper for all EDM functions
+    window.SafeExecute = {
+        call: function(functionName, ...args) {
+            const operationId = this.generateOperationId();
+            console.log(`?? [EDM-${operationId}] Executing: ${functionName}`);
+            
             try {
-                const stored = localStorage.getItem('edmLogs');
-                if (stored) {
-                    this.logs = JSON.parse(stored);
-                }
-                
-                const logNumber = localStorage.getItem('edmLogNumber');
-                if (logNumber) {
-                    this.currentLogNumber = parseInt(logNumber);
+                if (typeof window[functionName] === 'function') {
+                    const result = window[functionName].apply(this, args);
+                    console.log(`? [EDM-${operationId}] ${functionName} completed successfully`);
+                    return result;
+                } else if (typeof window.EDMOperations[functionName] === 'function') {
+                    const result = window.EDMOperations[functionName].apply(this, args);
+                    console.log(`? [EDM-${operationId}] ${functionName} completed successfully`);
+                    return result;
+                } else {
+                    throw new Error(`Function ${functionName} not found`);
                 }
             } catch (error) {
-                console.error('Error loading EDM logs from storage:', error);
-                this.logs = [];
-                this.currentLogNumber = 1;
+                this.logError(operationId, functionName, error);
+                this.showUserFriendlyError(functionName, error);
+                return false;
             }
         },
         
-        saveToStorage() {
-            try {
-                localStorage.setItem('edmLogs', JSON.stringify(this.logs));
-                localStorage.setItem('edmLogNumber', this.currentLogNumber.toString());
-            } catch (error) {
-                console.error('Error saving EDM logs to storage:', error);
-            }
+        generateOperationId: function() {
+            return Math.random().toString(36).substr(2, 8);
         },
         
-        addLog(logData) {
-            logData.id = Date.now();
-            logData.logNumber = this.currentLogNumber;
-            logData.timestamp = new Date().toISOString();
-            logData.operator = '@User.Identity?.Name';
-            
-            this.logs.unshift(logData); // Add to beginning
-            this.currentLogNumber++;
-            
-            // Keep only last 100 logs to prevent storage overflow
-            if (this.logs.length > 100) {
-                this.logs = this.logs.slice(0, 100);
-            }
-            
-            this.saveToStorage();
-            this.updateStats();
-            this.updateLogNumber();
-            
-            console.log('?? EDM Log stored locally:', logData);
-        },
-        
-        getStats() {
-            const today = new Date().toDateString();
-            const todayLogs = this.logs.filter(log => 
-                new Date(log.timestamp).toDateString() === today
-            );
-            
-            const lastLog = this.logs.length > 0 ? this.logs[0] : null;
-            
-            return {
-                total: this.logs.length,
-                today: todayLogs.length,
-                lastLogTime: lastLog ? new Date(lastLog.timestamp).toLocaleString() : 'Never'
+        logError: function(operationId, functionName, error) {
+            const errorData = {
+                id: `EDM_${Date.now()}_${operationId}`,
+                timestamp: new Date().toISOString(),
+                category: 'EDM',
+                operation: functionName,
+                error: {
+                    message: error.message,
+                    stack: error.stack,
+                    type: error.constructor.name
+                },
+                context: {
+                    url: window.location.href,
+                    page: 'EDM Operations',
+                    formData: this.getFormData(),
+                    elementIds: this.getAllElementIds()
+                }
             };
-        },
-        
-        updateStats() {
-            const stats = this.getStats();
             
-            document.getElementById('totalLogsCount').textContent = stats.total;
-            document.getElementById('todayLogsCount').textContent = stats.today;
-            document.getElementById('lastLogTime').textContent = stats.lastLogTime;
-            document.getElementById('logCount').textContent = stats.total;
+            console.error(`?? [EDM-${operationId}] Error in ${functionName}:`, errorData);
+            
+            // Store in localStorage
+            try {
+                const errors = JSON.parse(localStorage.getItem('edm_errors') || '[]');
+                errors.push(errorData);
+                localStorage.setItem('edm_errors', JSON.stringify(errors.slice(-10)));
+            } catch (e) {
+                console.warn('Failed to store error in localStorage:', e);
+            }
+            
+            // Send to server
+            this.sendErrorToServer(errorData);
         },
         
-        updateLogNumber() {
-            document.getElementById('nextLogNumber').textContent = this.currentLogNumber;
+        getFormData: function() {
+            const form = document.getElementById('edmLogForm');
+            if (!form) return {};
+            
+            const formData = new FormData(form);
+            const data = {};
+            for (const [key, value] of formData.entries()) {
+                data[key] = value;
+            }
+            return data;
+        },
+        
+        getAllElementIds: function() {
+            return Array.from(document.querySelectorAll('[id]')).map(el => el.id);
+        },
+        
+        sendErrorToServer: async function(errorData) {
+            try {
+                await fetch('/Api/ErrorLog', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(errorData)
+                });
+            } catch (e) {
+                console.warn('Failed to send error to server:', e);
+            }
+        },
+        
+        showUserFriendlyError: function(functionName, error) {
+            const friendlyMessages = {
+                'generatePrintout': 'Unable to generate the EDM log printout. Please check that all required fields are filled out.',
+                'printAndStore': 'Unable to print and store the log. Please try generating the printout again.',
+                'clearForm': 'Unable to clear the form. Please refresh the page and try again.',
+                'viewStoredLogs': 'Unable to view stored logs. Please check your browser storage settings.',
+                'closeStoredLogsModal': 'Unable to close the logs modal. Please refresh the page.'
+            };
+            
+            const message = friendlyMessages[functionName] || `An error occurred with ${functionName}. Please try again or contact support.`;
+            
+            // Show user-friendly notification
+            this.showNotification('error', message, error.message);
+        },
+        
+        showNotification: function(type, message, detail) {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-md ${
+                type === 'error' ? 'bg-red-500 text-white' : 
+                type === 'warning' ? 'bg-yellow-500 text-black' : 
+                'bg-green-500 text-white'
+            }`;
+            
+            notification.innerHTML = `
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        ${type === 'error' ? '?' : type === 'warning' ? '??' : '?'}
+                    </div>
+                    <div class="ml-3">
+                        <p class="font-semibold">${message}</p>
+                        ${detail ? `<p class="text-sm opacity-90 mt-1">${detail}</p>` : ''}
+                    </div>
+                    <button onclick="this.parentElement.parentElement.remove()" class="ml-auto pl-3 text-lg opacity-70 hover:opacity-100">×</button>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 5000);
         }
     };
 
-    // Initialize on page load
-    document.addEventListener('DOMContentLoaded', function() {
-        edmLogStorage.init();
-        
-        // Set current date and auto-detect shift
-        const now = new Date();
-        document.getElementById('logDate').value = now.toISOString().split('T')[0];
-        
-        // Auto-detect shift based on current time
-        const hour = now.getHours();
-        const shiftSelect = document.getElementById('shift');
-        if (hour >= 7 && hour < 15) {
-            shiftSelect.value = 'Day (7AM-3PM)';
-        } else if (hour >= 15 && hour < 23) {
-            shiftSelect.value = 'Evening (3PM-11PM)';
-        } else {
-            shiftSelect.value = 'Night (11PM-7AM)';
+    // **EDM OPERATIONS OBJECT**
+    // All EDM-specific functionality wrapped in comprehensive error handling
+    window.EDMOperations = {
+        logStorage: {
+            logs: [],
+            currentLogNumber: 1,
+            
+            init: function() {
+                try {
+                    this.loadFromStorage();
+                    this.updateStats();
+                    this.updateLogNumber();
+                } catch (error) {
+                    console.error('Error initializing log storage:', error);
+                    SafeExecute.logError('INIT', 'logStorage.init', error);
+                }
+            },
+            
+            loadFromStorage: function() {
+                try {
+                    const stored = localStorage.getItem('edmLogs');
+                    if (stored) {
+                        this.logs = JSON.parse(stored);
+                    }
+                    
+                    const logNumber = localStorage.getItem('edmLogNumber');
+                    if (logNumber) {
+                        this.currentLogNumber = parseInt(logNumber);
+                    }
+                } catch (error) {
+                    console.error('Error loading EDM logs from storage:', error);
+                    this.logs = [];
+                    this.currentLogNumber = 1;
+                }
+            },
+            
+            saveToStorage: function() {
+                try {
+                    localStorage.setItem('edmLogs', JSON.stringify(this.logs));
+                    localStorage.setItem('edmLogNumber', this.currentLogNumber.toString());
+                } catch (error) {
+                    console.error('Error saving EDM logs to storage:', error);
+                }
+            },
+            
+            addLog: function(logData) {
+                try {
+                    logData.id = Date.now();
+                    logData.logNumber = this.currentLogNumber;
+                    logData.timestamp = new Date().toISOString();
+                    logData.operator = '@User.Identity?.Name';
+                    
+                    this.logs.unshift(logData);
+                    this.currentLogNumber++;
+                    
+                    if (this.logs.length > 100) {
+                        this.logs = this.logs.slice(0, 100);
+                    }
+                    
+                    this.saveToStorage();
+                    this.updateStats();
+                    this.updateLogNumber();
+                    
+                    console.log('?? EDM Log stored locally:', logData);
+                    return true;
+                } catch (error) {
+                    console.error('Error adding EDM log:', error);
+                    return false;
+                }
+            },
+            
+            getStats: function() {
+                try {
+                    const today = new Date().toDateString();
+                    const todayLogs = this.logs.filter(log => 
+                        new Date(log.timestamp).toDateString() === today
+                    );
+                    
+                    const lastLog = this.logs.length > 0 ? this.logs[0] : null;
+                    
+                    return {
+                        total: this.logs.length,
+                        today: todayLogs.length,
+                        lastLogTime: lastLog ? new Date(lastLog.timestamp).toLocaleString() : 'Never'
+                    };
+                } catch (error) {
+                    console.error('Error getting stats:', error);
+                    return { total: 0, today: 0, lastLogTime: 'Error' };
+                }
+            },
+            
+            updateStats: function() {
+                try {
+                    const stats = this.getStats();
+                    
+                    const elements = {
+                        totalLogsCount: stats.total,
+                        todayLogsCount: stats.today,
+                        lastLogTime: stats.lastLogTime,
+                        logCount: stats.total
+                    };
+                    
+                    for (const [id, value] of Object.entries(elements)) {
+                        const element = document.getElementById(id);
+                        if (element) {
+                            element.textContent = value;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error updating stats:', error);
+                }
+            },
+            
+            updateLogNumber: function() {
+                try {
+                    const element = document.getElementById('nextLogNumber');
+                    if (element) {
+                        element.textContent = this.currentLogNumber;
+                    }
+                } catch (error) {
+                    console.error('Error updating log number:', error);
+                }
+            }
         }
-        
-        console.log('?? Enhanced EDM Log system initialized');
-    });
+    };
 
+    // **CORE EDM FUNCTIONS WITH ERROR HANDLING**
+    
     function calculateTotalTime() {
-        const startTime = document.getElementById('startTime').value;
-        const endTime = document.getElementById('endTime').value;
-        
-        if (startTime && endTime) {
-            const start = new Date(`2000-01-01T${startTime}`);
-            const end = new Date(`2000-01-01T${endTime}`);
-            let diff = (end - start) / (1000 * 60); // minutes
+        try {
+            const startTime = document.getElementById('startTime')?.value;
+            const endTime = document.getElementById('endTime')?.value;
             
-            if (diff < 0) diff += 24 * 60; // Handle overnight
-            
-            const hours = Math.floor(diff / 60);
-            const minutes = diff % 60;
-            
-            return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+            if (startTime && endTime) {
+                const start = new Date(`2000-01-01T${startTime}`);
+                const end = new Date(`2000-01-01T${endTime}`);
+                let diff = (end - start) / (1000 * 60); // minutes
+                
+                if (diff < 0) diff += 24 * 60; // Handle overnight
+                
+                const hours = Math.floor(diff / 60);
+                const minutes = diff % 60;
+                
+                return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+            }
+            return 'N/A';
+        } catch (error) {
+            console.error('Error calculating total time:', error);
+            return 'Error';
         }
-        return 'N/A';
     }
 
     function generatePrintout() {
-        console.log('?? Generating enhanced EDM log printout');
+        const operationId = SafeExecute.generateOperationId();
+        console.log(`?? [EDM-${operationId}] Starting generatePrintout operation`);
         
-        // Validate required fields
-        const requiredFields = ['partNumber', 'quantity', 'edmCutBy', 'edmInitials', 'logDate'];
-        const missingFields = [];
-        
-        for (const fieldId of requiredFields) {
-            const field = document.getElementById(fieldId);
-            if (!field.value.trim()) {
-                missingFields.push(field.previousElementSibling.textContent.replace(' *', ''));
-                field.classList.add('border-red-500', 'bg-red-50');
-            } else {
-                field.classList.remove('border-red-500', 'bg-red-50');
+        try {
+            // Validate required fields
+            const requiredFields = ['partNumber', 'quantity', 'edmCutBy', 'edmInitials', 'logDate'];
+            const missingFields = [];
+            
+            for (const fieldId of requiredFields) {
+                const field = document.getElementById(fieldId);
+                if (!field) {
+                    throw new Error(`Required field element not found: ${fieldId}`);
+                }
+                
+                if (!field.value.trim()) {
+                    const label = field.previousElementSibling;
+                    if (label) {
+                        missingFields.push(label.textContent.replace(' *', ''));
+                    } else {
+                        missingFields.push(fieldId);
+                    }
+                    field.classList.add('border-red-500', 'bg-red-50');
+                } else {
+                    field.classList.remove('border-red-500', 'bg-red-50');
+                }
             }
+            
+            if (missingFields.length > 0) {
+                SafeExecute.showNotification('warning', 
+                    'Please fill in all required fields', 
+                    `Missing: ${missingFields.join(', ')}`);
+                return false;
+            }
+            
+            // Collect log data
+            const logData = {
+                logNumber: EDMOperations.logStorage.currentLogNumber,
+                partNumber: document.getElementById('partNumber').value,
+                quantity: document.getElementById('quantity').value,
+                date: document.getElementById('logDate').value,
+                shift: document.getElementById('shift').value || 'Not Specified',
+                operatorName: document.getElementById('edmCutBy').value,
+                operatorInitials: document.getElementById('edmInitials').value,
+                startTime: document.getElementById('startTime').value || 'N/A',
+                endTime: document.getElementById('endTime').value || 'N/A',
+                measurement1: document.getElementById('measurement1').value || 'N/A',
+                measurement2: document.getElementById('measurement2').value || 'N/A',
+                tolerance: document.getElementById('tolerance').value || 'Not Specified',
+                scrap: document.getElementById('EDMScrap').value || 'None',
+                notes: document.getElementById('Notes').value || 'None',
+                totalTime: calculateTotalTime()
+            };
+            
+            // Populate print elements
+            const printElements = {
+                printLogNumber: logData.logNumber,
+                printTimestamp: new Date().toLocaleString(),
+                printLogDate: logData.date,
+                printShift: logData.shift,
+                printPartNumber: logData.partNumber,
+                printQuantity: logData.quantity,
+                printEdmCutBy: logData.operatorName,
+                printEdmInitials: logData.operatorInitials,
+                printStartTime: logData.startTime,
+                printEndTime: logData.endTime,
+                printMeasurement1: logData.measurement1,
+                printMeasurement2: logData.measurement2,
+                printTolerance: logData.tolerance,
+                printEDMScrap: logData.scrap,
+                printNotes: logData.notes,
+                printTotalTime: logData.totalTime,
+                printCutTime: 'See Total Time'
+            };
+            
+            for (const [id, value] of Object.entries(printElements)) {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.textContent = value;
+                }
+            }
+            
+            // Show print section
+            const printSection = document.getElementById('printSection');
+            if (printSection) {
+                printSection.style.display = 'block';
+                printSection.scrollIntoView({ behavior: 'smooth' });
+            }
+            
+            // Store the current log data for printing
+            window.currentLogData = logData;
+            
+            console.log(`? [EDM-${operationId}] EDM log generated successfully`);
+            SafeExecute.showNotification('success', 'EDM Log generated successfully', 'Ready for printing');
+            return true;
+            
+        } catch (error) {
+            SafeExecute.logError(operationId, 'generatePrintout', error);
+            SafeExecute.showUserFriendlyError('generatePrintout', error);
+            return false;
         }
-        
-        if (missingFields.length > 0) {
-            alert(`Please fill in the following required fields:\n• ${missingFields.join('\n• ')}`);
-            console.warn('? Missing required fields:', missingFields);
-            return;
-        }
-        
-        // Populate print section with enhanced formatting
-        const logData = {
-            logNumber: edmLogStorage.currentLogNumber,
-            partNumber: document.getElementById('partNumber').value,
-            quantity: document.getElementById('quantity').value,
-            date: document.getElementById('logDate').value,
-            shift: document.getElementById('shift').value || 'Not Specified',
-            operatorName: document.getElementById('edmCutBy').value,
-            operatorInitials: document.getElementById('edmInitials').value,
-            startTime: document.getElementById('startTime').value || 'N/A',
-            endTime: document.getElementById('endTime').value || 'N/A',
-            measurement1: document.getElementById('measurement1').value || 'N/A',
-            measurement2: document.getElementById('measurement2').value || 'N/A',
-            tolerance: document.getElementById('tolerance').value || 'Not Specified',
-            scrap: document.getElementById('EDMScrap').value || 'None',
-            notes: document.getElementById('Notes').value || 'None',
-            totalTime: calculateTotalTime()
-        };
-        
-        // Populate print elements
-        document.getElementById('printLogNumber').textContent = logData.logNumber;
-        document.getElementById('printTimestamp').textContent = new Date().toLocaleString();
-        document.getElementById('printLogDate').textContent = logData.date;
-        document.getElementById('printShift').textContent = logData.shift;
-        document.getElementById('printPartNumber').textContent = logData.partNumber;
-        document.getElementById('printQuantity').textContent = logData.quantity;
-        document.getElementById('printEdmCutBy').textContent = logData.operatorName;
-        document.getElementById('printEdmInitials').textContent = logData.operatorInitials;
-        document.getElementById('printStartTime').textContent = logData.startTime;
-        document.getElementById('printEndTime').textContent = logData.endTime;
-        document.getElementById('printMeasurement1').textContent = logData.measurement1;
-        document.getElementById('printMeasurement2').textContent = logData.measurement2;
-        document.getElementById('printTolerance').textContent = logData.tolerance;
-        document.getElementById('printEDMScrap').textContent = logData.scrap;
-        document.getElementById('printNotes').textContent = logData.notes;
-        document.getElementById('printTotalTime').textContent = logData.totalTime;
-        document.getElementById('printCutTime').textContent = 'See Total Time';
-        
-        // Show print section
-        document.getElementById('printSection').style.display = 'block';
-        document.getElementById('printSection').scrollIntoView({ behavior: 'smooth' });
-        
-        // Store the current log data for printing
-        window.currentLogData = logData;
-        
-        console.log('? Enhanced EDM log generated successfully');
     }
     
     function printAndStore() {
-        // Store the log data
-        if (window.currentLogData) {
-            edmLogStorage.addLog(window.currentLogData);
-            
-            // Show success message
-            const successMsg = document.createElement('div');
-            successMsg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
-            successMsg.innerHTML = `
-                <div class="flex items-center">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    Log #${window.currentLogData.logNumber} stored successfully!
-                </div>
-            `;
-            document.body.appendChild(successMsg);
-            
-            setTimeout(() => {
-                successMsg.remove();
-            }, 3000);
-        }
+        const operationId = SafeExecute.generateOperationId();
+        console.log(`?? [EDM-${operationId}] Starting printAndStore operation`);
         
-        // Trigger print
-        window.print();
+        try {
+            // Store the log data
+            if (window.currentLogData) {
+                const success = EDMOperations.logStorage.addLog(window.currentLogData);
+                
+                if (success) {
+                    SafeExecute.showNotification('success', 
+                        `Log #${window.currentLogData.logNumber} stored successfully!`,
+                        'Proceeding to print...');
+                } else {
+                    throw new Error('Failed to store log data');
+                }
+            } else {
+                throw new Error('No log data available to store');
+            }
+            
+            // Trigger print
+            window.print();
+            
+            console.log(`? [EDM-${operationId}] Print and store completed successfully`);
+            return true;
+            
+        } catch (error) {
+            SafeExecute.logError(operationId, 'printAndStore', error);
+            SafeExecute.showUserFriendlyError('printAndStore', error);
+            return false;
+        }
     }
     
     function hidePrintSection() {
-        document.getElementById('printSection').style.display = 'none';
-        console.log('?? Print section hidden');
+        try {
+            const printSection = document.getElementById('printSection');
+            if (printSection) {
+                printSection.style.display = 'none';
+            }
+            console.log('?? Print section hidden');
+            return true;
+        } catch (error) {
+            console.error('Error hiding print section:', error);
+            return false;
+        }
     }
     
     function clearForm() {
-        if (confirm('Are you sure you want to clear all form data?')) {
-            document.getElementById('edmLogForm').reset();
+        const operationId = SafeExecute.generateOperationId();
+        console.log(`?? [EDM-${operationId}] Starting clearForm operation`);
+        
+        try {
+            if (!confirm('Are you sure you want to clear all form data?')) {
+                return false;
+            }
+            
+            const form = document.getElementById('edmLogForm');
+            if (!form) {
+                throw new Error('EDM form not found');
+            }
+            
+            form.reset();
             
             // Reset to current date and auto-detect shift
             const now = new Date();
-            document.getElementById('logDate').value = now.toISOString().split('T')[0];
+            const logDateElement = document.getElementById('logDate');
+            if (logDateElement) {
+                logDateElement.value = now.toISOString().split('T')[0];
+            }
             
             const hour = now.getHours();
             const shiftSelect = document.getElementById('shift');
-            if (hour >= 7 && hour < 15) {
-                shiftSelect.value = 'Day (7AM-3PM)';
-            } else if (hour >= 15 && hour < 23) {
-                shiftSelect.value = 'Evening (3PM-11PM)';
-            } else {
-                shiftSelect.value = 'Night (11PM-7AM)';
+            if (shiftSelect) {
+                if (hour >= 7 && hour < 15) {
+                    shiftSelect.value = 'Day (7AM-3PM)';
+                } else if (hour >= 15 && hour < 23) {
+                    shiftSelect.value = 'Evening (3PM-11PM)';
+                } else {
+                    shiftSelect.value = 'Night (11PM-7AM)';
+                }
             }
             
             // Reset operator name
-            document.getElementById('edmCutBy').value = '@User.Identity?.Name';
+            const operatorElement = document.getElementById('edmCutBy');
+            if (operatorElement) {
+                operatorElement.value = '@User.Identity?.Name';
+            }
             
             hidePrintSection();
             
@@ -755,100 +986,220 @@
             const fields = document.querySelectorAll('input, textarea, select');
             fields.forEach(field => field.classList.remove('border-red-500', 'bg-red-50'));
             
-            console.log('?? Form cleared and reset');
+            console.log(`? [EDM-${operationId}] Form cleared and reset successfully`);
+            SafeExecute.showNotification('success', 'Form cleared successfully', 'All fields have been reset');
+            return true;
+            
+        } catch (error) {
+            SafeExecute.logError(operationId, 'clearForm', error);
+            SafeExecute.showUserFriendlyError('clearForm', error);
+            return false;
         }
     }
     
     function viewStoredLogs() {
-        const modal = document.getElementById('storedLogsModal');
-        const content = document.getElementById('storedLogsContent');
+        const operationId = SafeExecute.generateOperationId();
+        console.log(`?? [EDM-${operationId}] Starting viewStoredLogs operation`);
         
-        if (edmLogStorage.logs.length === 0) {
-            content.innerHTML = `
-                <div class="text-center text-gray-500 py-8">
-                    <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                    </svg>
-                    <p class="text-lg">No stored logs found</p>
-                    <p class="text-sm">Generated logs will appear here</p>
-                </div>
-            `;
-        } else {
-            content.innerHTML = `
-                <div class="space-y-4">
-                    ${edmLogStorage.logs.map(log => `
-                        <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
-                            <div class="flex justify-between items-start">
-                                <div class="flex-1">
-                                    <h4 class="font-semibold text-lg">Log #${log.logNumber} - ${log.partNumber}</h4>
-                                    <p class="text-gray-600">Qty: ${log.quantity} | Operator: ${log.operatorName} (${log.operatorInitials})</p>
-                                    <p class="text-sm text-gray-500">Created: ${new Date(log.timestamp).toLocaleString()}</p>
-                                    ${log.notes !== 'None' ? `<p class="text-sm text-gray-700 mt-2 italic">"${log.notes}"</p>` : ''}
-                                </div>
-                                <div class="text-right">
-                                    <span class="inline-block px-2 py-1 text-xs font-medium rounded ${
-                                        log.tolerance === '? Within Tolerance' ? 'bg-green-100 text-green-800' :
-                                        log.tolerance === '? Close to Limit' ? 'bg-yellow-100 text-yellow-800' :
-                                        log.tolerance === '? Out of Tolerance' ? 'bg-red-100 text-red-800' :
-                                        'bg-gray-100 text-gray-800'
-                                    }">${log.tolerance || 'Not Specified'}</span>
+        try {
+            const modal = document.getElementById('storedLogsModal');
+            const content = document.getElementById('storedLogsContent');
+            
+            if (!modal || !content) {
+                throw new Error('Stored logs modal elements not found');
+            }
+            
+            if (EDMOperations.logStorage.logs.length === 0) {
+                content.innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <p class="text-lg">No stored logs found</p>
+                        <p class="text-sm">Generated logs will appear here</p>
+                    </div>
+                `;
+            } else {
+                content.innerHTML = `
+                    <div class="space-y-4">
+                        ${EDMOperations.logStorage.logs.map(log => `
+                            <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+                                <div class="flex justify-between items-start">
+                                    <div class="flex-1">
+                                        <h4 class="font-semibold text-lg">Log #${log.logNumber} - ${log.partNumber}</h4>
+                                        <p class="text-gray-600">Qty: ${log.quantity} | Operator: ${log.operatorName} (${log.operatorInitials})</p>
+                                        <p class="text-sm text-gray-500">Created: ${new Date(log.timestamp).toLocaleString()}</p>
+                                        ${log.notes !== 'None' ? `<p class="text-sm text-gray-700 mt-2 italic">"${log.notes}"</p>` : ''}
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="inline-block px-2 py-1 text-xs font-medium rounded ${
+                                            log.tolerance === '? Within Tolerance' ? 'bg-green-100 text-green-800' :
+                                            log.tolerance === '?? Close to Limit' ? 'bg-yellow-100 text-yellow-800' :
+                                            log.tolerance === '? Out of Tolerance' ? 'bg-red-100 text-red-800' :
+                                            'bg-gray-100 text-gray-800'
+                                        }">${log.tolerance || 'Not Specified'}</span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    `).join('')}
-                </div>
-                <div class="mt-6 text-center">
-                    <button onclick="exportLogs()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-                        Export All Logs
-                    </button>
-                </div>
-            `;
+                        `).join('')}
+                    </div>
+                    <div class="mt-6 text-center">
+                        <button onclick="SafeExecute.call('exportLogs')" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                            Export All Logs
+                        </button>
+                    </div>
+                `;
+            }
+            
+            modal.classList.remove('hidden');
+            console.log(`? [EDM-${operationId}] Stored logs modal displayed successfully`);
+            return true;
+            
+        } catch (error) {
+            SafeExecute.logError(operationId, 'viewStoredLogs', error);
+            SafeExecute.showUserFriendlyError('viewStoredLogs', error);
+            return false;
         }
-        
-        modal.classList.remove('hidden');
     }
     
     function closeStoredLogsModal() {
-        document.getElementById('storedLogsModal').classList.add('hidden');
+        try {
+            const modal = document.getElementById('storedLogsModal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+            return true;
+        } catch (error) {
+            console.error('Error closing stored logs modal:', error);
+            return false;
+        }
     }
     
     function exportLogs() {
-        const csvContent = "data:text/csv;charset=utf-8," 
-            + "Log Number,Part Number,Quantity,Date,Shift,Operator,Initials,Start Time,End Time,Measurement 1,Measurement 2,Tolerance,Scrap,Notes,Created\n"
-            + edmLogStorage.logs.map(log => 
-                `${log.logNumber},"${log.partNumber}",${log.quantity},"${log.date}","${log.shift}","${log.operatorName}","${log.operatorInitials}","${log.startTime}","${log.endTime}","${log.measurement1}","${log.measurement2}","${log.tolerance}","${log.scrap}","${log.notes}","${log.timestamp}"""
-            ).join("\n");
+        const operationId = SafeExecute.generateOperationId();
+        console.log(`?? [EDM-${operationId}] Starting exportLogs operation`);
         
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `edm_logs_${new Date().toISOString().split('T')[0]}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        console.log('?? EDM logs exported successfully');
+        try {
+            const csvContent = "data:text/csv;charset=utf-8," 
+                + "Log Number,Part Number,Quantity,Date,Shift,Operator,Initials,Start Time,End Time,Measurement 1,Measurement 2,Tolerance,Scrap,Notes,Created\n"
+                + EDMOperations.logStorage.logs.map(log => 
+                    `${log.logNumber},"${log.partNumber}",${log.quantity},"${log.date}","${log.shift}","${log.operatorName}","${log.operatorInitials}","${log.startTime}","${log.endTime}","${log.measurement1}","${log.measurement2}","${log.tolerance}","${log.scrap}","${log.notes}","${log.timestamp}"""
+                ).join("\n");
+            
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `edm_logs_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            console.log(`? [EDM-${operationId}] EDM logs exported successfully`);
+            SafeExecute.showNotification('success', 'Logs exported successfully', 'CSV file has been downloaded');
+            return true;
+            
+        } catch (error) {
+            SafeExecute.logError(operationId, 'exportLogs', error);
+            SafeExecute.showUserFriendlyError('exportLogs', error);
+            return false;
+        }
     }
-    
-    // Auto-uppercase and formatting
-    document.getElementById('edmInitials').addEventListener('input', function() {
-        this.value = this.value.toUpperCase();
-    });
-    
-    document.getElementById('partNumber').addEventListener('input', function() {
-        this.value = this.value.toUpperCase();
-    });
-    
-    // Auto-fill initials from operator name
-    document.getElementById('edmCutBy').addEventListener('input', function() {
-        const name = this.value.trim();
-        if (name) {
-            const initials = name.split(' ')
-                .map(part => part.charAt(0))
-                .join('')
-                .toUpperCase()
-                .substring(0, 4);
-            document.getElementById('edmInitials').value = initials;
+
+    // **INITIALIZE EDM PAGE**
+    document.addEventListener('DOMContentLoaded', function() {
+        const operationId = SafeExecute.generateOperationId();
+        console.log(`?? [EDM-${operationId}] Initializing EDM Operations page`);
+        
+        try {
+            // Initialize log storage
+            EDMOperations.logStorage.init();
+            
+            // Set current date and auto-detect shift
+            const now = new Date();
+            const logDateElement = document.getElementById('logDate');
+            if (logDateElement) {
+                logDateElement.value = now.toISOString().split('T')[0];
+            }
+            
+            // Auto-detect shift based on current time
+            const hour = now.getHours();
+            const shiftSelect = document.getElementById('shift');
+            if (shiftSelect) {
+                if (hour >= 7 && hour < 15) {
+                    shiftSelect.value = 'Day (7AM-3PM)';
+                } else if (hour >= 15 && hour < 23) {
+                    shiftSelect.value = 'Evening (3PM-11PM)';
+                } else {
+                    shiftSelect.value = 'Night (11PM-7AM)';
+                }
+            }
+            
+            // Auto-uppercase and formatting
+            const initialsElement = document.getElementById('edmInitials');
+            if (initialsElement) {
+                initialsElement.addEventListener('input', function() {
+                    this.value = this.value.toUpperCase();
+                });
+            }
+            
+            const partNumberElement = document.getElementById('partNumber');
+            if (partNumberElement) {
+                partNumberElement.addEventListener('input', function() {
+                    this.value = this.value.toUpperCase();
+                });
+            }
+            
+            // Auto-fill initials from operator name
+            const operatorElement = document.getElementById('edmCutBy');
+            if (operatorElement) {
+                operatorElement.addEventListener('input', function() {
+                    const name = this.value.trim();
+                    if (name && initialsElement) {
+                        const initials = name.split(' ')
+                            .map(part => part.charAt(0))
+                            .join('')
+                            .toUpperCase()
+                            .substring(0, 4);
+                        initialsElement.value = initials;
+                    }
+                });
+            }
+            
+            console.log(`? [EDM-${operationId}] Enhanced EDM Log system initialized successfully`);
+            SafeExecute.showNotification('success', 'EDM Operations Ready', 'Enhanced error logging active');
+            
+        } catch (error) {
+            SafeExecute.logError(operationId, 'DOMContentLoaded', error);
+            console.error('Failed to initialize EDM page:', error);
         }
     });
+
+    // **GLOBAL ERROR HANDLER**
+    window.addEventListener('error', function(event) {
+        const errorData = {
+            message: event.message,
+            filename: event.filename,
+            lineno: event.lineno,
+            colno: event.colno,
+            error: event.error
+        };
+        
+        SafeExecute.logError('GLOBAL', 'window.error', errorData);
+        console.error('?? [EDM-GLOBAL] Unhandled JavaScript error:', errorData);
+    });
+
+    // **DEBUGGING HELPERS**
+    window.debugEDM = function() {
+        console.group('?? [EDM] Debug Information');
+        console.log('Log Storage:', EDMOperations.logStorage);
+        console.log('Current Log Data:', window.currentLogData);
+        console.log('Form Data:', SafeExecute.getFormData());
+        console.log('All Element IDs:', SafeExecute.getAllElementIds());
+        
+        const errors = JSON.parse(localStorage.getItem('edm_errors') || '[]');
+        console.log('Recent Errors:', errors);
+        console.groupEnd();
+    };
+
+    console.log('? [EDM] Enhanced EDM Operations page loaded successfully with comprehensive error logging');
 </script>
