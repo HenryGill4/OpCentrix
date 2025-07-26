@@ -134,6 +134,12 @@ builder.Services.AddScoped<OpCentrix.Services.Admin.IDatabaseManagementService, 
 // TASK 13: Inspection Checkpoint Service
 builder.Services.AddScoped<OpCentrix.Services.Admin.IInspectionCheckpointService, OpCentrix.Services.Admin.InspectionCheckpointService>();
 
+// TASK 14: Defect Category Service
+builder.Services.AddScoped<OpCentrix.Services.Admin.IDefectCategoryService, OpCentrix.Services.Admin.DefectCategoryService>();
+
+// TASK 15: Job Archive Service
+builder.Services.AddScoped<OpCentrix.Services.Admin.IJobArchiveService, OpCentrix.Services.Admin.JobArchiveService>();
+
 // FIXED: Add missing OPC UA service
 builder.Services.AddScoped<IOpcUaService, OpcUaService>();
 

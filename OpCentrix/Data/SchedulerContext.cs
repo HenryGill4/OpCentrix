@@ -179,11 +179,8 @@ namespace OpCentrix.Data
                     .HasForeignKey(e => e.JobId)
                     .OnDelete(DeleteBehavior.Cascade);
                     
-                entity.HasOne(e => e.Machine)
-                    .WithMany()
-                    .HasForeignKey(e => e.MachineId)
-                    .HasPrincipalKey(m => m.MachineId) // Use Machine.MachineId instead of Machine.Id
-                    .OnDelete(DeleteBehavior.SetNull);
+                // FIXED: Remove the Machine relationship as MachineId is just a string reference
+                // The JobStage.MachineId is a string that references Machine.MachineId, not Machine.Id
                     
                 // Indexes for performance
                 entity.HasIndex(e => e.JobId);
@@ -296,10 +293,11 @@ namespace OpCentrix.Data
                 entity.HasIndex(e => e.IsAvailable);
                 entity.HasIndex(e => new { e.MachineId, e.CapabilityType });
 
-                // Relationships
+                // Relationships - FIXED: Use correct primary key mapping
                 entity.HasOne(e => e.Machine)
-                      .WithMany()
+                      .WithMany(m => m.Capabilities)
                       .HasForeignKey(e => e.MachineId)
+                      .HasPrincipalKey(m => m.Id) // Use Machine.Id instead of Machine.MachineId
                       .OnDelete(DeleteBehavior.Cascade);
 
                 // Constraints

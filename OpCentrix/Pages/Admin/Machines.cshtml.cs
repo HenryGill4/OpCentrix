@@ -71,6 +71,9 @@ public class MachinesModel : PageModel
         {
             _logger.LogInformation("💻 Loading enhanced machine management page - Admin: {Admin}", User.Identity?.Name);
 
+            // Clear any existing model state issues for GET requests
+            ModelState.Clear();
+
             await LoadMachinesAsync();
             await LoadMachineCapabilitiesAsync();
             await LoadMaterialsAsync();
