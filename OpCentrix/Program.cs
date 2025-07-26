@@ -185,6 +185,9 @@ else
     }
 }
 
+// Add comprehensive error logging middleware for click-through testing
+app.UseMiddleware<ErrorLoggingMiddleware>();
+
 app.UseStaticFiles();
 
 app.UseRouting();
@@ -242,6 +245,7 @@ using (var scope = app.Services.CreateScope())
         logger.LogInformation("   printer/printer123 (PrintingSpecialist)");
         logger.LogInformation("   coating/coating123 (CoatingSpecialist)");
         logger.LogInformation("   And more... see TEST_USERS.txt for complete list");
+        logger.LogInformation("?? CLICK-THROUGH TESTING: Open browser console and run 'startClickThroughTest()' to begin comprehensive error logging");
     }
     catch (Exception ex)
     {
@@ -259,10 +263,11 @@ using (var scope = app.Services.CreateScope())
 // Log application startup with correct URL
 var startupLogger = app.Services.GetRequiredService<ILogger<Program>>();
 var urls = builder.Configuration.GetValue<string>("Urls") ?? "http://localhost:5090";
-startupLogger.LogInformation("?? OpCentrix SLS Scheduler started successfully");
+startupLogger.LogInformation("? OpCentrix SLS Scheduler started successfully");
 startupLogger.LogInformation("Environment: {Environment}", app.Environment.EnvironmentName);
 startupLogger.LogInformation("URL: {Url}", urls);
 startupLogger.LogInformation("Login Page: {LoginUrl}", $"{urls}/Account/Login");
+startupLogger.LogInformation("?? Enhanced Error Logging: All pages now have comprehensive error monitoring");
 
 app.Run();
 

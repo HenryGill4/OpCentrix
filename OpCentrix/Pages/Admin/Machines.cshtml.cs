@@ -437,6 +437,15 @@ public class MachinesModel : PageModel
             AvailableMaterials = await _materialService.GetActiveMaterialsAsync();
             MaterialTypes = await _materialService.GetMaterialTypesAsync();
             
+            // If no materials exist, seed some default ones
+            if (!AvailableMaterials.Any())
+            {
+                _logger.LogWarning("⚠️ No materials found, seeding default materials");
+                await _materialService.SeedDefaultMaterialsAsync();
+                AvailableMaterials = await _materialService.GetActiveMaterialsAsync();
+                MaterialTypes = await _materialService.GetMaterialTypesAsync();
+            }
+            
             _logger.LogInformation("📦 Loaded {MaterialCount} materials and {TypeCount} material types", 
                 AvailableMaterials.Count, MaterialTypes.Count);
         }
@@ -445,6 +454,9 @@ public class MachinesModel : PageModel
             _logger.LogError(ex, "❌ Error loading materials");
             AvailableMaterials = new List<Material>();
             MaterialTypes = new List<string>();
+            
+            // Set a temp data message for the user
+            TempData["Warning"] = "Unable to load materials. Please check the database connection.";
         }
     }
 
@@ -457,12 +469,17 @@ public class MachinesModel : PageModel
         // Fixed: Use ToListAsync() first, then GroupBy and ToDictionary for in-memory compatibility
         var machines = await _context.Machines.Select(m => m.Status).ToListAsync();
         StatusStatistics = machines
+            .Where(status => !string.IsNullOrEmpty(status))  // Filter out null/empty statuses
             .GroupBy(status => status)
             .ToDictionary(g => g.Key, g => g.Count());
 
-        AverageUtilization = await _context.Machines
+        // Fixed: Add null check for average utilization calculation
+        var utilizationValues = await _context.Machines
             .Where(m => m.IsActive)
-            .AverageAsync(m => (double?)m.AverageUtilizationPercent) ?? 0;
+            .Select(m => (double?)m.AverageUtilizationPercent)
+            .ToListAsync();
+            
+        AverageUtilization = utilizationValues.Any() ? utilizationValues.Average() ?? 0 : 0;
     }
 
     private async Task<List<string>> ValidateMachineAsync(MachineCreateEditModel input, int? existingMachineId)
@@ -522,7 +539,8 @@ public class MachinesModel : PageModel
             MachineId = MachineInput.MachineId,
             Name = MachineInput.MachineName,
             MachineName = MachineInput.MachineName,
-            MachineType = MachineInput.MachineModel,
+            MachineType = "SLS", // Set default machine type
+            MachineModel = MachineInput.MachineModel, // Use the model field properly
             SerialNumber = MachineInput.SerialNumber,
             Location = MachineInput.Location,
             Status = MachineInput.Status,
@@ -551,7 +569,8 @@ public class MachinesModel : PageModel
         machine.MachineId = MachineInput.MachineId;
         machine.Name = MachineInput.MachineName;
         machine.MachineName = MachineInput.MachineName;
-        machine.MachineType = MachineInput.MachineModel;
+        machine.MachineModel = MachineInput.MachineModel; // Fix: use MachineModel property
+        // machine.MachineType stays the same unless explicitly changed
         machine.SerialNumber = MachineInput.SerialNumber;
         machine.Location = MachineInput.Location;
         machine.SupportedMaterials = MachineInput.SupportedMaterials;
@@ -581,7 +600,7 @@ public class MachinesModel : PageModel
         {
             MachineId = machine.MachineId,
             MachineName = machine.Name,
-            MachineModel = machine.MachineType,
+            MachineModel = machine.MachineModel, // Fix: use machine.MachineModel
             SerialNumber = machine.SerialNumber,
             Location = machine.Location,
             SupportedMaterials = machine.SupportedMaterials,

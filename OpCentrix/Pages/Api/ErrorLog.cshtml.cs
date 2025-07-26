@@ -1,9 +1,17 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 
 namespace OpCentrix.Pages.Api
 {
+    /// <summary>
+    /// API endpoint for receiving client-side error logs
+    /// Enhanced with comprehensive error tracking for click-through testing
+    /// </summary>
+    [AllowAnonymous]
+    [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public class ErrorLogModel : PageModel
     {
         private readonly ILogger<ErrorLogModel> _logger;
@@ -13,116 +21,138 @@ namespace OpCentrix.Pages.Api
             _logger = logger;
         }
 
-        public IActionResult OnPostAsync()
+        /// <summary>
+        /// Handle client-side error reports via POST
+        /// </summary>
+        public async Task<IActionResult> OnPostAsync()
         {
-            var operationId = Guid.NewGuid().ToString("N")[..8];
-            
             try
             {
-                // Read the JSON body
-                string requestBody;
-                using (var reader = new StreamReader(Request.Body))
-                {
-                    requestBody = reader.ReadToEnd();
-                }
-                
+                // Read the request body
+                using var reader = new StreamReader(Request.Body);
+                var requestBody = await reader.ReadToEndAsync();
+
                 if (string.IsNullOrEmpty(requestBody))
                 {
-                    _logger.LogWarning("?? [ERROR-API-{OperationId}] Empty request body received", operationId);
-                    return BadRequest(new { error = "Empty request body", operationId });
+                    _logger.LogWarning("?? [CLIENT-ERROR-API] Empty request body received");
+                    return BadRequest("Empty request body");
                 }
 
-                // Parse the error log
-                var errorLog = JsonSerializer.Deserialize<ClientErrorLog>(requestBody, new JsonSerializerOptions
+                // Parse the error data
+                var errorData = JsonSerializer.Deserialize<ClientErrorData>(requestBody, new JsonSerializerOptions
                 {
                     PropertyNameCaseInsensitive = true
                 });
 
-                if (errorLog == null)
+                if (errorData == null)
                 {
-                    _logger.LogWarning("?? [ERROR-API-{OperationId}] Failed to parse error log JSON", operationId);
-                    return BadRequest(new { error = "Invalid JSON format", operationId });
+                    _logger.LogWarning("?? [CLIENT-ERROR-API] Failed to parse error data");
+                    return BadRequest("Invalid error data format");
                 }
 
-                // Extract user information
-                var userId = User.Identity?.Name ?? "Anonymous";
-                var userRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "Unknown";
+                // Generate operation ID for tracking
+                var operationId = Guid.NewGuid().ToString("N")[..8];
 
-                // Log the client-side error with full context
-                _logger.LogError("?? [CLIENT-ERROR-{OperationId}] User: {UserId} ({Role}) | {Category}.{Operation}: {Message} | URL: {Url} | Browser: {UserAgent} | Context: {Context}", 
+                // Get user information
+                var userName = User?.Identity?.Name ?? "Anonymous";
+                var userAgent = Request.Headers["User-Agent"].ToString();
+                var ipAddress = Request.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
+
+                // Log the error with comprehensive details
+                _logger.LogError("?? [CLIENT-ERROR-{OperationId}] {Category} error in {Operation}: {ErrorMessage}\n" +
+                    "?? Context: URL={Url}, User={User}, IP={IP}\n" +
+                    "?? Browser: {UserAgent}\n" +
+                    "?? Details: {ErrorDetails}\n" +
+                    "?? Stack: {ErrorStack}\n" +
+                    "?? Additional Context: {AdditionalContext}",
                     operationId,
-                    userId,
-                    userRole,
-                    errorLog.Category ?? "UNKNOWN",
-                    errorLog.Operation ?? "unknown",
-                    errorLog.Error?.Message ?? "No message",
-                    errorLog.Context?.GetValueOrDefault("url") ?? "unknown",
-                    errorLog.Context?.GetValueOrDefault("userAgent") ?? "unknown",
-                    JsonSerializer.Serialize(errorLog.Context ?? new Dictionary<string, object>())
-                );
+                    errorData.Category,
+                    errorData.Operation,
+                    errorData.Error?.Message,
+                    errorData.Context?.ContainsKey("url") == true ? errorData.Context["url"] : "Unknown",
+                    userName,
+                    ipAddress,
+                    userAgent,
+                    JsonSerializer.Serialize(errorData.Error),
+                    errorData.Error?.Stack ?? "No stack trace",
+                    JsonSerializer.Serialize(errorData.Context));
 
-                // Log browser details separately for analysis
-                if (errorLog.Browser != null)
+                // Log page monitoring data if available
+                if (errorData.Context?.ContainsKey("page") == true)
                 {
-                    _logger.LogDebug("??? [CLIENT-ERROR-{OperationId}] Browser Details: {BrowserInfo}", 
-                        operationId, JsonSerializer.Serialize(errorLog.Browser));
+                    _logger.LogInformation("?? [PAGE-MONITOR-{OperationId}] Page activity logged for {Page}",
+                        operationId, errorData.Context["page"]);
                 }
 
-                // Log error stack trace if available
-                if (!string.IsNullOrEmpty(errorLog.Error?.Stack))
+                // Log interaction data if available
+                if (errorData.Context?.ContainsKey("interactions") == true)
                 {
-                    _logger.LogDebug("?? [CLIENT-ERROR-{OperationId}] Stack Trace: {StackTrace}", 
-                        operationId, errorLog.Error.Stack);
+                    _logger.LogInformation("?? [INTERACTION-{OperationId}] User interactions: {Interactions}",
+                        operationId, errorData.Context["interactions"]);
                 }
 
+                // Return success response
                 return new JsonResult(new { 
                     success = true, 
-                    operationId, 
-                    message = "Error logged successfully",
-                    timestamp = DateTime.UtcNow
-                });
-            }
-            catch (JsonException jsonEx)
-            {
-                _logger.LogError(jsonEx, "? [ERROR-API-{OperationId}] JSON parsing error: {ErrorMessage}", 
-                    operationId, jsonEx.Message);
-                
-                return BadRequest(new { 
-                    error = "JSON parsing failed", 
-                    operationId, 
-                    details = jsonEx.Message 
+                    operationId = operationId,
+                    timestamp = DateTime.UtcNow 
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "? [ERROR-API-{OperationId}] Failed to log client error: {ErrorMessage}", 
-                    operationId, ex.Message);
+                var errorId = Guid.NewGuid().ToString("N")[..8];
+                _logger.LogError(ex, "?? [CLIENT-ERROR-API-{ErrorId}] Failed to process client error log", errorId);
                 
                 return StatusCode(500, new { 
-                    error = "Failed to log error", 
-                    operationId, 
-                    details = ex.Message 
+                    success = false, 
+                    error = "Failed to process error log",
+                    errorId = errorId 
                 });
             }
         }
+
+        /// <summary>
+        /// Handle GET requests (should return method not allowed)
+        /// </summary>
+        public IActionResult OnGet()
+        {
+            return StatusCode(405, "Method not allowed. Use POST to submit error logs.");
+        }
     }
 
-    // Model for client-side error logging
-    public class ClientErrorLog
+    /// <summary>
+    /// Data model for client-side error reports
+    /// Enhanced for comprehensive click-through testing
+    /// </summary>
+    public class ClientErrorData
     {
         public string? Id { get; set; }
         public string? Timestamp { get; set; }
         public string? Category { get; set; }
         public string? Operation { get; set; }
-        public ClientError? Error { get; set; }
+        public ClientErrorDetails? Error { get; set; }
         public Dictionary<string, object>? Context { get; set; }
-        public Dictionary<string, object>? Browser { get; set; }
+        public ClientBrowserInfo? Browser { get; set; }
     }
 
-    public class ClientError
+    /// <summary>
+    /// Error details from client
+    /// </summary>
+    public class ClientErrorDetails
     {
         public string? Message { get; set; }
         public string? Stack { get; set; }
         public string? Type { get; set; }
+    }
+
+    /// <summary>
+    /// Browser information from client
+    /// </summary>
+    public class ClientBrowserInfo
+    {
+        public string? Viewport { get; set; }
+        public string? Screen { get; set; }
+        public double? PixelRatio { get; set; }
+        public bool? Online { get; set; }
     }
 }
