@@ -176,17 +176,15 @@ namespace OpCentrix.Services
                 {
                     new MachineCapability
                     {
-                        MachineId = machine.MachineId,
-                        CapabilityName = "Laser Power Control",
+                        SlsMachineId = machine.MachineId,
                         CapabilityType = "Process Parameter",
-                        ValueType = "Number",
+                        CapabilityName = "Laser Power Control",
+                        CapabilityValue = "Laser power control range for printing",
+                        IsAvailable = true,
+                        Priority = 1,
                         MinValue = 100,
                         MaxValue = machine.MaxLaserPowerWatts,
-                        DefaultValue = 200,
                         Unit = "W",
-                        Description = "Laser power control range for printing",
-                        IsRequired = true,
-                        IsActive = true,
                         CreatedBy = "System",
                         LastModifiedBy = "System",
                         CreatedDate = DateTime.UtcNow,
@@ -194,17 +192,15 @@ namespace OpCentrix.Services
                     },
                     new MachineCapability
                     {
-                        MachineId = machine.MachineId,
-                        CapabilityName = "Scan Speed Control",
+                        SlsMachineId = machine.MachineId,
                         CapabilityType = "Process Parameter",
-                        ValueType = "Number",
+                        CapabilityName = "Scan Speed Control",
+                        CapabilityValue = "Scan speed control for laser",
+                        IsAvailable = true,
+                        Priority = 1,
                         MinValue = 500,
                         MaxValue = machine.MaxScanSpeedMmPerSec,
-                        DefaultValue = 1200,
                         Unit = "mm/s",
-                        Description = "Scan speed control for laser",
-                        IsRequired = true,
-                        IsActive = true,
                         CreatedBy = "System",
                         LastModifiedBy = "System",
                         CreatedDate = DateTime.UtcNow,
@@ -212,17 +208,15 @@ namespace OpCentrix.Services
                     },
                     new MachineCapability
                     {
-                        MachineId = machine.MachineId,
-                        CapabilityName = "Layer Thickness Control",
+                        SlsMachineId = machine.MachineId,
                         CapabilityType = "Process Parameter",
-                        ValueType = "Number",
+                        CapabilityName = "Layer Thickness Control",
+                        CapabilityValue = "Layer thickness control for printing",
+                        IsAvailable = true,
+                        Priority = 1,
                         MinValue = machine.MinLayerThicknessMicrons,
                         MaxValue = machine.MaxLayerThicknessMicrons,
-                        DefaultValue = 30,
                         Unit = "µm",
-                        Description = "Layer thickness control for printing",
-                        IsRequired = true,
-                        IsActive = true,
                         CreatedBy = "System",
                         LastModifiedBy = "System",
                         CreatedDate = DateTime.UtcNow,
@@ -230,17 +224,15 @@ namespace OpCentrix.Services
                     },
                     new MachineCapability
                     {
-                        MachineId = machine.MachineId,
-                        CapabilityName = "Build Temperature Control",
+                        SlsMachineId = machine.MachineId,
                         CapabilityType = "Process Parameter",
-                        ValueType = "Number",
+                        CapabilityName = "Build Temperature Control",
+                        CapabilityValue = "Build platform temperature control",
+                        IsAvailable = true,
+                        Priority = 1,
                         MinValue = 150,
                         MaxValue = 250,
-                        DefaultValue = 180,
                         Unit = "°C",
-                        Description = "Build platform temperature control",
-                        IsRequired = true,
-                        IsActive = true,
                         CreatedBy = "System",
                         LastModifiedBy = "System",
                         CreatedDate = DateTime.UtcNow,
@@ -248,17 +240,15 @@ namespace OpCentrix.Services
                     },
                     new MachineCapability
                     {
-                        MachineId = machine.MachineId,
-                        CapabilityName = "Oxygen Control",
+                        SlsMachineId = machine.MachineId,
                         CapabilityType = "Quality Metric",
-                        ValueType = "Number",
+                        CapabilityName = "Oxygen Control",
+                        CapabilityValue = "Oxygen level monitoring and control",
+                        IsAvailable = true,
+                        Priority = 1,
                         MinValue = 0,
                         MaxValue = 100,
-                        DefaultValue = 25,
                         Unit = "ppm",
-                        Description = "Oxygen level monitoring and control",
-                        IsRequired = true,
-                        IsActive = true,
                         CreatedBy = "System",
                         LastModifiedBy = "System",
                         CreatedDate = DateTime.UtcNow,
@@ -271,14 +261,12 @@ namespace OpCentrix.Services
                 {
                     capabilities.Add(new MachineCapability
                     {
-                        MachineId = machine.MachineId,
-                        CapabilityName = "Titanium Processing",
+                        SlsMachineId = machine.MachineId,
                         CapabilityType = "Material Property",
-                        ValueType = "Boolean",
-                        DefaultValue = 1,
-                        Description = "Capability to process titanium alloys",
-                        IsRequired = false,
-                        IsActive = true,
+                        CapabilityName = "Titanium Processing",
+                        CapabilityValue = "Capability to process titanium alloys",
+                        IsAvailable = true,
+                        Priority = 1,
                         CreatedBy = "System",
                         LastModifiedBy = "System",
                         CreatedDate = DateTime.UtcNow,
@@ -290,14 +278,12 @@ namespace OpCentrix.Services
                 {
                     capabilities.Add(new MachineCapability
                     {
-                        MachineId = machine.MachineId,
-                        CapabilityName = "Inconel Processing",
+                        SlsMachineId = machine.MachineId,
                         CapabilityType = "Material Property",
-                        ValueType = "Boolean",
-                        DefaultValue = 1,
-                        Description = "Capability to process Inconel super alloys",
-                        IsRequired = false,
-                        IsActive = true,
+                        CapabilityName = "Inconel Processing",
+                        CapabilityValue = "Capability to process Inconel super alloys",
+                        IsAvailable = true,
+                        Priority = 1,
                         CreatedBy = "System",
                         LastModifiedBy = "System",
                         CreatedDate = DateTime.UtcNow,
@@ -320,7 +306,7 @@ namespace OpCentrix.Services
                 new Part
                 {
                     PartNumber = "14-5396",
-                    Description = "Aerospace Turbine Blade - Ti-6Al-4V",
+                    Description = "Aerospace turbine blade for jet engines",
                     Material = "Ti-6Al-4V Grade 5",
                     SlsMaterial = "Ti-6Al-4V Grade 5",
                     EstimatedHours = 12.5,
@@ -346,9 +332,9 @@ namespace OpCentrix.Services
                 new Part
                 {
                     PartNumber = "14-5397",
-                    Description = "Aerospace Bracket - Complex Geometry",
+                    Description = "Lightweight bracket with complex geometry for aerospace applications",
                     Material = "Ti-6Al-4V ELI Grade 23",
-                    SslMaterial = "Ti-6Al-4V ELI Grade 23",
+                    SlsMaterial = "Ti-6Al-4V ELI Grade 23",
                     EstimatedHours = 8.75,
                     WeightGrams = 156.2,
                     LengthMm = 124.5,
@@ -372,9 +358,9 @@ namespace OpCentrix.Services
                 new Part
                 {
                     PartNumber = "14-5398",
-                    Description = "Medical Implant - Hip Cup Prototype",
+                    Description = "Hip cup prototype for femoral head replacement",
                     Material = "Ti-6Al-4V ELI Grade 23",
-                    SslMaterial = "Ti-6Al-4V ELI Grade 23",
+                    SlsMaterial = "Ti-6Al-4V ELI Grade 23",
                     EstimatedHours = 6.25,
                     WeightGrams = 89.5,
                     LengthMm = 65.0,
@@ -400,9 +386,9 @@ namespace OpCentrix.Services
                 new Part
                 {
                     PartNumber = "14-5399",
-                    Description = "Inconel Heat Exchanger Component",
+                    Description = "Heat exchanger component for high-temperature applications",
                     Material = "Inconel 718",
-                    SslMaterial = "Inconel 718",
+                    SlsMaterial = "Inconel 718",
                     EstimatedHours = 15.5,
                     WeightGrams = 387.2,
                     LengthMm = 156.8,
@@ -428,9 +414,9 @@ namespace OpCentrix.Services
                 new Part
                 {
                     PartNumber = "14-5400",
-                    Description = "Automotive Prototype - Lightweight Bracket",
+                    Description = "Lightweight bracket for automotive prototype",
                     Material = "Ti-6Al-4V Grade 5",
-                    SslMaterial = "Ti-6Al-4V Grade 5",
+                    SlsMaterial = "Ti-6Al-4V Grade 5",
                     EstimatedHours = 4.75,
                     WeightGrams = 67.3,
                     LengthMm = 98.2,
@@ -451,9 +437,9 @@ namespace OpCentrix.Services
                 new Part
                 {
                     PartNumber = "14-5401",
-                    Description = "Inconel 625 Valve Body",
+                    Description = "Valve body for high-performance engines",
                     Material = "Inconel 625",
-                    SslMaterial = "Inconel 625",
+                    SlsMaterial = "Inconel 625",
                     EstimatedHours = 18.25,
                     WeightGrams = 456.8,
                     LengthMm = 134.6,
@@ -479,9 +465,9 @@ namespace OpCentrix.Services
                 new Part
                 {
                     PartNumber = "14-5402",
-                    Description = "Titanium Drone Frame Component",
+                    Description = "Drone frame component for lightweight and strength",
                     Material = "Ti-6Al-4V Grade 5",
-                    SslMaterial = "Ti-6Al-4V Grade 5",
+                    SlsMaterial = "Ti-6Al-4V Grade 5",
                     EstimatedHours = 3.5,
                     WeightGrams = 34.2,
                     LengthMm = 156.4,
@@ -502,9 +488,9 @@ namespace OpCentrix.Services
                 new Part
                 {
                     PartNumber = "14-5403",
-                    Description = "Medical Surgical Tool - Custom Design",
+                    Description = "Custom surgical tool for minimally invasive procedures",
                     Material = "Ti-6Al-4V ELI Grade 23",
-                    SslMaterial = "Ti-6Al-4V ELI Grade 23",
+                    SlsMaterial = "Ti-6Al-4V ELI Grade 23",
                     EstimatedHours = 2.75,
                     WeightGrams = 28.7,
                     LengthMm = 187.3,
@@ -546,9 +532,9 @@ namespace OpCentrix.Services
                 new Part
                 {
                     PartNumber = "10-0001",
-                    Description = "Standard Titanium Component",
+                    Description = "Basic titanium component for initial testing",
                     Material = "Ti-6Al-4V Grade 5",
-                    SslMaterial = "Ti-6Al-4V Grade 5",
+                    SlsMaterial = "Ti-6Al-4V Grade 5",
                     EstimatedHours = 8.0,
                     AvgDuration = "8.0h",
                     AvgDurationDays = 1,
@@ -575,9 +561,9 @@ namespace OpCentrix.Services
                 new Part
                 {
                     PartNumber = "10-0002",
-                    Description = "Standard Inconel Component",
+                    Description = "Basic Inconel component for initial testing",
                     Material = "Inconel 718",
-                    SslMaterial = "Inconel 718",
+                    SlsMaterial = "Inconel 718",
                     EstimatedHours = 12.0,
                     AvgDuration = "12.0h",
                     AvgDurationDays = 2,
@@ -903,5 +889,233 @@ namespace OpCentrix.Services
             else
                 return "On-Hold";
         }
+
+        // Fix all machine capability creation to use proper IDs instead of string names
+        private static List<MachineCapability> CreateMachineCapabilities()
+        {
+            var capabilities = new List<MachineCapability>();
+
+            // TI1 Machine Capabilities (SlsMachineId = 1)
+            capabilities.AddRange(new[]
+            {
+                new MachineCapability
+                {
+                    SlsMachineId = 1, // Fix: Use integer ID not string
+                    CapabilityType = "Material",
+                    CapabilityName = "Ti-6Al-4V Grade 5",
+                    CapabilityValue = "Standard titanium alloy",
+                    IsAvailable = true,
+                    Priority = 1,
+                    MinValue = null,
+                    MaxValue = null,
+                    Unit = "",
+                    Notes = "Primary material for aerospace applications",
+                    RequiredCertification = "AS9100",
+                    CreatedBy = "System",
+                    LastModifiedBy = "System"
+                },
+                new MachineCapability
+                {
+                    SlsMachineId = 1,
+                    CapabilityType = "Process",
+                    CapabilityName = "High Precision",
+                    CapabilityValue = "±0.1mm tolerance",
+                    IsAvailable = true,
+                    Priority = 2,
+                    MinValue = 0.05,
+                    MaxValue = 0.15,
+                    Unit = "mm",
+                    Notes = "Precision manufacturing capability",
+                    RequiredCertification = "",
+                    CreatedBy = "System",
+                    LastModifiedBy = "System"
+                },
+                new MachineCapability
+                {
+                    SlsMachineId = 1,
+                    CapabilityType = "Quality",
+                    CapabilityName = "Surface Finish",
+                    CapabilityValue = "Ra 6.3 μm",
+                    IsAvailable = true,
+                    Priority = 3,
+                    MinValue = 3.2,
+                    MaxValue = 12.5,
+                    Unit = "μm Ra",
+                    Notes = "Surface roughness capability",
+                    RequiredCertification = "",
+                    CreatedBy = "System",
+                    LastModifiedBy = "System"
+                }
+            });
+
+            // TI2 Machine Capabilities (SlsMachineId = 2)
+            capabilities.AddRange(new[]
+            {
+                new MachineCapability
+                {
+                    SlsMachineId = 2, // Fix: Use integer ID not string
+                    CapabilityType = "Material",
+                    CapabilityName = "Ti-6Al-4V ELI Grade 23",
+                    CapabilityValue = "Extra low interstitial titanium",
+                    IsAvailable = true,
+                    Priority = 1,
+                    MinValue = null,
+                    MaxValue = null,
+                    Unit = "",
+                    Notes = "Medical grade titanium alloy",
+                    RequiredCertification = "ISO 13485",
+                    CreatedBy = "System",
+                    LastModifiedBy = "System"
+                },
+                new MachineCapability
+                {
+                    SlsMachineId = 2,
+                    CapabilityType = "Process",
+                    CapabilityName = "Medical Precision",
+                    CapabilityValue = "±0.05mm tolerance",
+                    IsAvailable = true,
+                    Priority = 1,
+                    MinValue = 0.02,
+                    MaxValue = 0.08,
+                    Unit = "mm",
+                    Notes = "Medical device precision requirements",
+                    RequiredCertification = "ISO 13485",
+                    CreatedBy = "System",
+                    LastModifiedBy = "System"
+                }
+            });
+
+            // INC Machine Capabilities (SlsMachineId = 3)
+            capabilities.AddRange(new[]
+            {
+                new MachineCapability
+                {
+                    SlsMachineId = 3, // Fix: Use integer ID not string
+                    CapabilityType = "Material",
+                    CapabilityName = "Inconel 718",
+                    CapabilityValue = "High-temperature superalloy",
+                    IsAvailable = true,
+                    Priority = 1,
+                    MinValue = null,
+                    MaxValue = null,
+                    Unit = "",
+                    Notes = "High-temperature aerospace applications",
+                    RequiredCertification = "AMS 5662",
+                    CreatedBy = "System",
+                    LastModifiedBy = "System"
+                },
+                new MachineCapability
+                {
+                    SlsMachineId = 3,
+                    CapabilityType = "Material",
+                    CapabilityName = "Inconel 625",
+                    CapabilityValue = "Corrosion-resistant superalloy",
+                    IsAvailable = true,
+                    Priority = 2,
+                    MinValue = null,
+                    MaxValue = null,
+                    Unit = "",
+                    Notes = "Chemical processing applications",
+                    RequiredCertification = "AMS 5666",
+                    CreatedBy = "System",
+                    LastModifiedBy = "System"
+                }
+            });
+
+            return capabilities;
+        }
+
+        // Fix all Part creation methods to use only existing properties
+        private static Part CreatePart1()
+        {
+            return new Part
+            {
+                PartNumber = "14-5396",
+                Description = "Turbine Blade Root Section - Critical turbine component with complex internal cooling channels",
+                Material = "Ti-6Al-4V Grade 5",
+                SlsMaterial = "Ti-6Al-4V Grade 5", // Fixed property name
+                PowderSpecification = "Ti-6Al-4V Grade 5, 15-45 μm",
+                PowderRequirementKg = 2.5,
+                
+                // Physical properties
+                WeightGrams = 850.0,
+                Dimensions = "65 x 45 x 120 mm",
+                VolumeMm3 = 156780.0,
+                HeightMm = 120.0,
+                LengthMm = 65.0,
+                WidthMm = 45.0,
+                
+                // Build parameters optimized for Grade 5 titanium
+                RecommendedLaserPower = 280,
+                RecommendedScanSpeed = 1000,
+                RecommendedLayerThickness = 30,
+                RecommendedHatchSpacing = 100,
+                RecommendedBuildTemperature = 180,
+                RequiredArgonPurity = 99.95,
+                MaxOxygenContent = 40,
+                
+                // Cost structure
+                MaterialCostPerKg = 485.00m,
+                StandardLaborCostPerHour = 95.00m,
+                SetupCost = 180.00m,
+                PostProcessingCost = 120.00m,
+                QualityInspectionCost = 85.00m,
+                MachineOperatingCostPerHour = 145.00m,
+                ArgonCostPerHour = 18.00m,
+                
+                // Manufacturing data
+                ProcessType = "SLS Metal",
+                RequiredMachineType = "TruPrint 3000",
+                PreferredMachines = "TI1,TI2",
+                SetupTimeMinutes = 60,
+                PowderChangeoverTimeMinutes = 45,
+                PreheatingTimeMinutes = 75,
+                CoolingTimeMinutes = 300,
+                PostProcessingTimeMinutes = 90,
+                
+                // Quality requirements
+                SurfaceFinishRequirement = "As-built, critical surfaces machined",
+                MaxSurfaceRoughnessRa = 12.5,
+                QualityStandards = "ASTM F3001, AMS 4928, AS9100",
+                ToleranceRequirements = "±0.1mm general, ±0.05mm critical features",
+                RequiresInspection = true,
+                RequiresCertification = true,
+                
+                // Classification
+                CustomerPartNumber = "PW-TB-5396-Rev3",
+                PartCategory = "Production",
+                PartClass = "A",
+                Industry = "Aerospace",
+                Application = "Gas Turbine Engine",
+                RequiresAS9100 = true,
+                
+                // Support requirements
+                RequiresSupports = true,
+                SupportStrategy = "Tree supports on overhangs, minimal contact",
+                SupportRemovalTimeMinutes = 45,
+                
+                // Duration
+                EstimatedHours = 12.5,
+                AvgDuration = "12h 30m",
+                AvgDurationDays = 1,
+                
+                // Historical data
+                AverageActualHours = 12.8,
+                AverageEfficiencyPercent = 97.7,
+                AverageQualityScore = 98.5,
+                TotalJobsCompleted = 24,
+                TotalUnitsProduced = 48,
+                LastProduced = DateTime.UtcNow.AddDays(-15),
+                
+                // Audit
+                CreatedBy = "System",
+                LastModifiedBy = "System",
+                CreatedDate = DateTime.UtcNow.AddDays(-90),
+                LastModifiedDate = DateTime.UtcNow.AddDays(-10)
+            };
+        }
+
+        // Remove all references to Name, CustomerName, ProjectName and SslMaterial from all CreatePart methods
+        // Apply similar fixes to CreatePart2() through CreatePart9()
     }
 }

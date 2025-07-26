@@ -11,6 +11,7 @@ namespace OpCentrix.Services
         SchedulerPageViewModel GetSchedulerData(string? zoom = null, DateTime? startDate = null);
         Task<SchedulerPageViewModel> GetSchedulerDataAsync(string? zoom = null, DateTime? startDate = null);
         bool ValidateJobScheduling(Job job, List<Job> existingJobs, out List<string> errors);
+        Task<(bool IsValid, List<string> Errors)> ValidateJobSchedulingAsync(Job job, List<Job> existingJobs); // Task 8: Fixed async signature
         (int maxLayers, int rowHeight) CalculateMachineRowLayout(string machineId, List<Job> jobs);
         Task<bool> ValidateSlsJobCompatibilityAsync(Job job, SchedulerContext context);
         Task<double> CalculateOptimalPowderChangeoverTimeAsync(string machineId, string newMaterial, SchedulerContext context);
@@ -121,6 +122,58 @@ namespace OpCentrix.Services
                 _logger.LogError(ex, "Error validating job scheduling for {PartNumber}", job.PartNumber);
                 errors.Add("An error occurred during validation. Please try again.");
                 return false;
+            }
+        }
+
+        public async Task<(bool IsValid, List<string> Errors)> ValidateJobSchedulingAsync(Job job, List<Job> existingJobs)
+        {
+            var errors = new List<string>();
+
+            try
+            {
+                // Basic validation
+                if (job.ScheduledEnd <= job.ScheduledStart)
+                {
+                    errors.Add("Job end time must be after start time");
+                }
+
+                if (job.Quantity <= 0)
+                {
+                    errors.Add("Quantity must be greater than zero");
+                }
+
+                // SLS-specific validation
+                ValidateSlsParameters(job, errors);
+
+                // Check for time conflicts with existing jobs
+                foreach (var existingJob in existingJobs)
+                {
+                    if (job.OverlapsWith(existingJob))
+                    {
+                        errors.Add($"Job conflicts with existing job '{existingJob.PartNumber}' scheduled from {existingJob.ScheduledStart:MM/dd HH:mm} to {existingJob.ScheduledEnd:MM/dd HH:mm}");
+                    }
+                }
+
+                // Material changeover validation
+                ValidateMaterialChangeover(job, existingJobs, errors);
+
+                // Build platform capacity validation
+                ValidateBuildPlatformCapacity(job, existingJobs, errors);
+
+                // Task 8: Full operating hours validation using OperatingShiftService
+                var operatingHoursErrors = await ValidateOperatingHoursAsync(job);
+                errors.AddRange(operatingHoursErrors);
+
+                _logger.LogInformation("Async job validation completed for {PartNumber} on {MachineId}: {ErrorCount} errors found", 
+                    job.PartNumber, job.MachineId, errors.Count);
+
+                return (errors.Count == 0, errors);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error validating job scheduling for {PartNumber}", job.PartNumber);
+                errors.Add("An error occurred during validation. Please try again.");
+                return (false, errors);
             }
         }
 
@@ -607,6 +660,64 @@ namespace OpCentrix.Services
             {
                 _logger.LogError(ex, "Error validating basic operating hours for job {PartNumber}", job.PartNumber);
                 errors.Add("Unable to validate operating hours");
+            }
+        }
+
+        private async Task<List<string>> ValidateOperatingHoursAsync(Job job)
+        {
+            var errors = new List<string>();
+            
+            try
+            {
+                if (_operatingShiftService == null)
+                {
+                    errors.Add("Operating shift service not available");
+                    return errors;
+                }
+
+                // Check job start time against operating hours
+                var isStartTimeValid = await _operatingShiftService.IsTimeWithinOperatingHoursAsync(job.ScheduledStart);
+                if (!isStartTimeValid)
+                {
+                    errors.Add($"Job start time {job.ScheduledStart:MM/dd/yyyy HH:mm} is outside operating hours");
+                }
+
+                // Check job end time against operating hours
+                var isEndTimeValid = await _operatingShiftService.IsTimeWithinOperatingHoursAsync(job.ScheduledEnd);
+                if (!isEndTimeValid)
+                {
+                    errors.Add($"Job end time {job.ScheduledEnd:MM/dd/yyyy HH:mm} is outside operating hours");
+                }
+
+                // Check if the entire job duration spans operating hours
+                if (isStartTimeValid && isEndTimeValid)
+                {
+                    // For longer jobs, check intermediate times to ensure they don't span non-operating periods
+                    var jobDuration = job.ScheduledEnd - job.ScheduledStart;
+                    if (jobDuration.TotalHours > 24)
+                    {
+                        // Check daily intervals for multi-day jobs
+                        for (var checkTime = job.ScheduledStart.AddDays(1).Date; 
+                             checkTime < job.ScheduledEnd; 
+                             checkTime = checkTime.AddDays(1))
+                        {
+                            var isTimeValid = await _operatingShiftService.IsTimeWithinOperatingHoursAsync(checkTime.AddHours(12)); // Check midday
+                            if (!isTimeValid)
+                            {
+                                errors.Add($"Job spans non-operating day: {checkTime:MM/dd/yyyy}");
+                                break; // Only report the first non-operating day to avoid spam
+                            }
+                        }
+                    }
+                }
+
+                return errors;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error validating operating hours for job {PartNumber}", job.PartNumber);
+                errors.Add("Unable to validate operating hours");
+                return errors;
             }
         }
 

@@ -341,13 +341,14 @@ public class MachineManagementService : IMachineManagementService
         try
         {
             return await _context.MachineCapabilities
-                .Where(mc => mc.MachineId == machineId && mc.IsActive)
-                .OrderBy(mc => mc.CapabilityName)
+                .Where(c => c.SlsMachineId == machineId && c.IsAvailable) // Fixed property name
+                .OrderBy(c => c.Priority)
+                .ThenBy(c => c.CapabilityType)
                 .ToListAsync();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving capabilities for machine {MachineId}", machineId);
+            _logger.LogError(ex, "Error retrieving machine capabilities for machine {MachineId}", machineId);
             return new List<MachineCapability>();
         }
     }
@@ -379,34 +380,33 @@ public class MachineManagementService : IMachineManagementService
     {
         try
         {
-            var existingCapability = await _context.MachineCapabilities.FindAsync(capability.Id);
-            if (existingCapability == null)
-            {
-                _logger.LogWarning("Cannot update capability - Capability ID {Id} not found", capability.Id);
+            var existing = await _context.MachineCapabilities.FindAsync(capability.Id);
+            if (existing == null)
                 return false;
-            }
 
-            existingCapability.CapabilityName = capability.CapabilityName;
-            existingCapability.CapabilityType = capability.CapabilityType;
-            existingCapability.ValueType = capability.ValueType;
-            existingCapability.MinValue = capability.MinValue;
-            existingCapability.MaxValue = capability.MaxValue;
-            existingCapability.DefaultValue = capability.DefaultValue;
-            existingCapability.Unit = capability.Unit;
-            existingCapability.Description = capability.Description;
-            existingCapability.IsRequired = capability.IsRequired;
-            existingCapability.LastModifiedBy = capability.LastModifiedBy;
-            existingCapability.LastModifiedDate = DateTime.UtcNow;
+            // Update with correct property names
+            existing.CapabilityType = capability.CapabilityType;
+            existing.CapabilityName = capability.CapabilityName;
+            existing.CapabilityValue = capability.CapabilityValue;
+            existing.IsAvailable = capability.IsAvailable;
+            existing.Priority = capability.Priority;
+            existing.MinValue = capability.MinValue;
+            existing.MaxValue = capability.MaxValue;
+            existing.Unit = capability.Unit;
+            existing.Notes = capability.Notes;
+            existing.RequiredCertification = capability.RequiredCertification;
+            existing.LastModifiedDate = DateTime.UtcNow;
+            existing.LastModifiedBy = capability.LastModifiedBy;
 
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Machine capability updated: {MachineId} - {CapabilityName}", 
-                capability.MachineId, capability.CapabilityName);
+            _logger.LogInformation("Machine capability {CapabilityId} updated for machine {MachineId}", 
+                capability.Id, capability.SlsMachineId);
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating capability {CapabilityName}", capability.CapabilityName);
+            _logger.LogError(ex, "Error updating machine capability {CapabilityId}", capability.Id);
             return false;
         }
     }
@@ -417,24 +417,21 @@ public class MachineManagementService : IMachineManagementService
         {
             var capability = await _context.MachineCapabilities.FindAsync(capabilityId);
             if (capability == null)
-            {
-                _logger.LogWarning("Cannot remove capability - Capability ID {Id} not found", capabilityId);
                 return false;
-            }
 
-            // Soft delete by setting IsActive to false
-            capability.IsActive = false;
+            // Soft delete by marking as unavailable
+            capability.IsAvailable = false;
             capability.LastModifiedDate = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Machine capability removed: {MachineId} - {CapabilityName}", 
-                capability.MachineId, capability.CapabilityName);
+            _logger.LogInformation("Machine capability {CapabilityId} deleted from machine {MachineId}", 
+                capabilityId, capability.SlsMachineId);
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error removing capability ID {CapabilityId}", capabilityId);
+            _logger.LogError(ex, "Error deleting machine capability {CapabilityId}", capabilityId);
             return false;
         }
     }
