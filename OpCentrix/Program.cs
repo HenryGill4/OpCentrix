@@ -3,9 +3,9 @@ using Microsoft.Extensions.DependencyInjection;
 using OpCentrix.Data;
 using OpCentrix.Models;
 using OpCentrix.Services;
+using OpCentrix.Services.Admin;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using OpCentrix.Authorization;
-using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Events;
 
@@ -27,82 +27,75 @@ var builder = WebApplication.CreateBuilder(args);
 // Use Serilog as the logging provider
 builder.Host.UseSerilog();
 
+// Configure logging first
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+
+if (builder.Environment.IsDevelopment())
+{
+    builder.Logging.SetMinimumLevel(LogLevel.Debug);
+}
+else
+{
+    builder.Logging.SetMinimumLevel(LogLevel.Information);
+}
+
 // Add services to the container
 builder.Services.AddRazorPages();
 
 // Database configuration
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrEmpty(connectionString))
+{
+    // Fallback to default SQLite connection
+    connectionString = "Data Source=scheduler.db";
+    builder.Configuration["ConnectionStrings:DefaultConnection"] = connectionString;
+}
+
 builder.Services.AddDbContext<SchedulerContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlite(connectionString, sqliteOptions =>
+    {
+        sqliteOptions.CommandTimeout(30);
+    }));
 
 builder.Services.AddHttpClient(); // Register HttpClient for external API calls
 
-// Authentication services
+// Authentication configuration
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
         options.LoginPath = "/Account/Login";
         options.LogoutPath = "/Account/Logout";
         options.AccessDeniedPath = "/Account/AccessDenied";
-        options.ExpireTimeSpan = TimeSpan.FromHours(2); // Default 2 hours
-        options.SlidingExpiration = true; // Extend session on activity
+        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+        options.SlidingExpiration = true;
         options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Strict;
         options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-        options.Cookie.SameSite = SameSiteMode.Lax;
-        
-        // Handle AJAX/HTMX authentication challenges
-        options.Events = new CookieAuthenticationEvents
-        {
-            OnRedirectToLogin = context =>
-            {
-                if (context.Request.Headers["HX-Request"] == "true")
-                {
-                    context.Response.StatusCode = 401;
-                    return Task.CompletedTask;
-                }
-                context.Response.Redirect(context.RedirectUri);
-                return Task.CompletedTask;
-            }
-        };
     });
 
-// Authorization services with custom requirements
+// Authorization policies
 builder.Services.AddAuthorization(options =>
 {
-    // Role-based policies
-    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
-    options.AddPolicy("ManagerOrAdmin", policy => policy.RequireRole("Manager", "Admin"));
+    options.AddPolicy("SchedulerAccess", policy =>
+        policy.RequireAuthenticatedUser());
     
-    // Department-specific policies
-    options.AddPolicy("SchedulerAccess", policy => 
-        policy.RequireRole("Admin", "Manager", "Scheduler", "Operator"));
-    options.AddPolicy("PrintingAccess", policy => 
-        policy.RequireRole("Admin", "Manager", "PrintingSpecialist"));
-    options.AddPolicy("CoatingAccess", policy => 
-        policy.RequireRole("Admin", "Manager", "CoatingSpecialist"));
-    options.AddPolicy("ShippingAccess", policy => 
-        policy.RequireRole("Admin", "Manager", "ShippingSpecialist"));
-    options.AddPolicy("EDMAccess", policy => 
-        policy.RequireRole("Admin", "Manager", "EDMSpecialist"));
-    options.AddPolicy("MachiningAccess", policy => 
-        policy.RequireRole("Admin", "Manager", "MachiningSpecialist"));
-    options.AddPolicy("QCAccess", policy => 
-        policy.RequireRole("Admin", "Manager", "QCSpecialist"));
-    options.AddPolicy("MediaAccess", policy => 
-        policy.RequireRole("Admin", "Manager", "MediaSpecialist"));
-    options.AddPolicy("AnalyticsAccess", policy => 
-        policy.RequireRole("Admin", "Manager", "Analyst"));
+    options.AddPolicy("AdminOnly", policy =>
+        policy.RequireRole("Admin"));
+    
+    options.AddPolicy("SupervisorAccess", policy =>
+        policy.RequireRole("Admin", "Supervisor"));
+    
+    options.AddPolicy("OperatorAccess", policy =>
+        policy.RequireRole("Admin", "Supervisor", "Operator"));
 });
 
-// Core business services
+// Register application services
 builder.Services.AddScoped<ISchedulerService, SchedulerService>();
-builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
-
-// SLS-specific services
-builder.Services.AddScoped<IOpcUaService, OpcUaService>();
 builder.Services.AddScoped<SlsDataSeedingService>();
-
-// Register the print tracking service
-builder.Services.AddScoped<IPrintTrackingService, PrintTrackingService>();
+builder.Services.AddScoped<PrintTrackingService>();
+builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 
 // Register database validation service
 builder.Services.AddScoped<DatabaseValidationService>();
@@ -118,8 +111,14 @@ builder.Services.AddScoped<OpCentrix.Services.Admin.IAdminDataSeedingService, Op
 builder.Services.AddScoped<OpCentrix.Services.Admin.ISystemConfigurationService, OpCentrix.Services.Admin.SystemConfigurationService>();
 builder.Services.AddScoped<OpCentrix.Services.Admin.IMachineManagementService, OpCentrix.Services.Admin.MachineManagementService>();
 
-// Background services for OPC UA monitoring (if needed in future)
-// builder.Services.AddHostedService<OpcUaMonitoringService>();
+// TASK 16: Database Management Service
+builder.Services.AddScoped<OpCentrix.Services.Admin.IDatabaseManagementService, OpCentrix.Services.Admin.DatabaseManagementService>();
+
+// FIXED: Add missing OPC UA service
+builder.Services.AddScoped<IOpcUaService, OpcUaService>();
+
+// FIXED: Add missing multi-stage job service with correct namespace
+builder.Services.AddScoped<IMultiStageJobService, MultiStageJobService>();
 
 // Logging configuration
 builder.Logging.ClearProviders();

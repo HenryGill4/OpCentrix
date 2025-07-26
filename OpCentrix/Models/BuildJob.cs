@@ -10,6 +10,7 @@ namespace OpCentrix.Models
     /// </summary>
     public class BuildJob
     {
+        [Key] // FIXED: Add explicit Key attribute to resolve primary key issue
         public int BuildId { get; set; }
 
         #region Core Print Tracking

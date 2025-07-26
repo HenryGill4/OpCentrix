@@ -13,6 +13,11 @@ namespace OpCentrix.Models
         [StringLength(50)]
         [RegularExpression(@"^\d{2}-\d{4}$", ErrorMessage = "Part number must be in format XX-XXXX (e.g., 14-5396)")]
         public string PartNumber { get; set; } = string.Empty;
+
+        // ADDED: Missing Name property
+        [Required]
+        [StringLength(200)]
+        public string Name { get; set; } = string.Empty;
         
         [Required]
         [StringLength(500)]
@@ -384,6 +389,11 @@ namespace OpCentrix.Models
         
         public virtual ICollection<Job> Jobs { get; set; } = new List<Job>();
         
+        /// <summary>
+        /// Job step notes - Task 9: Enhanced scheduler features
+        /// </summary>
+        public virtual ICollection<JobNote> JobNotes { get; set; } = new List<JobNote>();
+
         #endregion
         
         #region Helper Methods for SLS Operations

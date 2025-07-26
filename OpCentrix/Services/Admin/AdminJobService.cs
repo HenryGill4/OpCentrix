@@ -13,7 +13,9 @@ public interface IAdminJobService
     Task<AdminJobsViewModel> GetJobsAsync(AdminJobsViewModel filters, string currentUserName, string currentUserRole);
     Task<Job?> GetJobByIdAsync(int id);
     Task<bool> DeleteJobAsync(int id, string currentUserName);
-    Task<List<SlsMachine>> GetAvailableMachinesAsync();
+    Task<List<Machine>> GetAvailableMachinesAsync();
+    List<Machine> GetAllMachines();
+    Task<List<Machine>> GetAllMachinesAsync();
 }
 
 public class AdminJobService : IAdminJobService
@@ -133,11 +135,37 @@ public class AdminJobService : IAdminJobService
         }
     }
 
-    public async Task<List<SlsMachine>> GetAvailableMachinesAsync()
+    public async Task<List<Machine>> GetAvailableMachinesAsync()
     {
-        return await _context.SlsMachines
+        return await _context.Machines
             .Where(m => m.IsActive)
             .OrderBy(m => m.MachineId)
             .ToListAsync();
+    }
+
+    public List<Machine> GetAllMachines()
+    {
+        try
+        {
+            return _context.Machines.ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving machines");
+            return new List<Machine>();
+        }
+    }
+
+    public async Task<List<Machine>> GetAllMachinesAsync()
+    {
+        try
+        {
+            return await _context.Machines.ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving machines");
+            return new List<Machine>();
+        }
     }
 }

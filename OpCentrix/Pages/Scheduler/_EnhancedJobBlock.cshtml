@@ -1,0 +1,137 @@
+@model OpCentrix.Models.Job
+@{
+    // Task 9: Enhanced job block with color coding, priority indicators, and notes support
+    var statusClass = Model.Status.ToLower().Replace(" ", "-");
+    var priorityIndicator = Model.Priority switch {
+        1 => "??", // Critical
+        2 => "?", // High  
+        3 => "??", // Normal
+        4 => "?", // Low
+        5 => "??", // Lowest
+        _ => "??"
+    };
+    
+    var materialClass = Model.SlsMaterial?.ToLower().Contains("ti") == true ? "titanium" : 
+                       Model.SlsMaterial?.ToLower().Contains("inconel") == true ? "inconel" : "standard";
+                       
+    var progressPercent = Model.Status.ToLower() switch {
+        "completed" => 100,
+        "running" or "building" => 65,
+        "cooling" => 85,
+        "post-processing" => 95,
+        "scheduled" => 0,
+        _ => 0
+    };
+}
+
+<div class="job-content h-full w-full flex flex-col justify-between p-1">
+    <!-- Job Header -->
+    <div class="job-header flex items-center justify-between">
+        <div class="job-part-info flex-1 min-w-0">
+            <div class="job-part-number font-bold text-xs truncate" title="@Model.PartNumber">
+                @priorityIndicator @Model.PartNumber
+            </div>
+            @if (!string.IsNullOrEmpty(Model.SlsMaterial))
+            {
+                <div class="job-material text-xs opacity-90 truncate" title="@Model.SlsMaterial">
+                    @Model.SlsMaterial.Substring(0, Math.Min(Model.SlsMaterial.Length, 12))@(Model.SlsMaterial.Length > 12 ? "..." : "")
+                </div>
+            }
+        </div>
+        
+        @if (Model.IsRushJob)
+        {
+            <div class="rush-indicator text-xs">?</div>
+        }
+    </div>
+    
+    <!-- Job Status & Duration -->
+    <div class="job-status-info">
+        <div class="job-status-line flex items-center justify-between text-xs">
+            <span class="job-status-text opacity-90">@Model.Status</span>
+            <span class="job-duration opacity-80">@Model.DurationHours.ToString("F1")h</span>
+        </div>
+        
+        <!-- Progress Bar -->
+        @if (progressPercent > 0)
+        {
+            <div class="job-progress-bar mt-1 bg-black bg-opacity-20 rounded-full h-1 overflow-hidden">
+                <div class="job-progress-fill bg-white h-full transition-all duration-500" 
+                     style="width: @(progressPercent)%"></div>
+            </div>
+        }
+    </div>
+    
+    <!-- Job Notes Indicator -->
+    @if (Model.JobNotes?.Any() == true)
+    {
+        var hasHighPriorityNotes = Model.JobNotes.Any(n => n.Priority <= 2 && !n.IsCompleted);
+        var noteCount = Model.JobNotes.Count(n => !n.IsCompleted);
+        
+        <div class="job-notes-indicator absolute top-1 left-1 flex items-center">
+            @if (hasHighPriorityNotes)
+            {
+                <div class="note-icon bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs" 
+                     title="@noteCount urgent note@(noteCount != 1 ? "s" : "")">
+                    !
+                </div>
+            }
+            else if (noteCount > 0)
+            {
+                <div class="note-icon bg-blue-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs" 
+                     title="@noteCount note@(noteCount != 1 ? "s" : "")">
+                    @noteCount
+                </div>
+            }
+        </div>
+    }
+    
+    <!-- Machine Compatibility Indicator -->
+    @if (!string.IsNullOrEmpty(Model.MachineId))
+    {
+        <div class="machine-indicator absolute bottom-1 right-1 text-xs opacity-70" title="Assigned to @Model.MachineId">
+            @Model.MachineId
+        </div>
+    }
+</div>
+
+<style>
+    /* Task 9: Enhanced job block styling with material-based colors */
+    .job-block.titanium {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+    }
+    
+    .job-block.inconel {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+    }
+    
+    .job-block.standard {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    }
+    
+    /* Status-based color overrides */
+    .job-block.status-completed {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    }
+    
+    .job-block.status-running,
+    .job-block.status-building {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+    }
+    
+    .job-block.status-delayed {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+    }
+    
+    .job-block.status-on-hold {
+        background: linear-gradient(135deg, #f97316 0%, #ea580c 100%) !important;
+    }
+    
+    .job-block.status-cooling {
+        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
+    }
+    
+    .job-block.status-post-processing {
+        background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%) !important;
+    }
+</style>

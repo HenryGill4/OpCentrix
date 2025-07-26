@@ -28,7 +28,8 @@ namespace OpCentrix.Services
                 
                 // Validate essential data
                 result.HasUsers = await _context.Users.AnyAsync();
-                result.HasMachines = await _context.SlsMachines.AnyAsync();
+                // FIXED: Use correct DbSet name
+                result.HasMachines = await _context.Machines.AnyAsync();
                 
                 // Count real data
                 result.RealPartsCount = await CountRealPartsAsync();

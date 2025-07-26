@@ -39,7 +39,7 @@ public class AdminDashboardService : IAdminDashboardService
 
             // Get basic counts
             viewModel.TotalUsers = await _context.Users.CountAsync();
-            viewModel.TotalMachines = await _context.SlsMachines.CountAsync(m => m.IsActive);
+            viewModel.TotalMachines = await _context.Machines.CountAsync();
             viewModel.TotalParts = await _context.Parts.CountAsync();
             viewModel.TotalJobs = await _context.Jobs.CountAsync();
             viewModel.ActiveJobs = await _context.Jobs.CountAsync(j => j.Status == "Scheduled" || j.Status == "InProgress");

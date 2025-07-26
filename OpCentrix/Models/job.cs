@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json;
@@ -53,8 +54,6 @@ namespace OpCentrix.Models
         [RegularExpression(@"^\d{2}-\d{4}$", ErrorMessage = "Part number must be in format XX-XXXX (e.g., 14-5396)")]
         public string PartNumber { get; set; } = string.Empty;
         
-        public virtual Part? Part { get; set; }
-
         // Production details
         [Required]
         [Range(1, 1000, ErrorMessage = "Quantity must be between 1 and 1000")]
@@ -63,6 +62,13 @@ namespace OpCentrix.Models
         public int ProducedQuantity { get; set; } = 0;
         public int DefectQuantity { get; set; } = 0;
         public int ReworkQuantity { get; set; } = 0;
+
+        #endregion
+
+        #region Duration and Time Management
+
+        // ADDED: Missing EstimatedDuration property
+        public TimeSpan EstimatedDuration { get; set; } = TimeSpan.FromHours(8);
 
         #endregion
 
@@ -322,6 +328,25 @@ namespace OpCentrix.Models
         
         [StringLength(1000)]
         public string? Notes { get; set; }
+
+        #endregion
+
+        #region Navigation Properties
+
+        /// <summary>
+        /// Part information
+        /// </summary>
+        public virtual Part? Part { get; set; }
+
+        /// <summary>
+        /// Job step notes - Task 9: Enhanced scheduler features
+        /// </summary>
+        public virtual ICollection<JobNote> JobNotes { get; set; } = new List<JobNote>();
+
+        /// <summary>
+        /// Job stages for multi-stage manufacturing - Task 11: Modular Multi-Stage Scheduling
+        /// </summary>
+        public virtual ICollection<JobStage> JobStages { get; set; } = new List<JobStage>();
 
         #endregion
 

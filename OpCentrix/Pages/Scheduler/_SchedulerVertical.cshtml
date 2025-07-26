@@ -1,0 +1,177 @@
+@model OpCentrix.Models.ViewModels.SchedulerPageViewModel
+@{
+    var slotsPerDay = Model.SlotsPerDay;
+    var slotMinutes = Model.SlotMinutes;
+    var slotTimes = Enumerable.Range(0, slotsPerDay).Select(i => TimeSpan.FromMinutes(i * slotMinutes)).ToList();
+    var totalSlots = Model.Dates.Count * slotsPerDay;
+    
+    // Get zoom from query string
+    var zoom = Context.Request.Query["zoom"].FirstOrDefault() ?? "week";
+}
+
+<!-- Task 10: Vertical Scheduler Layout Implementation -->
+<div class="scheduler-grid-container scheduler-vertical opcentrix-card" 
+     data-zoom="@zoom"
+     data-orientation="vertical"
+     data-total-slots="@totalSlots">
+    
+    <!-- Machines Header Row (Horizontal across top) -->
+    <div class="scheduler-machines-header">
+        <!-- Time column header -->
+        <div class="scheduler-time-column scheduler-grid-header bg-white border-b border-r font-bold text-indigo-800">
+            <div class="flex items-center justify-center h-full p-2">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                Time
+            </div>
+        </div>
+        
+        <!-- Machine columns headers -->
+        <div class="scheduler-machine-columns">
+            @foreach (var machine in Model.Machines)
+            {
+                var machineJobs = Model.Jobs.Where(j => j.MachineId == machine).ToList();
+                var jobCount = machineJobs.Count;
+                
+                <div class="machine-column scheduler-grid-header bg-white border-b border-r font-bold text-indigo-800"
+                     data-machine="@machine">
+                    <div class="flex flex-col items-center justify-center h-full p-2 min-h-[80px]">
+                        <div class="text-lg font-bold">@machine</div>
+                        <div class="text-xs opacity-75 mt-1">@jobCount job@(jobCount != 1 ? "s" : "")</div>
+                        @if (machineJobs.Any())
+                        {
+                            <div class="text-xs opacity-60">@machineJobs.Sum(j => j.DurationHours).ToString("F1")h</div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+    
+    <!-- Time Rows Container -->
+    <div class="scheduler-time-rows">
+        @for (int d = 0; d < Model.Dates.Count; d++)
+        {
+            var day = Model.Dates[d];
+            for (int s = 0; s < slotsPerDay; s++)
+            {
+                var slotTime = slotTimes[s];
+                var slotDateTime = day.Add(slotTime);
+                var isToday = day.Date == DateTime.Today;
+                var isCurrentTimeSlot = isToday && 
+                    slotTime <= DateTime.Now.TimeOfDay && 
+                    slotTime.Add(TimeSpan.FromMinutes(slotMinutes)) > DateTime.Now.TimeOfDay;
+                var isWeekend = day.DayOfWeek == DayOfWeek.Saturday || day.DayOfWeek == DayOfWeek.Sunday;
+                var isPastWorkHours = slotTime < TimeSpan.FromHours(6) || slotTime >= TimeSpan.FromHours(18);
+                
+                <!-- Time Row -->
+                <div class="time-row flex" data-time="@slotDateTime.ToString("yyyy-MM-ddTHH:mm")">
+                    <!-- Time Label -->
+                    <div class="scheduler-time-column scheduler-grid-header @(isCurrentTimeSlot ? "bg-blue-50 text-blue-800" : "bg-gray-50 text-gray-700") border-b border-r">
+                        <div class="flex items-center justify-center h-full p-2 min-h-[60px]">
+                            @if (slotsPerDay == 1)
+                            {
+                                <div class="text-center">
+                                    <div class="font-bold">@day.ToString("ddd")</div>
+                                    <div class="text-sm">@day.ToString("M/d")</div>
+                                    @if (isToday)
+                                    {
+                                        <div class="text-xs text-blue-600 font-semibold">Today</div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="text-center">
+                                    <div class="text-sm font-medium">@day.ToString("M/d")</div>
+                                    <div class="text-xs">
+                                        @slotTime.ToString(@"h\:mm")
+                                        @if (slotTime.Hours >= 12) 
+                                        {
+                                            <span>PM</span>
+                                        } 
+                                        else 
+                                        {
+                                            <span>AM</span>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                            @if (isCurrentTimeSlot)
+                            {
+                                <div class="absolute top-1 right-1 w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
+                            }
+                        </div>
+                    </div>
+                    
+                    <!-- Machine Cells for this time slot -->
+                    <div class="scheduler-machine-columns">
+                        @foreach (var machine in Model.Machines)
+                        {
+                            var machineJobs = Model.Jobs.Where(j => j.MachineId == machine).ToList();
+                            var cellClasses = new List<string> { 
+                                "machine-column", "scheduler-grid-cell", "group", "relative", "cursor-pointer", "border-b", "border-r"
+                            };
+                            
+                            if (isCurrentTimeSlot) cellClasses.Add("current-time");
+                            else if (isWeekend) cellClasses.Add("weekend");
+                            else if (isPastWorkHours) cellClasses.Add("off-hours");
+                            
+                            <div class="@string.Join(" ", cellClasses)" 
+                                 onclick="openJobModal('@machine', '@slotDateTime.ToString("yyyy-MM-ddTHH:mm")')"
+                                 title="Click to add job at @slotDateTime.ToString("MMM dd, yyyy HH:mm")"
+                                 data-slot-time="@slotDateTime.ToString("yyyy-MM-ddTHH:mm")"
+                                 data-machine="@machine"
+                                 style="min-height: 60px; min-width: 150px;">
+                                 
+                                <!-- Jobs in this slot -->
+                                @{ 
+                                    var slotJobs = machineJobs.Where(job => 
+                                        job.ScheduledStart < slotDateTime.Add(TimeSpan.FromMinutes(slotMinutes)) &&
+                                        job.ScheduledEnd > slotDateTime).ToList();
+                                }
+                                
+                                @foreach (var job in slotJobs)
+                                {
+                                    // For vertical layout, calculate vertical position
+                                    var timeSlotIndex = d * slotsPerDay + s;
+                                    var jobStartTimeSlot = (int)Math.Floor((job.ScheduledStart - Model.Dates[0].Date).TotalMinutes / slotMinutes);
+                                    
+                                    // Only render the job if this is the starting time slot
+                                    @if (jobStartTimeSlot == timeSlotIndex)
+                                    {
+                                        var jobDurationSlots = (int)Math.Ceiling((job.ScheduledEnd - job.ScheduledStart).TotalMinutes / slotMinutes);
+                                        var heightPx = Math.Max(40, jobDurationSlots * 60); // 60px per slot minimum
+                                        
+                                        <!-- Task 9: Enhanced job block for vertical layout -->
+                                        <div class="absolute inset-2 job-block status-@job.Status.ToLower().Replace(" ", "-")"
+                                             style="height: @(heightPx)px; z-index: 10;"
+                                             data-material="@job.SlsMaterial"
+                                             data-priority="@job.Priority"
+                                             data-status="@job.Status"
+                                             onclick="event.stopPropagation(); openJobModal('@machine', '@job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")', @job.Id)"
+                                             title="@job.PartNumber - @job.Status (@job.DurationHours.ToString("F1")h) - @job.SlsMaterial"
+                                             data-job-id="@job.Id">
+                                            <partial name="_EnhancedJobBlock" model="job" />
+                                        </div>
+                                    }
+                                }
+                                
+                                <!-- Enhanced Add Job button for vertical layout -->
+                                <div class="absolute z-10 top-2 right-2 opacity-0 group-hover:opacity-100 transition-all duration-300 
+                                            bg-indigo-600 text-white rounded-full w-6 h-6 text-xs font-bold shadow-lg 
+                                            hover:bg-indigo-700 hover:scale-110 flex items-center justificar-center pointer-events-none
+                                            transform group-hover:scale-100 scale-90">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>

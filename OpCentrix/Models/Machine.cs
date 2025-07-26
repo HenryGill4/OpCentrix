@@ -20,7 +20,14 @@ public class Machine
     public string MachineId { get; set; } = string.Empty;
 
     /// <summary>
-    /// Human-readable machine name
+    /// Human-readable machine name - ADDED: Missing Name property
+    /// </summary>
+    [Required]
+    [StringLength(100)]
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Machine name for display (keeping existing property name for compatibility)
     /// </summary>
     [Required]
     [StringLength(100)]
@@ -51,6 +58,12 @@ public class Machine
     /// </summary>
     [StringLength(100)]
     public string Location { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Department or area (ADDED for missing references)
+    /// </summary>
+    [StringLength(50)]
+    public string Department { get; set; } = string.Empty;
 
     #region Status and Availability
 
@@ -142,6 +155,18 @@ public class Machine
     /// </summary>
     [Range(0, 100)]
     public double AverageUtilizationPercent { get; set; } = 0;
+
+    /// <summary>
+    /// Maintenance notes (ADDED for missing references)
+    /// </summary>
+    [StringLength(2000)]
+    public string MaintenanceNotes { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Operator notes (ADDED for missing references)
+    /// </summary>
+    [StringLength(2000)]
+    public string OperatorNotes { get; set; } = string.Empty;
 
     #endregion
 
@@ -318,6 +343,63 @@ public class Machine
     {
         TechnicalSpecifications = System.Text.Json.JsonSerializer.Serialize(specifications);
     }
+
+    #endregion
+
+    #region SLS-Specific Properties (for backward compatibility)
+
+    /// <summary>
+    /// Build envelope length in mm (SLS machines)
+    /// </summary>
+    [Range(50, 500)]
+    public double BuildLengthMm { get; set; } = 250;
+
+    /// <summary>
+    /// Build envelope width in mm (SLS machines)
+    /// </summary>
+    [Range(50, 500)]
+    public double BuildWidthMm { get; set; } = 250;
+
+    /// <summary>
+    /// Build envelope height in mm (SLS machines)
+    /// </summary>
+    [Range(50, 500)]
+    public double BuildHeightMm { get; set; } = 300;
+
+    /// <summary>
+    /// Build volume in cubic meters - ADDED: Missing BuildVolumeM3 property
+    /// </summary>
+    [NotMapped]
+    public double BuildVolumeM3 => (BuildLengthMm * BuildWidthMm * BuildHeightMm) / 1_000_000_000.0;
+
+    /// <summary>
+    /// Maximum laser power in watts (SLS machines)
+    /// </summary>
+    [Range(100, 1000)]
+    public double MaxLaserPowerWatts { get; set; } = 400;
+
+    /// <summary>
+    /// Maximum scan speed in mm/s (SLS machines)
+    /// </summary>
+    [Range(1000, 10000)]
+    public double MaxScanSpeedMmPerSec { get; set; } = 7000;
+
+    /// <summary>
+    /// Minimum layer thickness in microns (SLS machines)
+    /// </summary>
+    [Range(10, 100)]
+    public double MinLayerThicknessMicrons { get; set; } = 20;
+
+    /// <summary>
+    /// Maximum layer thickness in microns (SLS machines)
+    /// </summary>
+    [Range(10, 100)]
+    public double MaxLayerThicknessMicrons { get; set; } = 60;
+
+    /// <summary>
+    /// Total operating hours
+    /// </summary>
+    public double TotalOperatingHours { get; set; } = 0;
 
     #endregion
 }

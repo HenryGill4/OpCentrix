@@ -42,10 +42,10 @@ namespace OpCentrix.Services
         {
             try
             {
-                // Validate and set zoom level
-                var validZooms = new[] { "day", "hour", "30min", "15min" };
+                // Task 9: Enhanced zoom validation with new levels
+                var validZooms = new[] { "2month", "month", "week", "day", "12h", "6h", "4h", "2h", "1h", "hour", "30min", "15min" };
                 if (!validZooms.Contains(zoom))
-                    zoom = "day";
+                    zoom = "week"; // Default to week view
 
                 // Start from UTC today instead of server local time
                 var start = startDate ?? DateTime.UtcNow.Date;
@@ -96,10 +96,10 @@ namespace OpCentrix.Services
         {
             try
             {
-                // Validate and set zoom level
-                var validZooms = new[] { "day", "hour", "30min", "15min" };
+                // Task 9: Enhanced zoom validation with new levels
+                var validZooms = new[] { "2month", "month", "week", "day", "12h", "6h", "4h", "2h", "1h", "hour", "30min", "15min" };
                 if (!validZooms.Contains(zoom))
-                    zoom = "day";
+                    zoom = "week"; // Default to week view
 
                 // Start from UTC today instead of server local time
                 var start = startDate ?? DateTime.UtcNow.Date;
@@ -596,11 +596,20 @@ namespace OpCentrix.Services
         {
             return zoom switch
             {
-                "day" => (7, 1, 1440),      // 7 days, 1 slot per day (24 hours)
-                "hour" => (3, 24, 60),      // 3 days, 24 slots per day (1 hour each)
-                "30min" => (2, 48, 30),     // 2 days, 48 slots per day (30 minutes each)
-                "15min" => (1, 96, 15),     // 1 day, 96 slots per day (15 minutes each)
-                _ => (7, 1, 1440)           // Default to day view
+                // Task 9: Extended zoom levels from 12 hours down to 1 hour
+                "2month" => (60, 1, 1440),    // 60 days (2 months), 1 slot per day (24 hours)
+                "month" => (30, 1, 1440),     // 30 days (1 month), 1 slot per day (24 hours)
+                "week" => (7, 1, 1440),       // 7 days, 1 slot per day (24 hours)
+                "day" => (7, 1, 1440),        // 7 days, 1 slot per day (24 hours) - kept for compatibility
+                "12h" => (5, 2, 720),         // 5 days, 2 slots per day (12 hours each)
+                "6h" => (4, 4, 360),          // 4 days, 4 slots per day (6 hours each)
+                "4h" => (3, 6, 240),          // 3 days, 6 slots per day (4 hours each)
+                "2h" => (2, 12, 120),         // 2 days, 12 slots per day (2 hours each)
+                "1h" => (1, 24, 60),          // 1 day, 24 slots per day (1 hour each)
+                "hour" => (1, 24, 60),        // Alias for 1h - kept for compatibility
+                "30min" => (1, 48, 30),       // 1 day, 48 slots per day (30 minutes each)
+                "15min" => (1, 96, 15),       // 1 day, 96 slots per day (15 minutes each)
+                _ => (7, 1, 1440)             // Default to week view
             };
         }
 

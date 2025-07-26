@@ -10,6 +10,7 @@ namespace OpCentrix.Models
     /// </summary>
     public class BuildJobPart
     {
+        [Key] // FIXED: Add explicit Key attribute to resolve primary key issue
         public int PartEntryId { get; set; }
 
         [Required]

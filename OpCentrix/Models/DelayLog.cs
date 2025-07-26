@@ -9,6 +9,7 @@ namespace OpCentrix.Models
     /// </summary>
     public class DelayLog
     {
+        [Key] // FIXED: Add explicit Key attribute to resolve primary key issue
         public int DelayId { get; set; }
 
         [Required]

@@ -25,7 +25,7 @@ public class MachinesModel : PageModel
     }
 
     // Properties for the page
-    public List<SlsMachine> Machines { get; set; } = new();
+    public List<Machine> Machines { get; set; } = new();
     public List<MachineCapability> MachineCapabilities { get; set; } = new();
     public Dictionary<string, int> StatusStatistics { get; set; } = new();
     public int TotalMachines { get; set; }
@@ -78,7 +78,7 @@ public class MachinesModel : PageModel
             TempData["Error"] = "Error loading machine data. Please try again.";
             
             // Initialize with empty data on error
-            Machines = new List<SlsMachine>();
+            Machines = new List<Machine>();
             MachineCapabilities = new List<MachineCapability>();
             StatusStatistics = new Dictionary<string, int>();
         }
@@ -98,7 +98,7 @@ public class MachinesModel : PageModel
             }
 
             // Check if machine ID already exists
-            var existingMachine = await _context.SlsMachines
+            var existingMachine = await _context.Machines
                 .FirstOrDefaultAsync(m => m.MachineId.ToLower() == MachineInput.MachineId.ToLower());
 
             if (existingMachine != null)
@@ -111,36 +111,9 @@ public class MachinesModel : PageModel
                 return Page();
             }
 
-            var newMachine = new SlsMachine
-            {
-                MachineId = MachineInput.MachineId,
-                MachineName = MachineInput.MachineName,
-                MachineModel = MachineInput.MachineModel,
-                SerialNumber = MachineInput.SerialNumber,
-                Location = MachineInput.Location,
-                SupportedMaterials = MachineInput.SupportedMaterials,
-                CurrentMaterial = MachineInput.CurrentMaterial,
-                Status = MachineInput.Status,
-                IsActive = MachineInput.IsActive,
-                IsAvailableForScheduling = MachineInput.IsAvailableForScheduling,
-                Priority = MachineInput.Priority,
-                BuildLengthMm = MachineInput.BuildLengthMm,
-                BuildWidthMm = MachineInput.BuildWidthMm,
-                BuildHeightMm = MachineInput.BuildHeightMm,
-                MaxLaserPowerWatts = MachineInput.MaxLaserPowerWatts,
-                MaxScanSpeedMmPerSec = MachineInput.MaxScanSpeedMmPerSec,
-                MinLayerThicknessMicrons = MachineInput.MinLayerThicknessMicrons,
-                MaxLayerThicknessMicrons = MachineInput.MaxLayerThicknessMicrons,
-                MaintenanceIntervalHours = MachineInput.MaintenanceIntervalHours,
-                OpcUaEndpointUrl = MachineInput.OpcUaEndpointUrl,
-                OpcUaEnabled = MachineInput.OpcUaEnabled,
-                CreatedBy = User.Identity?.Name ?? "Admin",
-                LastModifiedBy = User.Identity?.Name ?? "Admin",
-                CreatedDate = DateTime.UtcNow,
-                LastModifiedDate = DateTime.UtcNow
-            };
+            var newMachine = CreateMachineFromForm();
 
-            _context.SlsMachines.Add(newMachine);
+            _context.Machines.Add(newMachine);
             await _context.SaveChangesAsync();
 
             TempData["Success"] = $"Machine '{MachineInput.MachineId}' created successfully.";
@@ -178,7 +151,7 @@ public class MachinesModel : PageModel
                 return Page();
             }
 
-            var machine = await _context.SlsMachines.FindAsync(EditingMachineId.Value);
+            var machine = await _context.Machines.FindAsync(EditingMachineId.Value);
             if (machine == null)
             {
                 TempData["Error"] = "Machine not found.";
@@ -188,7 +161,7 @@ public class MachinesModel : PageModel
             // Check if machine ID is being changed and if it conflicts
             if (machine.MachineId.ToLower() != MachineInput.MachineId.ToLower())
             {
-                var existingMachine = await _context.SlsMachines
+                var existingMachine = await _context.Machines
                     .FirstOrDefaultAsync(m => m.MachineId.ToLower() == MachineInput.MachineId.ToLower() && m.Id != machine.Id);
 
                 if (existingMachine != null)
@@ -204,8 +177,8 @@ public class MachinesModel : PageModel
 
             // Update machine properties
             machine.MachineId = MachineInput.MachineId;
-            machine.MachineName = MachineInput.MachineName;
-            machine.MachineModel = MachineInput.MachineModel;
+            machine.Name = MachineInput.MachineName;
+            machine.MachineType = MachineInput.MachineModel;
             machine.SerialNumber = MachineInput.SerialNumber;
             machine.Location = MachineInput.Location;
             machine.SupportedMaterials = MachineInput.SupportedMaterials;
@@ -250,7 +223,7 @@ public class MachinesModel : PageModel
     {
         try
         {
-            var machine = await _context.SlsMachines.FindAsync(machineId);
+            var machine = await _context.Machines.FindAsync(machineId);
             if (machine == null)
             {
                 TempData["Error"] = "Machine not found.";
@@ -293,7 +266,7 @@ public class MachinesModel : PageModel
     {
         try
         {
-            var machine = await _context.SlsMachines
+            var machine = await _context.Machines
                 .Include(m => m.CurrentJob)
                 .FirstOrDefaultAsync(m => m.Id == machineId);
 
@@ -324,7 +297,7 @@ public class MachinesModel : PageModel
                 _context.MachineCapabilities.RemoveRange(capabilities);
             }
 
-            _context.SlsMachines.Remove(machine);
+            _context.Machines.Remove(machine);
             await _context.SaveChangesAsync();
 
             TempData["Success"] = $"Machine '{machine.MachineId}' deleted successfully.";
@@ -354,7 +327,7 @@ public class MachinesModel : PageModel
             }
 
             // Find the machine by MachineId string and get its integer Id
-            var machine = await _context.SlsMachines
+            var machine = await _context.Machines
                 .FirstOrDefaultAsync(m => m.MachineId == CapabilityInput.MachineId);
 
             if (machine == null)
@@ -404,15 +377,15 @@ public class MachinesModel : PageModel
     // Helper methods
     private async Task LoadMachinesAsync()
     {
-        var query = _context.SlsMachines.AsQueryable();
+        var query = _context.Machines.AsQueryable();
 
         // Apply search filter
         if (!string.IsNullOrEmpty(SearchTerm))
         {
             query = query.Where(m => 
                 m.MachineId.Contains(SearchTerm) ||
-                m.MachineName.Contains(SearchTerm) ||
-                m.MachineModel.Contains(SearchTerm) ||
+                m.Name.Contains(SearchTerm) ||
+                m.MachineType.Contains(SearchTerm) ||
                 m.Location.Contains(SearchTerm) ||
                 m.SerialNumber.Contains(SearchTerm));
         }
@@ -433,8 +406,8 @@ public class MachinesModel : PageModel
         query = SortDirection.ToLower() == "desc"
             ? SortBy switch
             {
-                "MachineName" => query.OrderByDescending(m => m.MachineName),
-                "MachineModel" => query.OrderByDescending(m => m.MachineModel),
+                "Name" => query.OrderByDescending(m => m.Name),
+                "MachineType" => query.OrderByDescending(m => m.MachineType),
                 "Location" => query.OrderByDescending(m => m.Location),
                 "Status" => query.OrderByDescending(m => m.Status),
                 "Priority" => query.OrderByDescending(m => m.Priority),
@@ -444,8 +417,8 @@ public class MachinesModel : PageModel
             }
             : SortBy switch
             {
-                "MachineName" => query.OrderBy(m => m.MachineName),
-                "MachineModel" => query.OrderBy(m => m.MachineModel),
+                "Name" => query.OrderBy(m => m.Name),
+                "MachineType" => query.OrderBy(m => m.MachineType),
                 "Location" => query.OrderBy(m => m.Location),
                 "Status" => query.OrderBy(m => m.Status),
                 "Priority" => query.OrderBy(m => m.Priority),
@@ -460,36 +433,36 @@ public class MachinesModel : PageModel
     private async Task LoadMachineCapabilitiesAsync()
     {
         MachineCapabilities = await _context.MachineCapabilities
-            .Where(mc => mc.IsAvailable) // FIXED: Use IsAvailable (which exists) instead of IsActive (which doesn't)
-            .Include(mc => mc.Machine) // Include the machine for display
-            .OrderBy(mc => mc.Machine.MachineId) // FIXED: Order by SlsMachine.MachineId (navigation property)
+            .Where(mc => mc.IsAvailable)
+            .Include(mc => mc.Machine)
+            .OrderBy(mc => mc.Machine.MachineId)
             .ThenBy(mc => mc.CapabilityName)
             .ToListAsync();
     }
 
     private async Task LoadStatisticsAsync()
     {
-        TotalMachines = await _context.SlsMachines.CountAsync();
-        ActiveMachines = await _context.SlsMachines.CountAsync(m => m.IsActive);
-        OfflineMachines = await _context.SlsMachines.CountAsync(m => m.Status == "Offline");
+        TotalMachines = await _context.Machines.CountAsync();
+        ActiveMachines = await _context.Machines.CountAsync(m => m.IsActive);
+        OfflineMachines = await _context.Machines.CountAsync(m => m.Status == "Offline");
 
-        StatusStatistics = await _context.SlsMachines
+        StatusStatistics = await _context.Machines
             .GroupBy(m => m.Status)
             .ToDictionaryAsync(g => g.Key, g => g.Count());
 
-        AverageUtilization = await _context.SlsMachines
+        AverageUtilization = await _context.Machines
             .Where(m => m.IsActive)
             .AverageAsync(m => (double?)m.AverageUtilizationPercent) ?? 0;
     }
 
-    public void LoadMachineForEditing(SlsMachine machine)
+    public void LoadMachineForEditing(Machine machine)
     {
         EditingMachineId = machine.Id;
         MachineInput = new MachineCreateEditModel
         {
             MachineId = machine.MachineId,
-            MachineName = machine.MachineName,
-            MachineModel = machine.MachineModel,
+            MachineName = machine.Name,
+            MachineModel = machine.MachineType,
             SerialNumber = machine.SerialNumber,
             Location = machine.Location,
             SupportedMaterials = machine.SupportedMaterials,
@@ -523,6 +496,37 @@ public class MachinesModel : PageModel
         if (SortBy != column) return "↕";
         return SortDirection == "asc" ? "▲" : "▼";
     }
+
+        private Machine CreateMachineFromForm()
+        {
+            return new Machine
+            {
+                MachineId = MachineInput.MachineId,
+                Name = MachineInput.MachineName,
+                MachineName = MachineInput.MachineName,
+                MachineType = MachineInput.MachineModel,
+                SerialNumber = MachineInput.SerialNumber,
+                Location = MachineInput.Location,
+                Status = MachineInput.Status,
+                IsActive = MachineInput.IsActive,
+                IsAvailableForScheduling = MachineInput.IsAvailableForScheduling,
+                BuildLengthMm = MachineInput.BuildLengthMm,
+                BuildWidthMm = MachineInput.BuildWidthMm,
+                BuildHeightMm = MachineInput.BuildHeightMm,
+                SupportedMaterials = MachineInput.SupportedMaterials,
+                CurrentMaterial = MachineInput.CurrentMaterial,
+                MaxLaserPowerWatts = MachineInput.MaxLaserPowerWatts,
+                MaxScanSpeedMmPerSec = MachineInput.MaxScanSpeedMmPerSec,
+                MinLayerThicknessMicrons = MachineInput.MinLayerThicknessMicrons,
+                MaxLayerThicknessMicrons = MachineInput.MaxLayerThicknessMicrons,
+                MaintenanceIntervalHours = MachineInput.MaintenanceIntervalHours,
+                OpcUaEndpointUrl = MachineInput.OpcUaEndpointUrl,
+                OpcUaEnabled = MachineInput.OpcUaEnabled,
+                Priority = MachineInput.Priority,
+                CreatedBy = User.Identity?.Name ?? "Admin",
+                LastModifiedBy = User.Identity?.Name ?? "Admin"
+            };
+        }
 }
 
 /// <summary>
