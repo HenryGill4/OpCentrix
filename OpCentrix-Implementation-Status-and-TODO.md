@@ -251,3 +251,217 @@ docker run -p 5090:5090 opcentrix:v4.0
 *OpCentrix v4.0 Manufacturing Execution System - Complete Implementation*  
 *January 26, 2025 - 100% Task Completion Achieved*  
 *Ready for Enterprise Production Deployment* ✨
+
+PROMPT 1: Fix duplicate alert notification systems across Admin pages
+
+Context: The application has inconsistent alert implementations:
+- Settings.cshtml uses inline fixed position alerts with auto-hide
+- Checkpoints.cshtml uses Bootstrap dismissible alerts
+- Users.cshtml uses Tailwind fixed position alerts
+
+Requirements:
+1. Create a shared partial view _AlertNotifications.cshtml
+2. Standardize on Tailwind CSS styling with consistent positioning
+3. Implement auto-hide after 5 seconds with smooth animations
+4. Support Success, Error, Warning, and Info message types
+5. Include icon support for each message type
+6. Make it work with both TempData and ViewBag
+7. Ensure z-index properly layers over modals
+
+The partial should handle:
+- TempData["Success"]
+- TempData["Error"] 
+- TempData["Warning"]
+- TempData["Info"]
+- ViewBag equivalents
+
+PROMPT 2: Fix Bootstrap modal form validation issues
+
+Context: Multiple modals across the application have validation problems:
+- Checkpoints.cshtml duplicate modal doesn't show validation errors
+- Client-side validation isn't properly initialized for dynamically loaded content
+- Server-side validation errors don't display in modals after postback
+
+Requirements:
+1. Ensure jQuery validation works for all modal forms
+2. Display server-side validation errors within modals (not closing them)
+3. Add proper ARIA attributes for accessibility
+4. Implement loading states on submit buttons
+5. Prevent double-submission
+6. Show validation summary at top of modal for general errors
+
+Files to fix:
+- Pages/Admin/Checkpoints.cshtml (Create and Duplicate modals)
+- Pages/Admin/Users.cshtml (User and Password modals)
+- Update _ValidationScriptsPartial.cshtml if needed
+
+PROMPT 3: Refactor inconsistent JavaScript implementations
+
+Context: The application mixes jQuery, vanilla JavaScript, and inline event handlers:
+- Settings.cshtml uses addEventListener
+- Checkpoints.cshtml uses mixed jQuery and vanilla JS
+- Users.cshtml has inline onclick handlers
+
+Requirements:
+1. Create a standardized admin.js file for shared functionality
+2. Use consistent event delegation pattern
+3. Implement proper error handling for all AJAX calls
+4. Add loading states for all async operations
+5. Create reusable modal management functions
+6. Standardize on either jQuery or vanilla JS (prefer vanilla for performance)
+7. Remove all inline event handlers
+
+Common functions needed:
+- showModal(modalId)
+- hideModal(modalId)
+- confirmDelete(message)
+- showAlert(type, message)
+- initializeValidation(formId)
+
+PROMPT 4: Fix checkbox and boolean field handling
+
+Context: Several issues with checkbox handling:
+- Settings.cshtml boolean settings may not submit correctly
+- Hidden input fallbacks for checkboxes are inconsistently implemented
+- Some forms missing anti-forgery tokens
+
+Requirements:
+1. Implement consistent checkbox handling pattern
+2. Ensure all POST forms have anti-forgery tokens
+3. Add client-side validation for data type constraints
+4. Implement proper decimal/number input validation
+5. Add input masking for formatted fields
+6. Ensure form state is preserved on validation errors
+
+Focus on:
+- System Settings boolean values
+- User active/inactive status
+- Checkpoint required/active flags
+
+PROMPT 5: Add pagination and optimize data loading
+
+Context: Several pages load all records without pagination:
+- Checkpoints page loads all checkpoints
+- Users page loads all users
+- No lazy loading for related data
+
+Requirements:
+1. Implement server-side pagination with page size options
+2. Add loading indicators for data fetches
+3. Optimize Include() statements to prevent N+1 queries
+4. Add index hints for common query patterns
+5. Implement search debouncing
+6. Cache frequently accessed reference data
+
+Target pages:
+- Admin/Checkpoints (add pagination)
+- Admin/Users (optimize role statistics query)
+- Admin/Settings (cache setting lookups)
+
+PROMPT 6: Implement security best practices
+
+Context: Several security considerations need addressing:
+- XSS prevention in user-generated content
+- SQL injection prevention verification
+- Session timeout handling
+- Password complexity validation
+
+Requirements:
+1. Add HTML encoding for all user inputs displayed
+2. Implement CSRF protection on all state-changing operations
+3. Add session timeout warnings
+4. Enhance password validation rules
+5. Add rate limiting for login attempts
+6. Implement audit logging for sensitive operations
+7. Sanitize file uploads if any
+
+Focus areas:
+- User management (password policies)
+- Settings management (value sanitization)
+- Checkpoint descriptions (XSS prevention)
+
+PROMPT 7: Ensure cross-browser compatibility
+
+Context: Potential issues with:
+- CSS Grid/Flexbox in older browsers
+- JavaScript ES6+ features
+- Form validation API differences
+
+Requirements:
+1. Add appropriate polyfills
+2. Test and fix IE11 compatibility if required
+3. Ensure mobile responsive design works
+4. Fix any Safari-specific form issues
+5. Test print styles for reports
+6. Verify accessibility with screen readers
+
+Key areas:
+- Modal behavior on mobile
+- Table responsive scrolling
+- Form input types (date, number)
+
+PROMPT 8: Add global error handling and recovery
+
+Context: Need better error handling for:
+- AJAX request failures
+- Database connection issues
+- Validation errors
+- Unexpected exceptions
+
+Requirements:
+1. Create custom error pages (404, 500, etc.)
+2. Implement global exception handler
+3. Add retry logic for transient failures
+4. Create user-friendly error messages
+5. Log errors with context
+6. Add error boundaries for JavaScript
+7. Implement graceful degradation
+
+Components:
+- Global error handler middleware
+- Client-side error catching
+- Friendly error display component
+
+PROMPT 9: Implement automated testing for critical paths
+
+Context: Need tests for:
+- User authentication flow
+- Permission checking
+- Data validation
+- Critical business logic
+
+Requirements:
+1. Unit tests for services
+2. Integration tests for controllers
+3. UI tests for critical workflows
+4. Performance tests for data-heavy operations
+5. Security tests for authorization
+6. Accessibility tests
+
+Priority test cases:
+- User login/logout
+- Settings CRUD operations
+- Checkpoint validation
+- Permission enforcement
+
+PROMPT 10: Create missing technical documentation
+
+Context: Need documentation for:
+- API endpoints
+- Database schema
+- Deployment procedures
+- Troubleshooting guide
+
+Requirements:
+1. Document all page handlers and their parameters
+2. Create database diagram
+3. Write deployment checklist
+4. Create troubleshooting flowcharts
+5. Document configuration options
+6. Add inline code comments
+7. Create developer onboarding guide
+
+Priority sections:
+- Admin functionality overview
+- Security model explanation
+- Performance tuning guide

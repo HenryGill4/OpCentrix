@@ -245,6 +245,9 @@
     <!-- Main content -->
     <main class="flex-1">
         @RenderBody()
+        
+        @* Include shared alert notifications for all admin pages *@
+        <partial name="_AlertNotifications" />
     </main>
 
     <script src="~/js/bootstrap.bundle.min.js"></script>

@@ -14,8 +14,8 @@
             <p class="mt-1 text-sm text-gray-600">Manage user accounts, roles, and permissions</p>
         </div>
         <div class="flex space-x-3">
-            <button onclick="showCreateUserModal()" class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 active:bg-blue-900 focus:outline-none focus:border-blue-900 focus:ring ring-blue-300 transition ease-in-out duration-150">
-                ? Add New User
+            <button onclick="AdminFunctions.showCreateUserModal()" class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 active:bg-blue-900 focus:outline-none focus:border-blue-900 focus:ring ring-blue-300 transition ease-in-out duration-150">
+                ?? Add New User
             </button>
         </div>
     </div>
@@ -58,7 +58,7 @@
                     <h3 class="text-sm font-medium text-gray-500">Roles</h3>
                     <p class="text-2xl font-bold text-gray-900">@Model.RoleStatistics.Count</p>
                 </div>
-                <div class="text-purple-500 text-3xl">??</div>
+                <div class="text-purple-500 text-3xl">???</div>
             </div>
         </div>
     </div>
@@ -183,14 +183,14 @@
                             <tr class="hover:bg-gray-50">
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex items-center">
-                                        <div class="text-sm font-medium text-gray-900">@user.Username</div>
+                                        <div class="text-sm font-medium text-gray-900">@Html.Raw(Html.Encode(user.Username))</div>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm text-gray-900">@user.FullName</div>
+                                    <div class="text-sm text-gray-900">@Html.Raw(Html.Encode(user.FullName))</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm text-gray-900">@user.Email</div>
+                                    <div class="text-sm text-gray-900">@Html.Raw(Html.Encode(user.Email))</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium @(user.Role switch 
@@ -205,7 +205,7 @@
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm text-gray-900">@(string.IsNullOrEmpty(user.Department) ? "-" : user.Department)</div>
+                                    <div class="text-sm text-gray-900">@(string.IsNullOrEmpty(user.Department) ? "-" : Html.Raw(Html.Encode(user.Department)))</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     @if (user.IsActive)
@@ -226,34 +226,36 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <div class="flex items-center justify-end space-x-2">
-                                        <button onclick="editUser(@user.Id, '@user.Username', '@user.FullName', '@user.Email', '@user.Role', '@user.Department', @(user.IsActive ? "true" : "false"))" 
+                                        <button onclick="AdminFunctions.editUser(@user.Id, '@Html.Raw(Html.Encode(user.Username))', '@Html.Raw(Html.Encode(user.FullName))', '@Html.Raw(Html.Encode(user.Email))', '@user.Role', '@Html.Raw(Html.Encode(user.Department ?? ""))', @(user.IsActive ? "true" : "false"))" 
                                                 class="text-blue-600 hover:text-blue-900" title="Edit User">
                                             ??
                                         </button>
                                         
-                                        <button onclick="showPasswordResetModal(@user.Id, '@user.Username')" 
+                                        <button onclick="AdminFunctions.showPasswordResetModal(@user.Id, '@Html.Raw(Html.Encode(user.Username))')" 
                                                 class="text-yellow-600 hover:text-yellow-900" title="Reset Password">
                                             ??
                                         </button>
                                         
                                         <form method="post" asp-page-handler="ToggleUserStatus" class="inline">
+                                            @Html.AntiForgeryToken()
                                             <input type="hidden" name="userId" value="@user.Id" />
                                             <button type="submit" 
                                                     class="@(user.IsActive ? "text-orange-600 hover:text-orange-900" : "text-green-600 hover:text-green-900")" 
                                                     title="@(user.IsActive ? "Disable User" : "Enable User")"
-                                                    onclick="return confirm('@(user.IsActive ? "Disable" : "Enable") user @user.Username?')">
-                                                @(user.IsActive ? "??" : "?")
+                                                    onclick="return AdminFunctions.confirmAction('@(user.IsActive ? "Disable" : "Enable") user @Html.Raw(Html.Encode(user.Username))?')">
+                                                @(user.IsActive ? "??" : "??")
                                             </button>
                                         </form>
                                         
                                         @if (user.Role != UserRoles.Admin)
                                         {
                                             <form method="post" asp-page-handler="DeleteUser" class="inline">
+                                                @Html.AntiForgeryToken()
                                                 <input type="hidden" name="userId" value="@user.Id" />
                                                 <button type="submit" 
                                                         class="text-red-600 hover:text-red-900" 
                                                         title="Delete User"
-                                                        onclick="return confirm('Are you sure you want to delete user @user.Username? This action cannot be undone.')">
+                                                        onclick="return AdminFunctions.confirmAction('Are you sure you want to delete user @Html.Raw(Html.Encode(user.Username))? This action cannot be undone.')">
                                                     ???
                                                 </button>
                                             </form>
@@ -272,8 +274,8 @@
                 <div class="text-gray-400 text-6xl mb-4">??</div>
                 <h3 class="text-lg font-medium text-gray-900 mb-2">No users found</h3>
                 <p class="text-gray-600 mb-4">Try adjusting your search criteria or create a new user.</p>
-                <button onclick="showCreateUserModal()" class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700">
-                    ? Add First User
+                <button onclick="AdminFunctions.showCreateUserModal()" class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700">
+                    ?? Add First User
                 </button>
             </div>
         }
@@ -287,31 +289,39 @@
             <h3 id="userModalTitle" class="text-lg font-medium text-gray-900 mb-4">Add New User</h3>
             
             <form method="post" id="userForm">
+                @Html.AntiForgeryToken()
                 <input type="hidden" id="editingUserId" name="EditingUserId" value="" />
+                
+                <!-- Validation Summary -->
+                <div id="userValidationSummary" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4"></div>
                 
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Username*</label>
                         <input type="text" name="UserInput.Username" id="username" required minlength="3" maxlength="50" 
                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        <span class="text-red-500 text-xs" id="usernameError"></span>
                     </div>
                     
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Full Name*</label>
                         <input type="text" name="UserInput.FullName" id="fullName" required minlength="2" maxlength="100" 
                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        <span class="text-red-500 text-xs" id="fullNameError"></span>
                     </div>
                     
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Email*</label>
                         <input type="email" name="UserInput.Email" id="email" required maxlength="100" 
                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        <span class="text-red-500 text-xs" id="emailError"></span>
                     </div>
                     
                     <div id="passwordField">
                         <label class="block text-sm font-medium text-gray-700">Password*</label>
                         <input type="password" name="UserInput.Password" id="password" required minlength="6" maxlength="50" 
                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        <span class="text-red-500 text-xs" id="passwordError"></span>
                     </div>
                     
                     <div>
@@ -322,12 +332,14 @@
                                 <option value="@role">@UserRoles.GetDisplayName(role)</option>
                             }
                         </select>
+                        <span class="text-red-500 text-xs" id="roleError"></span>
                     </div>
                     
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Department</label>
                         <input type="text" name="UserInput.Department" id="department" maxlength="100" 
                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        <span class="text-red-500 text-xs" id="departmentError"></span>
                     </div>
                     
                     <div class="flex items-center">
@@ -339,13 +351,17 @@
                 </div>
                 
                 <div class="flex items-center justify-end space-x-2 mt-6">
-                    <button type="button" onclick="hideUserModal()" 
+                    <button type="button" onclick="AdminFunctions.hideUserModal()" 
                             class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                         Cancel
                     </button>
                     <button type="submit" id="userSubmitBtn" 
                             class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                        Create User
+                        <span class="submit-text">Create User</span>
+                        <span class="submit-loading hidden">
+                            <span class="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
+                            Creating...
+                        </span>
                     </button>
                 </div>
             </form>
@@ -359,31 +375,41 @@
         <div class="mt-3">
             <h3 id="passwordModalTitle" class="text-lg font-medium text-gray-900 mb-4">Reset Password</h3>
             
-            <form method="post" asp-page-handler="ResetPassword">
+            <form method="post" asp-page-handler="ResetPassword" id="passwordForm">
+                @Html.AntiForgeryToken()
                 <input type="hidden" id="resetUserId" name="PasswordReset.UserId" value="" />
+                
+                <!-- Validation Summary -->
+                <div id="passwordValidationSummary" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4"></div>
                 
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700">New Password*</label>
                         <input type="password" name="PasswordReset.NewPassword" id="newPassword" required minlength="6" maxlength="50" 
                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        <span class="text-red-500 text-xs" id="newPasswordError"></span>
                     </div>
                     
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Confirm Password*</label>
                         <input type="password" name="PasswordReset.ConfirmPassword" id="confirmPassword" required minlength="6" maxlength="50" 
                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        <span class="text-red-500 text-xs" id="confirmPasswordError"></span>
                     </div>
                 </div>
                 
                 <div class="flex items-center justify-end space-x-2 mt-6">
-                    <button type="button" onclick="hidePasswordModal()" 
+                    <button type="button" onclick="AdminFunctions.hidePasswordModal()" 
                             class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                         Cancel
                     </button>
-                    <button type="submit" 
+                    <button type="submit" id="passwordSubmitBtn"
                             class="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-                        Reset Password
+                        <span class="submit-text">Reset Password</span>
+                        <span class="submit-loading hidden">
+                            <span class="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
+                            Resetting...
+                        </span>
                     </button>
                 </div>
             </form>
@@ -391,142 +417,245 @@
     </div>
 </div>
 
-<!-- Success/Error Messages -->
-@if (TempData["Success"] != null)
-{
-    <div class="fixed top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded z-50" role="alert">
-        <strong class="font-bold">Success!</strong>
-        <span class="block sm:inline">@TempData["Success"]</span>
-    </div>
-}
-
-@if (TempData["Error"] != null)
-{
-    <div class="fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded z-50" role="alert">
-        <strong class="font-bold">Error!</strong>
-        <span class="block sm:inline">@TempData["Error"]</span>
-    </div>
-}
+@* Include the shared alert notifications *@
+<partial name="_AlertNotifications" />
 
 @section Scripts {
     <script>
-        let isEditMode = false;
+        // Admin Functions Namespace
+        window.AdminFunctions = {
+            isEditMode: false,
 
-        function showCreateUserModal() {
-            isEditMode = false;
-            document.getElementById('userModalTitle').textContent = 'Add New User';
-            document.getElementById('userSubmitBtn').textContent = 'Create User';
-            document.getElementById('userForm').action = '?handler=CreateUser';
-            document.getElementById('editingUserId').value = '';
-            document.getElementById('passwordField').style.display = 'block';
-            document.getElementById('password').required = true;
-            
-            // Clear form
-            document.getElementById('username').value = '';
-            document.getElementById('fullName').value = '';
-            document.getElementById('email').value = '';
-            document.getElementById('password').value = '';
-            document.getElementById('role').value = 'Operator';
-            document.getElementById('department').value = '';
-            document.getElementById('isActive').checked = true;
-            
-            document.getElementById('userModal').classList.remove('hidden');
-        }
+            showCreateUserModal: function() {
+                this.isEditMode = false;
+                document.getElementById('userModalTitle').textContent = 'Add New User';
+                document.querySelector('#userSubmitBtn .submit-text').textContent = 'Create User';
+                document.getElementById('userForm').action = '?handler=CreateUser';
+                document.getElementById('editingUserId').value = '';
+                document.getElementById('passwordField').style.display = 'block';
+                document.getElementById('password').required = true;
+                
+                // Clear form and validation errors
+                this.clearUserForm();
+                this.clearValidationErrors('user');
+                
+                document.getElementById('userModal').classList.remove('hidden');
+                document.getElementById('username').focus();
+            },
 
-        function editUser(id, username, fullName, email, role, department, isActive) {
-            isEditMode = true;
-            document.getElementById('userModalTitle').textContent = 'Edit User';
-            document.getElementById('userSubmitBtn').textContent = 'Update User';
-            document.getElementById('userForm').action = '?handler=EditUser';
-            document.getElementById('editingUserId').value = id;
-            document.getElementById('passwordField').style.display = 'none';
-            document.getElementById('password').required = false;
-            
-            // Populate form
-            document.getElementById('username').value = username;
-            document.getElementById('fullName').value = fullName;
-            document.getElementById('email').value = email;
-            document.getElementById('role').value = role;
-            document.getElementById('department').value = department;
-            document.getElementById('isActive').checked = isActive;
-            
-            document.getElementById('userModal').classList.remove('hidden');
-        }
+            editUser: function(id, username, fullName, email, role, department, isActive) {
+                this.isEditMode = true;
+                document.getElementById('userModalTitle').textContent = 'Edit User';
+                document.querySelector('#userSubmitBtn .submit-text').textContent = 'Update User';
+                document.getElementById('userForm').action = '?handler=EditUser';
+                document.getElementById('editingUserId').value = id;
+                document.getElementById('passwordField').style.display = 'none';
+                document.getElementById('password').required = false;
+                
+                // Populate form
+                document.getElementById('username').value = username;
+                document.getElementById('fullName').value = fullName;
+                document.getElementById('email').value = email;
+                document.getElementById('role').value = role;
+                document.getElementById('department').value = department;
+                document.getElementById('isActive').checked = isActive === 'true';
+                
+                this.clearValidationErrors('user');
+                
+                document.getElementById('userModal').classList.remove('hidden');
+                document.getElementById('username').focus();
+            },
 
-        function hideUserModal() {
-            document.getElementById('userModal').classList.add('hidden');
-        }
+            hideUserModal: function() {
+                document.getElementById('userModal').classList.add('hidden');
+                this.clearUserForm();
+                this.clearValidationErrors('user');
+            },
 
-        function showPasswordResetModal(userId, username) {
-            document.getElementById('passwordModalTitle').textContent = `Reset Password for ${username}`;
-            document.getElementById('resetUserId').value = userId;
-            document.getElementById('newPassword').value = '';
-            document.getElementById('confirmPassword').value = '';
-            document.getElementById('passwordModal').classList.remove('hidden');
-        }
+            showPasswordResetModal: function(userId, username) {
+                document.getElementById('passwordModalTitle').textContent = `Reset Password for ${username}`;
+                document.getElementById('resetUserId').value = userId;
+                document.getElementById('newPassword').value = '';
+                document.getElementById('confirmPassword').value = '';
+                this.clearValidationErrors('password');
+                document.getElementById('passwordModal').classList.remove('hidden');
+                document.getElementById('newPassword').focus();
+            },
 
-        function hidePasswordModal() {
-            document.getElementById('passwordModal').classList.add('hidden');
-        }
+            hidePasswordModal: function() {
+                document.getElementById('passwordModal').classList.add('hidden');
+                this.clearValidationErrors('password');
+            },
 
-        // Form validation
-        document.getElementById('userForm').addEventListener('submit', function(e) {
-            const password = document.getElementById('password');
-            if (!isEditMode && password.value.length < 6) {
-                e.preventDefault();
-                alert('Password must be at least 6 characters long.');
-                return false;
+            clearUserForm: function() {
+                document.getElementById('username').value = '';
+                document.getElementById('fullName').value = '';
+                document.getElementById('email').value = '';
+                document.getElementById('password').value = '';
+                document.getElementById('role').value = 'Operator';
+                document.getElementById('department').value = '';
+                document.getElementById('isActive').checked = true;
+            },
+
+            clearValidationErrors: function(formType) {
+                const prefix = formType === 'password' ? 'password' : 'user';
+                const summaryId = prefix + 'ValidationSummary';
+                
+                // Hide validation summary
+                const summary = document.getElementById(summaryId);
+                if (summary) {
+                    summary.classList.add('hidden');
+                    summary.innerHTML = '';
+                }
+                
+                // Clear individual field errors
+                const errorSpans = document.querySelectorAll(`#${prefix}Modal .text-red-500`);
+                errorSpans.forEach(span => span.textContent = '');
+                
+                // Remove error styling from inputs
+                const inputs = document.querySelectorAll(`#${prefix}Modal input, #${prefix}Modal select`);
+                inputs.forEach(input => input.classList.remove('border-red-500'));
+            },
+
+            showLoadingState: function(button) {
+                const textSpan = button.querySelector('.submit-text');
+                const loadingSpan = button.querySelector('.submit-loading');
+                
+                if (textSpan) textSpan.classList.add('hidden');
+                if (loadingSpan) loadingSpan.classList.remove('hidden');
+                button.disabled = true;
+            },
+
+            hideLoadingState: function(button) {
+                const textSpan = button.querySelector('.submit-text');
+                const loadingSpan = button.querySelector('.submit-loading');
+                
+                if (textSpan) textSpan.classList.remove('hidden');
+                if (loadingSpan) loadingSpan.classList.add('hidden');
+                button.disabled = false;
+            },
+
+            confirmAction: function(message) {
+                return confirm(message);
+            },
+
+            validateForm: function(formId) {
+                const form = document.getElementById(formId);
+                const requiredFields = form.querySelectorAll('[required]');
+                let isValid = true;
+                
+                requiredFields.forEach(field => {
+                    if (!field.value.trim()) {
+                        isValid = false;
+                        field.classList.add('border-red-500');
+                        const errorSpan = document.getElementById(field.id + 'Error');
+                        if (errorSpan) {
+                            errorSpan.textContent = 'This field is required.';
+                        }
+                    } else {
+                        field.classList.remove('border-red-500');
+                        const errorSpan = document.getElementById(field.id + 'Error');
+                        if (errorSpan) {
+                            errorSpan.textContent = '';
+                        }
+                    }
+                });
+                
+                return isValid;
             }
-        });
+        };
 
-        // Password confirmation validation
-        document.getElementById('confirmPassword').addEventListener('input', function() {
-            const newPassword = document.getElementById('newPassword').value;
-            const confirmPassword = this.value;
-            
-            if (newPassword !== confirmPassword) {
-                this.setCustomValidity('Passwords do not match');
-            } else {
-                this.setCustomValidity('');
-            }
-        });
-
-        // Close modals when clicking outside
-        window.addEventListener('click', function(event) {
-            const userModal = document.getElementById('userModal');
-            const passwordModal = document.getElementById('passwordModal');
-            
-            if (event.target === userModal) {
-                hideUserModal();
-            }
-            if (event.target === passwordModal) {
-                hidePasswordModal();
-            }
-        });
-
-        // Auto-hide alerts after 5 seconds
-        setTimeout(function() {
-            const alerts = document.querySelectorAll('[role="alert"]');
-            alerts.forEach(alert => {
-                alert.style.opacity = '0';
-                alert.style.transform = 'translateX(100%)';
-                setTimeout(() => alert.remove(), 300);
+        // Form validation and submission
+        document.addEventListener('DOMContentLoaded', function() {
+            // User form validation
+            document.getElementById('userForm').addEventListener('submit', function(e) {
+                const submitBtn = document.getElementById('userSubmitBtn');
+                
+                if (!AdminFunctions.validateForm('userForm')) {
+                    e.preventDefault();
+                    showAlert('error', 'Please fill in all required fields.');
+                    return false;
+                }
+                
+                // Password validation for new users
+                if (!AdminFunctions.isEditMode) {
+                    const password = document.getElementById('password');
+                    if (password.value.length < 6) {
+                        e.preventDefault();
+                        password.classList.add('border-red-500');
+                        document.getElementById('passwordError').textContent = 'Password must be at least 6 characters long.';
+                        showAlert('error', 'Password must be at least 6 characters long.');
+                        return false;
+                    }
+                }
+                
+                AdminFunctions.showLoadingState(submitBtn);
             });
-        }, 5000);
 
-        // Keyboard shortcuts
-        document.addEventListener('keydown', function(e) {
-            // Escape to close modals
-            if (e.key === 'Escape') {
-                hideUserModal();
-                hidePasswordModal();
-            }
-            
-            // Ctrl+N to create new user
-            if (e.ctrlKey && e.key === 'n') {
-                e.preventDefault();
-                showCreateUserModal();
-            }
+            // Password form validation
+            document.getElementById('passwordForm').addEventListener('submit', function(e) {
+                const submitBtn = document.getElementById('passwordSubmitBtn');
+                const newPassword = document.getElementById('newPassword');
+                const confirmPassword = document.getElementById('confirmPassword');
+                
+                if (!AdminFunctions.validateForm('passwordForm')) {
+                    e.preventDefault();
+                    showAlert('error', 'Please fill in all required fields.');
+                    return false;
+                }
+                
+                if (newPassword.value !== confirmPassword.value) {
+                    e.preventDefault();
+                    confirmPassword.classList.add('border-red-500');
+                    document.getElementById('confirmPasswordError').textContent = 'Passwords do not match.';
+                    showAlert('error', 'Passwords do not match.');
+                    return false;
+                }
+                
+                AdminFunctions.showLoadingState(submitBtn);
+            });
+
+            // Password confirmation validation
+            document.getElementById('confirmPassword').addEventListener('input', function() {
+                const newPassword = document.getElementById('newPassword').value;
+                const confirmPassword = this.value;
+                
+                if (newPassword !== confirmPassword) {
+                    this.classList.add('border-red-500');
+                    document.getElementById('confirmPasswordError').textContent = 'Passwords do not match.';
+                } else {
+                    this.classList.remove('border-red-500');
+                    document.getElementById('confirmPasswordError').textContent = '';
+                }
+            });
+
+            // Close modals when clicking outside
+            window.addEventListener('click', function(event) {
+                const userModal = document.getElementById('userModal');
+                const passwordModal = document.getElementById('passwordModal');
+                
+                if (event.target === userModal) {
+                    AdminFunctions.hideUserModal();
+                }
+                if (event.target === passwordModal) {
+                    AdminFunctions.hidePasswordModal();
+                }
+            });
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', function(e) {
+                // Escape to close modals
+                if (e.key === 'Escape') {
+                    AdminFunctions.hideUserModal();
+                    AdminFunctions.hidePasswordModal();
+                }
+                
+                // Ctrl+N to create new user
+                if (e.ctrlKey && e.key === 'n') {
+                    e.preventDefault();
+                    AdminFunctions.showCreateUserModal();
+                }
+            });
         });
     </script>
 }
