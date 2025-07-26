@@ -474,11 +474,135 @@ public class AdminDataSeedingService : IAdminDataSeedingService
             await SeedDefaultOperatingShiftsAsync();
             await SeedDefaultDefectCategoriesAsync();
 
-            _logger.LogInformation("Admin control system data seeding completed successfully");
+            // NEW: Seed default machines if none exist
+            await SeedDefaultMachinesIfNoneExistAsync();
+
+            _logger.LogInformation("Completed admin control system data seeding");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during admin control system data seeding");
+        }
+    }
+
+    /// <summary>
+    /// Seeds default machines only if no machines exist in the database
+    /// </summary>
+    private async Task SeedDefaultMachinesIfNoneExistAsync()
+    {
+        try
+        {
+            var existingMachinesCount = await _context.Machines.CountAsync();
+            
+            if (existingMachinesCount == 0)
+            {
+                _logger.LogInformation("No machines found in database, seeding default machines for demo purposes");
+                
+                var defaultMachines = new List<Machine>
+                {
+                    new Machine
+                    {
+                        MachineId = "TI1",
+                        MachineName = "SLS Titanium Printer #1",
+                        MachineType = "SLS",
+                        MachineModel = "EOS M290",
+                        Location = "Bay 1",
+                        Status = "Ready",
+                        IsActive = true,
+                        IsAvailableForScheduling = true,
+                        Priority = 1,
+                        SupportedMaterials = "Ti-6Al-4V Grade 5,Ti-6Al-4V ELI Grade 23",
+                        CurrentMaterial = "Ti-6Al-4V Grade 5",
+                        CreatedDate = DateTime.UtcNow,
+                        LastModifiedDate = DateTime.UtcNow,
+                        CreatedBy = "System Seed",
+                        LastModifiedBy = "System Seed"
+                    },
+                    new Machine
+                    {
+                        MachineId = "TI2",
+                        MachineName = "SLS Titanium Printer #2",
+                        MachineType = "SLS",
+                        MachineModel = "EOS M400-4",
+                        Location = "Bay 2", 
+                        Status = "Ready",
+                        IsActive = true,
+                        IsAvailableForScheduling = true,
+                        Priority = 2,
+                        SupportedMaterials = "Ti-6Al-4V Grade 5,Ti-6Al-4V ELI Grade 23",
+                        CurrentMaterial = "Ti-6Al-4V ELI Grade 23",
+                        CreatedDate = DateTime.UtcNow,
+                        LastModifiedDate = DateTime.UtcNow,
+                        CreatedBy = "System Seed",
+                        LastModifiedBy = "System Seed"
+                    },
+                    new Machine
+                    {
+                        MachineId = "INC1",
+                        MachineName = "SLS Inconel Printer #1",
+                        MachineType = "SLS",
+                        MachineModel = "Concept Laser M2",
+                        Location = "Bay 3",
+                        Status = "Ready",
+                        IsActive = true,
+                        IsAvailableForScheduling = true,
+                        Priority = 3,
+                        SupportedMaterials = "Inconel 718,Inconel 625",
+                        CurrentMaterial = "Inconel 718",
+                        CreatedDate = DateTime.UtcNow,
+                        LastModifiedDate = DateTime.UtcNow,
+                        CreatedBy = "System Seed",
+                        LastModifiedBy = "System Seed"
+                    },
+                    new Machine
+                    {
+                        MachineId = "EDM1",
+                        MachineName = "EDM Wire Machine #1",
+                        MachineType = "EDM",
+                        MachineModel = "Makino U3",
+                        Location = "Bay 4",
+                        Status = "Ready",
+                        IsActive = true,
+                        IsAvailableForScheduling = true,
+                        Priority = 4,
+                        SupportedMaterials = "All Metals",
+                        CreatedDate = DateTime.UtcNow,
+                        LastModifiedDate = DateTime.UtcNow,
+                        CreatedBy = "System Seed",
+                        LastModifiedBy = "System Seed"
+                    },
+                    new Machine
+                    {
+                        MachineId = "CNC1",
+                        MachineName = "CNC Machining Center #1",
+                        MachineType = "CNC",
+                        MachineModel = "Haas VF-4SS",
+                        Location = "Bay 5",
+                        Status = "Ready",
+                        IsActive = true,
+                        IsAvailableForScheduling = true,
+                        Priority = 5,
+                        SupportedMaterials = "All Metals",
+                        CreatedDate = DateTime.UtcNow,
+                        LastModifiedDate = DateTime.UtcNow,
+                        CreatedBy = "System Seed",
+                        LastModifiedBy = "System Seed"
+                    }
+                };
+
+                _context.Machines.AddRange(defaultMachines);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Successfully seeded {Count} default machines", defaultMachines.Count);
+            }
+            else
+            {
+                _logger.LogInformation("Machines already exist ({Count}), skipping default machine seeding", existingMachinesCount);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error seeding default machines during admin data seeding");
         }
     }
 }

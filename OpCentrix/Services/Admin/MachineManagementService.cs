@@ -44,6 +44,10 @@ public interface IMachineManagementService
     // Machine type operations
     Task<List<string>> GetSupportedMachineTypesAsync();
     Task<List<string>> GetAvailableMachineIdsAsync(string? machineType = null);
+
+    // Default data operations
+    Task<List<string>> GetDefaultEmptyScheduleMachinesAsync();
+    Task<bool> SeedDefaultMachinesAsync();
 }
 
 /// <summary>
@@ -84,13 +88,36 @@ public class MachineManagementService : IMachineManagementService
     {
         try
         {
-            return await _context.Machines
+            var machines = await _context.Machines
                 .Include(m => m.Capabilities)
                 .Where(m => m.IsActive && m.IsAvailableForScheduling)
                 .OrderBy(m => m.Priority)
                 .ThenBy(m => m.MachineType)
                 .ThenBy(m => m.MachineId)
                 .ToListAsync();
+
+            // If no active machines found, provide default empty schedule machines
+            if (!machines.Any())
+            {
+                _logger.LogInformation("No active machines found - providing default empty schedule machines for demo purposes");
+                var defaultMachineIds = await GetDefaultEmptyScheduleMachinesAsync();
+                
+                // Return virtual machines for empty state display
+                return defaultMachineIds.Select(id => new Machine
+                {
+                    MachineId = id,
+                    MachineName = GetDefaultMachineName(id),
+                    MachineType = GetDefaultMachineType(id),
+                    Status = "Not Configured",
+                    IsActive = false,
+                    IsAvailableForScheduling = false,
+                    SupportedMaterials = GetDefaultSupportedMaterials(id),
+                    Location = "Virtual",
+                    Priority = GetDefaultMachinePriority(id)
+                }).ToList();
+            }
+
+            return machines;
         }
         catch (Exception ex)
         {
@@ -662,6 +689,192 @@ public class MachineManagementService : IMachineManagementService
             _logger.LogError(ex, "Error retrieving available machine IDs for type: {MachineType}", machineType);
             return new List<string>();
         }
+    }
+
+    #endregion
+
+    #region Default Data Operations
+
+    /// <summary>
+    /// Provides default machine IDs for empty schedule display
+    /// </summary>
+    public async Task<List<string>> GetDefaultEmptyScheduleMachinesAsync()
+    {
+        return await Task.FromResult(new List<string>
+        {
+            "TI1",      // SLS Titanium Printer 1
+            "TI2",      // SLS Titanium Printer 2  
+            "INC1",     // SLS Inconel Printer 1
+            "EDM1",     // EDM Machine 1
+            "CNC1"      // CNC Machine 1
+        });
+    }
+
+    /// <summary>
+    /// Seeds default machines for demonstration purposes
+    /// </summary>
+    public async Task<bool> SeedDefaultMachinesAsync()
+    {
+        try
+        {
+            // Check if machines already exist
+            var existingCount = await _context.Machines.CountAsync();
+            if (existingCount > 0)
+            {
+                _logger.LogInformation("Machines already exist ({Count}), skipping default machine seeding", existingCount);
+                return true;
+            }
+
+            var defaultMachines = new List<Machine>
+            {
+                new Machine
+                {
+                    MachineId = "TI1",
+                    MachineName = "SLS Titanium Printer #1",
+                    MachineType = "SLS",
+                    MachineModel = "EOS M290",
+                    Location = "Bay 1",
+                    Status = "Ready",
+                    IsActive = true,
+                    IsAvailableForScheduling = true,
+                    Priority = 1,
+                    SupportedMaterials = "Ti-6Al-4V Grade 5,Ti-6Al-4V ELI Grade 23",
+                    CurrentMaterial = "Ti-6Al-4V Grade 5",
+                    CreatedDate = DateTime.UtcNow,
+                    LastModifiedDate = DateTime.UtcNow,
+                    CreatedBy = "System Seed"
+                },
+                new Machine
+                {
+                    MachineId = "TI2",
+                    MachineName = "SLS Titanium Printer #2",
+                    MachineType = "SLS",
+                    MachineModel = "EOS M400-4",
+                    Location = "Bay 2", 
+                    Status = "Ready",
+                    IsActive = true,
+                    IsAvailableForScheduling = true,
+                    Priority = 2,
+                    SupportedMaterials = "Ti-6Al-4V Grade 5,Ti-6Al-4V ELI Grade 23",
+                    CurrentMaterial = "Ti-6Al-4V ELI Grade 23",
+                    CreatedDate = DateTime.UtcNow,
+                    LastModifiedDate = DateTime.UtcNow,
+                    CreatedBy = "System Seed"
+                },
+                new Machine
+                {
+                    MachineId = "INC1",
+                    MachineName = "SLS Inconel Printer #1",
+                    MachineType = "SLS",
+                    MachineModel = "Concept Laser M2",
+                    Location = "Bay 3",
+                    Status = "Ready",
+                    IsActive = true,
+                    IsAvailableForScheduling = true,
+                    Priority = 3,
+                    SupportedMaterials = "Inconel 718,Inconel 625",
+                    CurrentMaterial = "Inconel 718",
+                    CreatedDate = DateTime.UtcNow,
+                    LastModifiedDate = DateTime.UtcNow,
+                    CreatedBy = "System Seed"
+                },
+                new Machine
+                {
+                    MachineId = "EDM1",
+                    MachineName = "EDM Wire Machine #1",
+                    MachineType = "EDM",
+                    MachineModel = "Makino U3",
+                    Location = "Bay 4",
+                    Status = "Ready",
+                    IsActive = true,
+                    IsAvailableForScheduling = true,
+                    Priority = 4,
+                    SupportedMaterials = "All Metals",
+                    CreatedDate = DateTime.UtcNow,
+                    LastModifiedDate = DateTime.UtcNow,
+                    CreatedBy = "System Seed"
+                },
+                new Machine
+                {
+                    MachineId = "CNC1",
+                    MachineName = "CNC Machining Center #1",
+                    MachineType = "CNC",
+                    MachineModel = "Haas VF-4SS",
+                    Location = "Bay 5",
+                    Status = "Ready",
+                    IsActive = true,
+                    IsAvailableForScheduling = true,
+                    Priority = 5,
+                    SupportedMaterials = "All Metals",
+                    CreatedDate = DateTime.UtcNow,
+                    LastModifiedDate = DateTime.UtcNow,
+                    CreatedBy = "System Seed"
+                }
+            };
+
+            _context.Machines.AddRange(defaultMachines);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Successfully seeded {Count} default machines", defaultMachines.Count);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error seeding default machines");
+            return false;
+        }
+    }
+
+    #endregion
+
+    #region Private Helper Methods
+
+    private string GetDefaultMachineName(string machineId)
+    {
+        return machineId switch
+        {
+            "TI1" => "SLS Titanium Printer #1 (Not Configured)",
+            "TI2" => "SLS Titanium Printer #2 (Not Configured)",
+            "INC1" => "SLS Inconel Printer #1 (Not Configured)",
+            "EDM1" => "EDM Wire Machine #1 (Not Configured)",
+            "CNC1" => "CNC Machining Center #1 (Not Configured)",
+            _ => $"{machineId} (Not Configured)"
+        };
+    }
+
+    private string GetDefaultMachineType(string machineId)
+    {
+        return machineId switch
+        {
+            "TI1" or "TI2" or "INC1" => "SLS",
+            "EDM1" => "EDM",
+            "CNC1" => "CNC",
+            _ => "Unknown"
+        };
+    }
+
+    private string GetDefaultSupportedMaterials(string machineId)
+    {
+        return machineId switch
+        {
+            "TI1" or "TI2" => "Ti-6Al-4V Grade 5,Ti-6Al-4V ELI Grade 23",
+            "INC1" => "Inconel 718,Inconel 625",
+            "EDM1" or "CNC1" => "All Metals",
+            _ => "Various"
+        };
+    }
+
+    private int GetDefaultMachinePriority(string machineId)
+    {
+        return machineId switch
+        {
+            "TI1" => 1,
+            "TI2" => 2,
+            "INC1" => 3,
+            "EDM1" => 4,
+            "CNC1" => 5,
+            _ => 10
+        };
     }
 
     #endregion

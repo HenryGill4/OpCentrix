@@ -23,6 +23,40 @@
     var slotTimes = Enumerable.Range(0, slotsPerDay).Select(i => TimeSpan.FromMinutes(i * slotMinutes)).ToList();
     var totalSlots = viewModel.Dates.Count * slotsPerDay;
     
+    // Check if system is in empty state (no real machines configured)
+    var hasRealMachines = viewModel.Machines.Any(m => !m.Contains("Not Configured"));
+    var hasJobs = viewModel.Jobs.Any();
+    var isEmptyState = !hasRealMachines && !hasJobs;
+    
+    // Get dynamic slot width values
+    var slotWidthDesktop = zoom switch {
+        "2month" => "30px",
+        "month" => "40px", 
+        "week" => "120px",
+        "12h" => "60px",
+        "6h" => "50px",
+        "4h" => "40px", 
+        "2h" => "30px",
+        "1h" => "25px",
+        "30min" => "20px",
+        "15min" => "15px",
+        _ => "120px"
+    };
+    
+    var slotWidthMobile = zoom switch {
+        "2month" => "20px",
+        "month" => "25px", 
+        "week" => "80px",
+        "12h" => "40px",
+        "6h" => "35px",
+        "4h" => "30px", 
+        "2h" => "25px",
+        "1h" => "20px",
+        "30min" => "15px",
+        "15min" => "12px",
+        _ => "80px"
+    };
+    
     // Color scheme for enhanced job blocks
     var statusColors = new Dictionary<string, string>
     {
@@ -38,25 +72,13 @@
         ["preheating"] = "#FBBF24"   // yellow (SLS-specific)
     };
 }
-
+    
 @section Styles {
     <link rel="stylesheet" href="~/css/scheduler-modal.css" asp-append-version="true" />
     <style>
         /* Task 9 & 10: Enhanced CSS for new zoom levels and orientation toggle */
         .scheduler-grid-container {
-            --slot-width: @(zoom switch {
-                "2month" => "30px",
-                "month" => "40px", 
-                "week" => "120px",
-                "12h" => "60px",
-                "6h" => "50px",
-                "4h" => "40px", 
-                "2h" => "30px",
-                "1h" => "25px",
-                "30min" => "20px",
-                "15min" => "15px",
-                _ => "120px"
-            });
+            --slot-width: @slotWidthDesktop;
         }
         
         /* Task 10: Vertical orientation styles */
@@ -172,22 +194,120 @@
             color: #6b7280;
         }
         
+        /* Empty state styling */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 400px;
+            padding: 3rem;
+            text-align: center;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-radius: 12px;
+            border: 2px dashed #cbd5e1;
+            margin: 2rem 0;
+        }
+        
+        .empty-state-icon {
+            width: 80px;
+            height: 80px;
+            color: #64748b;
+            margin-bottom: 1.5rem;
+        }
+        
+        .empty-state-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 1rem;
+        }
+        
+        .empty-state-text {
+            font-size: 1.125rem;
+            color: #64748b;
+            margin-bottom: 2rem;
+            max-width: 500px;
+            line-height: 1.6;
+        }
+        
+        .setup-instructions {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-top: 1rem;
+            text-align: left;
+            max-width: 600px;
+        }
+        
+        .setup-instructions h4 {
+            color: #1e293b;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .setup-instructions ol {
+            color: #475569;
+            padding-left: 1.25rem;
+            line-height: 1.7;
+        }
+        
+        .setup-instructions li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .setup-instructions code {
+            background: #f1f5f9;
+            padding: 0.125rem 0.25rem;
+            border-radius: 0.25rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+        }
+        
+        .demo-machines-notice {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            color: #92400e;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .demo-machines-notice svg {
+            width: 20px;
+            height: 20px;
+            margin-right: 0.5rem;
+            flex-shrink: 0;
+        }
+        
         /* Responsive adjustments */
         @@media (max-width: 768px) {
             .scheduler-grid-container {
-                --slot-width: @(zoom switch {
-                    "2month" => "20px",
-                    "month" => "25px", 
-                    "week" => "80px",
-                    "12h" => "40px",
-                    "6h" => "35px",
-                    "4h" => "30px", 
-                    "2h" => "25px",
-                    "1h" => "20px",
-                    "30min" => "15px",
-                    "15min" => "12px",
-                    _ => "80px"
-                });
+                --slot-width: @slotWidthMobile;
+            }
+            
+            .empty-state {
+                padding: 2rem;
+                min-height: 300px;
+            }
+            
+            .empty-state-title {
+                font-size: 1.5rem;
+            }
+            
+            .empty-state-text {
+                font-size: 1rem;
+            }
+            
+            .setup-instructions {
+                padding: 1rem;
             }
         }
     </style>
@@ -292,13 +412,17 @@
     
     <div class="flex items-center gap-4">
         <div class="text-2xl font-bold text-indigo-900 tracking-tight">Production Scheduler</div>
-        <button class="opcentrix-button opcentrix-button-primary"
-                onclick="openJobModal('@(viewModel.Machines.FirstOrDefault() ?? "DefaultMachine")', '@DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm")')">
-            <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-            </svg>
-            Add Job
-        </button>
+        @if (!isEmptyState && viewModel.Machines.Any())
+        {
+            <button class="opcentrix-button opcentrix-button-primary" id="add-job-btn"
+                    data-machine="@(viewModel.Machines.FirstOrDefault() ?? "DefaultMachine")" 
+                    data-date="@DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm")">
+                <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                Add Job
+            </button>
+        }
     </div>
 </div>
 
@@ -315,21 +439,82 @@
 
 <!-- MAIN SCHEDULER CONTENT with Orientation Support -->
 <div id="scheduler-main-content" class="scheduler-main-content @(isVertical ? "scheduler-vertical" : "scheduler-horizontal")">
-    @if (!viewModel.Jobs.Any() && !viewModel.Machines.Any())
+    @if (isEmptyState)
     {
-        <!-- Empty state when no data -->
+        <!-- Enhanced Empty State for New Installations -->
         <div class="empty-state">
-            <div class="empty-state-content">
-                <svg class="empty-state-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
-                </svg>
-                <h3 class="empty-state-title">No Machines or Jobs Available</h3>
-                <p class="empty-state-text">The scheduler data may be loading or no machines are configured.</p>
-                <button class="opcentrix-button opcentrix-button-primary" onclick="location.reload()">
-                    Refresh Page
+            <svg class="empty-state-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.78 0-2.678-2.153-1.415-3.414l5-5A2 2 0 009 9.172V5L8 4z"></path>
+            </svg>
+            <h3 class="empty-state-title">Welcome to OpCentrix Scheduler!</h3>
+            <p class="empty-state-text">
+                Your production scheduler is ready to use, but no machines have been configured yet. 
+                To get started, you'll need to set up your machines and create some parts.
+            </p>
+            
+            <div class="setup-instructions">
+                <h4>
+                    <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Quick Setup Guide
+                </h4>
+                <ol>
+                    <li>Go to <code>Admin ? Machines</code> to add your production machines (SLS printers, EDM, CNC, etc.)</li>
+                    <li>Configure machine capabilities and supported materials</li>
+                    <li>Add parts in <code>Admin ? Parts</code> with specifications and processing requirements</li>
+                    <li>Return here to schedule jobs and manage your production workflow</li>
+                    <li>Use the <code>Add Job</code> button to create your first production job</li>
+                </ol>
+            </div>
+            
+            <div class="flex gap-3 mt-6">
+                <a href="/Admin/Machines" class="opcentrix-button opcentrix-button-primary">
+                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    Setup Machines
+                </a>
+                <a href="/Admin/Parts" class="opcentrix-button opcentrix-button-secondary">
+                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 002 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2H5a2 2 0 00-2 2v2M7 7h10"></path>
+                    </svg>
+                    Add Parts
+                </a>
+                <button class="opcentrix-button opcentrix-button-outline" onclick="seedDefaultMachines()">
+                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                    Quick Start with Demo Machines
                 </button>
             </div>
         </div>
+    }
+    else if (!viewModel.Jobs.Any() && viewModel.Machines.Any())
+    {
+        <!-- Empty Schedule State (machines configured but no jobs) -->
+        @if (viewModel.Machines.Any(m => m.Contains("Not Configured")))
+        {
+            <div class="demo-machines-notice">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.966-.833-2.732 0L4.268 19.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                </svg>
+                <span>
+                    <strong>Demo Mode:</strong> Default machines are shown for demonstration. 
+                    Configure real machines in <a href="/Admin/Machines" class="text-blue-600 underline">Admin ? Machines</a> for production use.
+                </span>
+            </div>
+        }
+        
+        @if (isVertical)
+        {
+            <partial name="_SchedulerVertical" model="viewModel" />
+        }
+        else
+        {
+            <partial name="_SchedulerHorizontal" model="viewModel" />
+        }
     }
     else
     {
@@ -358,11 +543,156 @@
 <div id="notification-container" class="notification-container"></div>
 
 @section Scripts {
+<script src="~/js/scheduler-ui.js" asp-append-version="true"></script>
 <script>
 // OpCentrix Scheduler - Enhanced for Tasks 9 & 10
 // Comprehensive zoom levels (12h to 1h, 2 months) and orientation toggle
 (function() {
     'use strict';
+    
+    // CRITICAL FIX: Define openJobModal function immediately
+    window.openJobModal = function(machineId, date, jobId = null) {
+        console.log('?? [MODAL] Opening job modal for:', { machineId, date, jobId });
+        
+        if (!machineId || !date) {
+            console.error('? [MODAL] Missing required parameters');
+            if (window.showErrorNotification) {
+                window.showErrorNotification('Missing machine ID or date for opening job modal');
+            }
+            return false;
+        }
+        
+        // Build URL for modal content
+        const params = new URLSearchParams({
+            handler: 'ShowAddModal',
+            machineId: machineId,
+            date: date
+        });
+        
+        if (jobId) {
+            params.append('id', jobId);
+        }
+        
+        const url = `/Scheduler?${params.toString()}`;
+        
+        console.log('?? [MODAL] Fetching modal content from:', url);
+        
+        // Show loading indicator
+        if (window.showLoadingIndicator) {
+            window.showLoadingIndicator('Opening job form...');
+        }
+        
+        // Use HTMX to load modal content
+        if (typeof htmx !== 'undefined') {
+            htmx.ajax('GET', url, {
+                target: '#modal-container',
+                swap: 'innerHTML'
+            }).then(() => {
+                showModalContainer();
+                if (window.hideLoadingIndicator) {
+                    window.hideLoadingIndicator();
+                }
+                console.log('? [MODAL] Modal opened successfully');
+            }).catch((error) => {
+                if (window.hideLoadingIndicator) {
+                    window.hideLoadingIndicator();
+                }
+                console.error('? [MODAL] Error loading modal:', error);
+                if (window.showErrorNotification) {
+                    window.showErrorNotification('Error opening job form. Please try again.');
+                }
+            });
+        } else {
+            // Fallback if HTMX is not available
+            console.error('? [MODAL] HTMX not available');
+            if (window.hideLoadingIndicator) {
+                window.hideLoadingIndicator();
+            }
+            if (window.showErrorNotification) {
+                window.showErrorNotification('System error: HTMX not loaded. Please refresh the page.');
+            }
+        }
+        
+        return true;
+    };
+    
+    // Show modal container
+    function showModalContainer() {
+        const modalContainer = document.getElementById('modal-container');
+        if (modalContainer) {
+            modalContainer.style.display = 'flex';
+            modalContainer.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            
+            // Focus management for accessibility
+            setTimeout(() => {
+                const firstInput = modalContainer.querySelector('input:not([type="hidden"]), select, textarea');
+                if (firstInput) {
+                    firstInput.focus();
+                }
+            }, 150);
+        }
+    }
+    
+    // Close modal function
+    window.closeJobModal = function() {
+        console.log('?? [MODAL] Closing job modal');
+        
+        const modalContainer = document.getElementById('modal-container');
+        if (modalContainer) {
+            modalContainer.style.display = 'none';
+            modalContainer.classList.add('hidden');
+            document.body.style.overflow = '';
+            
+            // Clear modal content after animation
+            setTimeout(() => {
+                modalContainer.innerHTML = '';
+            }, 300);
+            
+            console.log('? [MODAL] Modal closed successfully');
+        }
+    };
+    
+    // Quick start with demo machines function
+    window.seedDefaultMachines = function() {
+        if (window.showLoadingIndicator) {
+            window.showLoadingIndicator('Setting up demo machines...');
+        }
+        
+        // Use HTMX to seed default machines
+        if (typeof htmx !== 'undefined') {
+            htmx.ajax('POST', '/Scheduler?handler=SeedDefaultMachines', {
+                target: '#scheduler-main-content',
+                swap: 'outerHTML'
+            }).then(() => {
+                if (window.hideLoadingIndicator) {
+                    window.hideLoadingIndicator();
+                }
+                if (window.showSuccessNotification) {
+                    window.showSuccessNotification('Demo machines created successfully! You can now add jobs and explore the scheduler.');
+                }
+                // Refresh the page to show the new state
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            }).catch((error) => {
+                if (window.hideLoadingIndicator) {
+                    window.hideLoadingIndicator();
+                }
+                console.error('? [SEED] Error seeding default machines:', error);
+                if (window.showErrorNotification) {
+                    window.showErrorNotification('Error creating demo machines. Please try again or contact support.');
+                }
+            });
+        } else {
+            if (window.hideLoadingIndicator) {
+                window.hideLoadingIndicator();
+            }
+            if (window.showErrorNotification) {
+                window.showErrorNotification('System error: HTMX not loaded. Please refresh the page.');
+            }
+        }
+    };
     
     // Application state management
     const SchedulerApp = {
@@ -383,7 +713,32 @@
             this.updateGridStyles(this.currentZoom);
             this.setupZoomControls();
             this.setupOrientationToggle();
+            this.setupAddJobButton();
             this.logDebugInfo();
+        },
+        
+        // Setup Add Job button
+        setupAddJobButton() {
+            const addJobBtn = document.getElementById('add-job-btn');
+            if (addJobBtn) {
+                addJobBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const machineId = this.getAttribute('data-machine');
+                    const date = this.getAttribute('data-date');
+                    
+                    console.log('?? [BUTTON] Add Job button clicked:', { machineId, date });
+                    
+                    if (window.openJobModal) {
+                        window.openJobModal(machineId, date);
+                    } else {
+                        console.error('? [BUTTON] openJobModal function not available');
+                    }
+                });
+                
+                console.log('? [INIT] Add Job button event listener attached');
+            } else {
+                console.log('?? [INIT] Add Job button not found (normal for empty state)');
+            }
         },
         
         // Setup all event listeners
@@ -410,15 +765,18 @@
             
             // Modal management
             document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && this.isModalOpen) {
-                    this.closeJobModal();
+                if (e.key === 'Escape') {
+                    const modalContainer = document.getElementById('modal-container');
+                    if (modalContainer && !modalContainer.classList.contains('hidden')) {
+                        window.closeJobModal();
+                    }
                 }
             });
             
             // Background click handling
             document.addEventListener('click', (e) => {
-                if (e.target.classList.contains('modal-backdrop')) {
-                    this.closeJobModal();
+                if (e.target.id === 'modal-container' || e.target.classList.contains('modal-backdrop')) {
+                    window.closeJobModal();
                 }
             });
         },
@@ -457,12 +815,12 @@
                 
                 if (content.includes('error-container') || content.includes('error-list')) {
                     // Form has validation errors - keep modal open
-                    this.showJobModal();
+                    showModalContainer();
                     return;
                 }
                 
                 // Success case - close modal and refresh
-                this.closeJobModal();
+                window.closeJobModal();
                 this.showSuccessNotification('Job saved successfully!');
                 
                 // Small delay to ensure modal closes before refresh
@@ -640,6 +998,60 @@
             window.location.reload();
         },
         
+        // Notification functions
+        showSuccessNotification(message) {
+            this.showNotification(message, 'success');
+        },
+        
+        showErrorNotification(message) {
+            this.showNotification(message, 'error');
+        },
+        
+        showNotification(message, type) {
+            // Remove existing notifications
+            const existingNotifications = document.querySelectorAll('.notification');
+            existingNotifications.forEach(n => n.remove());
+            
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type} fixed top-20 right-4 px-6 py-4 rounded-lg shadow-lg z-50 transform transition-all duration-300 translate-x-full text-white font-medium max-w-md`;
+            
+            const icon = type === 'success' 
+                ? '<svg class="w-5 h-5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>'
+                : '<svg class="w-5 h-5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+            
+            const bgColor = type === 'success' ? 'bg-green-600' : 'bg-red-600';
+            notification.classList.add(bgColor);
+            
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    ${icon}
+                    <span class="flex-1">${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" class="ml-2 text-white opacity-70 hover:opacity-100 transition-opacity">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Animate in
+            requestAnimationFrame(() => {
+                notification.classList.remove('translate-x-full');
+            });
+            
+            // Auto remove
+            setTimeout(() => {
+                notification.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.remove();
+                    }
+                }, 300);
+            }, type === 'success' ? 5000 : 8000);
+        },
+        
         // Debug logging
         logDebugInfo() {
             @if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
@@ -654,44 +1066,13 @@
                 console.log('Jobs count:', @viewModel.Jobs.Count);
                 console.log('Modal state:', this.isModalOpen);
                 console.log('Loading state:', this.isLoading);
+                console.log('Is empty state:', @isEmptyState.ToString().ToLower());
+                console.log('Has real machines:', @hasRealMachines.ToString().ToLower());
+                console.log('openJobModal function available:', typeof window.openJobModal === 'function');
                 console.log('==============================================');
                 </text>
             }
-        };
-    
-    // Modal management functions (global scope for HTMX integration)
-    window.openJobModal = function(machineId, date, jobId = null) {
-        if (SchedulerApp.isModalOpen || SchedulerApp.isLoading) return;
-        
-        // Clear any pending close timeouts
-        if (SchedulerApp.modalCloseTimeout) {
-            clearTimeout(SchedulerApp.modalCloseTimeout);
-            SchedulerApp.modalCloseTimeout = null;
         }
-        
-        const params = new URLSearchParams({
-            handler: 'ShowAddModal',
-            machineId: machineId || 'DefaultMachine',
-            date: date || new Date().toISOString()
-        });
-        
-        if (jobId) {
-            params.append('id', jobId);
-        }
-        
-        SchedulerApp.showLoadingIndicator('Opening job form...');
-        
-        htmx.ajax('GET', `/Scheduler?${params.toString()}`, {
-            target: '#modal-container',
-            swap: 'innerHTML'
-        }).then(() => {
-            SchedulerApp.showJobModal();
-            SchedulerApp.hideLoadingIndicator();
-        }).catch((error) => {
-            SchedulerApp.hideLoadingIndicator();
-            console.error('Error opening modal:', error);
-            SchedulerApp.showErrorNotification('Failed to open job form. Please try again.');
-        });
     };
     
     // Task 10: Global orientation toggle function
@@ -699,103 +1080,12 @@
         SchedulerApp.toggleOrientation(orientation);
     };
     
-    // Show modal
-    SchedulerApp.showJobModal = function() {
-        const modal = document.getElementById('modal-container');
-        if (modal && !SchedulerApp.isModalOpen) {
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            document.body.style.overflow = 'hidden';
-            SchedulerApp.isModalOpen = true;
-            
-            // Focus management for accessibility
-            setTimeout(() => {
-                const firstInput = modal.querySelector('input:not([type="hidden"]), select, textarea');
-                if (firstInput) {
-                    firstInput.focus();
-                }
-            }, 150);
-        }
-    };
-    
-    // Close modal
-    SchedulerApp.closeJobModal = function() {
-        const modal = document.getElementById('modal-container');
-        if (modal && SchedulerApp.isModalOpen) {
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-            document.body.style.overflow = '';
-            SchedulerApp.isModalOpen = false;
-            
-            // Clear modal content after animation
-            setTimeout(() => {
-                modal.innerHTML = '';
-            }, 300);
-        }
-    };
-    
-    // Notification functions
-    SchedulerApp.showSuccessNotification = function(message) {
-        SchedulerApp.showNotification(message, 'success');
-    };
-    
-    SchedulerApp.showErrorNotification = function(message) {
-        SchedulerApp.showNotification(message, 'error');
-    };
-    
-    SchedulerApp.showNotification = function(message, type) {
-        // Remove existing notifications
-        const existingNotifications = document.querySelectorAll('.notification');
-        existingNotifications.forEach(n => n.remove());
-        
-        const notification = document.createElement('div');
-        notification.className = `notification notification-${type} fixed top-20 right-4 px-6 py-4 rounded-lg shadow-lg z-50 transform transition-all duration-300 translate-x-full text-white font-medium max-w-md`;
-        
-        const icon = type === 'success' 
-            ? '<svg class="w-5 h-5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>'
-            : '<svg class="w-5 h-5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
-        
-        const bgColor = type === 'success' ? 'bg-green-600' : 'bg-red-600';
-        notification.classList.add(bgColor);
-        
-        notification.innerHTML = `
-            <div class="flex items-center">
-                ${icon}
-                <span class="flex-1">${message}</span>
-                <button onclick="this.parentElement.parentElement.remove()" class="ml-2 text-white opacity-70 hover:opacity-100 transition-opacity">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
-        `;
-        
-        document.body.appendChild(notification);
-        
-        // Animate in
-        requestAnimationFrame(() => {
-            notification.classList.remove('translate-x-full');
-        });
-        
-        // Auto remove
-        setTimeout(() => {
-            notification.classList.add('translate-x-full', 'opacity-0');
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.remove();
-                }
-            }, 300);
-        }, type === 'success' ? 5000 : 8000);
-    };
-    
     // Expose functions globally
     window.SchedulerApp = SchedulerApp;
-    window.showJobModal = SchedulerApp.showJobModal;
-    window.closeJobModal = SchedulerApp.closeJobModal;
-    window.showLoadingIndicator = SchedulerApp.showLoadingIndicator;
-    window.hideLoadingIndicator = SchedulerApp.hideLoadingIndicator;
-    window.showSuccessNotification = SchedulerApp.showSuccessNotification;
-    window.showErrorNotification = SchedulerApp.showErrorNotification;
+    window.showLoadingIndicator = SchedulerApp.showLoadingIndicator.bind(SchedulerApp);
+    window.hideLoadingIndicator = SchedulerApp.hideLoadingIndicator.bind(SchedulerApp);
+    window.showSuccessNotification = SchedulerApp.showSuccessNotification.bind(SchedulerApp);
+    window.showErrorNotification = SchedulerApp.showErrorNotification.bind(SchedulerApp);
     window.navigatePeriod = SchedulerApp.navigatePeriod.bind(SchedulerApp);
     window.navigateToToday = SchedulerApp.navigateToToday.bind(SchedulerApp);
     
@@ -811,8 +1101,12 @@
     
     // Initialize on DOM ready
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => SchedulerApp.init());
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('?? [INIT] DOM Content Loaded - Initializing Scheduler');
+            SchedulerApp.init();
+        });
     } else {
+        console.log('?? [INIT] DOM Already Ready - Initializing Scheduler');
         SchedulerApp.init();
     }
     

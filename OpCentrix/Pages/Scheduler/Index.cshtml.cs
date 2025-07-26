@@ -494,7 +494,7 @@ namespace OpCentrix.Pages.Scheduler
                 {
                     _logger.LogWarning("❌ [SCHEDULER-{OperationId}] Part not found: {PartId}", operationId, job.PartId);
                     return await CreatePartNotFoundErrorAsync(job, operationId);
-                }
+                    }
 
                 _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Found part: {PartNumber} - {Description}",
                     operationId, part.PartNumber, part.Description);
@@ -1070,6 +1070,116 @@ namespace OpCentrix.Pages.Scheduler
                         "Please refresh the page and try again."
                     }
                 });
+            }
+        }
+
+        public async Task<IActionResult> OnPostSeedDefaultMachinesAsync()
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("🌱 [SCHEDULER-{OperationId}] Request to seed default machines", operationId);
+
+            try
+            {
+                var success = await _machineService.SeedDefaultMachinesAsync();
+                
+                if (success)
+                {
+                    _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Default machines seeded successfully", operationId);
+                    
+                    // Reload the scheduler with the new machines
+                    await OnGetAsync();
+                    
+                    return Partial("_SchedulerContent", new { ViewModel, Summary });
+                }
+                else
+                {
+                    _logger.LogWarning("⚠️ [SCHEDULER-{OperationId}] Failed to seed default machines", operationId);
+                    return BadRequest("Failed to create default machines. They may already exist.");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error seeding default machines: {ErrorMessage}",
+                    operationId, ex.Message);
+                return StatusCode(500, "An error occurred while creating default machines.");
+            }
+        }
+
+        public async Task<IActionResult> OnGetGetMachineRowAsync(string machineId)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogDebug("🔄 [SCHEDULER-{OperationId}] Refreshing machine row for: {MachineId}", operationId, machineId);
+
+            try
+            {
+                // Reload scheduler data
+                await OnGetAsync();
+                
+                // Find jobs for this specific machine
+                var machineJobs = ViewModel.Jobs.Where(j => j.MachineId == machineId).ToList();
+                
+                // Create a mini view model for just this machine
+                var machineViewModel = new SchedulerPageViewModel
+                {
+                    StartDate = ViewModel.StartDate,
+                    Dates = ViewModel.Dates,
+                    Machines = new List<string> { machineId },
+                    Jobs = machineJobs,
+                    SlotsPerDay = ViewModel.SlotsPerDay,
+                    SlotMinutes = ViewModel.SlotMinutes,
+                    MachineRowHeights = new Dictionary<string, int> 
+                    { 
+                        [machineId] = ViewModel.MachineRowHeights.GetValueOrDefault(machineId, 160) 
+                    }
+                };
+
+                _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Machine row data prepared for {MachineId}: {JobCount} jobs",
+                    operationId, machineId, machineJobs.Count);
+
+                return Partial("_MachineRow", machineViewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error refreshing machine row for {MachineId}: {ErrorMessage}",
+                    operationId, machineId, ex.Message);
+                
+                // Return empty machine row as fallback
+                var fallbackViewModel = new SchedulerPageViewModel
+                {
+                    StartDate = DateTime.UtcNow.Date,
+                    Dates = new List<DateTime> { DateTime.UtcNow.Date },
+                    Machines = new List<string> { machineId },
+                    Jobs = new List<Job>(),
+                    SlotsPerDay = 1,
+                    SlotMinutes = 1440,
+                    MachineRowHeights = new Dictionary<string, int> { [machineId] = 160 }
+                };
+                
+                return Partial("_MachineRow", fallbackViewModel);
+            }
+        }
+
+        public async Task<IActionResult> OnGetGetFooterSummaryAsync()
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogDebug("📊 [SCHEDULER-{OperationId}] Refreshing footer summary", operationId);
+
+            try
+            {
+                // Reload scheduler data to get latest summary
+                await OnGetAsync();
+                
+                _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Footer summary data prepared", operationId);
+                
+                return Partial("_FooterSummary", Summary);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error refreshing footer summary: {ErrorMessage}",
+                    operationId, ex.Message);
+                
+                // Return empty summary as fallback
+                return Partial("_FooterSummary", new FooterSummaryViewModel());
             }
         }
     }

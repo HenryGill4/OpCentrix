@@ -5,24 +5,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - OpCentrix</title>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    
+    @* Load OpCentrix styles FIRST to avoid conflicts *@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     
     @* Use Tailwind CDN only in development, production CSS in production *@
     @if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
     {
         <script src="https://cdn.tailwindcss.com"></script>
-    }
-    else
-    {
-        <link rel="stylesheet" href="~/css/tailwind-output.css" asp-append-version="true" />
-    }
-    
-    <script src="https://unpkg.com/htmx.org@1.9.10" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC" crossorigin="anonymous"></script>
-    
-    <!-- OpCentrix Brand Configuration -->
-    @if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
-    {
         <script>
             tailwind.config = {
                 theme: {
@@ -42,24 +32,18 @@
             }
         </script>
     }
+    else
+    {
+        <link rel="stylesheet" href="~/css/tailwind-output.css" asp-append-version="true" />
+    }
     
-    <style>
-        .session-timeout-warning {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
-            color: white;
-            padding: 12px;
-            text-align: center;
-            z-index: 10000;
-            display: none;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-    </style>
+    @* Load Bootstrap LAST and only what we need *@
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     
-    @* Render Styles section to fix the error *@
+    @* HTMX for dynamic content *@
+    <script src="https://unpkg.com/htmx.org@1.9.10" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC" crossorigin="anonymous"></script>
+    
+    @* Render Styles section *@
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body class="bg-gray-50">
@@ -292,6 +276,7 @@
         </div>
     </footer>
 
+    <!-- JavaScript Libraries -->
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
@@ -366,7 +351,9 @@
                 fetch('/Account/ExtendSession', { method: 'POST' })
                     .then(() => {
                         resetSessionTimeout();
-                        showNotification('Session extended successfully', 'success');
+                        if (window.showSuccessNotification) {
+                            window.showSuccessNotification('Session extended successfully');
+                        }
                     })
                     .catch(() => {
                         window.location.href = '/Account/Login';

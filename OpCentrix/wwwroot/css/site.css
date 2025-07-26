@@ -1,4 +1,4 @@
-/* OpCentrix Complete Design System - Final Production Styling */
+/* OpCentrix Complete Design System - Clean Production Styling */
 
 :root {
     /* Enhanced Color Palette - Professional Grade */
@@ -149,17 +149,6 @@
     --opcentrix-border-light: var(--opcentrix-gray-800);
     --opcentrix-border-medium: var(--opcentrix-gray-600);
     --opcentrix-border-dark: var(--opcentrix-gray-500);
-    
-    --opcentrix-primary-light: #60A5FA;
-    --opcentrix-accent: #34D399;
-    --opcentrix-warning: #FBBF24;
-    --opcentrix-danger: #F87171;
-    --opcentrix-success: #34D399;
-    
-    --opcentrix-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.2);
-    --opcentrix-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
-    --opcentrix-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
-    --opcentrix-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
 }
 
 /* System Dark Mode Support */
@@ -183,29 +172,28 @@
     }
 }
 
-/* Global Base Styles */
+/* Global Base Styles - Reset Bootstrap conflicts */
 * {
     box-sizing: border-box;
-    margin: 0;
-    padding: 0;
 }
 
-html {
-    font-size: 16px;
-    line-height: var(--opcentrix-line-height-normal);
-    -webkit-text-size-adjust: 100%;
-    transition: background-color var(--opcentrix-transition-base), color var(--opcentrix-transition-base);
-}
-
+/* Override Bootstrap defaults */
 body {
-    font-family: var(--opcentrix-font-family);
-    background-color: var(--opcentrix-bg-primary);
-    color: var(--opcentrix-text-primary);
-    font-size: var(--opcentrix-font-size-sm);
-    line-height: var(--opcentrix-line-height-normal);
+    font-family: var(--opcentrix-font-family) !important;
+    background-color: var(--opcentrix-bg-primary) !important;
+    color: var(--opcentrix-text-primary) !important;
+    font-size: var(--opcentrix-font-size-sm) !important;
+    line-height: var(--opcentrix-line-height-normal) !important;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     transition: background-color var(--opcentrix-transition-base), color var(--opcentrix-transition-base);
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Remove Bootstrap button styles that conflict */
+.btn {
+    all: unset;
 }
 
 /* Enhanced Component System */
@@ -289,6 +277,7 @@ body {
     white-space: nowrap;
     user-select: none;
     min-height: 40px;
+    font-family: var(--opcentrix-font-family);
 }
 
 .opcentrix-button:focus {
@@ -541,26 +530,20 @@ body {
 }
 
 /* Modal Enhancements */
-.opcentrix-modal-backdrop {
+.modal-container {
     position: fixed;
     inset: 0;
     background: var(--opcentrix-bg-overlay);
-    z-index: var(--opcentrix-z-modal-backdrop);
+    z-index: var(--opcentrix-z-modal);
     backdrop-filter: blur(4px);
     animation: modalBackdropFadeIn var(--opcentrix-transition-base) ease-out;
-}
-
-.opcentrix-modal {
-    position: fixed;
-    inset: 0;
-    z-index: var(--opcentrix-z-modal);
     display: flex;
     align-items: center;
     justify-content: center;
     padding: var(--opcentrix-spacing-4);
 }
 
-.opcentrix-modal-content {
+.modal-content {
     background: var(--opcentrix-bg-secondary);
     border-radius: var(--opcentrix-radius-lg);
     box-shadow: var(--opcentrix-shadow-2xl);
@@ -607,6 +590,27 @@ body {
 }
 
 /* Loading Indicators */
+.loading-indicator {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--opcentrix-bg-secondary);
+    border-radius: var(--opcentrix-radius-lg);
+    padding: var(--opcentrix-spacing-6);
+    box-shadow: var(--opcentrix-shadow-xl);
+    z-index: var(--opcentrix-z-modal);
+    border: 1px solid var(--opcentrix-border);
+}
+
+.loading-content {
+    display: flex;
+    align-items: center;
+    gap: var(--opcentrix-spacing-3);
+    color: var(--opcentrix-text-primary);
+    font-weight: 600;
+}
+
 .opcentrix-spinner {
     width: 24px;
     height: 24px;
@@ -669,7 +673,7 @@ body {
         font-size: var(--opcentrix-font-size-xs);
     }
     
-    .opcentrix-modal-content {
+    .modal-content {
         margin: var(--opcentrix-spacing-2);
         max-width: calc(100vw - var(--opcentrix-spacing-4));
     }
@@ -707,11 +711,11 @@ body {
 @keyframes modalContentSlideIn {
     from { 
         opacity: 0; 
-        transform: translate(-50%, -50%) scale(0.95);
+        transform: scale(0.95) translate(-50%, -50%);
     }
     to { 
         opacity: 1; 
-        transform: translate(-50%, -50%) scale(1);
+        transform: scale(1) translate(-50%, -50%);
     }
 }
 
@@ -792,7 +796,7 @@ body {
     }
     
     .opcentrix-button,
-    .opcentrix-modal,
+    .modal-container,
     .opcentrix-notification {
         display: none !important;
     }
@@ -850,4 +854,113 @@ body {
 .session-timeout-warning.animate-slide-in {
     animation: slideInDown var(--opcentrix-transition-base) ease-out;
     display: block;
+}
+
+/* Scheduler-specific styles */
+.scheduler-main-content {
+    background: var(--opcentrix-bg-secondary);
+    border-radius: var(--opcentrix-radius-lg);
+    box-shadow: var(--opcentrix-shadow);
+    border: 1px solid var(--opcentrix-border);
+    overflow: hidden;
+}
+
+.empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    padding: var(--opcentrix-spacing-8);
+}
+
+.empty-state-content {
+    text-align: center;
+    max-width: 400px;
+}
+
+.empty-state-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto var(--opcentrix-spacing-6);
+    color: var(--opcentrix-text-quaternary);
+}
+
+.empty-state-title {
+    font-size: var(--opcentrix-font-size-xl);
+    font-weight: 600;
+    color: var(--opcentrix-text-primary);
+    margin-bottom: var(--opcentrix-spacing-3);
+}
+
+.empty-state-text {
+    color: var(--opcentrix-text-tertiary);
+    margin-bottom: var(--opcentrix-spacing-6);
+}
+
+/* Job block styles */
+.job-block {
+    border-radius: var(--opcentrix-radius);
+    padding: var(--opcentrix-spacing-2) var(--opcentrix-spacing-3);
+    font-size: var(--opcentrix-font-size-xs);
+    font-weight: 600;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.2);
+    cursor: pointer;
+    transition: all var(--opcentrix-transition-base);
+    box-shadow: var(--opcentrix-shadow-xs);
+    min-height: var(--job-min-height);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.job-block:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--opcentrix-shadow-md);
+}
+
+/* Override any conflicting styles from other frameworks */
+.job-block,
+.opcentrix-button,
+.opcentrix-card {
+    all: unset;
+    /* Then re-apply our styles */
+    display: inline-flex;
+    box-sizing: border-box;
+}
+
+/* Re-apply specific styles after the reset */
+.opcentrix-button {
+    align-items: center;
+    justify-content: center;
+    gap: var(--opcentrix-spacing-2);
+    padding: var(--opcentrix-spacing-3) var(--opcentrix-spacing-5);
+    border-radius: var(--opcentrix-radius);
+    font-weight: 600;
+    font-size: var(--opcentrix-font-size-sm);
+    line-height: 1;
+    border: none;
+    cursor: pointer;
+    transition: all var(--opcentrix-transition-base);
+    text-decoration: none;
+    position: relative;
+    overflow: hidden;
+    white-space: nowrap;
+    user-select: none;
+    min-height: 40px;
+    font-family: var(--opcentrix-font-family);
+}
+
+.opcentrix-card {
+    display: block;
+    background: var(--opcentrix-bg-secondary);
+    border-radius: var(--opcentrix-radius-md);
+    box-shadow: var(--opcentrix-shadow);
+    border: 1px solid var(--opcentrix-border);
+    transition: all var(--opcentrix-transition-base);
+    color: var(--opcentrix-text-primary);
+    position: relative;
+    overflow: hidden;
 }
