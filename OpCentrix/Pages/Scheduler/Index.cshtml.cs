@@ -34,36 +34,39 @@ namespace OpCentrix.Pages.Scheduler
             _logger = logger;
         }
 
-        public async Task OnGetAsync(string? zoom = null, DateTime? startDate = null)
+        public async Task OnGetAsync(string? zoom = null, DateTime? startDate = null, string? orientation = null)
         {
             var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogInformation("?? [SCHEDULER-{OperationId}] Starting OnGetAsync with zoom: {Zoom}, startDate: {StartDate}",
-                operationId, zoom, startDate);
+            _logger.LogInformation("🎯 [SCHEDULER-{OperationId}] Starting OnGetAsync with zoom: {Zoom}, startDate: {StartDate}, orientation: {Orientation}",
+                operationId, zoom, startDate, orientation);
 
             try
             {
+                // Task 10: Handle orientation preference
+                await HandleOrientationPreferenceAsync(orientation, operationId);
+
                 // Get scheduler configuration with optimized date range
-                _logger.LogDebug("?? [SCHEDULER-{OperationId}] Getting scheduler data from service", operationId);
+                _logger.LogDebug("🔧 [SCHEDULER-{OperationId}] Getting scheduler data from service", operationId);
                 ViewModel = _schedulerService.GetSchedulerData(zoom, startDate);
 
                 // PERFORMANCE OPTIMIZATION: Load only jobs within visible date range + buffer
-                _logger.LogDebug("?? [SCHEDULER-{OperationId}] Loading optimized job data", operationId);
+                _logger.LogDebug("🔧 [SCHEDULER-{OperationId}] Loading optimized job data", operationId);
                 await LoadOptimizedJobDataAsync(operationId);
 
                 // Calculate machine row heights efficiently
-                _logger.LogDebug("?? [SCHEDULER-{OperationId}] Calculating machine row heights", operationId);
+                _logger.LogDebug("🔧 [SCHEDULER-{OperationId}] Calculating machine row heights", operationId);
                 CalculateMachineRowHeights(operationId);
 
                 // Generate efficient summary data
-                _logger.LogDebug("?? [SCHEDULER-{OperationId}] Generating optimized summary", operationId);
+                _logger.LogDebug("🔧 [SCHEDULER-{OperationId}] Generating optimized summary", operationId);
                 await GenerateOptimizedSummaryAsync(operationId);
 
-                _logger.LogInformation("? [SCHEDULER-{OperationId}] Scheduler loaded successfully: {JobCount} jobs across {MachineCount} machines",
+                _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Scheduler loaded successfully: {JobCount} jobs across {MachineCount} machines",
                     operationId, ViewModel.Jobs.Count, ViewModel.Machines.Count);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "? [SCHEDULER-{OperationId}] Critical error loading scheduler page: {ErrorMessage}",
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Critical error loading scheduler page: {ErrorMessage}",
                     operationId, ex.Message);
                 await HandleLoadErrorAsync(zoom, startDate, operationId, ex);
             }
@@ -1180,6 +1183,72 @@ namespace OpCentrix.Pages.Scheduler
                 
                 // Return empty summary as fallback
                 return Partial("_FooterSummary", new FooterSummaryViewModel());
+            }
+        }
+
+        // Task 10: Handle orientation preference management
+        private async Task HandleOrientationPreferenceAsync(string? orientation, string operationId)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(orientation) && (orientation == "horizontal" || orientation == "vertical"))
+                {
+                    var username = User.Identity?.Name;
+                    if (!string.IsNullOrEmpty(username))
+                    {
+                        _logger.LogDebug("🔄 [SCHEDULER-{OperationId}] Saving orientation preference '{Orientation}' for user '{Username}'",
+                            operationId, orientation, username);
+
+                        var user = await _context.Users
+                            .Include(u => u.Settings)
+                            .FirstOrDefaultAsync(u => u.Username == username);
+
+                        if (user != null)
+                        {
+                            if (user.Settings == null)
+                            {
+                                user.Settings = new UserSettings { UserId = user.Id };
+                                _context.UserSettings.Add(user.Settings);
+                            }
+
+                            user.Settings.SchedulerOrientation = orientation;
+                            user.Settings.LastModifiedDate = DateTime.UtcNow;
+
+                            await _context.SaveChangesAsync();
+
+                            _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Orientation preference '{Orientation}' saved for user '{Username}'",
+                                operationId, orientation, username);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error handling orientation preference: {ErrorMessage}",
+                    operationId, ex.Message);
+                // Don't fail the main operation for preference save issues
+            }
+        }
+
+        // Task 10: Get user's current orientation preference
+        public async Task<string> GetUserOrientationPreferenceAsync()
+        {
+            try
+            {
+                var username = User.Identity?.Name;
+                if (string.IsNullOrEmpty(username))
+                    return "horizontal"; // Default for anonymous users
+
+                var user = await _context.Users
+                    .Include(u => u.Settings)
+                    .FirstOrDefaultAsync(u => u.Username == username);
+
+                return user?.Settings?.SchedulerOrientation ?? "horizontal";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error getting user orientation preference: {ErrorMessage}", ex.Message);
+                return "horizontal"; // Safe default
             }
         }
     }

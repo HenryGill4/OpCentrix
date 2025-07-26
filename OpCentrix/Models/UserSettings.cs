@@ -17,6 +17,10 @@ namespace OpCentrix.Models
         // Theme preferences
         public string Theme { get; set; } = "Light";
         
+        // Task 10: Scheduler orientation preference
+        [StringLength(20)]
+        public string SchedulerOrientation { get; set; } = "horizontal";
+        
         // Notification preferences
         public bool EmailNotifications { get; set; } = true;
         public bool BrowserNotifications { get; set; } = true;
