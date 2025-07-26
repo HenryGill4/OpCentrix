@@ -575,6 +575,9 @@
     }
 </div>
 
+@* Include the shared alert notifications *@
+<partial name="_AlertNotifications" />
+
 @section Scripts {
     <script>
         // Auto-refresh database status every 30 seconds
@@ -626,7 +629,7 @@
             
             const overwrite = this.querySelector('input[name*="OverwriteExisting"]:checked');
             if (overwrite) {
-                return confirm('⚠️ OVERWRITE MODE ENABLED\n\nThis will replace existing data with imported data. This cannot be undone without a backup.\n\nAre you absolutely sure you want to continue?');
+                return confirm('⚠️ OVERWRITE MODE ENABLED\n\nThis will replace existing data with imported data. This cannot be undone without a backup.\n\nAre you absolutamente sure you want to continue?');
             }
         });
     </script>

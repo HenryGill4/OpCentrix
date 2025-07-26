@@ -195,6 +195,9 @@
     </main>
 </div>
 
+@* Include the shared alert notifications *@
+<partial name="_AlertNotifications" />
+
 @section Scripts {
     <script>
         function refreshStages() {
@@ -202,7 +205,14 @@
         }
 
         function showCreateStageModal() {
-            alert('Create stage modal not yet implemented. This would open a modal for creating new stages.');
+            // Use the shared alert system to show info message
+            window.dispatchEvent(new CustomEvent('opcentrix:alert', {
+                detail: {
+                    type: 'info',
+                    message: 'Create stage modal not yet implemented. This would open a modal for creating new stages.',
+                    autoHide: true
+                }
+            }));
         }
 
         async function startStage(stageId) {
@@ -281,18 +291,14 @@
         }
 
         function showNotification(message, type) {
-            // Simple notification implementation
-            const notification = document.createElement('div');
-            notification.className = `fixed top-4 right-4 px-4 py-2 rounded-md shadow-lg z-50 ${
-                type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
-            }`;
-            notification.textContent = message;
-            
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.remove();
-            }, 3000);
+            // Use the shared alert system
+            window.dispatchEvent(new CustomEvent('opcentrix:alert', {
+                detail: {
+                    type: type,
+                    message: message,
+                    autoHide: true
+                }
+            }));
         }
     </script>
 }

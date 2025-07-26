@@ -1,441 +1,437 @@
 ﻿@model OpCentrix.Models.Part
 
-<div class="modal-overlay" onclick="hideModal()">
-    <div class="modal-content max-w-4xl max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
-        <div class="modal-header">
-            <h2 class="text-xl font-bold text-gray-900">
-                @(Model.Id == 0 ? "Add New Part" : $"Edit Part: {Model.PartNumber}")
-            </h2>
-            <button type="button" onclick="hideModal()" class="text-gray-400 hover:text-gray-600">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+<div class="modal-header">
+    <h2 class="text-xl font-bold text-gray-900">
+        @(Model.Id == 0 ? "Add New Part" : $"Edit Part: {Model.PartNumber}")
+    </h2>
+    <button type="button" onclick="hideModal()" class="text-gray-400 hover:text-gray-600">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+    </button>
+</div>
+
+<!-- Display validation errors if any -->
+@if (ViewData["ValidationErrors"] is List<string> errors && errors.Any())
+{
+    <div class="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div class="flex">
+            <svg class="w-5 h-5 text-red-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+            </svg>
+            <div>
+                <h3 class="text-sm font-medium text-red-800">Please correct the following errors:</h3>
+                <ul class="mt-2 text-sm text-red-700">
+                    @foreach (var error in errors)
+                    {
+                        <li>• @error</li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+}
+
+<form id="partForm" method="post" 
+      hx-post="/Admin/Parts?handler=Save" 
+      hx-target="#modal-container .modal-content" 
+      hx-swap="innerHTML"
+      hx-on::before-request="console.log('🎯 [FORM] Submitting part form'); showFormLoading();"
+      hx-on::after-swap="console.log('🎯 [FORM] Form response received, checking response...'); handleFormResponse(event);"
+      hx-on::response-error="console.error('❌ [FORM] Submission error:', event.detail); showErrorNotification('Form submission failed. Please try again.');"
+      enctype="application/x-www-form-urlencoded">
+    
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="CreatedDate" />
+    <input type="hidden" asp-for="CreatedBy" />
+    
+    <div class="modal-body">
+        <!-- Basic Information Section -->
+        <div class="bg-blue-50 rounded-lg p-4 mb-6">
+            <h3 class="text-lg font-semibold text-blue-900 mb-4 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
-            </button>
+                Basic Information
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label asp-for="PartNumber" class="block text-sm font-medium text-gray-700 mb-1">
+                        Part Number <span class="text-red-500">*</span>
+                    </label>
+                    <input asp-for="PartNumber" type="text" placeholder="XX-XXXX (e.g., 14-5396)" required
+                           onblur="validatePartNumber(this.value)"
+                           class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                    <span asp-validation-for="PartNumber" class="text-red-500 text-sm"></span>
+                    <div id="partNumberValidation" class="text-xs mt-1 hidden"></div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <select asp-for="IsActive" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="true">Active</option>
+                        <option value="false">Inactive</option>
+                    </select>
+                </div>
+                
+                <div class="md:col-span-2">
+                    <label asp-for="Description" class="block text-sm font-medium text-gray-700 mb-1">
+                        Description <span class="text-red-500">*</span>
+                    </label>
+                    <input asp-for="Description" type="text" placeholder="Enter part description..." required
+                           class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                    <span asp-validation-for="Description" class="text-red-500 text-sm"></span>
+                </div>
+            </div>
         </div>
 
-        <!-- Display validation errors if any -->
-        @if (ViewData["ValidationErrors"] is List<string> errors && errors.Any())
-        {
-            <div class="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <div class="flex">
-                    <svg class="w-5 h-5 text-red-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
-                    </svg>
-                    <div>
-                        <h3 class="text-sm font-medium text-red-800">Please correct the following errors:</h3>
-                        <ul class="mt-2 text-sm text-red-700">
-                            @foreach (var error in errors)
-                            {
-                                <li>• @error</li>
-                            }
-                        </ul>
-                    </div>
+        <!-- Material Selection Section -->
+        <div class="bg-green-50 rounded-lg p-4 mb-6">
+            <h3 class="text-lg font-semibold text-green-900 mb-4 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 7.586V5L8 4z"></path>
+                </svg>
+                Material & SLS Configuration
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Material Type</label>
+                    <select asp-for="Material" id="materialSelect" onchange="updateSlsMaterial()" 
+                            class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                        <option value="">Select material...</option>
+                        <optgroup label="Titanium Alloys">
+                            <option value="Ti-6Al-4V Grade 5">Ti-6Al-4V Grade 5 (Standard)</option>
+                            <option value="Ti-6Al-4V ELI Grade 23">Ti-6Al-4V ELI Grade 23 (Medical)</option>
+                            <option value="Ti-6Al-4V Grade 23">Ti-6Al-4V Grade 23</option>
+                            <option value="CP Titanium Grade 1">CP Titanium Grade 1</option>
+                            <option value="CP Titanium Grade 2">CP Titanium Grade 2</option>
+                        </optgroup>
+                        <optgroup label="Inconel Alloys">
+                            <option value="Inconel 718">Inconel 718 (High Temperature)</option>
+                            <option value="Inconel 625">Inconel 625 (Corrosion Resistant)</option>
+                            <option value="Inconel 939">Inconel 939</option>
+                        </optgroup>
+                        <optgroup label="Stainless Steel">
+                            <option value="316L Stainless Steel">316L Stainless Steel</option>
+                            <option value="17-4 PH Stainless Steel">17-4 PH Stainless Steel</option>
+                            <option value="15-5 PH Stainless Steel">15-5 PH Stainless Steel</option>
+                        </optgroup>
+                        <optgroup label="Tool Steel">
+                            <option value="Maraging Steel 18Ni300">Maraging Steel 18Ni300</option>
+                            <option value="H13 Tool Steel">H13 Tool Steel</option>
+                        </optgroup>
+                        <optgroup label="Aluminum Alloys">
+                            <option value="AlSi10Mg">AlSi10Mg</option>
+                            <option value="AlSi7Mg">AlSi7Mg</option>
+                        </optgroup>
+                        <optgroup label="Other">
+                            <option value="Custom">Custom Material</option>
+                        </optgroup>
+                    </select>
+                    <span asp-validation-for="Material" class="text-red-500 text-sm"></span>
+                </div>
+                
+                <div>
+                    <label asp-for="SlsMaterial" class="block text-sm font-medium text-gray-700 mb-1">SLS Material</label>
+                    <input asp-for="SlsMaterial" id="slsMaterialInput" type="text" 
+                           class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-gray-50" 
+                           readonly />
+                    <p class="text-xs text-gray-500 mt-1">Auto-filled based on material selection</p>
                 </div>
             </div>
-        }
+        </div>
 
-        <form id="partForm" method="post" 
-              hx-post="/Admin/Parts?handler=Save" 
-              hx-target="body" 
-              hx-swap="none"
-              hx-on::before-request="console.log('?? [FORM] Submitting part form'); console.log('?? [FORM] Form data:', new FormData(document.getElementById('partForm'))); showFormLoading();"
-              hx-on::after-request="console.log('?? [FORM] Form response received:', event.detail.xhr.status); handleFormResponse(event);"
-              hx-on::response-error="console.error('?? [FORM] Submission error:', event.detail); alert('Form submission failed. Check console for details.');"
-              enctype="application/x-www-form-urlencoded">
+        <!-- Duration & Time Estimates Section -->
+        <div class="bg-yellow-50 rounded-lg p-4 mb-6">
+            <h3 class="text-lg font-semibold text-yellow-900 mb-4 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                Duration & Time Estimates
+            </h3>
             
-            <input type="hidden" asp-for="Id" />
-            <input type="hidden" asp-for="CreatedDate" />
-            <input type="hidden" asp-for="CreatedBy" />
-            
-            <div class="modal-body">
-                <!-- Basic Information Section -->
-                <div class="bg-blue-50 rounded-lg p-4 mb-6">
-                    <h3 class="text-lg font-semibold text-blue-900 mb-4 flex items-center">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                        Basic Information
-                    </h3>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label asp-for="PartNumber" class="block text-sm font-medium text-gray-700 mb-1">
-                                Part Number <span class="text-red-500">*</span>
-                            </label>
-                            <input asp-for="PartNumber" type="text" placeholder="XX-XXXX (e.g., 14-5396)" required
-                                   onblur="validatePartNumber(this.value)"
-                                   class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
-                            <span asp-validation-for="PartNumber" class="text-red-500 text-sm"></span>
-                            <div id="partNumberValidation" class="text-xs mt-1 hidden"></div>
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                            <select asp-for="IsActive" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                <option value="true">Active</option>
-                                <option value="false">Inactive</option>
-                            </select>
-                        </div>
-                        
-                        <div class="md:col-span-2">
-                            <label asp-for="Description" class="block text-sm font-medium text-gray-700 mb-1">
-                                Description <span class="text-red-500">*</span>
-                            </label>
-                            <input asp-for="Description" type="text" placeholder="Enter part description..." required
-                                   class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
-                            <span asp-validation-for="Description" class="text-red-500 text-sm"></span>
-                        </div>
-                    </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                    <label asp-for="EstimatedHours" class="block text-sm font-medium text-gray-700 mb-1">
+                        Standard Duration (Hours) <span class="text-red-500">*</span>
+                    </label>
+                    <input asp-for="EstimatedHours" type="number" step="0.25" min="0.25" max="200" 
+                           placeholder="8.5" onchange="updateDurationDisplay()" required
+                           class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500" />
+                    <span asp-validation-for="EstimatedHours" class="text-red-500 text-sm"></span>
+                    <p class="text-xs text-gray-500 mt-1">Default manufacturing time</p>
                 </div>
-
-                <!-- Material Selection Section -->
-                <div class="bg-green-50 rounded-lg p-4 mb-6">
-                    <h3 class="text-lg font-semibold text-green-900 mb-4 flex items-center">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 7.586V5L8 4z"></path>
-                        </svg>
-                        Material & SLS Configuration
-                    </h3>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Material Type</label>
-                            <select asp-for="Material" id="materialSelect" onchange="updateSlsMaterial()" 
-                                    class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-green-500 focus:border-green-500">
-                                <option value="">Select material...</option>
-                                <optgroup label="Titanium Alloys">
-                                    <option value="Ti-6Al-4V Grade 5">Ti-6Al-4V Grade 5 (Standard)</option>
-                                    <option value="Ti-6Al-4V ELI Grade 23">Ti-6Al-4V ELI Grade 23 (Medical)</option>
-                                    <option value="Ti-6Al-4V Grade 23">Ti-6Al-4V Grade 23</option>
-                                    <option value="CP Titanium Grade 1">CP Titanium Grade 1</option>
-                                    <option value="CP Titanium Grade 2">CP Titanium Grade 2</option>
-                                </optgroup>
-                                <optgroup label="Inconel Alloys">
-                                    <option value="Inconel 718">Inconel 718 (High Temperature)</option>
-                                    <option value="Inconel 625">Inconel 625 (Corrosion Resistant)</option>
-                                    <option value="Inconel 939">Inconel 939</option>
-                                </optgroup>
-                                <optgroup label="Stainless Steel">
-                                    <option value="316L Stainless Steel">316L Stainless Steel</option>
-                                    <option value="17-4 PH Stainless Steel">17-4 PH Stainless Steel</option>
-                                    <option value="15-5 PH Stainless Steel">15-5 PH Stainless Steel</option>
-                                </optgroup>
-                                <optgroup label="Tool Steel">
-                                    <option value="Maraging Steel 18Ni300">Maraging Steel 18Ni300</option>
-                                    <option value="H13 Tool Steel">H13 Tool Steel</option>
-                                </optgroup>
-                                <optgroup label="Aluminum Alloys">
-                                    <option value="AlSi10Mg">AlSi10Mg</option>
-                                    <option value="AlSi7Mg">AlSi7Mg</option>
-                                </optgroup>
-                                <optgroup label="Other">
-                                    <option value="Custom">Custom Material</option>
-                                </optgroup>
-                            </select>
-                            <span asp-validation-for="Material" class="text-red-500 text-sm"></span>
-                        </div>
-                        
-                        <div>
-                            <label asp-for="SlsMaterial" class="block text-sm font-medium text-gray-700 mb-1">SLS Material</label>
-                            <input asp-for="SlsMaterial" id="slsMaterialInput" type="text" 
-                                   class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-gray-50" 
-                                   readonly />
-                            <p class="text-xs text-gray-500 mt-1">Auto-filled based on material selection</p>
-                        </div>
-                    </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Duration Display</label>
+                    <input asp-for="AvgDuration" id="durationDisplay" type="text" readonly
+                           class="w-full border border-gray-300 rounded-lg p-2 bg-gray-50 text-gray-600" />
+                    <p class="text-xs text-gray-500 mt-1">Formatted for display (auto-calculated)</p>
                 </div>
-
-                <!-- Duration & Time Estimates Section -->
-                <div class="bg-yellow-50 rounded-lg p-4 mb-6">
-                    <h3 class="text-lg font-semibold text-yellow-900 mb-4 flex items-center">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                        Duration & Time Estimates
-                    </h3>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <div>
-                            <label asp-for="EstimatedHours" class="block text-sm font-medium text-gray-700 mb-1">
-                                Standard Duration (Hours) <span class="text-red-500">*</span>
-                            </label>
-                            <input asp-for="EstimatedHours" type="number" step="0.25" min="0.25" max="200" 
-                                   placeholder="8.5" onchange="updateDurationDisplay()" required
-                                   class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500" />
-                            <span asp-validation-for="EstimatedHours" class="text-red-500 text-sm"></span>
-                            <p class="text-xs text-gray-500 mt-1">Default manufacturing time</p>
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Duration Display</label>
-                            <input asp-for="AvgDuration" id="durationDisplay" type="text" readonly
-                                   class="w-full border border-gray-300 rounded-lg p-2 bg-gray-50 text-gray-600" />
-                            <p class="text-xs text-gray-500 mt-1">Formatted for display (auto-calculated)</p>
-                        </div>
-                        
-                        <div>
-                            <label asp-for="AvgDurationDays" class="block text-sm font-medium text-gray-700 mb-1">Duration Days</label>
-                            <input asp-for="AvgDurationDays" id="durationDays" type="number" readonly
-                                   class="w-full border border-gray-300 rounded-lg p-2 bg-gray-50 text-gray-600" />
-                            <p class="text-xs text-gray-500 mt-1">Whole days (auto-calculated)</p>
-                        </div>
-                    </div>
-
-                    <!-- Task 7: Admin Duration Override Section -->
-                    <div class="border-t border-yellow-200 pt-4">
-                        <div class="flex items-center justify-between mb-3">
-                            <h4 class="text-md font-semibold text-yellow-800 flex items-center">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                                </svg>
-                                Admin Duration Override
-                            </h4>
-                            <span class="text-xs text-yellow-600 bg-yellow-100 px-2 py-1 rounded-full">
-                                @(Model.HasAdminOverride ? "Override Active" : "No Override")
-                            </span>
-                        </div>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label asp-for="AdminEstimatedHoursOverride" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Override Duration (Hours)
-                                </label>
-                                <input asp-for="AdminEstimatedHoursOverride" type="number" step="0.25" min="0.25" max="200" 
-                                       placeholder="Leave empty for no override" onchange="updateOverrideDisplay()"
-                                       class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500" />
-                                <span asp-validation-for="AdminEstimatedHoursOverride" class="text-red-500 text-sm"></span>
-                                <p class="text-xs text-gray-500 mt-1">Overrides standard duration when set</p>
-                            </div>
-                            
-                            <div>
-                                <label asp-for="AdminOverrideReason" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Override Reason
-                                </label>
-                                <input asp-for="AdminOverrideReason" type="text" maxlength="500" 
-                                       placeholder="Reason for duration override..."
-                                       class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500" />
-                                <span asp-validation-for="AdminOverrideReason" class="text-red-500 text-sm"></span>
-                                <p class="text-xs text-gray-500 mt-1">Required when override is set</p>
-                            </div>
-                        </div>
-                        
-                        <!-- Override Status Display -->
-                        <div id="overrideStatus" class="mt-3 p-3 rounded-lg @(Model.HasAdminOverride ? "bg-orange-50 border border-orange-200" : "hidden")">
-                            <div class="flex items-start space-x-2">
-                                <svg class="w-5 h-5 text-orange-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 6.5c-.77.833.192 2.5 1.732 2.5z"></path>
-                                </svg>
-                                <div>
-                                    <p class="text-sm font-medium text-orange-800">Duration Override Active</p>
-                                    @if (Model.HasAdminOverride)
-                                    {
-                                        <p class="text-xs text-orange-600 mt-1">
-                                            Effective Duration: @Model.EffectiveDurationHours.ToString("F1") hours
-                                            @if (!string.IsNullOrEmpty(Model.AdminOverrideBy))
-                                            {
-                                                <br />
-                                                <text>Override by: @Model.AdminOverrideBy</text>
-                                            }
-                                            @if (Model.AdminOverrideDate.HasValue)
-                                            {
-                                                <br />
-                                                <text>Override date: @Model.AdminOverrideDate.Value.ToString("yyyy-MM-dd HH:mm")</text>
-                                            }
-                                        </p>
-                                    }
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Physical Dimensions Section -->
-                <div class="bg-purple-50 rounded-lg p-4 mb-6">
-                    <h3 class="text-lg font-semibold text-purple-900 mb-4 flex items-center">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
-                        </svg>
-                        Physical Dimensions & Weight
-                    </h3>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div>
-                            <label asp-for="LengthMm" class="block text-sm font-medium text-gray-700 mb-1">Length (mm)</label>
-                            <input asp-for="LengthMm" type="number" step="0.1" min="0" placeholder="100.0 (optional)" 
-                                   class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500" />
-                        </div>
-                        
-                        <div>
-                            <label asp-for="WidthMm" class="block text-sm font-medium text-gray-700 mb-1">Width (mm)</label>
-                            <input asp-for="WidthMm" type="number" step="0.1" min="0" placeholder="50.0 (optional)" 
-                                   class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500" />
-                        </div>
-                        
-                        <div>
-                            <label asp-for="HeightMm" class="block text-sm font-medium text-gray-700 mb-1">Height (mm)</label>
-                            <input asp-for="HeightMm" type="number" step="0.1" min="0" placeholder="25.0 (optional)" 
-                                   class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500" />
-                        </div>
-                        
-                        <div>
-                            <label asp-for="WeightGrams" class="block text-sm font-medium text-gray-700 mb-1">Weight (g)</label>
-                            <input asp-for="WeightGrams" type="number" step="0.1" min="0" placeholder="200.0 (optional)" 
-                                   class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500" />
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Manufacturing Parameters Section -->
-                <div class="bg-indigo-50 rounded-lg p-4 mb-6">
-                    <h3 class="text-lg font-semibold text-indigo-900 mb-4 flex items-center">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                        </svg>
-                        SLS Manufacturing Parameters
-                    </h3>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label asp-for="RecommendedLaserPower" class="block text-sm font-medium text-gray-700 mb-1">Laser Power (W)</label>
-                            <input asp-for="RecommendedLaserPower" type="number" step="1" min="0" max="400" placeholder="200 (optional)" 
-                                   class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
-                        </div>
-                        
-                        <div>
-                            <label asp-for="RecommendedScanSpeed" class="block text-sm font-medium text-gray-700 mb-1">Scan Speed (mm/s)</label>
-                            <input asp-for="RecommendedScanSpeed" type="number" step="10" min="0" max="2000" placeholder="1200 (optional)" 
-                                   class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
-                        </div>
-                        
-                        <div>
-                            <label asp-for="RecommendedBuildTemperature" class="block text-sm font-medium text-gray-700 mb-1">Build Temp (°C)</label>
-                            <input asp-for="RecommendedBuildTemperature" type="number" step="5" min="0" max="300" placeholder="180 (optional)" 
-                                   class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Cost Information Section -->
-                <div class="bg-red-50 rounded-lg p-4 mb-6">
-                    <h3 class="text-lg font-semibold text-red-900 mb-4 flex items-center">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-                        </svg>
-                        Cost Information
-                    </h3>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label asp-for="MaterialCostPerKg" class="block text-sm font-medium text-gray-700 mb-1">Material Cost ($/kg)</label>
-                            <input asp-for="MaterialCostPerKg" type="number" step="0.01" min="0" placeholder="450.00" 
-                                   class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-red-500 focus:border-red-500" />
-                        </div>
-                        
-                        <div>
-                            <label asp-for="StandardLaborCostPerHour" class="block text-sm font-medium text-gray-700 mb-1">Labor Cost ($/hr)</label>
-                            <input asp-for="StandardLaborCostPerHour" type="number" step="0.01" min="0" placeholder="85.00" 
-                                   class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-red-500 focus:border-red-500" />
-                        </div>
-                        
-                        <div>
-                            <label asp-for="SetupCost" class="block text-sm font-medium text-gray-700 mb-1">Setup Cost ($)</label>
-                            <input asp-for="SetupCost" type="number" step="0.01" min="0" placeholder="125.00" 
-                                   class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-red-500 focus:border-red-500" />
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Classification Section -->
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
-                        </svg>
-                        Classification & Industry
-                    </h3>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div>
-                            <label asp-for="Industry" class="block text-sm font-medium text-gray-700 mb-1">
-                                Industry <span class="text-red-500">*</span>
-                            </label>
-                            <select asp-for="Industry" required class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-gray-500 focus:border-gray-500">
-                                <option value="General" selected="@(string.IsNullOrEmpty(Model.Industry) || Model.Industry == "General")">General Manufacturing</option>
-                                <option value="Aerospace">Aerospace</option>
-                                <option value="Medical">Medical</option>
-                                <option value="Automotive">Automotive</option>
-                                <option value="Oil & Gas">Oil & Gas</option>
-                                <option value="Defense">Defense</option>
-                                <option value="Energy">Energy</option>
-                            </select>
-                            <span asp-validation-for="Industry" class="text-red-500 text-sm"></span>
-                        </div>
-                        
-                        <div>
-                            <label asp-for="Application" class="block text-sm font-medium text-gray-700 mb-1">
-                                Application <span class="text-red-500">*</span>
-                            </label>
-                            <select asp-for="Application" required class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-gray-500 focus:border-gray-500">
-                                <option value="General Component" selected="@(string.IsNullOrEmpty(Model.Application) || Model.Application == "General Component")">General Component</option>
-                                <option value="Turbine Blade">Turbine Blade</option>
-                                <option value="Structural Bracket">Structural Bracket</option>
-                                <option value="Heat Exchanger">Heat Exchanger</option>
-                                <option value="Valve Body">Valve Body</option>
-                                <option value="Hip Implant">Hip Implant</option>
-                                <option value="Surgical Instrument">Surgical Instrument</option>
-                                <option value="Suspension Component">Suspension Component</option>
-                                <option value="UAV Frame">UAV Frame</option>
-                                <option value="Engine Component">Engine Component</option>
-                                <option value="Pump Housing">Pump Housing</option>
-                                <option value="Manifold">Manifold</option>
-                                <option value="Nozzle">Nozzle</option>
-                                <option value="Custom Component">Custom Component</option>
-                            </select>
-                            <span asp-validation-for="Application" class="text-red-500 text-sm"></span>
-                        </div>
-                        
-                        <div>
-                            <label asp-for="PartCategory" class="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                            <select asp-for="PartCategory" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-gray-500 focus:border-gray-500">
-                                <option value="">Select category...</option>
-                                <option value="Production">Production</option>
-                                <option value="Prototype">Prototype</option>
-                                <option value="Tooling">Tooling</option>
-                                <option value="Repair">Repair</option>
-                            </select>
-                        </div>
-                        
-                        <div>
-                            <label asp-for="PartClass" class="block text-sm font-medium text-gray-700 mb-1">Part Class</label>
-                            <select asp-for="PartClass" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-gray-500 focus:border-gray-500">
-                                <option value="">Select class...</option>
-                                <option value="A">Class A (Critical)</option>
-                                <option value="B">Class B (Important)</option>
-                                <option value="C">Class C (Standard)</option>
-                            </select>
-                        </div>
-                    </div>
+                
+                <div>
+                    <label asp-for="AvgDurationDays" class="block text-sm font-medium text-gray-700 mb-1">Duration Days</label>
+                    <input asp-for="AvgDurationDays" id="durationDays" type="number" readonly
+                           class="w-full border border-gray-300 rounded-lg p-2 bg-gray-50 text-gray-600" />
+                    <p class="text-xs text-gray-500 mt-1">Whole days (auto-calculated)</p>
                 </div>
             </div>
 
-            <div class="modal-footer">
-                <button type="button" onclick="hideModal()" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition">
-                    Cancel
-                </button>
-                <button type="submit" id="submitBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-                    <span id="submitText">@(Model.Id == 0 ? "Create Part" : "Update Part")</span>
-                    <span id="submitSpinner" class="hidden ml-2">
-                        <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            <!-- Task 7: Admin Duration Override Section -->
+            <div class="border-t border-yellow-200 pt-4">
+                <div class="flex items-center justify-between mb-3">
+                    <h4 class="text-md font-semibold text-yellow-800 flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                         </svg>
+                        Admin Duration Override
+                    </h4>
+                    <span class="text-xs text-yellow-600 bg-yellow-100 px-2 py-1 rounded-full">
+                        @(Model.HasAdminOverride ? "Override Active" : "No Override")
                     </span>
-                </button>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label asp-for="AdminEstimatedHoursOverride" class="block text-sm font-medium text-gray-700 mb-1">
+                            Override Duration (Hours)
+                        </label>
+                        <input asp-for="AdminEstimatedHoursOverride" type="number" step="0.25" min="0.25" max="200" 
+                               placeholder="Leave empty for no override" onchange="updateOverrideDisplay()"
+                               class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500" />
+                        <span asp-validation-for="AdminEstimatedHoursOverride" class="text-red-500 text-sm"></span>
+                        <p class="text-xs text-gray-500 mt-1">Overrides standard duration when set</p>
+                    </div>
+                    
+                    <div>
+                        <label asp-for="AdminOverrideReason" class="block text-sm font-medium text-gray-700 mb-1">
+                            Override Reason
+                        </label>
+                        <input asp-for="AdminOverrideReason" type="text" maxlength="500" 
+                               placeholder="Reason for duration override..."
+                               class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500" />
+                        <span asp-validation-for="AdminOverrideReason" class="text-red-500 text-sm"></span>
+                        <p class="text-xs text-gray-500 mt-1">Required when override is set</p>
+                    </div>
+                </div>
+                
+                <!-- Override Status Display -->
+                <div id="overrideStatus" class="mt-3 p-3 rounded-lg @(Model.HasAdminOverride ? "bg-orange-50 border border-orange-200" : "hidden")">
+                    <div class="flex items-start space-x-2">
+                        <svg class="w-5 h-5 text-orange-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 6.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                        </svg>
+                        <div>
+                            <p class="text-sm font-medium text-orange-800">Duration Override Active</p>
+                            @if (Model.HasAdminOverride)
+                            {
+                                <p class="text-xs text-orange-600 mt-1">
+                                    Effective Duration: @Model.EffectiveDurationHours.ToString("F1") hours
+                                    @if (!string.IsNullOrEmpty(Model.AdminOverrideBy))
+                                    {
+                                        <br />
+                                        <text>Override by: @Model.AdminOverrideBy</text>
+                                    }
+                                    @if (Model.AdminOverrideDate.HasValue)
+                                    {
+                                        <br />
+                                        <text>Override date: @Model.AdminOverrideDate.Value.ToString("yyyy-MM-dd HH:mm")</text>
+                                    }
+                                </p>
+                            }
+                        </div>
+                    </div>
+                </div>
             </div>
-        </form>
+        </div>
+
+        <!-- Physical Dimensions Section -->
+        <div class="bg-purple-50 rounded-lg p-4 mb-6">
+            <h3 class="text-lg font-semibold text-purple-900 mb-4 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
+                </svg>
+                Physical Dimensions & Weight
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                    <label asp-for="LengthMm" class="block text-sm font-medium text-gray-700 mb-1">Length (mm)</label>
+                    <input asp-for="LengthMm" type="number" step="0.1" min="0" placeholder="100.0 (optional)" 
+                           class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500" />
+                </div>
+                
+                <div>
+                    <label asp-for="WidthMm" class="block text-sm font-medium text-gray-700 mb-1">Width (mm)</label>
+                    <input asp-for="WidthMm" type="number" step="0.1" min="0" placeholder="50.0 (optional)" 
+                           class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500" />
+                </div>
+                
+                <div>
+                    <label asp-for="HeightMm" class="block text-sm font-medium text-gray-700 mb-1">Height (mm)</label>
+                    <input asp-for="HeightMm" type="number" step="0.1" min="0" placeholder="25.0 (optional)" 
+                           class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500" />
+                </div>
+                
+                <div>
+                    <label asp-for="WeightGrams" class="block text-sm font-medium text-gray-700 mb-1">Weight (g)</label>
+                    <input asp-for="WeightGrams" type="number" step="0.1" min="0" placeholder="200.0 (optional)" 
+                           class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500" />
+                </div>
+            </div>
+        </div>
+
+        <!-- Manufacturing Parameters Section -->
+        <div class="bg-indigo-50 rounded-lg p-4 mb-6">
+            <h3 class="text-lg font-semibold text-indigo-900 mb-4 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+                SLS Manufacturing Parameters
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label asp-for="RecommendedLaserPower" class="block text-sm font-medium text-gray-700 mb-1">Laser Power (W)</label>
+                    <input asp-for="RecommendedLaserPower" type="number" step="1" min="0" max="400" placeholder="200 (optional)" 
+                           class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                </div>
+                
+                <div>
+                    <label asp-for="RecommendedScanSpeed" class="block text-sm font-medium text-gray-700 mb-1">Scan Speed (mm/s)</label>
+                    <input asp-for="RecommendedScanSpeed" type="number" step="10" min="0" max="2000" placeholder="1200 (optional)" 
+                           class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                </div>
+                
+                <div>
+                    <label asp-for="RecommendedBuildTemperature" class="block text-sm font-medium text-gray-700 mb-1">Build Temp (°C)</label>
+                    <input asp-for="RecommendedBuildTemperature" type="number" step="5" min="0" max="300" placeholder="180 (optional)" 
+                           class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                </div>
+            </div>
+        </div>
+
+        <!-- Cost Information Section -->
+        <div class="bg-red-50 rounded-lg p-4 mb-6">
+            <h3 class="text-lg font-semibold text-red-900 mb-4 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                </svg>
+                Cost Information
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label asp-for="MaterialCostPerKg" class="block text-sm font-medium text-gray-700 mb-1">Material Cost ($/kg)</label>
+                    <input asp-for="MaterialCostPerKg" type="number" step="0.01" min="0" placeholder="450.00" 
+                           class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-red-500 focus:border-red-500" />
+                </div>
+                
+                <div>
+                    <label asp-for="StandardLaborCostPerHour" class="block text-sm font-medium text-gray-700 mb-1">Labor Cost ($/hr)</label>
+                    <input asp-for="StandardLaborCostPerHour" type="number" step="0.01" min="0" placeholder="85.00" 
+                           class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-red-500 focus:border-red-500" />
+                </div>
+                
+                <div>
+                    <label asp-for="SetupCost" class="block text-sm font-medium text-gray-700 mb-1">Setup Cost ($)</label>
+                    <input asp-for="SetupCost" type="number" step="0.01" min="0" placeholder="125.00" 
+                           class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-red-500 focus:border-red-500" />
+                </div>
+            </div>
+        </div>
+
+        <!-- Classification Section -->
+        <div class="bg-gray-50 rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                </svg>
+                Classification & Industry
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                    <label asp-for="Industry" class="block text-sm font-medium text-gray-700 mb-1">
+                        Industry <span class="text-red-500">*</span>
+                    </label>
+                    <select asp-for="Industry" required class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-gray-500 focus:border-gray-500">
+                        <option value="General" selected="@(string.IsNullOrEmpty(Model.Industry) || Model.Industry == "General")">General Manufacturing</option>
+                        <option value="Aerospace">Aerospace</option>
+                        <option value="Medical">Medical</option>
+                        <option value="Automotive">Automotive</option>
+                        <option value="Oil & Gas">Oil & Gas</option>
+                        <option value="Defense">Defense</option>
+                        <option value="Energy">Energy</option>
+                    </select>
+                    <span asp-validation-for="Industry" class="text-red-500 text-sm"></span>
+                </div>
+                
+                <div>
+                    <label asp-for="Application" class="block text-sm font-medium text-gray-700 mb-1">
+                        Application <span class="text-red-500">*</span>
+                    </label>
+                    <select asp-for="Application" required class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-gray-500 focus:border-gray-500">
+                        <option value="General Component" selected="@(string.IsNullOrEmpty(Model.Application) || Model.Application == "General Component")">General Component</option>
+                        <option value="Turbine Blade">Turbine Blade</option>
+                        <option value="Structural Bracket">Structural Bracket</option>
+                        <option value="Heat Exchanger">Heat Exchanger</option>
+                        <option value="Valve Body">Valve Body</option>
+                        <option value="Hip Implant">Hip Implant</option>
+                        <option value="Surgical Instrument">Surgical Instrument</option>
+                        <option value="Suspension Component">Suspension Component</option>
+                        <option value="UAV Frame">UAV Frame</option>
+                        <option value="Engine Component">Engine Component</option>
+                        <option value="Pump Housing">Pump Housing</option>
+                        <option value="Manifold">Manifold</option>
+                        <option value="Nozzle">Nozzle</option>
+                        <option value="Custom Component">Custom Component</option>
+                    </select>
+                    <span asp-validation-for="Application" class="text-red-500 text-sm"></span>
+                </div>
+                
+                <div>
+                    <label asp-for="PartCategory" class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                    <select asp-for="PartCategory" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-gray-500 focus:border-gray-500">
+                        <option value="">Select category...</option>
+                        <option value="Production">Production</option>
+                        <option value="Prototype">Prototype</option>
+                        <option value="Tooling">Tooling</option>
+                        <option value="Repair">Repair</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label asp-for="PartClass" class="block text-sm font-medium text-gray-700 mb-1">Part Class</label>
+                    <select asp-for="PartClass" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-gray-500 focus:border-gray-500">
+                        <option value="">Select class...</option>
+                        <option value="A">Class A (Critical)</option>
+                        <option value="B">Class B (Important)</option>
+                        <option value="C">Class C (Standard)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
+
+    <div class="modal-footer">
+        <button type="button" onclick="hideModal()" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition">
+            Cancel
+        </button>
+        <button type="submit" id="submitBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+            <span id="submitText">@(Model.Id == 0 ? "Create Part" : "Update Part")</span>
+            <span id="submitSpinner" class="hidden ml-2">
+                <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </span>
+        </button>
+    </div>
+</form>
 
 <script>
     // Part Form functions - Enhanced and Fixed
@@ -472,7 +468,7 @@
                     slsMaterialInput.value = materialSelect.value;
                     console.log('✅ [FORM] SLS Material updated to:', materialSelect.value);
                     
-                    // CRITICAL FIX: Auto-adjust defaults based on material type for Inconel parts
+                    // Auto-adjust defaults based on material type
                     updateMaterialDefaults(materialSelect.value);
                 } else {
                     slsMaterialInput.value = '';
@@ -485,67 +481,38 @@
             }
         };
         
-        // CRITICAL FIX: Add material-specific defaults to prevent errors with Inconel parts
+        // Material-specific defaults
         window.updateMaterialDefaults = function(materialType) {
             console.log('🔧 [FORM] Updating defaults for material:', materialType);
             
-            // Define material-specific defaults
             const materialDefaults = {
                 'Inconel 718': {
                     laserPower: 285,
                     scanSpeed: 960,
                     buildTemperature: 200,
-                    layerThickness: 30,
-                    hatchSpacing: 110,
-                    argonPurity: 99.95,
-                    oxygenContent: 25,
                     materialCost: 750.00,
-                    estimatedHours: 12.0,
-                    preheatingTime: 90,
-                    coolingTime: 180,
-                    postProcessingTime: 120
+                    estimatedHours: 12.0
                 },
                 'Inconel 625': {
                     laserPower: 275,
                     scanSpeed: 980,
                     buildTemperature: 195,
-                    layerThickness: 30,
-                    hatchSpacing: 115,
-                    argonPurity: 99.9,
-                    oxygenContent: 30,
                     materialCost: 850.00,
-                    estimatedHours: 14.0,
-                    preheatingTime: 85,
-                    coolingTime: 200,
-                    postProcessingTime: 150
+                    estimatedHours: 14.0
                 },
                 'Ti-6Al-4V Grade 5': {
                     laserPower: 200,
                     scanSpeed: 1200,
                     buildTemperature: 180,
-                    layerThickness: 30,
-                    hatchSpacing: 120,
-                    argonPurity: 99.9,
-                    oxygenContent: 50,
                     materialCost: 450.00,
-                    estimatedHours: 8.0,
-                    preheatingTime: 60,
-                    coolingTime: 120,
-                    postProcessingTime: 90
+                    estimatedHours: 8.0
                 },
                 'Ti-6Al-4V ELI Grade 23': {
                     laserPower: 195,
                     scanSpeed: 1250,
                     buildTemperature: 175,
-                    layerThickness: 30,
-                    hatchSpacing: 125,
-                    argonPurity: 99.95,
-                    oxygenContent: 40,
                     materialCost: 520.00,
-                    estimatedHours: 9.0,
-                    preheatingTime: 65,
-                    coolingTime: 140,
-                    postProcessingTime: 100
+                    estimatedHours: 9.0
                 }
             };
             
@@ -560,15 +527,8 @@
                 { id: 'RecommendedLaserPower', value: defaults.laserPower, name: 'Laser Power' },
                 { id: 'RecommendedScanSpeed', value: defaults.scanSpeed, name: 'Scan Speed' },
                 { id: 'RecommendedBuildTemperature', value: defaults.buildTemperature, name: 'Build Temperature' },
-                { id: 'RecommendedLayerThickness', value: defaults.layerThickness, name: 'Layer Thickness' },
-                { id: 'RecommendedHatchSpacing', value: defaults.hatchSpacing, name: 'Hatch Spacing' },
-                { id: 'RequiredArgonPurity', value: defaults.argonPurity, name: 'Argon Purity' },
-                { id: 'MaxOxygenContent', value: defaults.oxygenContent, name: 'Max Oxygen Content' },
                 { id: 'MaterialCostPerKg', value: defaults.materialCost, name: 'Material Cost' },
-                { id: 'EstimatedHours', value: defaults.estimatedHours, name: 'Estimated Hours' },
-                { id: 'PreheatingTimeMinutes', value: defaults.preheatingTime, name: 'Preheating Time' },
-                { id: 'CoolingTimeMinutes', value: defaults.coolingTime, name: 'Cooling Time' },
-                { id: 'PostProcessingTimeMinutes', value: defaults.postProcessingTime, name: 'Post Processing Time' }
+                { id: 'EstimatedHours', value: defaults.estimatedHours, name: 'Estimated Hours' }
             ];
             
             let updateCount = 0;
@@ -602,25 +562,8 @@
             const durationDisplay = document.getElementById('durationDisplay');
             const durationDays = document.getElementById('durationDays');
             
-            console.log('🔧 [FORM] Duration elements found:', {
-                hoursInput: !!hoursInput,
-                durationDisplay: !!durationDisplay,
-                durationDays: !!durationDays,
-                currentValue: hoursInput?.value
-            });
-            
-            if (!hoursInput) {
-                console.error('❌ [FORM] Hours input not found (name="EstimatedHours")');
-                return false;
-            }
-            
-            if (!durationDisplay) {
-                console.error('❌ [FORM] Duration display not found (ID: durationDisplay)');
-                return false;
-            }
-            
-            if (!durationDays) {
-                console.error('❌ [FORM] Duration days not found (ID: durationDays)');
+            if (!hoursInput || !durationDisplay || !durationDays) {
+                console.error('❌ [FORM] Duration elements not found');
                 return false;
             }
             
@@ -629,11 +572,6 @@
                 console.log('🔧 [FORM] Processing hours:', hours);
                 
                 if (hours > 0) {
-                    if (hours > 8760) { // More than a year
-                        console.warn('⚠️ [FORM] Invalid hours value:', hours);
-                        return false;
-                    }
-                    
                     const days = Math.floor(hours / 24);
                     const remainingHours = hours % 24;
                     
@@ -660,7 +598,7 @@
             }
         };
 
-        // Task 7: Admin Override Display Update
+        // Admin Override Display Update
         window.updateOverrideDisplay = function() {
             console.log('🔧 [FORM] updateOverrideDisplay called');
             
@@ -775,7 +713,7 @@
             }
             
             if (response.includes('<script>')) {
-                console.log('✅ [FORM] Script response received - executing');
+                console.log('✅ [FORM] Success script response received - executing');
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = response;
                 const scripts = tempDiv.querySelectorAll('script');
@@ -789,10 +727,10 @@
                 return;
             }
             
-            console.log('🔧 [FORM] Standard response handled');
+            console.log('🔧 [FORM] Standard response handled - this might be new form content');
         };
         
-        // CRITICAL FIX: Add part number validation to prevent duplicate submissions
+        // Part number validation
         window.validatePartNumber = async function(partNumber) {
             console.log('🔧 [FORM] Validating part number:', partNumber);
             
@@ -810,7 +748,7 @@
             // Clean and validate format
             const cleanPartNumber = partNumber.trim().toUpperCase();
             
-            // Basic format validation (adjust pattern as needed)
+            // Basic format validation
             const partNumberPattern = /^[A-Z0-9-]{3,20}$/;
             if (!partNumberPattern.test(cleanPartNumber)) {
                 if (validationDiv) {
@@ -821,7 +759,7 @@
             }
             
             try {
-                // Check for duplicates (if not editing current part)
+                // Check for duplicates
                 const currentPartId = document.querySelector('input[name="Id"]')?.value || '0';
                 const response = await fetch(`/Admin/Parts?handler=CheckDuplicate&partNumber=${encodeURIComponent(cleanPartNumber)}&currentId=${currentPartId}`);
                 
@@ -902,43 +840,4 @@
         console.log('✅ [FORM] Part form script loaded successfully');
         
     })();
-    
-    // Validate part number for duplicates
-    function validatePartNumber(partNumber) {
-        console.log('🔧 [FORM] validatePartNumber called:', partNumber);
-        
-        const validationMessage = document.getElementById('partNumberValidation');
-        
-        // Basic client-side validation (format and required)
-        if (!partNumber || partNumber.trim() === '') {
-            validationMessage.textContent = 'Part number is required.';
-            validationMessage.classList.add('text-red-500');
-            validationMessage.classList.remove('text-green-500');
-            return false;
-        } else if (!/^[A-Za-z0-9\-]+$/.test(partNumber)) {
-            validationMessage.textContent = 'Part number must be alphanumeric with dashes.';
-            validationMessage.classList.add('text-red-500');
-            validationMessage.classList.remove('text-green-500');
-            return false;
-        } else {
-            validationMessage.textContent = '';
-        }
-        
-        // Simulated server-side duplicate check (replace with actual AJAX call)
-        setTimeout(() => {
-            const isDuplicate = false; // Simulate duplicate check result
-            
-            if (isDuplicate) {
-                validationMessage.textContent = 'Part number already exists. Please choose another.';
-                validationMessage.classList.add('text-red-500');
-                validationMessage.classList.remove('text-green-500');
-            } else {
-                validationMessage.textContent = 'Part number is available.';
-                validationMessage.classList.add('text-green-500');
-                validationMessage.classList.remove('text-red-500');
-            }
-        }, 500);
-        
-        return true;
-    }
 </script>

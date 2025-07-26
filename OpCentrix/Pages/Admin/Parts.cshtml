@@ -14,9 +14,9 @@
         <button hx-get="/Admin/Parts?handler=Add" 
                 hx-target="#modal-container .modal-content"
                 hx-swap="innerHTML"
-                hx-on::before-request="console.log('?? [HTMX] Starting request to create new part'); console.log('?? [HTMX] Target:', '#modal-container .modal-content');"
-                hx-on::after-request="console.log('?? [HTMX] Response received:', event.detail.xhr.status, event.detail.xhr.statusText); console.log('?? [HTMX] Response body length:', event.detail.xhr.responseText.length); if(event.detail.xhr.status === 200) { console.log('? [HTMX] Success - showing modal'); document.getElementById('modal-container').classList.remove('hidden'); document.getElementById('modal-container').classList.add('flex'); document.body.style.overflow = 'hidden'; } else { console.error('? [HTMX] Failed with status:', event.detail.xhr.status); }"
-                hx-on::response-error="console.error('?? [HTMX] Response error:', event.detail); if (typeof showErrorNotification === 'function') { showErrorNotification('Error loading form. Please try again.'); } else { alert('Error loading form. Check console for details.'); }"
+                hx-on::before-request="console.log('?? [HTMX] Starting request to create new part');"
+                hx-on::after-swap="console.log('?? [HTMX] Content loaded, checking for showModal function...'); if (typeof showModal === 'function') { console.log('?? [HTMX] showModal function found, calling it...'); setTimeout(() => showModal(), 50); } else { console.error('? [HTMX] showModal function not found!'); }"
+                hx-on::response-error="console.error('? [HTMX] Response error:', event.detail); showErrorNotification('Error loading form. Please try again.');"
                 class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">
             + Add New Part
         </button>
@@ -138,8 +138,8 @@
                                         hx-target="#modal-container .modal-content"
                                         hx-swap="innerHTML"
                                         hx-on::before-request="console.log('?? [HTMX] Starting edit request for part ID:', @part.Id);"
-                                        hx-on::after-request="console.log('?? [HTMX] Edit response received:', event.detail.xhr.status); if(event.detail.xhr.status === 200) { console.log('? [HTMX] Edit success - showing modal'); showModal(event.detail.xhr.responseText); } else { console.error('? [HTMX] Edit failed:', event.detail.xhr.status); }"
-                                        hx-on::response-error="console.error('?? [HTMX] Edit error:', event.detail);"
+                                        hx-on::after-swap="console.log('?? [HTMX] Edit content loaded, checking for showModal function...'); if (typeof showModal === 'function') { console.log('?? [HTMX] showModal function found, calling it...'); setTimeout(() => showModal(), 50); } else { console.error('? [HTMX] showModal function not found!'); }"
+                                        hx-on::response-error="console.error('? [HTMX] Edit error:', event.detail); showErrorNotification('Error loading edit form. Please try again.');"
                                         class="text-blue-600 hover:text-blue-900 transition">
                                     Edit
                                 </button>

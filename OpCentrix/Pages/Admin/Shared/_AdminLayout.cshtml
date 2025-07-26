@@ -4,269 +4,319 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - OpCentrix Admin</title>
-    <link rel="stylesheet" href="~/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/OpCentrix.styles.css" asp-append-version="true" />
     <script src="https://unpkg.com/htmx.org@1.9.2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    
     @await RenderSectionAsync("Styles", required: false)
 </head>
-<body class="bg-gray-50">
-    <!-- Enhanced Admin Navigation -->
-    <nav class="bg-white shadow-sm border-b border-gray-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
+<body class="bg-gray-50 overflow-hidden">
+    <div class="flex h-screen">
+        <!-- Sidebar Navigation -->
+        <div id="sidebar" class="bg-white shadow-lg w-64 fixed inset-y-0 left-0 z-50 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
+            <!-- Logo and Brand -->
+            <div class="flex items-center justify-center h-16 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
                 <div class="flex items-center">
-                    <!-- Logo -->
-                    <div class="flex-shrink-0 flex items-center">
-                        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center mr-3">
-                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
-                            </svg>
-                        </div>
-                        <div>
-                            <div class="text-lg font-bold text-gray-900">OpCentrix</div>
-                            <div class="text-xs text-gray-500">Admin Control Panel</div>
-                        </div>
+                    <div class="w-8 h-8 bg-white bg-opacity-20 rounded-lg flex items-center justify-center mr-3">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="text-lg font-bold">OpCentrix</div>
+                        <div class="text-xs opacity-75">Admin Panel</div>
                     </div>
                 </div>
+            </div>
 
-                <!-- Navigation Links -->
-                <div class="hidden md:flex items-center space-x-1">
-                    <!-- Core Operations -->
-                    <div class="relative group">
-                        <button class="flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:text-gray-900 hover:bg-gray-50 transition-colors">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                            </svg>
-                            Operations
-                            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                        </button>
-                        <div class="absolute left-0 mt-2 w-56 bg-white border border-gray-200 rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                            <div class="py-1">
-                                <a href="/Scheduler" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                    <svg class="w-4 h-4 mr-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                    </svg>
-                                    Job Scheduler
-                                </a>
-                                <a href="/Scheduler/MasterSchedule" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                    <svg class="w-4 h-4 mr-3 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                                    </svg>
-                                    Master Schedule
-                                </a>
-                                <a href="/Admin/Stages" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                    <svg class="w-4 h-4 mr-3 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 4h6m-6 4h6m-7-7h.01M9 16h.01"></path>
-                                    </svg>
-                                    Multi-Stage Jobs
-                                </a>
-                                <a href="/PrintTracking" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                    <svg class="w-4 h-4 mr-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
-                                    </svg>
-                                    Print Tracking
-                                </a>
-                            </div>
-                        </div>
+            <!-- User Profile Section -->
+            <div class="px-4 py-4 border-b border-gray-200 bg-gray-50">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold">
+                        @(User.Identity?.Name?.Substring(0, 1).ToUpper() ?? "A")
+                    </div>
+                    <div class="ml-3">
+                        <div class="text-sm font-medium text-gray-900">@(User.Identity?.Name ?? "Administrator")</div>
+                        <div class="text-xs text-gray-500">System Administrator</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Menu -->
+            <nav class="mt-4 px-2 space-y-1 flex-1 overflow-y-auto">
+                <!-- Dashboard -->
+                <div class="mb-6">
+                    <h3 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Overview</h3>
+                    <a href="/Admin" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Index" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5v4M12 5v4M16 5v4"></path>
+                        </svg>
+                        Dashboard
+                    </a>
+                    <a href="/Scheduler" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                        Job Scheduler
+                    </a>
+                    <a href="/Scheduler/MasterSchedule" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                        Master Schedule
+                    </a>
+                    <a href="/Admin/Stages" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Stages" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 4h6m-6 4h6m-7-7h.01M9 16h.01"></path>
+                        </svg>
+                        Multi-Stage Jobs
+                    </a>
+                    <a href="/PrintTracking" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                        </svg>
+                        Print Tracking
+                    </a>
+                </div>
+
+                <!-- Resource Management -->
+                <div class="mb-6">
+                    <h3 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Resources</h3>
+                    <a href="/Admin/Machines" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Machines" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
+                        </svg>
+                        Machines
+                        @if (ViewBag.MachineCount != null && ViewBag.MachineCount > 0)
+                        {
+                            <span class="ml-auto bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">@ViewBag.MachineCount</span>
+                        }
+                    </a>
+                    <a href="/Admin/Parts" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Parts" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
+                        </svg>
+                        Parts
+                        @if (ViewBag.PartCount != null && ViewBag.PartCount > 0)
+                        {
+                            <span class="ml-auto bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full">@ViewBag.PartCount</span>
+                        }
+                    </a>
+                    <a href="/Admin/Shifts" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Shifts" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Operating Shifts
+                    </a>
+                    <a href="/Admin/Stages" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Stages" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 4h6m-6 4h6m-7-7h.01M9 16h.01"></path>
+                        </svg>
+                        Multi-Stage Jobs
+                    </a>
+                </div>
+
+                <!-- Quality Management -->
+                <div class="mb-6">
+                    <h3 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Quality</h3>
+                    <a href="/Admin/Checkpoints" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Checkpoints" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                        </svg>
+                        Inspection Checkpoints
+                    </a>
+                    <a href="/Admin/Defects" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Defects" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                        Defect Categories
+                    </a>
+                </div>
+
+                <!-- Data Management -->
+                <div class="mb-6">
+                    <h3 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Data</h3>
+                    <a href="/Admin/Archive" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Archive" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+                        </svg>
+                        Job Archive
+                    </a>
+                    <a href="/Admin/Database" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Database" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path>
+                        </svg>
+                        Database Management
+                    </a>
+                    <a href="/Admin/Logs" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Logs" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        System Logs
+                    </a>
+                </div>
+
+                <!-- System Administration -->
+                <div class="mb-6">
+                    <h3 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Administration</h3>
+                    <a href="/Admin/Users" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Users" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-.5a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                        </svg>
+                        User Management
+                    </a>
+                    <a href="/Admin/Roles" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Roles" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                        </svg>
+                        Roles & Permissions
+                    </a>
+                    <a href="/Admin/Settings" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Settings" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        System Settings
+                    </a>
+                </div>
+            </nav>
+
+            <!-- Sidebar Footer -->
+            <div class="p-4 border-t border-gray-200 bg-gray-50">
+                <div class="space-y-2">
+                    <a href="/" class="flex items-center w-full px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
+                        <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                        </svg>
+                        Return to Scheduler
+                    </a>
+                    <a href="/Account/Logout" class="flex items-center w-full px-3 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors">
+                        <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                        </svg>
+                        Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="flex-1 md:ml-64">
+            <!-- Top Header Bar -->
+            <header class="bg-white shadow-sm border-b border-gray-200 h-16 flex items-center justify-between px-6">
+                <!-- Mobile menu button -->
+                <button id="mobile-menu-button" class="md:hidden p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+
+                <!-- Page Title and Breadcrumb -->
+                <div class="flex-1">
+                    <h1 class="text-xl font-semibold text-gray-900">@ViewData["Title"]</h1>
+                    @if (ViewData["Description"] != null)
+                    {
+                        <p class="text-sm text-gray-600 mt-1">@ViewData["Description"]</p>
+                    }
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="flex items-center space-x-4">
+                    <!-- System Status Indicator -->
+                    <div class="flex items-center space-x-2">
+                        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span class="text-sm text-gray-600">System Online</span>
                     </div>
 
-                    <!-- Resource Management -->
-                    <div class="relative group">
-                        <button class="flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:text-gray-900 hover:bg-gray-50 transition-colors">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <!-- Quick Settings -->
+                    <div class="relative">
+                        <button class="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100" title="Quick Settings">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                             </svg>
-                            Resources
-                            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
                         </button>
-                        <div class="absolute left-0 mt-2 w-56 bg-white border border-gray-200 rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                            <div class="py-1">
-                                <a href="/Admin/Machines" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                    <svg class="w-4 h-4 mr-3 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
-                                    </svg>
-                                    Machines
-                                </a>
-                                <a href="/Admin/Parts" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                    <svg class="w-4 h-4 mr-3 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
-                                    </svg>
-                                    Parts
-                                </a>
-                                <a href="/Admin/Shifts" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                    <svg class="w-4 h-4 mr-3 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                    </svg>
-                                    Operating Shifts
-                                </a>
-                            </div>
-                        </div>
                     </div>
 
-                    <!-- Quality Management -->
-                    <div class="relative group">
-                        <button class="flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:text-gray-900 hover:bg-gray-50 transition-colors">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    <!-- Notifications -->
+                    <div class="relative">
+                        <button class="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100" title="Notifications">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
                             </svg>
-                            Quality
-                            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
+                            <span class="absolute top-0 right-0 block h-2 w-2 bg-red-500 rounded-full"></span>
                         </button>
-                        <div class="absolute left-0 mt-2 w-56 bg-white border border-gray-200 rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                            <div class="py-1">
-                                <a href="/Admin/Checkpoints" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                    <svg class="w-4 h-4 mr-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
-                                    </svg>
-                                    Inspection Checkpoints
-                                </a>
-                                <a href="/Admin/Defects" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                    <svg class="w-4 h-4 mr-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                                    </svg>
-                                    Defect Categories
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- System Management -->
-                    <div class="relative group">
-                        <button class="flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:text-gray-900 hover:bg-gray-50 transition-colors">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100-4m0 4v2m0-6V4"></path>
-                            </svg>
-                            System
-                            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                        </button>
-                        <div class="absolute left-0 mt-2 w-56 bg-white border border-gray-200 rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                            <div class="py-1">
-                                <a href="/Admin" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                    <svg class="w-4 h-4 mr-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5v4"></path>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v4"></path>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 5v4"></path>
-                                    </svg>
-                                    Dashboard
-                                </a>
-                                <a href="/Admin/Settings" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                    <svg class="w-4 h-4 mr-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                    </svg>
-                                    Settings
-                                </a>
-                                <a href="/Admin/Users" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                    <svg class="w-4 h-4 mr-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-.5a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
-                                    </svg>
-                                    Users
-                                </a>
-                                <a href="/Admin/Roles" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                    <svg class="w-4 h-4 mr-3 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-                                    </svg>
-                                    Roles & Permissions
-                                </a>
-                                <a href="/Admin/Archive" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                    <svg class="w-4 h-4 mr-3 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
-                                    </svg>
-                                    Job Archive
-                                </a>
-                                <a href="/Admin/Database" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                    <svg class="w-4 h-4 mr-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path>
-                                    </svg>
-                                    Database Management
-                                </a>
-                                <a href="/Admin/Logs" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                    <svg class="w-4 h-4 mr-3 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                    </svg>
-                                    System Logs
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- User Actions -->
-                    <div class="flex items-center space-x-3 ml-6 pl-6 border-l border-gray-200">
-                        <span class="text-sm text-gray-700">Welcome, <strong>@(User.Identity?.Name ?? "Admin")</strong></span>
-                        <a href="/Account/Logout" class="flex items-center px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                            </svg>
-                            Logout
-                        </a>
                     </div>
                 </div>
+            </header>
 
-                <!-- Mobile menu button -->
-                <div class="md:hidden flex items-center">
-                    <button onclick="toggleMobileMenu()" class="text-gray-400 hover:text-gray-500 focus:outline-none focus:text-gray-500">
-                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                        </svg>
-                    </button>
-                </div>
-            </div>
+            <!-- Main Content -->
+            <main class="flex-1 p-6 overflow-y-auto" style="height: calc(100vh - 4rem);">
+                @RenderBody()
+            </main>
         </div>
+    </div>
 
-        <!-- Mobile menu -->
-        <div id="mobile-menu" class="md:hidden hidden border-t border-gray-200 bg-white">
-            <div class="px-2 pt-2 pb-3 space-y-1">
-                <a href="/Admin" class="block px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md">Dashboard</a>
-                <a href="/Scheduler" class="block px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md">Job Scheduler</a>
-                <a href="/Scheduler/MasterSchedule" class="block px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md">Master Schedule</a>
-                <a href="/Admin/Machines" class="block px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md">Machines</a>
-                <a href="/Admin/Parts" class="block px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md">Parts</a>
-                <a href="/Admin/Checkpoints" class="block px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md">Inspection Checkpoints</a>
-                <a href="/Admin/Defects" class="block px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md">Defect Categories</a>
-                <a href="/Admin/Archive" class="block px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md">Job Archive</a>
-                <a href="/Admin/Settings" class="block px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md">Settings</a>
-                <a href="/Account/Logout" class="block px-3 py-2 text-base font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md">Logout</a>
-            </div>
+    <!-- Mobile Sidebar Overlay -->
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden hidden"></div>
+
+    <!-- Modal Container for Admin Pages -->
+    <div id="modal-container" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden items-center justify-center p-4">
+        <div class="modal-content bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <!-- Modal content will be loaded here -->
         </div>
-    </nav>
+    </div>
 
-    <!-- Main content -->
-    <main class="flex-1">
-        @RenderBody()
-        
-        @* Include shared alert notifications for all admin pages *@
-        <partial name="_AlertNotifications" />
-    </main>
-
-    <script src="~/js/bootstrap.bundle.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     
-    <!-- Mobile menu toggle script -->
+    <!-- Load the standardized admin.js module -->
+    <script src="~/js/admin.js" asp-append-version="true"></script>
+    
+    <!-- Sidebar Navigation Script -->
     <script>
-        function toggleMobileMenu() {
-            const menu = document.getElementById('mobile-menu');
-            menu.classList.toggle('hidden');
+        // Mobile sidebar functionality
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+
+        function toggleSidebar() {
+            sidebar.classList.toggle('-translate-x-full');
+            sidebarOverlay.classList.toggle('hidden');
         }
-        
-        // Close mobile menu when clicking outside
-        document.addEventListener('click', function(event) {
-            const menu = document.getElementById('mobile-menu');
-            const button = event.target.closest('button[onclick="toggleMobileMenu()"]');
-            
-            if (!button && !menu.contains(event.target)) {
-                menu.classList.add('hidden');
+
+        function closeSidebar() {
+            sidebar.classList.add('-translate-x-full');
+            sidebarOverlay.classList.add('hidden');
+        }
+
+        // Event listeners
+        mobileMenuButton.addEventListener('click', toggleSidebar);
+        sidebarOverlay.addEventListener('click', closeSidebar);
+
+        // Close sidebar on window resize to desktop
+        window.addEventListener('resize', function() {
+            if (window.innerWidth >= 768) {
+                closeSidebar();
+            }
+        });
+
+        // Auto-close mobile sidebar when clicking nav links
+        document.querySelectorAll('#sidebar a').forEach(link => {
+            link.addEventListener('click', function() {
+                if (window.innerWidth < 768) {
+                    setTimeout(closeSidebar, 100);
+                }
+            });
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeSidebar();
             }
         });
     </script>

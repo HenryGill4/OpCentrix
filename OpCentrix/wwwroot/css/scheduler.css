@@ -60,6 +60,57 @@
     border: 1px solid #e2e8f0;
 }
 
+/* Horizontal scheduler specific layout fixes */
+.scheduler-horizontal {
+    display: flex;
+    flex-direction: column;
+}
+
+.scheduler-horizontal .scheduler-header-row {
+    display: flex;
+    flex-shrink: 0;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.scheduler-horizontal .scheduler-date-headers {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+}
+
+.scheduler-horizontal .machine-rows-container {
+    display: flex;
+    flex-direction: column;
+}
+
+.scheduler-horizontal .machine-row {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.scheduler-horizontal .scheduler-machine-label {
+    position: sticky;
+    left: 0;
+    z-index: 10;
+    background: white;
+    border-right: 1px solid #e5e7eb;
+    flex-shrink: 0;
+}
+
+.scheduler-horizontal .time-slots-container {
+    display: flex;
+    flex-direction: row;
+    position: relative;
+    overflow-x: auto;
+}
+
+.scheduler-horizontal .scheduler-grid-cell {
+    flex-shrink: 0;
+    border-right: 1px solid #e5e7eb;
+}
+
 /* Enhanced job block styling with improved visual hierarchy */
 .job-block {
     position: absolute;
@@ -486,6 +537,11 @@
     
     .time-slot-time {
         font-size: 10px;
+    }
+    
+    /* Mobile horizontal scheduler adjustments */
+    .scheduler-horizontal .scheduler-machine-label {
+        width: 150px !important;
     }
 }
 

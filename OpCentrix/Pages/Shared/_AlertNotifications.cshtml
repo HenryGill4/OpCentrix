@@ -1,287 +1,337 @@
-@* Shared Alert Notifications Partial View *@
-@* Supports TempData and ViewBag alert messages with consistent Tailwind styling *@
+@*
+    Shared Alert Notifications Partial
+    Standardized alert system for all admin pages
+    Supports TempData and ViewBag alerts with auto-hide and animations
+*@
 
 @{
-    var alerts = new List<(string Type, string Message, string Icon)>();
+    // Collect all alert messages from TempData and ViewBag
+    var alerts = new List<(string Type, string Message)>();
     
-    // Check TempData sources
-    if (TempData["Success"] != null)
-        alerts.Add(("success", TempData["Success"]?.ToString() ?? "", "?"));
-    if (TempData["Error"] != null)
-        alerts.Add(("error", TempData["Error"]?.ToString() ?? "", "?"));
-    if (TempData["Warning"] != null)
-        alerts.Add(("warning", TempData["Warning"]?.ToString() ?? "", "?"));
-    if (TempData["Info"] != null)
-        alerts.Add(("info", TempData["Info"]?.ToString() ?? "", "?"));
+    // TempData alerts
+    if (TempData["Success"] != null) alerts.Add(("success", TempData["Success"].ToString()));
+    if (TempData["Error"] != null) alerts.Add(("error", TempData["Error"].ToString()));
+    if (TempData["Warning"] != null) alerts.Add(("warning", TempData["Warning"].ToString()));
+    if (TempData["Info"] != null) alerts.Add(("info", TempData["Info"].ToString()));
     
-    // Check ViewBag sources as fallback
-    if (ViewBag.SuccessMessage != null)
-        alerts.Add(("success", ViewBag.SuccessMessage?.ToString() ?? "", "?"));
-    if (ViewBag.ErrorMessage != null)
-        alerts.Add(("error", ViewBag.ErrorMessage?.ToString() ?? "", "?"));
-    if (ViewBag.WarningMessage != null)
-        alerts.Add(("warning", ViewBag.WarningMessage?.ToString() ?? "", "?"));
-    if (ViewBag.InfoMessage != null)
-        alerts.Add(("info", ViewBag.InfoMessage?.ToString() ?? "", "?"));
+    // ViewBag alerts (fallback)
+    if (ViewBag.Success != null) alerts.Add(("success", ViewBag.Success.ToString()));
+    if (ViewBag.Error != null) alerts.Add(("error", ViewBag.Error.ToString()));
+    if (ViewBag.Warning != null) alerts.Add(("warning", ViewBag.Warning.ToString()));
+    if (ViewBag.Info != null) alerts.Add(("info", ViewBag.Info.ToString()));
 }
 
-@* Alert Container - Fixed positioning above modals *@
-<div id="alertContainer" class="fixed top-4 right-4 z-[60] space-y-3 pointer-events-none">
-    @foreach (var alert in alerts)
-    {
-        <div class="alert-notification alert-@alert.Type opacity-0 transform translate-x-full transition-all duration-500 ease-in-out pointer-events-auto"
-             data-alert-type="@alert.Type">
-            <div class="flex items-center p-4 rounded-lg shadow-lg border-l-4 max-w-md @GetAlertClasses(alert.Type)">
-                <!-- Alert Icon -->
-                <div class="flex-shrink-0">
-                    <span class="text-xl font-bold @GetIconClasses(alert.Type)">@alert.Icon</span>
-                </div>
+@if (alerts.Any())
+{
+    <div class="alert-notifications-container fixed top-4 right-4 z-50 space-y-2" id="alertContainer">
+        @foreach (var alert in alerts)
+        {
+            var alertId = $"alert-{Guid.NewGuid().ToString("N")[..8]}";
+            var (bgColor, textColor, borderColor, iconColor, icon) = alert.Type switch
+            {
+                "success" => ("bg-green-50", "text-green-800", "border-green-200", "text-green-400", "check-circle"),
+                "error" => ("bg-red-50", "text-red-800", "border-red-200", "text-red-400", "x-circle"),
+                "warning" => ("bg-yellow-50", "text-yellow-800", "border-yellow-200", "text-yellow-400", "exclamation-triangle"),
+                "info" => ("bg-blue-50", "text-blue-800", "border-blue-200", "text-blue-400", "information-circle"),
+                _ => ("bg-gray-50", "text-gray-800", "border-gray-200", "text-gray-400", "information-circle")
+            };
+            
+            <div id="@alertId" 
+                 class="alert-notification @bgColor @textColor border @borderColor rounded-lg p-4 shadow-lg transform translate-x-full transition-transform duration-300 ease-in-out max-w-sm"
+                 role="alert" 
+                 aria-live="polite"
+                 data-alert-type="@alert.Type"
+                 data-auto-dismiss="true">
                 
-                <!-- Alert Content -->
-                <div class="ml-3 flex-1">
-                    <div class="text-sm font-medium @GetTitleClasses(alert.Type)">
-                        @GetAlertTitle(alert.Type)
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        @switch (icon)
+                        {
+                            case "check-circle":
+                                <svg class="h-5 w-5 @iconColor" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                </svg>
+                                break;
+                            case "x-circle":
+                                <svg class="h-5 w-5 @iconColor" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                </svg>
+                                break;
+                            case "exclamation-triangle":
+                                <svg class="h-5 w-5 @iconColor" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                </svg>
+                                break;
+                            default:
+                                <svg class="h-5 w-5 @iconColor" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                                </svg>
+                                break;
+                        }
                     </div>
-                    <div class="text-sm @GetMessageClasses(alert.Type)">
-                        @alert.Message
+                    
+                    <div class="ml-3 w-0 flex-1">
+                        <p class="text-sm font-medium">
+                            @Html.Raw(Html.Encode(alert.Message))
+                        </p>
                     </div>
-                </div>
-                
-                <!-- Close Button -->
-                <div class="ml-4 flex-shrink-0">
-                    <button type="button" 
-                            onclick="dismissAlert(this.closest('.alert-notification'))"
-                            class="inline-flex rounded-md p-1.5 transition-colors duration-200 @GetCloseButtonClasses(alert.Type)">
-                        <span class="sr-only">Dismiss</span>
-                        <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-                        </svg>
-                    </button>
+                    
+                    <div class="ml-4 flex-shrink-0 flex">
+                        <button type="button" 
+                                class="inline-flex @textColor hover:@textColor.Replace("800", "600") focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-@(alert.Type == "success" ? "green" : alert.Type == "error" ? "red" : alert.Type == "warning" ? "yellow" : "blue")-500"
+                                onclick="dismissAlert('@alertId')"
+                                aria-label="Dismiss alert">
+                            <span class="sr-only">Dismiss</span>
+                            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
-    }
-</div>
+        }
+    </div>
 
-@functions {
-    private string GetAlertClasses(string type) => type switch
-    {
-        "success" => "bg-green-50 border-green-400",
-        "error" => "bg-red-50 border-red-400", 
-        "warning" => "bg-yellow-50 border-yellow-400",
-        "info" => "bg-blue-50 border-blue-400",
-        _ => "bg-gray-50 border-gray-400"
-    };
-    
-    private string GetIconClasses(string type) => type switch
-    {
-        "success" => "text-green-500",
-        "error" => "text-red-500",
-        "warning" => "text-yellow-500", 
-        "info" => "text-blue-500",
-        _ => "text-gray-500"
-    };
-    
-    private string GetTitleClasses(string type) => type switch
-    {
-        "success" => "text-green-800",
-        "error" => "text-red-800",
-        "warning" => "text-yellow-800",
-        "info" => "text-blue-800", 
-        _ => "text-gray-800"
-    };
-    
-    private string GetMessageClasses(string type) => type switch
-    {
-        "success" => "text-green-700",
-        "error" => "text-red-700",
-        "warning" => "text-yellow-700",
-        "info" => "text-blue-700",
-        _ => "text-gray-700"
-    };
-    
-    private string GetCloseButtonClasses(string type) => type switch
-    {
-        "success" => "text-green-400 hover:text-green-600 hover:bg-green-100",
-        "error" => "text-red-400 hover:text-red-600 hover:bg-red-100",
-        "warning" => "text-yellow-400 hover:text-yellow-600 hover:bg-yellow-100",
-        "info" => "text-blue-400 hover:text-blue-600 hover:bg-blue-100",
-        _ => "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-    };
-    
-    private string GetAlertTitle(string type) => type switch
-    {
-        "success" => "Success!",
-        "error" => "Error!",
-        "warning" => "Warning!",
-        "info" => "Information",
-        _ => "Notice"
-    };
-}
-
-@* Alert JavaScript - Auto-show, auto-hide, and dismiss functionality *@
-<script>
-    // Alert management functions
-    window.AlertManager = {
-        // Show alerts with animation
-        showAlerts: function() {
-            const alerts = document.querySelectorAll('.alert-notification');
-            alerts.forEach((alert, index) => {
+    <script>
+        // Alert Notification Management
+        (function() {
+            'use strict';
+            
+            // Configuration
+            const config = {
+                autoHideDuration: 5000, // 5 seconds
+                animationDuration: 300,  // 300ms
+                slideInDelay: 100       // 100ms between alerts
+            };
+            
+            // Initialize alerts on page load
+            document.addEventListener('DOMContentLoaded', function() {
+                initializeAlerts();
+            });
+            
+            /**
+             * Initialize all alerts with animations and auto-hide
+             */
+            function initializeAlerts() {
+                const alerts = document.querySelectorAll('.alert-notification');
+                
+                alerts.forEach((alert, index) => {
+                    // Stagger the slide-in animation
+                    setTimeout(() => {
+                        slideInAlert(alert);
+                        
+                        // Setup auto-hide for alerts marked with data-auto-dismiss
+                        if (alert.getAttribute('data-auto-dismiss') === 'true') {
+                            setTimeout(() => {
+                                dismissAlert(alert.id);
+                            }, config.autoHideDuration);
+                        }
+                    }, index * config.slideInDelay);
+                });
+            }
+            
+            /**
+             * Slide in alert animation
+             */
+            function slideInAlert(alert) {
+                if (!alert) return;
+                
+                // Remove translate-x-full and add translate-x-0 for slide-in effect
+                alert.classList.remove('translate-x-full');
+                alert.classList.add('translate-x-0');
+                
+                // Add a subtle bounce effect
                 setTimeout(() => {
-                    alert.style.opacity = '1';
-                    alert.style.transform = 'translateX(0)';
-                }, index * 100); // Stagger animations
-            });
-        },
-        
-        // Hide all alerts
-        hideAlerts: function() {
-            const alerts = document.querySelectorAll('.alert-notification');
-            alerts.forEach(alert => {
-                alert.style.opacity = '0';
-                alert.style.transform = 'translateX(100%)';
-                setTimeout(() => alert.remove(), 300);
-            });
-        },
-        
-        // Show a programmatic alert
-        showAlert: function(type, message, duration = 5000) {
-            const container = document.getElementById('alertContainer');
-            if (!container) return;
+                    alert.style.transform = 'translateX(-4px)';
+                    setTimeout(() => {
+                        alert.style.transform = 'translateX(0)';
+                    }, 100);
+                }, config.animationDuration);
+            }
             
-            const alertId = 'alert_' + Date.now();
-            const icons = { success: '?', error: '?', warning: '?', info: '?' };
-            const titles = { success: 'Success!', error: 'Error!', warning: 'Warning!', info: 'Information' };
+            /**
+             * Dismiss alert with animation
+             */
+            function dismissAlert(alertId) {
+                const alert = document.getElementById(alertId);
+                if (!alert) return;
+                
+                // Add slide-out animation
+                alert.classList.remove('translate-x-0');
+                alert.classList.add('translate-x-full');
+                
+                // Remove from DOM after animation
+                setTimeout(() => {
+                    if (alert.parentNode) {
+                        alert.parentNode.removeChild(alert);
+                    }
+                    
+                    // Check if container is empty and hide it
+                    const container = document.getElementById('alertContainer');
+                    if (container && container.children.length === 0) {
+                        container.style.display = 'none';
+                    }
+                }, config.animationDuration);
+            }
             
-            const alertHTML = `
-                <div id="${alertId}" class="alert-notification alert-${type} opacity-0 transform translate-x-full transition-all duration-500 ease-in-out pointer-events-auto"
-                     data-alert-type="${type}">
-                    <div class="flex items-center p-4 rounded-lg shadow-lg border-l-4 max-w-md ${this.getAlertClasses(type)}">
-                        <div class="flex-shrink-0">
-                            <span class="text-xl font-bold ${this.getIconClasses(type)}">${icons[type] || '?'}</span>
-                        </div>
-                        <div class="ml-3 flex-1">
-                            <div class="text-sm font-medium ${this.getTitleClasses(type)}">
-                                ${titles[type] || 'Notice'}
+            /**
+             * Add new alert dynamically
+             */
+            function addAlert(type, message, autoHide = true) {
+                const container = document.getElementById('alertContainer');
+                if (!container) {
+                    console.warn('Alert container not found');
+                    return;
+                }
+                
+                const alertId = `alert-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+                const alertConfig = getAlertConfig(type);
+                
+                const alertHtml = `
+                    <div id="${alertId}" 
+                         class="alert-notification ${alertConfig.bgColor} ${alertConfig.textColor} border ${alertConfig.borderColor} rounded-lg p-4 shadow-lg transform translate-x-full transition-transform duration-300 ease-in-out max-w-sm"
+                         role="alert" 
+                         aria-live="polite"
+                         data-alert-type="${type}"
+                         data-auto-dismiss="${autoHide}">
+                        
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0">
+                                ${alertConfig.icon}
                             </div>
-                            <div class="text-sm ${this.getMessageClasses(type)}">
-                                ${message}
+                            
+                            <div class="ml-3 w-0 flex-1">
+                                <p class="text-sm font-medium">
+                                    ${escapeHtml(message)}
+                                </p>
                             </div>
-                        </div>
-                        <div class="ml-4 flex-shrink-0">
-                            <button type="button" 
-                                    onclick="dismissAlert(document.getElementById('${alertId}'))"
-                                    class="inline-flex rounded-md p-1.5 transition-colors duration-200 ${this.getCloseButtonClasses(type)}">
-                                <span class="sr-only">Dismiss</span>
-                                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-                                </svg>
-                            </button>
+                            
+                            <div class="ml-4 flex-shrink-0 flex">
+                                <button type="button" 
+                                        class="inline-flex ${alertConfig.textColor} hover:${alertConfig.textColor.replace('800', '600')} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-${alertConfig.ringColor}-500"
+                                        onclick="dismissAlert('${alertId}')"
+                                        aria-label="Dismiss alert">
+                                    <span class="sr-only">Dismiss</span>
+                                    <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            `;
-            
-            container.insertAdjacentHTML('beforeend', alertHTML);
-            
-            // Show with animation
-            setTimeout(() => {
-                const alert = document.getElementById(alertId);
-                if (alert) {
-                    alert.style.opacity = '1';
-                    alert.style.transform = 'translateX(0)';
+                `;
+                
+                container.insertAdjacentHTML('beforeend', alertHtml);
+                const newAlert = document.getElementById(alertId);
+                
+                // Animate in
+                setTimeout(() => slideInAlert(newAlert), 50);
+                
+                // Auto-hide if enabled
+                if (autoHide) {
+                    setTimeout(() => dismissAlert(alertId), config.autoHideDuration);
                 }
-            }, 50);
-            
-            // Auto-hide after duration
-            if (duration > 0) {
-                setTimeout(() => {
-                    const alert = document.getElementById(alertId);
-                    if (alert) {
-                        dismissAlert(alert);
-                    }
-                }, duration);
+                
+                return alertId;
             }
-        },
-        
-        // Helper methods for CSS classes
-        getAlertClasses: function(type) {
-            const classes = {
-                success: 'bg-green-50 border-green-400',
-                error: 'bg-red-50 border-red-400',
-                warning: 'bg-yellow-50 border-yellow-400',
-                info: 'bg-blue-50 border-blue-400'
-            };
-            return classes[type] || 'bg-gray-50 border-gray-400';
-        },
-        
-        getIconClasses: function(type) {
-            const classes = {
-                success: 'text-green-500',
-                error: 'text-red-500', 
-                warning: 'text-yellow-500',
-                info: 'text-blue-500'
-            };
-            return classes[type] || 'text-gray-500';
-        },
-        
-        getTitleClasses: function(type) {
-            const classes = {
-                success: 'text-green-800',
-                error: 'text-red-800',
-                warning: 'text-yellow-800',
-                info: 'text-blue-800'
-            };
-            return classes[type] || 'text-gray-800';
-        },
-        
-        getMessageClasses: function(type) {
-            const classes = {
-                success: 'text-green-700',
-                error: 'text-red-700',
-                warning: 'text-yellow-700',
-                info: 'text-blue-700'
-            };
-            return classes[type] || 'text-gray-700';
-        },
-        
-        getCloseButtonClasses: function(type) {
-            const classes = {
-                success: 'text-green-400 hover:text-green-600 hover:bg-green-100',
-                error: 'text-red-400 hover:text-red-600 hover:bg-red-100',
-                warning: 'text-yellow-400 hover:text-yellow-600 hover:bg-yellow-100',
-                info: 'text-blue-400 hover:text-blue-600 hover:bg-blue-100'
-            };
-            return classes[type] || 'text-gray-400 hover:text-gray-600 hover:bg-gray-100';
-        }
-    };
-    
-    // Dismiss individual alert
-    function dismissAlert(alertElement) {
-        if (alertElement) {
-            alertElement.style.opacity = '0';
-            alertElement.style.transform = 'translateX(100%)';
-            setTimeout(() => {
-                if (alertElement.parentNode) {
-                    alertElement.remove();
+            
+            /**
+             * Get alert configuration based on type
+             */
+            function getAlertConfig(type) {
+                const configs = {
+                    success: {
+                        bgColor: 'bg-green-50',
+                        textColor: 'text-green-800',
+                        borderColor: 'border-green-200',
+                        iconColor: 'text-green-400',
+                        ringColor: 'green',
+                        icon: `<svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                              </svg>`
+                    },
+                    error: {
+                        bgColor: 'bg-red-50',
+                        textColor: 'text-red-800',
+                        borderColor: 'border-red-200',
+                        iconColor: 'text-red-400',
+                        ringColor: 'red',
+                        icon: `<svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                              </svg>`
+                    },
+                    warning: {
+                        bgColor: 'bg-yellow-50',
+                        textColor: 'text-yellow-800',
+                        borderColor: 'border-yellow-200',
+                        iconColor: 'text-yellow-400',
+                        ringColor: 'yellow',
+                        icon: `<svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                              </svg>`
+                    },
+                    info: {
+                        bgColor: 'bg-blue-50',
+                        textColor: 'text-blue-800',
+                        borderColor: 'border-blue-200',
+                        iconColor: 'text-blue-400',
+                        ringColor: 'blue',
+                        icon: `<svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                              </svg>`
+                    }
+                };
+                
+                return configs[type] || configs.info;
+            }
+            
+            /**
+             * Escape HTML to prevent XSS
+             */
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+            
+            // Make functions globally available
+            window.dismissAlert = dismissAlert;
+            window.addAlert = addAlert;
+            
+            // Listen for custom alert events
+            window.addEventListener('opcentrix:alert', function(event) {
+                if (event.detail && event.detail.type && event.detail.message) {
+                    addAlert(event.detail.type, event.detail.message, event.detail.autoHide !== false);
                 }
-            }, 300);
-        }
+            });
+            
+        })();
+    </script>
+}
+
+<style>
+    /* Additional styles for alert animations */
+    .alert-notification {
+        z-index: 1000;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
     }
     
-    // Initialize alerts when DOM is ready
-    document.addEventListener('DOMContentLoaded', function() {
-        // Show existing alerts
-        AlertManager.showAlerts();
-        
-        // Auto-hide alerts after 5 seconds
-        setTimeout(function() {
-            AlertManager.hideAlerts();
-        }, 5000);
-    });
+    .alert-notification:hover {
+        transform: translateX(-2px) !important;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    }
     
-    // Global function for easy access
-    window.showAlert = function(type, message, duration) {
-        AlertManager.showAlert(type, message, duration);
-    };
-</script>
+    /* Responsive adjustments */
+    @@media (max-width: 640px) {
+        .alert-notifications-container {
+            left: 1rem;
+            right: 1rem;
+            top: 1rem;
+        }
+        
+        .alert-notification {
+            max-width: none;
+        }
+    }
+</style>

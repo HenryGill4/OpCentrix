@@ -10,16 +10,17 @@
 }
 
 <!-- Enhanced Horizontal Scheduler Grid Container -->
-<div class="scheduler-grid-container opcentrix-card" 
+<div class="scheduler-grid-container scheduler-horizontal opcentrix-card" 
      data-zoom="@zoom"
      data-orientation="horizontal"
      data-total-slots="@totalSlots">
     
     <!-- Header Row -->
-    <div class="scheduler-header-row">
+    <div class="scheduler-header-row flex">
         <!-- Machine column header -->
-        <div class="scheduler-grid-header sticky left-0 top-0 z-20 bg-white border-b border-r font-bold text-indigo-800">
-            <div class="flex items-center justify-center h-full">
+        <div class="scheduler-grid-header sticky left-0 top-0 z-20 bg-white border-b border-r font-bold text-indigo-800"
+             style="width: 200px; flex-shrink: 0;">
+            <div class="flex items-center justify-center h-full p-2">
                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
                 </svg>
@@ -28,7 +29,7 @@
         </div>
         
         <!-- Date headers container -->
-        <div class="scheduler-date-headers">
+        <div class="scheduler-date-headers flex">
             @foreach (var date in Model.Dates)
             {
                 for (int s = 0; s < slotsPerDay; s++)
@@ -40,10 +41,13 @@
                     
                     if (isToday && isFirstSlot) headerClass += " bg-blue-50 text-blue-800 border-blue-200";
                     
-                    <div class="@headerClass" data-date="@date.ToString("yyyy-MM-dd")" data-slot="@s">
+                    <div class="@headerClass" 
+                         style="width: var(--slot-width); flex-shrink: 0;"
+                         data-date="@date.ToString("yyyy-MM-dd")" 
+                         data-slot="@s">
                         @if (isFirstSlot)
                         {
-                            <div class="text-center">
+                            <div class="text-center p-2">
                                 <div class="font-bold">@date.ToString("ddd")</div>
                                 <div class="text-sm">@date.ToString("M/d")</div>
                                 @if (isToday)
@@ -54,8 +58,8 @@
                         }
                         else if (slotsPerDay > 1)
                         {
-                            <div class="text-center">
-                                @slotTime.ToString(@"h\:mm")
+                            <div class="text-center p-1">
+                                <div class="text-xs">@slotTime.ToString(@"h\:mm")</div>
                                 @if (slotTime.Hours >= 12) 
                                 {
                                     <span class="text-xs">PM</span>
@@ -81,10 +85,12 @@
             var jobCount = machineJobs.Count;
             
             <!-- Individual Machine Row -->
-            <div class="machine-row" id="machine-row-@machine" data-machine="@machine">
+            <div class="machine-row flex border-b border-gray-200" 
+                 id="machine-row-@machine" 
+                 data-machine="@machine">
                 <!-- Machine Label -->
-                <div class="scheduler-machine-label @machine.ToLower()" 
-                     style="height:@(rowHeight)px;"
+                <div class="scheduler-machine-label @machine.ToLower() sticky left-0 z-10 bg-white border-r" 
+                     style="width: 200px; height:@(rowHeight)px; flex-shrink: 0;"
                      data-machine="@machine">
                     <div class="flex flex-col items-center justify-center h-full p-2">
                         <div class="text-lg font-bold">@machine</div>
@@ -97,7 +103,8 @@
                 </div>
                 
                 <!-- Time Slots for this machine -->
-                <div class="time-slots-container">
+                <div class="time-slots-container flex relative" 
+                     style="width: calc(var(--slot-width) * @totalSlots);">
                     @for (int d = 0; d < Model.Dates.Count; d++)
                     {
                         var day = Model.Dates[d];
@@ -113,7 +120,7 @@
                             var isPastWorkHours = slotTime < TimeSpan.FromHours(6) || slotTime >= TimeSpan.FromHours(18);
                             
                             var cellClasses = new List<string> { 
-                                "scheduler-grid-cell", "group", "relative", "cursor-pointer"
+                                "scheduler-grid-cell", "group", "relative", "cursor-pointer", "border-r", "border-gray-200"
                             };
                             
                             if (isCurrentTimeSlot) cellClasses.Add("current-time");
@@ -121,7 +128,7 @@
                             else if (isPastWorkHours) cellClasses.Add("off-hours");
                             
                             <div class="@string.Join(" ", cellClasses)" 
-                                 style="height:@(rowHeight)px;"
+                                 style="width: var(--slot-width); height:@(rowHeight)px; flex-shrink: 0;"
                                  onclick="openJobModal('@machine', '@slotDateTime.ToString("yyyy-MM-ddTHH:mm")')"
                                  title="Click to add job at @slotDateTime.ToString("MMM dd, yyyy HH:mm")"
                                  data-slot-time="@slotDateTime.ToString("yyyy-MM-ddTHH:mm")"

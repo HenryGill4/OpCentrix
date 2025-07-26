@@ -1,8 +1,7 @@
-@page
-@using OpCentrix.Models
+﻿@page
 @model OpCentrix.Pages.Admin.RolesModel
 @{
-    ViewData["Title"] = "Role-Based Permissions";
+    ViewData["Title"] = "Role Management";
     Layout = "~/Pages/Admin/Shared/_AdminLayout.cshtml";
 }
 
@@ -10,191 +9,174 @@
     <!-- Header Section -->
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Role-Based Permissions</h1>
-            <p class="mt-1 text-sm text-gray-600">Manage feature access permissions for each user role</p>
+            <h1 class="text-2xl font-bold text-gray-900">Role Management</h1>
+            <p class="mt-1 text-sm text-gray-600">Configure role permissions and access controls</p>
         </div>
         <div class="flex space-x-3">
-            <button onclick="toggleBulkActions()" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                ?? Bulk Actions
+            <button type="button" 
+                    data-action="show-modal" 
+                    data-target="copyPermissionsModal"
+                    class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                📋 Copy Permissions
             </button>
         </div>
     </div>
 
-    <!-- Role Summary Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        @foreach (var role in Model.AvailableRoles.Take(4))
-        {
-            var userCount = Model.RoleUserCounts.ContainsKey(role) ? Model.RoleUserCounts[role] : 0;
-            var permissions = Model.PermissionMatrix.ContainsKey(role) ? Model.PermissionMatrix[role] : new Dictionary<string, RolePermission>();
-            var grantedCount = permissions.Values.Count(p => p.HasPermission);
-            var totalCount = Model.AvailableFeatures.Count;
-
-            <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h3 class="text-lg font-medium text-gray-900">@Model.GetRoleDisplayName(role)</h3>
-                        <p class="text-sm text-gray-600 mt-1">@Model.GetRoleDescription(role)</p>
+    <!-- Role Statistics -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-lg">
+                        <span class="text-xl">👥</span>
                     </div>
                 </div>
-                <div class="mt-4 space-y-2">
-                    <div class="flex justify-between text-sm">
-                        <span class="text-gray-600">Users:</span>
-                        <span class="font-medium">@userCount</span>
-                    </div>
-                    <div class="flex justify-between text-sm">
-                        <span class="text-gray-600">Permissions:</span>
-                        <span class="font-medium">@grantedCount/@totalCount</span>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-2">
-                        <div class="bg-blue-600 h-2 rounded-full" style="width: @(totalCount > 0 ? (grantedCount * 100 / totalCount) : 0)%"></div>
-                    </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-gray-500">Total Roles</p>
+                    <p class="text-lg font-semibold text-gray-900">@Model.AvailableRoles.Count</p>
                 </div>
             </div>
-        }
-    </div>
+        </div>
 
-    <!-- Bulk Actions Panel (Hidden by default) -->
-    <div id="bulkActionsPanel" class="hidden bg-white rounded-lg shadow p-6 border-l-4 border-orange-500">
-        <h3 class="text-lg font-medium text-gray-900 mb-4">Bulk Actions</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Copy Permissions -->
-            <div>
-                <h4 class="text-md font-medium text-gray-900 mb-3">Copy Permissions</h4>
-                <form method="post" asp-page-handler="CopyPermissions" class="space-y-3">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Copy From:</label>
-                        <select asp-for="SourceRole" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-                            <option value="">Select source role</option>
-                            @foreach (var role in Model.AvailableRoles)
-                            {
-                                <option value="@role">@Model.GetRoleDisplayName(role)</option>
-                            }
-                        </select>
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="flex items-center justify-center w-10 h-10 bg-purple-100 rounded-lg">
+                        <span class="text-xl">🔧</span>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Copy To:</label>
-                        <select asp-for="TargetRole" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-                            <option value="">Select target role</option>
-                            @foreach (var role in Model.AvailableRoles)
-                            {
-                                <option value="@role">@Model.GetRoleDisplayName(role)</option>
-                            }
-                        </select>
-                    </div>
-                    <button type="submit" onclick="return confirm('This will overwrite all permissions for the target role. Continue?')" class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                        ?? Copy Permissions
-                    </button>
-                </form>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-gray-500">Features</p>
+                    <p class="text-lg font-semibold text-gray-900">@Model.AvailableFeatures.Count</p>
+                </div>
             </div>
+        </div>
 
-            <!-- Reset to Defaults -->
-            <div>
-                <h4 class="text-md font-medium text-gray-900 mb-3">Reset to Defaults</h4>
-                <p class="text-sm text-gray-600 mb-3">Reset any role to its default permission set.</p>
-                @foreach (var role in Model.AvailableRoles.Take(4))
-                {
-                    <form method="post" asp-page-handler="ResetRolePermissions" class="inline mr-2 mb-2">
-                        <input type="hidden" name="roleName" value="@role">
-                        <button type="submit" onclick="return confirm('Reset @role to default permissions?')" class="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                            ?? @role
-                        </button>
-                    </form>
-                }
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="flex items-center justify-center w-10 h-10 bg-green-100 rounded-lg">
+                        <span class="text-xl">✅</span>
+                    </div>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-gray-500">Total Permissions</p>
+                    <p class="text-lg font-semibold text-gray-900">@(Model.AvailableRoles.Count * Model.AvailableFeatures.Count)</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="flex items-center justify-center w-10 h-10 bg-yellow-100 rounded-lg">
+                        <span class="text-xl">🔐</span>
+                    </div>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-gray-500">Active Permissions</p>
+                    <p class="text-lg font-semibold text-gray-900">@Model.PermissionMatrix.Values.SelectMany(d => d.Values).Count(p => p.HasPermission)</p>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Permission Matrix -->
     <form method="post" asp-page-handler="UpdatePermissions" id="permissionsForm">
+        @Html.AntiForgeryToken()
         <div class="bg-white rounded-lg shadow overflow-hidden">
-            <!-- Matrix Header -->
             <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                <h3 class="text-lg font-medium text-gray-900">Permission Matrix</h3>
-                <p class="mt-1 text-sm text-gray-600">Toggle feature access for each role. Changes are saved when you click "Save Changes".</p>
+                <h3 class="text-lg font-medium text-gray-900">Role Permission Matrix</h3>
+                <p class="mt-1 text-sm text-gray-600">Configure which features each role can access</p>
             </div>
-
-            <!-- Matrix Table -->
+            
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10">
-                                Feature
-                            </th>
-                            @foreach (var role in Model.AvailableRoles)
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Feature</th>
+                            @foreach (var role in Model.AvailableRoles.OrderBy(r => r))
                             {
-                                <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
+                                <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     <div class="flex flex-col items-center">
-                                        <span class="font-semibold">@Model.GetRoleDisplayName(role)</span>
-                                        <span class="text-xs text-gray-400 mt-1">
-                                            @(Model.RoleUserCounts.ContainsKey(role) ? Model.RoleUserCounts[role] : 0) users
-                                        </span>
+                                        <span>@role</span>
+                                        <button type="button" 
+                                                class="mt-1 text-xs text-blue-600 hover:text-blue-800"
+                                                data-action="reset-role-permissions"
+                                                data-role="@role"
+                                                title="Reset @role to defaults">
+                                            🔄 Reset
+                                        </button>
                                     </div>
                                 </th>
                             }
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
-                        @{int featureIndex = 0;}
-                        @foreach (var feature in Model.AvailableFeatures)
+                        @{
+                            int updateIndex = 0;
+                        }
+                        @foreach (var feature in Model.AvailableFeatures.OrderBy(f => f))
                         {
                             <tr class="hover:bg-gray-50">
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 sticky left-0 bg-white z-10 border-r border-gray-200">
-                                    <div>
-                                        <div class="font-medium">@Model.GetFeatureDisplayName(feature)</div>
-                                        <div class="text-xs text-gray-500 mt-1">@feature</div>
-                                    </div>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                    @Model.GetFeatureDisplayName(feature)
                                 </td>
-                                @{int roleIndex = 0;}
-                                @foreach (var role in Model.AvailableRoles)
+                                @foreach (var role in Model.AvailableRoles.OrderBy(r => r))
                                 {
                                     var permission = Model.PermissionMatrix.ContainsKey(role) && Model.PermissionMatrix[role].ContainsKey(feature) 
                                         ? Model.PermissionMatrix[role][feature] 
                                         : null;
-                                    var isGranted = permission?.HasPermission ?? false;
-                                    var inputName = $"PermissionUpdates[{featureIndex * Model.AvailableRoles.Count + roleIndex}]";
-
+                                    var isEnabled = permission?.HasPermission ?? false;
+                                    var accessLevel = permission?.PermissionLevel ?? "Read";
+                                    var permissionKey = $"{role}_{feature}";
+                                    
                                     <td class="px-3 py-4 whitespace-nowrap text-center">
-                                        <div class="flex flex-col items-center space-y-2">
-                                            <!-- Hidden fields for model binding -->
-                                            <input type="hidden" name="@(inputName).Role" value="@role" />
-                                            <input type="hidden" name="@(inputName).Feature" value="@feature" />
-                                            
-                                            <!-- Permission toggle -->
-                                            <label class="relative inline-flex items-center cursor-pointer">
+                                        <div class="flex flex-col items-center space-y-1">
+                                            <!-- Enable/Disable Checkbox -->
+                                            <label class="flex items-center">
                                                 <input type="checkbox" 
-                                                       name="@(inputName).IsGranted" 
-                                                       value="true" 
-                                                       @(isGranted ? "checked" : "") 
-                                                       class="sr-only peer permission-toggle"
+                                                       name="PermissionUpdates[@updateIndex].IsGranted" 
+                                                       value="true"
+                                                       @(isEnabled ? "checked" : "")
+                                                       class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded permission-toggle"
                                                        data-role="@role"
                                                        data-feature="@feature">
-                                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                <input type="hidden" name="PermissionUpdates[@updateIndex].IsGranted" value="false">
                                             </label>
                                             
-                                            <!-- Status indicator -->
-                                            <div class="text-xs">
-                                                @if (isGranted)
+                                            <!-- Access Level Dropdown (without tag helpers) -->
+                                            <select name="PermissionUpdates[@updateIndex].AccessLevel" 
+                                                    class="text-xs border-gray-300 rounded access-level-select @(isEnabled ? "" : "opacity-50")"
+                                                    data-permission-key="@permissionKey">
+                                                @if (accessLevel == "Read")
                                                 {
-                                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                        ? Granted
-                                                    </span>
+                                                    <option value="Read" selected>Read</option>
+                                                    <option value="Write">Write</option>
+                                                    <option value="Admin">Admin</option>
+                                                }
+                                                else if (accessLevel == "Write")
+                                                {
+                                                    <option value="Read">Read</option>
+                                                    <option value="Write" selected>Write</option>
+                                                    <option value="Admin">Admin</option>
                                                 }
                                                 else
                                                 {
-                                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                                        ? Denied
-                                                    </span>
+                                                    <option value="Read">Read</option>
+                                                    <option value="Write">Write</option>
+                                                    <option value="Admin" selected>Admin</option>
                                                 }
-                                            </div>
+                                            </select>
+                                            
+                                            <!-- Hidden fields for role and feature -->
+                                            <input type="hidden" name="PermissionUpdates[@updateIndex].Role" value="@role">
+                                            <input type="hidden" name="PermissionUpdates[@updateIndex].Feature" value="@feature">
                                         </div>
-                                        <!-- Hidden field for false value -->
-                                        <input type="hidden" name="@(inputName).IsGranted" value="false" />
                                     </td>
-                                    roleIndex++;
+                                    updateIndex++;
                                 }
                             </tr>
-                            featureIndex++;
                         }
                     </tbody>
                 </table>
@@ -204,14 +186,14 @@
         <!-- Save Button -->
         <div class="flex items-center justify-between pt-6">
             <div class="text-sm text-gray-600">
-                @Model.AvailableRoles.Count role(s) � @Model.AvailableFeatures.Count feature(s) = @(Model.AvailableRoles.Count * Model.AvailableFeatures.Count) permissions
+                @Model.AvailableRoles.Count role(s) × @Model.AvailableFeatures.Count feature(s) = @(Model.AvailableRoles.Count * Model.AvailableFeatures.Count) permissions
             </div>
             <div class="flex space-x-3">
                 <button type="button" onclick="resetForm()" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                    ?? Reset Changes
+                    🔄 Reset Changes
                 </button>
                 <button type="submit" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                    ?? Save Permission Changes
+                    💾 Save Permission Changes
                 </button>
             </div>
         </div>
@@ -220,210 +202,233 @@
     @if (!Model.AvailableRoles.Any() || !Model.AvailableFeatures.Any())
     {
         <div class="text-center py-12">
-            <div class="text-gray-400 text-6xl mb-4">??</div>
+            <div class="text-gray-400 text-6xl mb-4">🔐</div>
             <h3 class="text-lg font-medium text-gray-900 mb-2">No roles or features found</h3>
             <p class="text-gray-600 mb-4">The system needs to be initialized with default roles and features.</p>
             <a href="/Admin" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                ? Back to Admin Dashboard
+                🏠 Back to Admin Dashboard
             </a>
         </div>
     }
 </div>
 
-<!-- Success/Error Messages -->
-@if (TempData["Success"] != null)
-{
-    <div class="fixed top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded z-50" role="alert">
-        <strong class="font-bold">Success!</strong>
-        <span class="block sm:inline">@TempData["Success"]</span>
+<!-- Copy Permissions Modal -->
+<div id="copyPermissionsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50" aria-hidden="true" role="dialog" aria-labelledby="copyPermissionsTitle">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 id="copyPermissionsTitle" class="text-lg font-medium text-gray-900">Copy Permissions</h3>
+            <button type="button" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600" data-action="hide-modal" data-target="copyPermissionsModal" aria-label="Close">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        
+        <form method="post" asp-page-handler="CopyPermissions" class="p-6">
+            @Html.AntiForgeryToken()
+            
+            <div class="space-y-4">
+                <div class="form-field">
+                    <label for="sourceRole" class="block text-sm font-medium text-gray-700">Source Role</label>
+                    <select id="sourceRole" name="sourceRole" required 
+                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        <option value="">Select source role</option>
+                        @foreach (var role in Model.AvailableRoles.OrderBy(r => r))
+                        {
+                            <option value="@role">@role</option>
+                        }
+                    </select>
+                </div>
+                
+                <div class="form-field">
+                    <label for="targetRole" class="block text-sm font-medium text-gray-700">Target Role</label>
+                    <select id="targetRole" name="targetRole" required 
+                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        <option value="">Select target role</option>
+                        @foreach (var role in Model.AvailableRoles.OrderBy(r => r))
+                        {
+                            <option value="@role">@role</option>
+                        }
+                    </select>
+                </div>
+                
+                <div class="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                    <div class="flex">
+                        <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                        <div class="ml-3">
+                            <p class="text-sm text-yellow-800">
+                                This will overwrite all existing permissions for the target role.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-6 flex items-center justify-end space-x-3">
+                <button type="button" data-action="hide-modal" data-target="copyPermissionsModal"
+                        class="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    ❌ Cancel
+                </button>
+                <button type="submit"
+                        class="px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                    📋 Copy Permissions
+                </button>
+            </div>
+        </form>
     </div>
-}
+</div>
 
-@if (TempData["Error"] != null)
-{
-    <div class="fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded z-50" role="alert">
-        <strong class="font-bold">Error!</strong>
-        <span class="block sm:inline">@TempData["Error"]</span>
-    </div>
-}
-
-@if (TempData["Info"] != null)
-{
-    <div class="fixed top-4 right-4 bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded z-50" role="alert">
-        <strong class="font-bold">Info:</strong>
-        <span class="block sm:inline">@TempData["Info"]</span>
-    </div>
-}
+@* Include the shared alert notifications *@
+<partial name="_AlertNotifications" />
 
 @section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    
     <script>
-        let originalFormData = null;
-
-        // Store original form state on page load
+        // Roles Page JavaScript - Using OpCentrix Admin Module
         document.addEventListener('DOMContentLoaded', function() {
-            originalFormData = new FormData(document.getElementById('permissionsForm'));
+            
+            // Setup permission toggles
+            setupPermissionToggles();
+            
+            // Setup custom data action handlers
+            setupCustomActions();
+            
+            console.log('✅ [ROLES] Page initialized successfully');
         });
 
-        function toggleBulkActions() {
-            const panel = document.getElementById('bulkActionsPanel');
-            panel.classList.toggle('hidden');
+        /**
+         * Setup permission toggle functionality
+         */
+        function setupPermissionToggles() {
+            // Handle permission checkbox changes
+            document.querySelectorAll('.permission-toggle').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const isEnabled = this.checked;
+                    const role = this.getAttribute('data-role');
+                    const feature = this.getAttribute('data-feature');
+                    const permissionKey = `${role}_${feature}`;
+                    
+                    // Find corresponding access level dropdown
+                    const accessLevelSelect = document.querySelector(`[data-permission-key="${permissionKey}"]`);
+                    if (accessLevelSelect) {
+                        accessLevelSelect.disabled = !isEnabled;
+                        if (isEnabled) {
+                            accessLevelSelect.classList.remove('opacity-50');
+                        } else {
+                            accessLevelSelect.classList.add('opacity-50');
+                        }
+                    }
+                });
+            });
         }
 
+        /**
+         * Setup custom data action handlers
+         */
+        function setupCustomActions() {
+            document.addEventListener('click', function(e) {
+                const target = e.target;
+                
+                // Handle reset role permissions action
+                if (target.getAttribute('data-action') === 'reset-role-permissions') {
+                    e.preventDefault();
+                    const role = target.getAttribute('data-role');
+                    resetRolePermissions(role);
+                }
+            });
+        }
+
+        /**
+         * Reset permissions for a specific role
+         */
+        function resetRolePermissions(role) {
+            if (!role) return;
+            
+            if (confirm(`Are you sure you want to reset all permissions for the "${role}" role to default values? This cannot be undone.`)) {
+                // Create and submit a form for role reset
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '?handler=ResetRolePermissions';
+                
+                // Add anti-forgery token
+                const tokenInput = document.createElement('input');
+                tokenInput.type = 'hidden';
+                tokenInput.name = '__RequestVerificationToken';
+                tokenInput.value = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                form.appendChild(tokenInput);
+                
+                // Add role name
+                const roleInput = document.createElement('input');
+                roleInput.type = 'hidden';
+                roleInput.name = 'roleName';
+                roleInput.value = role;
+                form.appendChild(roleInput);
+                
+                // Submit form
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        /**
+         * Reset entire form
+         */
         function resetForm() {
             if (confirm('Are you sure you want to reset all changes? This will reload the page and lose any unsaved modifications.')) {
                 window.location.reload();
             }
         }
 
-        // Real-time permission toggle feedback
-        document.addEventListener('change', function(e) {
-            if (e.target.classList.contains('permission-toggle')) {
-                const isChecked = e.target.checked;
-                const role = e.target.dataset.role;
-                const feature = e.target.dataset.feature;
-                
-                // Find the status indicator for this toggle
-                const statusIndicator = e.target.closest('td').querySelector('.inline-flex');
-                
-                // Update the status indicator
-                if (isChecked) {
-                    statusIndicator.className = 'inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800';
-                    statusIndicator.innerHTML = '? Granted';
-                } else {
-                    statusIndicator.className = 'inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800';
-                    statusIndicator.innerHTML = '? Denied';
-                }
-                
-                // Mark form as changed
-                markFormAsChanged();
-            }
-        });
-
-        function markFormAsChanged() {
-            // Add visual indicator that changes have been made
-            const saveButton = document.querySelector('button[type="submit"]');
-            if (saveButton && !saveButton.textContent.includes('*')) {
-                saveButton.innerHTML = '?? Save Permission Changes *';
-                saveButton.classList.add('bg-orange-600', 'hover:bg-orange-700');
-                saveButton.classList.remove('bg-blue-600', 'hover:bg-blue-700');
-            }
-        }
-
-        // Form validation
-        document.getElementById('permissionsForm').addEventListener('submit', function(e) {
-            const toggles = this.querySelectorAll('.permission-toggle');
-            let hasChanges = false;
-            
-            // Check if any changes were made
-            toggles.forEach(toggle => {
-                const originalValue = originalFormData ? originalFormData.get(toggle.name) : null;
-                if (toggle.checked !== (originalValue === 'true')) {
-                    hasChanges = true;
-                }
-            });
-            
-            if (!hasChanges) {
-                e.preventDefault();
-                alert('No permission changes detected. Make some changes before saving.');
-                return false;
-            }
-            
-            // Show confirmation for bulk changes
-            const changeCount = Array.from(toggles).filter(toggle => {
-                const originalValue = originalFormData ? originalFormData.get(toggle.name) : null;
-                return toggle.checked !== (originalValue === 'true');
-            }).length;
-            
-            if (changeCount > 10) {
-                if (!confirm(`You are about to change ${changeCount} permissions. This will affect user access across the system. Continue?`)) {
-                    e.preventDefault();
-                    return false;
-                }
-            }
-        });
-
-        // Auto-hide alerts after 5 seconds
-        setTimeout(function() {
-            const alerts = document.querySelectorAll('[role="alert"]');
-            alerts.forEach(alert => {
-                alert.style.opacity = '0';
-                alert.style.transform = 'translateX(100%)';
-                setTimeout(() => alert.remove(), 300);
-            });
-        }, 5000);
-
-        // Add keyboard shortcuts
-        document.addEventListener('keydown', function(e) {
-            // Ctrl+S to save
-            if (e.ctrlKey && e.key === 's') {
-                e.preventDefault();
-                document.getElementById('permissionsForm').submit();
-            }
-            
-            // Ctrl+R to reset
-            if (e.ctrlKey && e.key === 'r') {
-                e.preventDefault();
-                resetForm();
-            }
-        });
-
-        // Bulk toggle functionality for roles
-        function toggleRolePermissions(role, enable) {
-            const toggles = document.querySelectorAll(`input[data-role="${role}"]`);
-            toggles.forEach(toggle => {
-                if (toggle.checked !== enable) {
-                    toggle.checked = enable;
-                    toggle.dispatchEvent(new Event('change'));
-                }
-            });
-        }
-
-        // Bulk toggle functionality for features
-        function toggleFeaturePermissions(feature, enable) {
-            const toggles = document.querySelectorAll(`input[data-feature="${feature}"]`);
-            toggles.forEach(toggle => {
-                if (toggle.checked !== enable) {
-                    toggle.checked = enable;
-                    toggle.dispatchEvent(new Event('change'));
-                }
-            });
-        }
+        // Global functions for backward compatibility
+        window.RolesPage = {
+            resetRolePermissions,
+            setupPermissionToggles
+        };
     </script>
 }
 
 <style>
-    /* Smooth transitions for toggles */
-    .permission-toggle:checked + div {
-        background-color: #2563eb;
+    /* Enhanced styles for permission matrix */
+    .permission-toggle:checked {
+        background-color: #3b82f6;
+        border-color: #3b82f6;
     }
     
-    .permission-toggle + div {
-        transition: background-color 0.2s ease;
+    .access-level-select {
+        min-width: 80px;
     }
     
-    /* Sticky column styling */
-    .sticky {
+    .access-level-select:disabled {
+        background-color: #f3f4f6;
+        cursor: not-allowed;
+    }
+    
+    /* Hover effects for matrix */
+    .permission-toggle:hover {
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    /* Enhanced table styling */
+    table th {
         position: sticky;
-        left: 0;
+        top: 0;
+        background-color: #f9fafb;
         z-index: 10;
     }
     
-    /* Alert animations */
-    [role="alert"] {
-        transition: opacity 0.3s ease, transform 0.3s ease;
+    /* Loading state styles */
+    .submit-loading {
+        display: none;
     }
     
-    /* Table hover effects */
-    tr:hover .sticky {
-        background-color: #f9fafb;
+    button.loading .submit-text {
+        display: none;
     }
     
-    /* Form change indicators */
-    .bg-orange-600 {
-        background-color: #ea580c;
-    }
-    
-    .hover\:bg-orange-700:hover {
-        background-color: #c2410c;
+    button.loading .submit-loading {
+        display: inline-flex !important;
     }
 </style>

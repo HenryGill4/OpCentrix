@@ -5,458 +5,323 @@
     Layout = "~/Pages/Admin/Shared/_AdminLayout.cshtml";
 }
 
-<div class="container-fluid py-4">
-    <!-- Page Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h1 class="h3 mb-0 text-gray-800">
-                        <i class="fas fa-clipboard-check text-primary me-2"></i>
-                        Inspection Checkpoints
-                    </h1>
-                    <p class="text-muted mb-0">Configure quality inspection checkpoints for parts</p>
-                </div>
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCheckpointModal">
-                    <i class="fas fa-plus me-1"></i>
-                    Add Checkpoint
-                </button>
-            </div>
+<div class="space-y-6">
+    <!-- Header Section -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Inspection Checkpoints</h1>
+            <p class="mt-1 text-sm text-gray-600">Configure quality control checkpoints for parts inspection</p>
+        </div>
+        <div class="flex space-x-3">
+            <button type="button" 
+                    data-action="show-modal" 
+                    data-target="createCheckpointModal"
+                    class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                ?? Add Checkpoint
+            </button>
         </div>
     </div>
 
-    <!-- Statistics Cards -->
-    <div class="row mb-4">
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card border-left-primary h-100">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                Total Checkpoints
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.TotalCheckpoints</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-list-check fa-2x text-gray-300"></i>
-                        </div>
+    <!-- Checkpoints Statistics -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-lg">
+                        <span class="text-xl">??</span>
                     </div>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-gray-500">Total Checkpoints</p>
+                    <p class="text-lg font-semibold text-gray-900">@Model.Checkpoints.Count()</p>
                 </div>
             </div>
         </div>
 
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card border-left-success h-100">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                Active Checkpoints
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.ActiveCheckpoints</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
-                        </div>
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="flex items-center justify-center w-10 h-10 bg-green-100 rounded-lg">
+                        <span class="text-xl">?</span>
                     </div>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-gray-500">Active Checkpoints</p>
+                    <p class="text-lg font-semibold text-gray-900">@Model.Checkpoints.Count(c => c.IsActive)</p>
                 </div>
             </div>
         </div>
 
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card border-left-info h-100">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                Parts with Checkpoints
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.PartsWithCheckpoints</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-cogs fa-2x text-gray-300"></i>
-                        </div>
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="flex items-center justify-center w-10 h-10 bg-purple-100 rounded-lg">
+                        <span class="text-xl">??</span>
                     </div>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-gray-500">Dimensional</p>
+                    <p class="text-lg font-semibold text-gray-900">@Model.Checkpoints.Count(c => c.InspectionType == "Dimensional")</p>
                 </div>
             </div>
         </div>
 
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card border-left-warning h-100">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                Quality Coverage
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                @(Model.Parts.Any() ? (Model.PartsWithCheckpoints * 100 / Model.Parts.Count()) : 0)%
-                            </div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-shield-alt fa-2x text-gray-300"></i>
-                        </div>
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="flex items-center justify-center w-10 h-10 bg-yellow-100 rounded-lg">
+                        <span class="text-xl">??</span>
                     </div>
                 </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-gray-500">Visual</p>
+                    <p class="text-lg font-semibold text-gray-900">@Model.Checkpoints.Count(c => c.InspectionType == "Visual")</p>
+                </div>
             </div>
-        </div>
-    </div>
-
-    <!-- Filters and Search -->
-    <div class="card shadow mb-4">
-        <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">Filter and Search</h6>
-        </div>
-        <div class="card-body">
-            <form method="get" class="row g-3">
-                <div class="col-md-3">
-                    <label class="form-label">Search</label>
-                    <input type="text" class="form-control" name="SearchTerm" value="@Model.SearchTerm" 
-                           placeholder="Search checkpoints..." />
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Part</label>
-                    <select class="form-select" name="FilterPartId">
-                        <option value="">All Parts</option>
-                        @foreach (var part in Model.Parts)
-                        {
-                            <option value="@part.Id" selected="@(Model.FilterPartId == part.Id)">
-                                @Html.Raw(Html.Encode(part.PartNumber))
-                            </option>
-                        }
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Type</label>
-                    <select class="form-select" name="FilterType">
-                        <option value="">All Types</option>
-                        @if (Model.InspectionTypesSelectList != null)
-                        {
-                            @foreach (var type in Model.InspectionTypesSelectList)
-                            {
-                                <option value="@type.Value" selected="@(Model.FilterType == type.Value)">
-                                    @Html.Raw(Html.Encode(type.Text))
-                                </option>
-                            }
-                        }
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Category</label>
-                    <select class="form-select" name="FilterCategory">
-                        <option value="">All Categories</option>
-                        @if (Model.CategoriesSelectList != null)
-                        {
-                            @foreach (var category in Model.CategoriesSelectList)
-                            {
-                                <option value="@category.Value" selected="@(Model.FilterCategory == category.Value)">
-                                    @Html.Raw(Html.Encode(category.Text))
-                                </option>
-                            }
-                        }
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Status</label>
-                    <select class="form-select" name="FilterActiveOnly">
-                        <option value="">All</option>
-                        <option value="true" selected="@(Model.FilterActiveOnly == true)">Active Only</option>
-                    </select>
-                </div>
-                <div class="col-md-1">
-                    <label class="form-label">&nbsp;</label>
-                    <button type="submit" class="btn btn-primary d-block w-100">Filter</button>
-                </div>
-            </form>
         </div>
     </div>
 
     <!-- Checkpoints Table -->
-    <div class="card shadow">
-        <div class="card-header py-3 d-flex justify-content-between align-items-center">
-            <h6 class="m-0 font-weight-bold text-primary">Inspection Checkpoints</h6>
-            <div class="dropdown">
-                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
-                        data-bs-toggle="dropdown">
-                    Sort: @(Model.SortBy ?? "Part")
-                </button>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="?SortBy=Part&SortDirection=asc">Part (A-Z)</a></li>
-                    <li><a class="dropdown-item" href="?SortBy=Part&SortDirection=desc">Part (Z-A)</a></li>
-                    <li><a class="dropdown-item" href="?SortBy=Name&SortDirection=asc">Name (A-Z)</a></li>
-                    <li><a class="dropdown-item" href="?SortBy=Name&SortDirection=desc">Name (Z-A)</a></li>
-                    <li><a class="dropdown-item" href="?SortBy=Type&SortDirection=asc">Type (A-Z)</a></li>
-                    <li><a class="dropdown-item" href="?SortBy=Priority&SortDirection=asc">Priority (Low-High)</a></li>
-                    <li><a class="dropdown-item" href="?SortBy=Priority&SortDirection=desc">Priority (High-Low)</a></li>
-                    <li><a class="dropdown-item" href="?SortBy=Order&SortDirection=asc">Execution Order</a></li>
-                </ul>
-            </div>
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <h3 class="text-lg font-medium text-gray-900">Inspection Checkpoints (@Model.Checkpoints.Count())</h3>
         </div>
-        <div class="card-body p-0">
-            @if (Model.Checkpoints.Any())
-            {
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Order</th>
-                                <th>Part</th>
-                                <th>Checkpoint</th>
-                                <th>Type</th>
-                                <th>Category</th>
-                                <th>Priority</th>
-                                <th>Required</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var checkpoint in Model.Checkpoints)
-                            {
-                                <tr class="@(checkpoint.IsActive ? "" : "text-muted")">
-                                    <td>
-                                        <span class="badge bg-secondary">@checkpoint.SortOrder</span>
-                                    </td>
-                                    <td>
-                                        <strong>@Html.Raw(Html.Encode(checkpoint.Part.PartNumber))</strong>
-                                        @if (!string.IsNullOrEmpty(checkpoint.Part.Name))
-                                        {
-                                            <br><small class="text-muted">@Html.Raw(Html.Encode(checkpoint.Part.Name))</small>
-                                        }
-                                    </td>
-                                    <td>
-                                        <div>
-                                            <strong>@Html.Raw(Html.Encode(checkpoint.CheckpointName))</strong>
-                                            @if (!string.IsNullOrEmpty(checkpoint.Description))
-                                            {
-                                                <br><small class="text-muted">@Html.Raw(Html.Encode(checkpoint.Description))</small>
-                                            }
-                                            @if (checkpoint.EstimatedMinutes > 0)
-                                            {
-                                                <br><small class="text-info">@checkpoint.EstimatedMinutes min</small>
-                                            }
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-info">@Html.Raw(Html.Encode(checkpoint.InspectionType))</span>
-                                        @if (checkpoint.IsDimensional)
-                                        {
-                                            <br><small class="text-success">@Html.Raw(Html.Encode(checkpoint.ToleranceDisplay))</small>
-                                        }
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-secondary">@Html.Raw(Html.Encode(checkpoint.Category))</span>
-                                    </td>
-                                    <td>
-                                        <span class="badge text-white" style="background-color: @checkpoint.GetPriorityColor()">
-                                            @checkpoint.Priority
-                                        </span>
-                                    </td>
-                                    <td>
+        
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Checkpoint</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Part</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    @foreach (var checkpoint in Model.Checkpoints)
+                    {
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4">
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">
+                                        @Html.Raw(Html.Encode(checkpoint.CheckpointName))
                                         @if (checkpoint.IsRequired)
                                         {
-                                            <i class="fas fa-check text-success" title="Required"></i>
+                                            <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                ?? Required
+                                            </span>
                                         }
-                                        else
-                                        {
-                                            <i class="fas fa-times text-muted" title="Optional"></i>
-                                        }
-                                    </td>
-                                    <td>
-                                        @if (checkpoint.IsActive)
-                                        {
-                                            <span class="badge bg-success">Active</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-secondary">Inactive</span>
-                                        }
-                                    </td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm" role="group">
-                                            <a href="?handler=Edit&id=@checkpoint.Id" class="btn btn-outline-primary"
-                                               title="Edit Checkpoint">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                            <button type="button" class="btn btn-outline-info" 
-                                                    data-bs-toggle="modal" data-bs-target="#duplicateModal"
-                                                    data-source-id="@checkpoint.Id" 
-                                                    data-source-name="@Html.Raw(Html.Encode(checkpoint.CheckpointName))"
-                                                    title="Duplicate Checkpoint">
-                                                <i class="fas fa-copy"></i>
-                                            </button>
-                                            <form method="post" class="d-inline" asp-page-handler="ToggleStatus" 
-                                                  asp-route-id="@checkpoint.Id">
-                                                @Html.AntiForgeryToken()
-                                                <button type="submit" class="btn btn-outline-warning" 
-                                                        title="Toggle Status">
-                                                    <i class="fas fa-toggle-@(checkpoint.IsActive ? "on" : "off")"></i>
-                                                </button>
-                                            </form>
-                                            <form method="post" class="d-inline" asp-page-handler="Delete" 
-                                                  asp-route-id="@checkpoint.Id"
-                                                  onsubmit="return confirm('Are you sure you want to delete this checkpoint?');">
-                                                @Html.AntiForgeryToken()
-                                                <button type="submit" class="btn btn-outline-danger" 
-                                                        title="Delete Checkpoint">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </form>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(checkpoint.Description))
+                                    {
+                                        <div class="text-sm text-gray-500 mt-1">@Html.Raw(Html.Encode(checkpoint.Description))</div>
+                                    }
+                                    @if (checkpoint.InspectionType == "Dimensional")
+                                    {
+                                        <div class="text-xs text-gray-400 mt-1">
+                                            @if (checkpoint.TargetValue.HasValue)
+                                            {
+                                                <span>Target: @checkpoint.TargetValue.Value</span>
+                                            }
+                                            @if (checkpoint.UpperTolerance.HasValue && checkpoint.LowerTolerance.HasValue)
+                                            {
+                                                <span class="ml-2">Tolerance: +@checkpoint.UpperTolerance.Value / -@checkpoint.LowerTolerance.Value</span>
+                                            }
+                                            @if (!string.IsNullOrEmpty(checkpoint.Unit))
+                                            {
+                                                <span class="ml-2">Units: @checkpoint.Unit</span>
+                                            }
                                         </div>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
-            else
-            {
-                <div class="text-center py-5">
-                    <i class="fas fa-clipboard-check fa-3x text-muted mb-3"></i>
-                    <h5 class="text-muted">No Inspection Checkpoints Found</h5>
-                    <p class="text-muted">Create your first inspection checkpoint to get started with quality control.</p>
-                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCheckpointModal">
-                        <i class="fas fa-plus me-1"></i>
-                        Add First Checkpoint
-                    </button>
-                </div>
-            }
+                                    }
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">@Html.Raw(Html.Encode(checkpoint.Part?.PartNumber))</div>
+                                <div class="text-sm text-gray-500">@Html.Raw(Html.Encode(checkpoint.Part?.Name))</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium @(checkpoint.InspectionType == "Dimensional" ? "bg-purple-100 text-purple-800" : "bg-yellow-100 text-yellow-800")">
+                                    @(checkpoint.InspectionType == "Dimensional" ? "??" : "??") @checkpoint.InspectionType
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                @if (checkpoint.IsActive)
+                                {
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        ? Active
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                        ? Inactive
+                                    </span>
+                                }
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <div class="flex justify-end space-x-2">
+                                    <button type="button" 
+                                            data-action="duplicate-checkpoint"
+                                            data-checkpoint-id="@checkpoint.Id"
+                                            data-checkpoint-name="@checkpoint.CheckpointName"
+                                            class="text-blue-600 hover:text-blue-900 text-sm">
+                                        ?? Duplicate
+                                    </button>
+                                    <form method="post" asp-page-handler="DeleteCheckpoint" class="inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="checkpointId" value="@checkpoint.Id">
+                                        <button type="submit" 
+                                                data-action="confirm-delete"
+                                                data-item-name="@checkpoint.CheckpointName"
+                                                class="text-red-600 hover:text-red-900 text-sm">
+                                            ??? Delete
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
         </div>
     </div>
+
+    @if (!Model.Checkpoints.Any())
+    {
+        <div class="text-center py-12">
+            <div class="text-gray-400 text-6xl mb-4">??</div>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">No checkpoints found</h3>
+            <p class="text-gray-600 mb-4">Create your first inspection checkpoint to get started.</p>
+            <button type="button" data-action="show-modal" data-target="createCheckpointModal"
+                    class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                ?? Add First Checkpoint
+            </button>
+        </div>
+    }
 </div>
 
 <!-- Create Checkpoint Modal -->
-<div class="modal fade" id="createCheckpointModal" tabindex="-1">
+<div class="modal fade" id="createCheckpointModal" tabindex="-1" aria-labelledby="createCheckpointModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <form method="post" asp-page-handler="Create">
+            <form method="post" asp-page-handler="CreateCheckpoint">
                 @Html.AntiForgeryToken()
                 <div class="modal-header">
-                    <h5 class="modal-title">Add Inspection Checkpoint</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <h5 class="modal-title" id="createCheckpointModalLabel">Create Inspection Checkpoint</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <!-- Validation Summary -->
                     <div asp-validation-summary="All" class="alert alert-danger d-none" role="alert"></div>
                     
-                    <div class="row g-3">
+                    <div class="row">
                         <div class="col-md-6">
-                            <label asp-for="Checkpoint.PartId" class="form-label">Part *</label>
-                            <select asp-for="Checkpoint.PartId" asp-items="Model.PartsSelectList" class="form-select" required>
-                                <option value="">Select Part</option>
-                            </select>
-                            <span asp-validation-for="Checkpoint.PartId" class="text-danger"></span>
+                            <div class="mb-3 form-field">
+                                <label asp-for="Checkpoint.PartId" class="form-label">Part</label>
+                                <select asp-for="Checkpoint.PartId" class="form-select" required>
+                                    <option value="">Select Part</option>
+                                    @foreach (var part in Model.Parts)
+                                    {
+                                        <option value="@part.Id">@Html.Raw(Html.Encode(part.PartNumber)) - @Html.Raw(Html.Encode(part.Name))</option>
+                                    }
+                                </select>
+                                <span asp-validation-for="Checkpoint.PartId" class="text-danger invalid-feedback"></span>
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            <label asp-for="Checkpoint.CheckpointName" class="form-label">Checkpoint Name *</label>
-                            <input asp-for="Checkpoint.CheckpointName" class="form-control" required />
-                            <span asp-validation-for="Checkpoint.CheckpointName" class="text-danger"></span>
-                        </div>
-                        <div class="col-12">
-                            <label asp-for="Checkpoint.Description" class="form-label">Description</label>
-                            <textarea asp-for="Checkpoint.Description" class="form-control" rows="2"></textarea>
-                            <span asp-validation-for="Checkpoint.Description" class="text-danger"></span>
-                        </div>
-                        <div class="col-md-4">
-                            <label asp-for="Checkpoint.InspectionType" class="form-label">Inspection Type *</label>
-                            <select asp-for="Checkpoint.InspectionType" asp-items="Model.InspectionTypesSelectList" class="form-select" required>
-                                <option value="">Select Type</option>
-                            </select>
-                            <span asp-validation-for="Checkpoint.InspectionType" class="text-danger"></span>
-                        </div>
-                        <div class="col-md-4">
-                            <label asp-for="Checkpoint.Category" class="form-label">Category</label>
-                            <select asp-for="Checkpoint.Category" asp-items="Model.CategoriesSelectList" class="form-select">
-                                <option value="">Select Category</option>
-                            </select>
-                            <span asp-validation-for="Checkpoint.Category" class="text-danger"></span>
-                        </div>
-                        <div class="col-md-4">
-                            <label asp-for="Checkpoint.Priority" class="form-label">Priority</label>
-                            <select asp-for="Checkpoint.Priority" asp-items="Model.PrioritySelectList" class="form-select">
-                            </select>
-                            <span asp-validation-for="Checkpoint.Priority" class="text-danger"></span>
-                        </div>
-                        <div class="col-md-3">
-                            <label asp-for="Checkpoint.SortOrder" class="form-label">Sort Order</label>
-                            <input asp-for="Checkpoint.SortOrder" type="number" class="form-control" min="1" max="9999" />
-                            <span asp-validation-for="Checkpoint.SortOrder" class="text-danger"></span>
-                        </div>
-                        <div class="col-md-3">
-                            <label asp-for="Checkpoint.EstimatedMinutes" class="form-label">Est. Minutes</label>
-                            <input asp-for="Checkpoint.EstimatedMinutes" type="number" class="form-control" min="0" max="480" />
-                            <span asp-validation-for="Checkpoint.EstimatedMinutes" class="text-danger"></span>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Required</label>
-                            <div class="form-check mt-2">
-                                <input asp-for="Checkpoint.IsRequired" class="form-check-input" type="checkbox" />
-                                <label asp-for="Checkpoint.IsRequired" class="form-check-label">
-                                    This checkpoint is required
-                                </label>
+                            <div class="mb-3 form-field">
+                                <label asp-for="Checkpoint.CheckpointName" class="form-label">Checkpoint Name</label>
+                                <input asp-for="Checkpoint.CheckpointName" type="text" class="form-control" required>
+                                <span asp-validation-for="Checkpoint.CheckpointName" class="text-danger invalid-feedback"></span>
                             </div>
-                            <input asp-for="Checkpoint.IsRequired" type="hidden" value="false" />
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Active</label>
-                            <div class="form-check mt-2">
-                                <input asp-for="Checkpoint.IsActive" class="form-check-input" type="checkbox" checked />
-                                <label asp-for="Checkpoint.IsActive" class="form-check-label">
-                                    This checkpoint is active
-                                </label>
-                            </div>
-                            <input asp-for="Checkpoint.IsActive" type="hidden" value="false" />
                         </div>
                     </div>
-
-                    <!-- Dimensional Inspection Fields -->
-                    <div class="row g-3 mt-2" id="dimensionalFields" style="display: none;">
-                        <div class="col-12">
-                            <h6 class="text-primary">Dimensional Inspection Settings</h6>
-                        </div>
-                        <div class="col-md-4">
-                            <label asp-for="Checkpoint.TargetValue" class="form-label">Target Value</label>
-                            <input asp-for="Checkpoint.TargetValue" type="number" step="0.001" class="form-control" />
-                            <span asp-validation-for="Checkpoint.TargetValue" class="text-danger"></span>
-                        </div>
-                        <div class="col-md-4">
-                            <label asp-for="Checkpoint.UpperTolerance" class="form-label">Upper Tolerance</label>
-                            <input asp-for="Checkpoint.UpperTolerance" type="number" step="0.001" class="form-control" />
-                            <span asp-validation-for="Checkpoint.UpperTolerance" class="text-danger"></span>
-                        </div>
-                        <div class="col-md-4">
-                            <label asp-for="Checkpoint.LowerTolerance" class="form-label">Lower Tolerance</label>
-                            <input asp-for="Checkpoint.LowerTolerance" type="number" step="0.001" class="form-control" />
-                            <span asp-validation-for="Checkpoint.LowerTolerance" class="text-danger"></span>
+                    
+                    <div class="mb-3 form-field">
+                        <label asp-for="Checkpoint.Description" class="form-label">Description</label>
+                        <textarea asp-for="Checkpoint.Description" class="form-control" rows="2"></textarea>
+                        <span asp-validation-for="Checkpoint.Description" class="text-danger invalid-feedback"></span>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3 form-field">
+                                <label asp-for="Checkpoint.InspectionType" class="form-label">Inspection Type</label>
+                                <select asp-for="Checkpoint.InspectionType" class="form-select" required data-toggle-dimensional="true">
+                                    <option value="">Select Type</option>
+                                    <option value="Visual">Visual</option>
+                                    <option value="Dimensional">Dimensional</option>
+                                    <option value="Functional">Functional</option>
+                                    <option value="Material">Material</option>
+                                </select>
+                                <span asp-validation-for="Checkpoint.InspectionType" class="text-danger invalid-feedback"></span>
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            <label asp-for="Checkpoint.Unit" class="form-label">Unit</label>
-                            <input asp-for="Checkpoint.Unit" class="form-control" placeholder="mm, in, deg, etc." />
-                            <span asp-validation-for="Checkpoint.Unit" class="text-danger"></span>
-                        </div>
-                        <div class="col-md-6">
-                            <label asp-for="Checkpoint.MeasurementMethod" class="form-label">Measurement Method</label>
-                            <input asp-for="Checkpoint.MeasurementMethod" class="form-control" placeholder="Caliper, CMM, etc." />
-                            <span asp-validation-for="Checkpoint.MeasurementMethod" class="text-danger"></span>
+                            <div class="mb-3 form-field">
+                                <label asp-for="Checkpoint.SortOrder" class="form-label">Sort Order</label>
+                                <input asp-for="Checkpoint.SortOrder" type="number" class="form-control" value="100">
+                                <span asp-validation-for="Checkpoint.SortOrder" class="text-danger invalid-feedback"></span>
+                            </div>
                         </div>
                     </div>
-
-                    <div class="row g-3 mt-2">
+                    
+                    <!-- Dimensional fields (initially hidden) -->
+                    <div id="dimensionalFields" class="dimensional-fields" style="display: none;">
+                        <hr>
+                        <h6 class="mb-3">Dimensional Specifications</h6>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="mb-3 form-field">
+                                    <label asp-for="Checkpoint.TargetValue" class="form-label">Target Value</label>
+                                    <input asp-for="Checkpoint.TargetValue" type="number" step="0.0001" class="form-control">
+                                    <span asp-validation-for="Checkpoint.TargetValue" class="text-danger invalid-feedback"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3 form-field">
+                                    <label asp-for="Checkpoint.UpperTolerance" class="form-label">Upper Tolerance (+)</label>
+                                    <input asp-for="Checkpoint.UpperTolerance" type="number" step="0.0001" class="form-control">
+                                    <span asp-validation-for="Checkpoint.UpperTolerance" class="text-danger invalid-feedback"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3 form-field">
+                                    <label asp-for="Checkpoint.LowerTolerance" class="form-label">Lower Tolerance (-)</label>
+                                    <input asp-for="Checkpoint.LowerTolerance" type="number" step="0.0001" class="form-control">
+                                    <span asp-validation-for="Checkpoint.LowerTolerance" class="text-danger invalid-feedback"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3 form-field">
+                                    <label asp-for="Checkpoint.Unit" class="form-label">Unit</label>
+                                    <select asp-for="Checkpoint.Unit" class="form-select">
+                                        <option value="">Select Unit</option>
+                                        <option value="inches">inches</option>
+                                        <option value="mm">mm</option>
+                                        <option value="cm">cm</option>
+                                        <option value="degrees">degrees</option>
+                                        <option value="percent">percent</option>
+                                    </select>
+                                    <span asp-validation-for="Checkpoint.Unit" class="text-danger invalid-feedback"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
                         <div class="col-md-6">
-                            <label asp-for="Checkpoint.AcceptanceCriteria" class="form-label">Acceptance Criteria</label>
-                            <textarea asp-for="Checkpoint.AcceptanceCriteria" class="form-control" rows="2"></textarea>
-                            <span asp-validation-for="Checkpoint.AcceptanceCriteria" class="text-danger"></span>
+                            <div class="form-check">
+                                <input asp-for="Checkpoint.IsRequired" class="form-check-input" type="checkbox">
+                                <label asp-for="Checkpoint.IsRequired" class="form-check-label">Required Checkpoint</label>
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            <label asp-for="Checkpoint.FailureAction" class="form-label">Failure Action</label>
-                            <textarea asp-for="Checkpoint.FailureAction" class="form-control" rows="2"></textarea>
-                            <span asp-validation-for="Checkpoint.FailureAction" class="text-danger"></span>
-                        </div>
-                        <div class="col-12">
-                            <label asp-for="Checkpoint.Notes" class="form-label">Additional Notes</label>
-                            <textarea asp-for="Checkpoint.Notes" class="form-control" rows="2"></textarea>
-                            <span asp-validation-for="Checkpoint.Notes" class="text-danger"></span>
+                            <div class="form-check">
+                                <input asp-for="Checkpoint.IsActive" class="form-check-input" type="checkbox" checked>
+                                <label asp-for="Checkpoint.IsActive" class="form-check-label">Active</label>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -476,14 +341,14 @@
 </div>
 
 <!-- Duplicate Checkpoint Modal -->
-<div class="modal fade" id="duplicateModal" tabindex="-1">
+<div class="modal fade" id="duplicateModal" tabindex="-1" aria-labelledby="duplicateModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <form method="post" asp-page-handler="Duplicate">
                 @Html.AntiForgeryToken()
                 <div class="modal-header">
-                    <h5 class="modal-title">Duplicate Checkpoint</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <h5 class="modal-title" id="duplicateModalLabel">Duplicate Checkpoint</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <!-- Validation Summary -->
@@ -491,7 +356,7 @@
                     
                     <p>Select the target part to duplicate "<span id="sourceCheckpointName"></span>" to:</p>
                     <input type="hidden" id="sourceCheckpointId" name="sourceId" />
-                    <div class="mb-3">
+                    <div class="mb-3 form-field">
                         <label class="form-label">Target Part</label>
                         <select name="targetPartId" class="form-select" required>
                             <option value="">Select Target Part</option>
@@ -500,6 +365,7 @@
                                 <option value="@part.Id">@Html.Raw(Html.Encode(part.PartNumber)) - @Html.Raw(Html.Encode(part.Name))</option>
                             }
                         </select>
+                        <div class="invalid-feedback"></div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -524,114 +390,110 @@
     <partial name="_ValidationScriptsPartial" />
     
     <script>
-        // Enhanced form validation and submission handling
-        function initializeModalForms() {
-            // Handle create form submission
-            document.querySelector('#createCheckpointModal form').addEventListener('submit', function(e) {
-                const submitBtn = document.getElementById('createSubmitBtn');
-                showLoadingState(submitBtn);
-                
-                // Basic validation
-                const requiredFields = this.querySelectorAll('[required]');
-                let isValid = true;
-                
-                requiredFields.forEach(field => {
-                    if (!field.value.trim()) {
-                        isValid = false;
-                        field.classList.add('is-invalid');
-                    } else {
-                        field.classList.remove('is-invalid');
-                    }
-                });
-                
-                if (!isValid) {
-                    e.preventDefault();
-                    hideLoadingState(submitBtn);
-                    showAlert('error', 'Please fill in all required fields.');
-                }
-            });
-            
-            // Handle duplicate form submission
-            document.querySelector('#duplicateModal form').addEventListener('submit', function(e) {
-                const submitBtn = document.getElementById('duplicateSubmitBtn');
-                showLoadingState(submitBtn);
-                
-                const targetPart = this.querySelector('select[name="targetPartId"]');
-                if (!targetPart.value) {
-                    e.preventDefault();
-                    hideLoadingState(submitBtn);
-                    showAlert('error', 'Please select a target part.');
-                    targetPart.focus();
-                }
-            });
-        }
-        
-        function showLoadingState(button) {
-            const textSpan = button.querySelector('.submit-text');
-            const loadingSpan = button.querySelector('.submit-loading');
-            
-            if (textSpan) textSpan.classList.add('d-none');
-            if (loadingSpan) loadingSpan.classList.remove('d-none');
-            button.disabled = true;
-        }
-        
-        function hideLoadingState(button) {
-            const textSpan = button.querySelector('.submit-text');
-            const loadingSpan = button.querySelector('.submit-loading');
-            
-            if (textSpan) textSpan.classList.remove('d-none');
-            if (loadingSpan) loadingSpan.classList.add('d-none');
-            button.disabled = false;
-        }
-
-        // Show/hide dimensional fields based on inspection type
-        function toggleDimensionalFields() {
-            const inspectionType = document.getElementById('Checkpoint_InspectionType');
-            const dimensionalFields = document.getElementById('dimensionalFields');
-            
-            if (inspectionType && dimensionalFields) {
-                const isDimensional = inspectionType.value.toLowerCase().includes('dimensional');
-                dimensionalFields.style.display = isDimensional ? 'block' : 'none';
-            }
-        }
-
-        // Set up event listeners
+        // Checkpoints Page JavaScript - Using OpCentrix Admin Module
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize form validation
-            initializeModalForms();
             
-            // Dimensional fields toggle
-            const inspectionTypeSelect = document.getElementById('Checkpoint_InspectionType');
+            // Setup dimensional fields toggle
+            setupDimensionalToggle();
+            
+            // Setup duplicate checkpoint functionality
+            setupDuplicateCheckpoint();
+            
+            // Setup custom data action handlers
+            setupCustomActions();
+            
+            console.log('? [CHECKPOINTS] Page initialized successfully');
+        });
+
+        /**
+         * Setup dimensional fields toggle
+         */
+        function setupDimensionalToggle() {
+            const inspectionTypeSelect = document.querySelector('[data-toggle-dimensional]');
             if (inspectionTypeSelect) {
                 inspectionTypeSelect.addEventListener('change', toggleDimensionalFields);
                 toggleDimensionalFields(); // Initial check
             }
+        }
 
-            // Set up duplicate modal
+        /**
+         * Toggle dimensional fields visibility
+         */
+        function toggleDimensionalFields() {
+            const inspectionTypeSelect = document.querySelector('[data-toggle-dimensional]');
+            const dimensionalFields = document.getElementById('dimensionalFields');
+            
+            if (inspectionTypeSelect && dimensionalFields) {
+                const isDimensional = inspectionTypeSelect.value === 'Dimensional';
+                dimensionalFields.style.display = isDimensional ? 'block' : 'none';
+                
+                // Update required status for dimensional fields
+                const dimensionalInputs = dimensionalFields.querySelectorAll('input, select');
+                dimensionalInputs.forEach(input => {
+                    if (isDimensional) {
+                        // Make certain fields required for dimensional inspections
+                        if (input.name.includes('TargetValue') || input.name.includes('Unit')) {
+                            input.setAttribute('required', 'required');
+                        }
+                    } else {
+                        input.removeAttribute('required');
+                    }
+                });
+            }
+        }
+
+        /**
+         * Setup duplicate checkpoint functionality
+         */
+        function setupDuplicateCheckpoint() {
+            // Listen for Bootstrap modal events
             const duplicateModal = document.getElementById('duplicateModal');
             if (duplicateModal) {
                 duplicateModal.addEventListener('show.bs.modal', function (event) {
                     const button = event.relatedTarget;
-                    const sourceId = button.getAttribute('data-source-id');
-                    const sourceName = button.getAttribute('data-source-name');
+                    const sourceId = button.getAttribute('data-checkpoint-id');
+                    const sourceName = button.getAttribute('data-checkpoint-name');
                     
                     document.getElementById('sourceCheckpointId').value = sourceId;
                     document.getElementById('sourceCheckpointName').textContent = sourceName;
                 });
             }
-            
-            // Reset loading states when modals are closed
-            document.querySelectorAll('.modal').forEach(modal => {
-                modal.addEventListener('hidden.bs.modal', function() {
-                    const submitBtns = this.querySelectorAll('[id$="SubmitBtn"]');
-                    submitBtns.forEach(btn => hideLoadingState(btn));
-                });
+        }
+
+        /**
+         * Setup custom data action handlers
+         */
+        function setupCustomActions() {
+            document.addEventListener('click', function(e) {
+                const target = e.target;
+                
+                // Handle duplicate checkpoint action
+                if (target.getAttribute('data-action') === 'duplicate-checkpoint') {
+                    e.preventDefault();
+                    showDuplicateModal(target);
+                }
             });
-        });
-        
-        // Handle server-side validation errors
+        }
+
+        /**
+         * Show duplicate modal using Bootstrap modal
+         */
+        function showDuplicateModal(button) {
+            const checkpointId = button.getAttribute('data-checkpoint-id');
+            const checkpointName = button.getAttribute('data-checkpoint-name');
+            
+            // Populate modal data
+            document.getElementById('sourceCheckpointId').value = checkpointId;
+            document.getElementById('sourceCheckpointName').textContent = checkpointName;
+            
+            // Show Bootstrap modal
+            const duplicateModal = new bootstrap.Modal(document.getElementById('duplicateModal'));
+            duplicateModal.show();
+        }
+
+        // Handle server-side validation errors by showing the modal
         document.addEventListener('DOMContentLoaded', function() {
-            // Check if there are validation errors and show the modal
+            // Check if there are validation errors and show the appropriate modal
             const validationErrors = document.querySelectorAll('.text-danger');
             const hasErrors = Array.from(validationErrors).some(error => error.textContent.trim());
             
@@ -641,9 +503,11 @@
                 const duplicateModal = document.querySelector('#duplicateModal .text-danger');
                 
                 if (createModal && createModal.textContent.trim()) {
-                    new bootstrap.Modal(document.getElementById('createCheckpointModal')).show();
+                    const modal = new bootstrap.Modal(document.getElementById('createCheckpointModal'));
+                    modal.show();
                 } else if (duplicateModal && duplicateModal.textContent.trim()) {
-                    new bootstrap.Modal(document.getElementById('duplicateModal')).show();
+                    const modal = new bootstrap.Modal(document.getElementById('duplicateModal'));
+                    modal.show();
                 }
                 
                 // Show validation summary
@@ -653,5 +517,77 @@
                 }
             }
         });
+
+        // Reset loading states when modals are closed
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('hidden.bs.modal', function() {
+                const submitBtns = this.querySelectorAll('[id$="SubmitBtn"]');
+                submitBtns.forEach(btn => OpCentrixAdmin.Loading.hide(btn));
+            });
+        });
+
+        // Global functions for backward compatibility
+        window.CheckpointsPage = {
+            toggleDimensionalFields,
+            showDuplicateModal,
+            setupDimensionalToggle,
+            setupDuplicateCheckpoint
+        };
     </script>
 }
+
+<style>
+    /* Bootstrap modal integration with admin styles */
+    .modal-content {
+        border-radius: 0.5rem;
+        border: none;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    }
+    
+    .modal-header {
+        border-bottom: 1px solid #e5e7eb;
+        padding: 1.5rem;
+    }
+    
+    .modal-body {
+        padding: 1.5rem;
+    }
+    
+    .modal-footer {
+        border-top: 1px solid #e5e7eb;
+        padding: 1.5rem;
+    }
+    
+    /* Form validation styles */
+    .form-field .form-control:focus,
+    .form-field .form-select:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 0.125rem rgba(59, 130, 246, 0.25);
+    }
+    
+    .form-field .form-control.is-invalid:focus {
+        border-color: #ef4444;
+        box-shadow: 0 0 0 0.125rem rgba(239, 68, 68, 0.25);
+    }
+    
+    /* Loading state styles */
+    .submit-loading {
+        display: none;
+    }
+    
+    button.loading .submit-text {
+        display: none;
+    }
+    
+    button.loading .submit-loading {
+        display: inline-flex !important;
+    }
+    
+    /* Dimensional fields styling */
+    .dimensional-fields {
+        background-color: #f8fafc;
+        padding: 1rem;
+        border-radius: 0.375rem;
+        border: 1px solid #e2e8f0;
+    }
+</style>

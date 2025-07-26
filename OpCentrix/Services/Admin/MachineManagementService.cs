@@ -96,27 +96,10 @@ public class MachineManagementService : IMachineManagementService
                 .ThenBy(m => m.MachineId)
                 .ToListAsync();
 
-            // If no active machines found, provide default empty schedule machines
-            if (!machines.Any())
-            {
-                _logger.LogInformation("No active machines found - providing default empty schedule machines for demo purposes");
-                var defaultMachineIds = await GetDefaultEmptyScheduleMachinesAsync();
-                
-                // Return virtual machines for empty state display
-                return defaultMachineIds.Select(id => new Machine
-                {
-                    MachineId = id,
-                    MachineName = GetDefaultMachineName(id),
-                    MachineType = GetDefaultMachineType(id),
-                    Status = "Not Configured",
-                    IsActive = false,
-                    IsAvailableForScheduling = false,
-                    SupportedMaterials = GetDefaultSupportedMaterials(id),
-                    Location = "Virtual",
-                    Priority = GetDefaultMachinePriority(id)
-                }).ToList();
-            }
+            _logger.LogInformation("Retrieved {Count} active machines from database", machines.Count);
 
+            // Return actual machines from database - no fallback to virtual machines
+            // The scheduler will handle the empty state display if no machines exist
             return machines;
         }
         catch (Exception ex)

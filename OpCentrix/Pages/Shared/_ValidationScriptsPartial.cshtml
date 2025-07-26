@@ -1,2 +1,486 @@
-﻿<script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+﻿@*
+    Enhanced Validation Scripts Partial
+    Provides comprehensive form validation with modal support
+    Integrates with admin.js for consistent validation patterns
+*@
+
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
 <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+<script src="~/js/admin.js"></script>
+
+<script>
+/**
+ * Enhanced Modal Validation System
+ * Integrates jQuery Validation with OpCentrix Admin module
+ */
+window.ModalValidation = {
+    
+    /**
+     * Configure global validation settings
+     */
+    configure: function() {
+        // Enhanced jQuery validation defaults
+        jQuery.validator.setDefaults({
+            errorClass: 'is-invalid text-red-500 text-xs',
+            validClass: 'is-valid border-green-500',
+            errorElement: 'div',
+            errorPlacement: function(error, element) {
+                // Find the best place to put the error message
+                const container = element.closest('.form-group, .mb-3, .space-y-1, .form-field');
+                if (container.length) {
+                    // Look for existing error container
+                    let errorContainer = container.find('.invalid-feedback, .error-message').first();
+                    if (!errorContainer.length) {
+                        // Create error container
+                        errorContainer = jQuery('<div class="invalid-feedback text-red-500 text-xs mt-1"></div>');
+                        container.append(errorContainer);
+                    }
+                    error.appendTo(errorContainer.parent());
+                } else {
+                    // Fallback - insert after element
+                    error.insertAfter(element);
+                }
+            },
+            highlight: function(element, errorClass, validClass) {
+                jQuery(element).addClass(errorClass).removeClass(validClass);
+                jQuery(element).closest('.form-group, .mb-3, .space-y-1').addClass('has-error');
+            },
+            unhighlight: function(element, errorClass, validClass) {
+                jQuery(element).removeClass(errorClass).addClass(validClass);
+                jQuery(element).closest('.form-group, .mb-3, .space-y-1').removeClass('has-error');
+            },
+            submitHandler: function(form) {
+                // Use OpCentrix Admin form submission
+                return OpCentrixAdmin.Form.submit(form, { validate: false });
+            }
+        });
+
+        // Add custom validation methods
+        this.addCustomMethods();
+        
+        // Setup global form submission handling
+        this.setupGlobalHandlers();
+    },
+
+    /**
+     * Initialize validation for a specific modal
+     */
+    initializeModal: function(modalId) {
+        const modal = document.getElementById(modalId);
+        if (!modal) {
+            console.warn('Modal not found: ' + modalId);
+            return;
+        }
+
+        const form = modal.querySelector('form');
+        if (!form) {
+            console.warn('No form found in modal: ' + modalId);
+            return;
+        }
+
+        // Initialize jQuery validation
+        const $form = jQuery(form);
+        if (!$form.data('validator')) {
+            $form.validate();
+        }
+
+        // Setup form submission handling
+        this.setupFormSubmission(form);
+        
+        // Setup field validation
+        this.setupFieldValidation(form);
+        
+        console.log('✅ [VALIDATION] Initialized modal: ' + modalId);
+    },
+
+    /**
+     * Setup form submission handling
+     */
+    setupFormSubmission: function(form) {
+        const $form = jQuery(form);
+        
+        // Remove existing handlers to prevent duplicates
+        $form.off('submit.modalValidation');
+        
+        // Add submission handler
+        $form.on('submit.modalValidation', (e) => {
+            const validator = $form.data('validator');
+            
+            if (validator && !validator.form()) {
+                e.preventDefault();
+                
+                // Show validation errors in modal
+                this.showValidationSummary(form);
+                
+                // Focus first invalid field
+                const firstError = form.querySelector('.is-invalid, .input-validation-error');
+                if (firstError) {
+                    firstError.focus();
+                }
+                
+                // Hide loading state
+                const submitBtn = form.querySelector('[type="submit"]');
+                if (submitBtn) {
+                    OpCentrixAdmin.Loading.hide(submitBtn);
+                }
+                
+                console.log('❌ [VALIDATION] Form validation failed: ' + (form.id || 'unnamed'));
+                return false;
+            }
+            
+            // If validation passes, show loading state
+            const submitBtn = form.querySelector('[type="submit"]');
+            if (submitBtn) {
+                OpCentrixAdmin.Loading.show(submitBtn);
+            }
+            
+            console.log('✅ [VALIDATION] Form validation passed: ' + (form.id || 'unnamed'));
+        });
+    },
+
+    /**
+     * Setup field-level validation
+     */
+    setupFieldValidation: function(form) {
+        const fields = form.querySelectorAll('input, select, textarea');
+        
+        fields.forEach(field => {
+            const $field = jQuery(field);
+            
+            // Remove existing handlers
+            $field.off('blur.modalValidation input.modalValidation');
+            
+            // Add validation on blur
+            $field.on('blur.modalValidation', () => {
+                const validator = jQuery(form).data('validator');
+                if (validator) {
+                    validator.element(field);
+                }
+            });
+            
+            // Add validation on input (debounced)
+            let timeout;
+            $field.on('input.modalValidation', () => {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => {
+                    const validator = jQuery(form).data('validator');
+                    if (validator && field.value.trim()) {
+                        validator.element(field);
+                    }
+                }, 300);
+            });
+        });
+    },
+
+    /**
+     * Show validation summary in modal
+     */
+    showValidationSummary: function(form) {
+        const validator = jQuery(form).data('validator');
+        if (!validator || !validator.errorList.length) return;
+
+        // Find or create validation summary container
+        let summaryContainer = form.querySelector('.validation-summary, [asp-validation-summary]');
+        if (!summaryContainer) {
+            summaryContainer = document.createElement('div');
+            summaryContainer.className = 'validation-summary alert alert-danger mb-3';
+            summaryContainer.setAttribute('role', 'alert');
+            form.insertBefore(summaryContainer, form.firstChild);
+        }
+
+        // Build error list
+        const errorMessages = validator.errorList.map(error => 
+            '<li>' + error.message + '</li>'
+        ).join('');
+
+        summaryContainer.innerHTML = '<div class="flex items-center space-x-2">' +
+            '<svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">' +
+                '<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>' +
+            '</svg>' +
+            '<div>' +
+                '<h4 class="font-medium text-red-800">Please correct the following errors:</h4>' +
+                '<ul class="mt-1 text-sm text-red-700 list-disc list-inside">' +
+                    errorMessages +
+                '</ul>' +
+            '</div>' +
+        '</div>';
+
+        summaryContainer.classList.remove('d-none', 'hidden');
+        summaryContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    },
+
+    /**
+     * Add custom validation methods
+     */
+    addCustomMethods: function() {
+        // Strong password validation
+        jQuery.validator.addMethod('strongPassword', function(value, element) {
+            return this.optional(element) || 
+                   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@@$!%*?&])[A-Za-z\d@@$!%*?&]/.test(value);
+        }, 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.');
+
+        // Phone number validation
+        jQuery.validator.addMethod('phoneNumber', function(value, element) {
+            return this.optional(element) || 
+                   /^[\+]?[(]?[\d\s\-\(\)]{10,}/.test(value.replace(/\s/g, ''));
+        }, 'Please enter a valid phone number.');
+
+        // Future date validation
+        jQuery.validator.addMethod('futureDate', function(value, element) {
+            if (this.optional(element)) return true;
+            const inputDate = new Date(value);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            return inputDate >= today;
+        }, 'Date must be today or in the future.');
+
+        // Past date validation
+        jQuery.validator.addMethod('pastDate', function(value, element) {
+            if (this.optional(element)) return true;
+            const inputDate = new Date(value);
+            const today = new Date();
+            today.setHours(23, 59, 59, 999);
+            return inputDate <= today;
+        }, 'Date must be today or in the past.');
+
+        // Decimal validation with specific precision
+        jQuery.validator.addMethod('decimal', function(value, element, param) {
+            if (this.optional(element)) return true;
+            const regex = new RegExp('^\\d+(\\.\\d{1,' + param + '})?');
+            return regex.test(value);
+        }, 'Please enter a valid decimal number.');
+
+        // File size validation
+        jQuery.validator.addMethod('fileSize', function(value, element, param) {
+            if (this.optional(element)) return true;
+            const file = element.files[0];
+            if (!file) return true;
+            const maxSize = param * 1024 * 1024; // Convert MB to bytes
+            return file.size <= maxSize;
+        }, 'File size must be less than {0} MB.');
+
+        // File extension validation
+        jQuery.validator.addMethod('fileExtension', function(value, element, param) {
+            if (this.optional(element)) return true;
+            const extensions = param.split(',').map(ext => ext.toLowerCase().trim());
+            const fileName = value.toLowerCase();
+            return extensions.some(ext => fileName.endsWith(ext));
+        }, 'Please upload a file with a valid extension.');
+    },
+
+    /**
+     * Setup global form handlers
+     */
+    setupGlobalHandlers: function() {
+        // Handle HTMX responses for validation
+        jQuery(document).on('htmx:responseError', (event) => {
+            const xhr = event.detail.xhr;
+            if (xhr.status === 400) {
+                // Bad request - likely validation errors
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    if (response.errors) {
+                        this.handleServerErrors(event.target, response.errors);
+                    }
+                } catch (e) {
+                    // Response is HTML with validation errors
+                    console.log('Server returned HTML validation errors');
+                }
+            }
+        });
+
+        // Handle successful form submissions
+        jQuery(document).on('htmx:afterRequest', (event) => {
+            if (event.detail.successful) {
+                const form = event.target.closest('form');
+                if (form) {
+                    // Clear validation errors on successful submission
+                    this.clearFormErrors(form);
+                    
+                    // Hide loading states
+                    const submitBtn = form.querySelector('[type="submit"]');
+                    if (submitBtn) {
+                        OpCentrixAdmin.Loading.hide(submitBtn);
+                    }
+                }
+            }
+        });
+    },
+
+    /**
+     * Handle server-side validation errors
+     */
+    handleServerErrors: function(form, errors) {
+        if (typeof form === 'string') {
+            form = document.getElementById(form);
+        }
+        if (!form) return;
+
+        const $form = jQuery(form);
+        const validator = $form.data('validator');
+
+        if (validator) {
+            // Clear existing errors
+            validator.resetForm();
+            
+            // Add server errors
+            const serverErrors = {};
+            Object.keys(errors).forEach(fieldName => {
+                const field = form.querySelector('[name="' + fieldName + '"]');
+                if (field) {
+                    serverErrors[fieldName] = errors[fieldName][0]; // Take first error
+                }
+            });
+            
+            validator.showErrors(serverErrors);
+        }
+
+        // Show validation summary
+        this.showValidationSummary(form);
+    },
+
+    /**
+     * Clear form validation errors
+     */
+    clearFormErrors: function(form) {
+        const $form = jQuery(form);
+        const validator = $form.data('validator');
+        
+        if (validator) {
+            validator.resetForm();
+        }
+
+        // Clear visual indicators
+        const fields = form.querySelectorAll('input, select, textarea');
+        fields.forEach(field => {
+            field.classList.remove('is-invalid', 'is-valid', 'border-red-500', 'border-green-500');
+        });
+
+        // Hide validation summary
+        const summaryContainer = form.querySelector('.validation-summary');
+        if (summaryContainer) {
+            summaryContainer.classList.add('d-none', 'hidden');
+        }
+    },
+
+    /**
+     * Reset form validation
+     */
+    resetForm: function(form) {
+        if (typeof form === 'string') {
+            form = document.getElementById(form);
+        }
+        if (!form) return;
+
+        this.clearFormErrors(form);
+        form.reset();
+    },
+
+    /**
+     * Setup accessibility features
+     */
+    setupAccessibility: function(modalId) {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+
+        // Add live region for validation announcements
+        if (!document.getElementById('validation-status')) {
+            const liveRegion = document.createElement('div');
+            liveRegion.id = 'validation-status';
+            liveRegion.setAttribute('aria-live', 'polite');
+            liveRegion.setAttribute('aria-atomic', 'true');
+            liveRegion.className = 'sr-only';
+            document.body.appendChild(liveRegion);
+        }
+
+        // Announce validation results
+        const form = modal.querySelector('form');
+        if (form) {
+            const $form = jQuery(form);
+            
+            $form.on('invalid-form.validate', () => {
+                const liveRegion = document.getElementById('validation-status');
+                liveRegion.textContent = 'Form has validation errors. Please correct them and try again.';
+            });
+
+            $form.on('valid-form.validate', () => {
+                const liveRegion = document.getElementById('validation-status');
+                liveRegion.textContent = 'Form is valid and being submitted.';
+            });
+        }
+    },
+
+    /**
+     * Loading state management
+     */
+    showLoadingState: function(button) {
+        OpCentrixAdmin.Loading.show(button);
+    },
+
+    hideLoadingState: function(button) {
+        OpCentrixAdmin.Loading.hide(button);
+    }
+};
+
+// Auto-initialize when DOM is ready
+jQuery(document).ready(function() {
+    // Configure global validation settings
+    ModalValidation.configure();
+    
+    // Auto-detect and initialize modal forms
+    jQuery('.modal form').each(function() {
+        const modal = this.closest('.modal');
+        if (modal && modal.id) {
+            ModalValidation.initializeModal(modal.id);
+            ModalValidation.setupAccessibility(modal.id);
+        }
+    });
+    
+    // Initialize non-modal forms
+    jQuery('form:not(.modal form)').each(function() {
+        if (!jQuery(this).data('validator')) {
+            jQuery(this).validate();
+            ModalValidation.setupFormSubmission(this);
+            ModalValidation.setupFieldValidation(this);
+        }
+    });
+    
+    // Handle dynamic content (forms loaded via HTMX)
+    jQuery(document).on('htmx:afterSwap', function(event) {
+        const newForms = jQuery(event.target).find('form');
+        newForms.each(function() {
+            if (!jQuery(this).data('validator')) {
+                jQuery(this).validate();
+                ModalValidation.setupFormSubmission(this);
+                ModalValidation.setupFieldValidation(this);
+                
+                // If it's in a modal, setup modal-specific features
+                const modal = this.closest('.modal');
+                if (modal && modal.id) {
+                    ModalValidation.setupAccessibility(modal.id);
+                }
+            }
+        });
+    });
+    
+    // Global helper functions for backward compatibility
+    window.showLoadingState = function(button) {
+        ModalValidation.showLoadingState(button);
+    };
+
+    window.hideLoadingState = function(button) {
+        ModalValidation.hideLoadingState(button);
+    };
+
+    window.resetModalForm = function(modalId) {
+        const modal = document.getElementById(modalId);
+        const form = modal && modal.querySelector('form');
+        if (form) {
+            ModalValidation.resetForm(form);
+        }
+    };
+});
+
+console.log('✅ [VALIDATION] Enhanced validation system loaded');
+</script>

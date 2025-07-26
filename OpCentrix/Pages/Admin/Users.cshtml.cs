@@ -487,8 +487,52 @@ public class UsersModel : PageModel
 
     public string GetSortIcon(string column)
     {
-        if (SortBy != column) return "??";
+        if (SortBy != column) return "?";
         return SortDirection == "asc" ? "??" : "??";
+    }
+
+    /// <summary>
+    /// Get CSS class for role badge
+    /// </summary>
+    public string GetRoleBadgeClass(string role)
+    {
+        return role switch
+        {
+            UserRoles.Admin => "bg-red-100 text-red-800",
+            UserRoles.Manager => "bg-purple-100 text-purple-800",
+            UserRoles.Scheduler => "bg-blue-100 text-blue-800",
+            UserRoles.Operator => "bg-green-100 text-green-800",
+            UserRoles.PrintingSpecialist => "bg-orange-100 text-orange-800",
+            UserRoles.CoatingSpecialist => "bg-yellow-100 text-yellow-800",
+            UserRoles.ShippingSpecialist => "bg-indigo-100 text-indigo-800",
+            UserRoles.EDMSpecialist => "bg-pink-100 text-pink-800",
+            UserRoles.MachiningSpecialist => "bg-gray-100 text-gray-800",
+            UserRoles.QCSpecialist => "bg-teal-100 text-teal-800",
+            UserRoles.Analyst => "bg-cyan-100 text-cyan-800",
+            _ => "bg-gray-100 text-gray-800"
+        };
+    }
+
+    /// <summary>
+    /// Get display name for role
+    /// </summary>
+    public string GetRoleDisplayName(string role)
+    {
+        return role switch
+        {
+            UserRoles.Admin => "Administrator",
+            UserRoles.Manager => "Manager",
+            UserRoles.Scheduler => "Scheduler",
+            UserRoles.Operator => "Operator",
+            UserRoles.PrintingSpecialist => "Printing Specialist",
+            UserRoles.CoatingSpecialist => "Coating Specialist",
+            UserRoles.ShippingSpecialist => "Shipping Specialist",
+            UserRoles.EDMSpecialist => "EDM Specialist",
+            UserRoles.MachiningSpecialist => "Machining Specialist",
+            UserRoles.QCSpecialist => "QC Specialist",
+            UserRoles.Analyst => "Analyst",
+            _ => role
+        };
     }
 }
 

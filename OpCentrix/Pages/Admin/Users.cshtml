@@ -1,5 +1,4 @@
 @page
-@using OpCentrix.Models
 @model OpCentrix.Pages.Admin.UsersModel
 @{
     ViewData["Title"] = "User Management";
@@ -14,108 +13,72 @@
             <p class="mt-1 text-sm text-gray-600">Manage user accounts, roles, and permissions</p>
         </div>
         <div class="flex space-x-3">
-            <button onclick="AdminFunctions.showCreateUserModal()" class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 active:bg-blue-900 focus:outline-none focus:border-blue-900 focus:ring ring-blue-300 transition ease-in-out duration-150">
-                ?? Add New User
+            <button type="button" 
+                    data-action="show-modal" 
+                    data-target="userModal"
+                    class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                ?? Add User
             </button>
         </div>
     </div>
 
-    <!-- Statistics Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
-            <div class="flex items-center">
-                <div class="flex-1">
-                    <h3 class="text-sm font-medium text-gray-500">Total Users</h3>
-                    <p class="text-2xl font-bold text-gray-900">@Model.TotalUsers</p>
-                </div>
-                <div class="text-blue-500 text-3xl">??</div>
-            </div>
-        </div>
-        
-        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
-            <div class="flex items-center">
-                <div class="flex-1">
-                    <h3 class="text-sm font-medium text-gray-500">Active Users</h3>
-                    <p class="text-2xl font-bold text-gray-900">@Model.ActiveUsers</p>
-                </div>
-                <div class="text-green-500 text-3xl">?</div>
-            </div>
-        </div>
-        
-        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-red-500">
-            <div class="flex items-center">
-                <div class="flex-1">
-                    <h3 class="text-sm font-medium text-gray-500">Inactive Users</h3>
-                    <p class="text-2xl font-bold text-gray-900">@Model.InactiveUsers</p>
-                </div>
-                <div class="text-red-500 text-3xl">?</div>
-            </div>
-        </div>
-        
-        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500">
-            <div class="flex items-center">
-                <div class="flex-1">
-                    <h3 class="text-sm font-medium text-gray-500">Roles</h3>
-                    <p class="text-2xl font-bold text-gray-900">@Model.RoleStatistics.Count</p>
-                </div>
-                <div class="text-purple-500 text-3xl">???</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Role Statistics -->
-    @if (Model.RoleStatistics.Any())
-    {
+    <!-- Users Statistics -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">Users by Role</h3>
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                @foreach (var roleStats in Model.RoleStatistics.OrderByDescending(r => r.Value))
-                {
-                    <div class="text-center p-3 bg-gray-50 rounded-lg">
-                        <div class="text-2xl font-bold text-blue-600">@roleStats.Value</div>
-                        <div class="text-sm text-gray-600">@UserRoles.GetDisplayName(roleStats.Key)</div>
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-lg">
+                        <span class="text-xl">??</span>
                     </div>
-                }
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-gray-500">Total Users</p>
+                    <p class="text-lg font-semibold text-gray-900">@Model.Users.Count</p>
+                </div>
             </div>
         </div>
-    }
 
-    <!-- Search and Filter Section -->
-    <div class="bg-white rounded-lg shadow p-6">
-        <h3 class="text-lg font-medium text-gray-900 mb-4">Search & Filter</h3>
-        <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Search</label>
-                <input type="text" name="searchTerm" value="@Model.SearchTerm" placeholder="Username, name, email..." 
-                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="flex items-center justify-center w-10 h-10 bg-green-100 rounded-lg">
+                        <span class="text-xl">?</span>
+                    </div>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-gray-500">Active Users</p>
+                    <p class="text-lg font-semibold text-gray-900">@Model.Users.Count(u => u.IsActive)</p>
+                </div>
             </div>
-            
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Role</label>
-                <select name="roleFilter" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                    <option value="">All Roles</option>
-                    @foreach (var role in UserRoles.AllRoles)
-                    {
-                        <option value="@role" selected="@(Model.RoleFilter == role)">@UserRoles.GetDisplayName(role)</option>
-                    }
-                </select>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="flex items-center justify-center w-10 h-10 bg-purple-100 rounded-lg">
+                        <span class="text-xl">??</span>
+                    </div>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-gray-500">Administrators</p>
+                    <p class="text-lg font-semibold text-gray-900">@Model.Users.Count(u => u.Role == "Admin")</p>
+                </div>
             </div>
-            
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Status</label>
-                <select name="statusFilter" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                    <option value="">All Statuses</option>
-                    <option value="Active" selected="@(Model.StatusFilter == "Active")">Active</option>
-                    <option value="Inactive" selected="@(Model.StatusFilter == "Inactive")">Inactive</option>
-                </select>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="flex items-center justify-center w-10 h-10 bg-yellow-100 rounded-lg">
+                        <span class="text-xl">??</span>
+                    </div>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-gray-500">Operators</p>
+                    <p class="text-lg font-semibold text-gray-900">@Model.Users.Count(u => u.Role == "Operator")</p>
+                </div>
             </div>
-            
-            <div class="flex items-end">
-                <button type="submit" class="w-full px-4 py-2 bg-gray-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:outline-none focus:border-gray-700 focus:ring ring-gray-300 transition ease-in-out duration-150">
-                    ?? Search
-                </button>
-            </div>
-        </form>
+        </div>
     </div>
 
     <!-- Users Table -->
@@ -124,296 +87,286 @@
             <h3 class="text-lg font-medium text-gray-900">Users (@Model.Users.Count)</h3>
         </div>
         
-        @if (Model.Users.Any())
-        {
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                <a href="?searchTerm=@Model.SearchTerm&roleFilter=@Model.RoleFilter&statusFilter=@Model.StatusFilter&sortBy=Username&sortDirection=@Model.GetNextSortDirection("Username")" 
-                                   class="flex items-center hover:text-gray-700">
-                                    Username @Model.GetSortIcon("Username")
-                                </a>
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                <a href="?searchTerm=@Model.SearchTerm&roleFilter=@Model.RoleFilter&statusFilter=@Model.StatusFilter&sortBy=FullName&sortDirection=@Model.GetNextSortDirection("FullName")" 
-                                   class="flex items-center hover:text-gray-700">
-                                    Full Name @Model.GetSortIcon("FullName")
-                                </a>
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                <a href="?searchTerm=@Model.SearchTerm&roleFilter=@Model.RoleFilter&statusFilter=@Model.StatusFilter&sortBy=Email&sortDirection=@Model.GetNextSortDirection("Email")" 
-                                   class="flex items-center hover:text-gray-700">
-                                    Email @Model.GetSortIcon("Email")
-                                </a>
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                <a href="?searchTerm=@Model.SearchTerm&roleFilter=@Model.RoleFilter&statusFilter=@Model.StatusFilter&sortBy=Role&sortDirection=@Model.GetNextSortDirection("Role")" 
-                                   class="flex items-center hover:text-gray-700">
-                                    Role @Model.GetSortIcon("Role")
-                                </a>
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                <a href="?searchTerm=@Model.SearchTerm&roleFilter=@Model.RoleFilter&statusFilter=@Model.StatusFilter&sortBy=Department&sortDirection=@Model.GetNextSortDirection("Department")" 
-                                   class="flex items-center hover:text-gray-700">
-                                    Department @Model.GetSortIcon("Department")
-                                </a>
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                <a href="?searchTerm=@Model.SearchTerm&roleFilter=@Model.RoleFilter&statusFilter=@Model.StatusFilter&sortBy=IsActive&sortDirection=@Model.GetNextSortDirection("IsActive")" 
-                                   class="flex items-center hover:text-gray-700">
-                                    Status @Model.GetSortIcon("IsActive")
-                                </a>
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                <a href="?searchTerm=@Model.SearchTerm&roleFilter=@Model.RoleFilter&statusFilter=@Model.StatusFilter&sortBy=LastLoginDate&sortDirection=@Model.GetNextSortDirection("LastLoginDate")" 
-                                   class="flex items-center hover:text-gray-700">
-                                    Last Login @Model.GetSortIcon("LastLoginDate")
-                                </a>
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Actions
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        @foreach (var user in Model.Users)
-                        {
-                            <tr class="hover:bg-gray-50">
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="flex items-center">
-                                        <div class="text-sm font-medium text-gray-900">@Html.Raw(Html.Encode(user.Username))</div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    @foreach (var user in Model.Users)
+                    {
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-10 w-10">
+                                        <div class="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                                            <span class="text-sm font-medium text-gray-700">@user.FullName?.Substring(0, 1)?.ToUpper()</span>
+                                        </div>
                                     </div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm text-gray-900">@Html.Raw(Html.Encode(user.FullName))</div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm text-gray-900">@Html.Raw(Html.Encode(user.Email))</div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium @(user.Role switch 
-                                    { 
-                                        "Admin" => "bg-red-100 text-red-800", 
-                                        "Manager" => "bg-purple-100 text-purple-800", 
-                                        "Scheduler" => "bg-blue-100 text-blue-800", 
-                                        "Operator" => "bg-green-100 text-green-800", 
-                                        _ => "bg-gray-100 text-gray-800" 
-                                    })">
-                                        @UserRoles.GetDisplayName(user.Role)
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm text-gray-900">@(string.IsNullOrEmpty(user.Department) ? "-" : Html.Raw(Html.Encode(user.Department)))</div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    @if (user.IsActive)
-                                    {
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                            ? Active
-                                        </span>
-                                    }
-                                    else
-                                    {
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                            ? Inactive
-                                        </span>
-                                    }
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    @(user.LastLoginDate == default ? "Never" : user.LastLoginDate.ToString("MM/dd/yyyy"))
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <div class="flex items-center justify-end space-x-2">
-                                        <button onclick="AdminFunctions.editUser(@user.Id, '@Html.Raw(Html.Encode(user.Username))', '@Html.Raw(Html.Encode(user.FullName))', '@Html.Raw(Html.Encode(user.Email))', '@user.Role', '@Html.Raw(Html.Encode(user.Department ?? ""))', @(user.IsActive ? "true" : "false"))" 
-                                                class="text-blue-600 hover:text-blue-900" title="Edit User">
-                                            ??
-                                        </button>
-                                        
-                                        <button onclick="AdminFunctions.showPasswordResetModal(@user.Id, '@Html.Raw(Html.Encode(user.Username))')" 
-                                                class="text-yellow-600 hover:text-yellow-900" title="Reset Password">
-                                            ??
-                                        </button>
-                                        
-                                        <form method="post" asp-page-handler="ToggleUserStatus" class="inline">
-                                            @Html.AntiForgeryToken()
-                                            <input type="hidden" name="userId" value="@user.Id" />
-                                            <button type="submit" 
-                                                    class="@(user.IsActive ? "text-orange-600 hover:text-orange-900" : "text-green-600 hover:text-green-900")" 
-                                                    title="@(user.IsActive ? "Disable User" : "Enable User")"
-                                                    onclick="return AdminFunctions.confirmAction('@(user.IsActive ? "Disable" : "Enable") user @Html.Raw(Html.Encode(user.Username))?')">
-                                                @(user.IsActive ? "??" : "??")
-                                            </button>
-                                        </form>
-                                        
-                                        @if (user.Role != UserRoles.Admin)
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900">@Html.Raw(Html.Encode(user.FullName))</div>
+                                        <div class="text-sm text-gray-500">@Html.Raw(Html.Encode(user.Username))</div>
+                                        @if (!string.IsNullOrEmpty(user.Email))
                                         {
-                                            <form method="post" asp-page-handler="DeleteUser" class="inline">
-                                                @Html.AntiForgeryToken()
-                                                <input type="hidden" name="userId" value="@user.Id" />
-                                                <button type="submit" 
-                                                        class="text-red-600 hover:text-red-900" 
-                                                        title="Delete User"
-                                                        onclick="return AdminFunctions.confirmAction('Are you sure you want to delete user @Html.Raw(Html.Encode(user.Username))? This action cannot be undone.')">
-                                                    ???
-                                                </button>
-                                            </form>
+                                            <div class="text-xs text-gray-400">@Html.Raw(Html.Encode(user.Email))</div>
                                         }
                                     </div>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        }
-        else
-        {
-            <div class="text-center py-12">
-                <div class="text-gray-400 text-6xl mb-4">??</div>
-                <h3 class="text-lg font-medium text-gray-900 mb-2">No users found</h3>
-                <p class="text-gray-600 mb-4">Try adjusting your search criteria or create a new user.</p>
-                <button onclick="AdminFunctions.showCreateUserModal()" class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700">
-                    ?? Add First User
-                </button>
-            </div>
-        }
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium @Model.GetRoleBadgeClass(user.Role)">
+                                    @Model.GetRoleDisplayName(user.Role)
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                @Html.Raw(Html.Encode(user.Department ?? "Not assigned"))
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                @if (user.IsActive)
+                                {
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        ? Active
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                        ? Inactive
+                                    </span>
+                                }
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <div class="flex justify-end space-x-2">
+                                    <button type="button" 
+                                            data-action="edit-user"
+                                            data-user-id="@user.Id"
+                                            data-username="@user.Username"
+                                            data-fullname="@user.FullName"
+                                            data-email="@user.Email"
+                                            data-role="@user.Role"
+                                            data-department="@user.Department"
+                                            data-isactive="@user.IsActive.ToString().ToLower()"
+                                            class="text-blue-600 hover:text-blue-900 text-sm">
+                                        ?? Edit
+                                    </button>
+                                    <button type="button" 
+                                            data-action="show-modal"
+                                            data-target="passwordModal"
+                                            data-user-id="@user.Id"
+                                            data-username="@user.Username"
+                                            class="text-yellow-600 hover:text-yellow-900 text-sm">
+                                        ?? Reset Password
+                                    </button>
+                                    <form method="post" asp-page-handler="DeleteUser" class="inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="userId" value="@user.Id">
+                                        <button type="submit" 
+                                                data-action="confirm-delete"
+                                                data-item-name="@user.FullName (@user.Username)"
+                                                class="text-red-600 hover:text-red-900 text-sm">
+                                            ??? Delete
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     </div>
+
+    @if (!Model.Users.Any())
+    {
+        <div class="text-center py-12">
+            <div class="text-gray-400 text-6xl mb-4">??</div>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">No users found</h3>
+            <p class="text-gray-600 mb-4">Create your first user account to get started.</p>
+            <button type="button" data-action="show-modal" data-target="userModal"
+                    class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                ?? Add First User
+            </button>
+        </div>
+    }
 </div>
 
-<!-- Create/Edit User Modal -->
-<div id="userModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
-    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-        <div class="mt-3">
-            <h3 id="userModalTitle" class="text-lg font-medium text-gray-900 mb-4">Add New User</h3>
-            
-            <form method="post" id="userForm">
-                @Html.AntiForgeryToken()
-                <input type="hidden" id="editingUserId" name="EditingUserId" value="" />
-                
-                <!-- Validation Summary -->
-                <div id="userValidationSummary" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4"></div>
-                
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Username*</label>
-                        <input type="text" name="UserInput.Username" id="username" required minlength="3" maxlength="50" 
-                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                        <span class="text-red-500 text-xs" id="usernameError"></span>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Full Name*</label>
-                        <input type="text" name="UserInput.FullName" id="fullName" required minlength="2" maxlength="100" 
-                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                        <span class="text-red-500 text-xs" id="fullNameError"></span>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Email*</label>
-                        <input type="email" name="UserInput.Email" id="email" required maxlength="100" 
-                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                        <span class="text-red-500 text-xs" id="emailError"></span>
-                    </div>
-                    
-                    <div id="passwordField">
-                        <label class="block text-sm font-medium text-gray-700">Password*</label>
-                        <input type="password" name="UserInput.Password" id="password" required minlength="6" maxlength="50" 
-                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                        <span class="text-red-500 text-xs" id="passwordError"></span>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Role*</label>
-                        <select name="UserInput.Role" id="role" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                            @foreach (var role in UserRoles.AllRoles)
-                            {
-                                <option value="@role">@UserRoles.GetDisplayName(role)</option>
-                            }
-                        </select>
-                        <span class="text-red-500 text-xs" id="roleError"></span>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Department</label>
-                        <input type="text" name="UserInput.Department" id="department" maxlength="100" 
-                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                        <span class="text-red-500 text-xs" id="departmentError"></span>
-                    </div>
-                    
-                    <div class="flex items-center">
-                        <input type="checkbox" name="UserInput.IsActive" id="isActive" value="true" checked 
-                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                        <label for="isActive" class="ml-2 block text-sm text-gray-900">Active</label>
-                        <input type="hidden" name="UserInput.IsActive" value="false" />
-                    </div>
-                </div>
-                
-                <div class="flex items-center justify-end space-x-2 mt-6">
-                    <button type="button" onclick="AdminFunctions.hideUserModal()" 
-                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                        Cancel
-                    </button>
-                    <button type="submit" id="userSubmitBtn" 
-                            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                        <span class="submit-text">Create User</span>
-                        <span class="submit-loading hidden">
-                            <span class="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
-                            Creating...
-                        </span>
-                    </button>
-                </div>
-            </form>
+<!-- User Modal -->
+<div id="userModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50" aria-hidden="true" role="dialog" aria-labelledby="userModalTitle">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 id="userModalTitle" class="text-lg font-medium text-gray-900">Add New User</h3>
+            <button type="button" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600" data-action="hide-modal" data-target="userModal" aria-label="Close">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
         </div>
+        
+        <form id="userForm" method="post" asp-page-handler="CreateUser" class="p-6">
+            @Html.AntiForgeryToken()
+            
+            <!-- Validation Summary -->
+            <div asp-validation-summary="All" class="alert alert-danger mb-4 hidden" role="alert"></div>
+            
+            <input type="hidden" id="editingUserId" name="userId" value="">
+            
+            <div class="space-y-4">
+                <div class="form-field">
+                    <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
+                    <input type="text" id="username" name="username" required 
+                           class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                    <span class="text-red-500 text-xs invalid-feedback"></span>
+                </div>
+                
+                <div class="form-field">
+                    <label for="fullName" class="block text-sm font-medium text-gray-700">Full Name</label>
+                    <input type="text" id="fullName" name="fullName" required 
+                           class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                    <span class="text-red-500 text-xs invalid-feedback"></span>
+                </div>
+                
+                <div class="form-field">
+                    <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="email" name="email" 
+                           class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                    <span class="text-red-500 text-xs invalid-feedback"></span>
+                </div>
+                
+                <div class="form-field" id="passwordField">
+                    <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+                    <input type="password" id="password" name="password" required 
+                           class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                    <span class="text-red-500 text-xs invalid-feedback"></span>
+                </div>
+                
+                <div class="form-field">
+                    <label for="role" class="block text-sm font-medium text-gray-700">Role</label>
+                    <select id="role" name="role" required 
+                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        <option value="">Select Role</option>
+                        <option value="Admin">Administrator</option>
+                        <option value="Manager">Manager</option>
+                        <option value="Scheduler">Scheduler</option>
+                        <option value="Operator">Operator</option>
+                        <option value="PrintingSpecialist">Printing Specialist</option>
+                        <option value="CoatingSpecialist">Coating Specialist</option>
+                        <option value="ShippingSpecialist">Shipping Specialist</option>
+                        <option value="EDMSpecialist">EDM Specialist</option>
+                        <option value="MachiningSpecialist">Machining Specialist</option>
+                        <option value="QCSpecialist">QC Specialist</option>
+                        <option value="Analyst">Analyst</option>
+                    </select>
+                    <span class="text-red-500 text-xs invalid-feedback"></span>
+                </div>
+                
+                <div class="form-field">
+                    <label for="department" class="block text-sm font-medium text-gray-700">Department</label>
+                    <select id="department" name="department" 
+                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        <option value="">Select Department</option>
+                        <option value="Administration">Administration</option>
+                        <option value="Scheduling">Scheduling</option>
+                        <option value="Operations">Operations</option>
+                        <option value="Printing">Printing</option>
+                        <option value="Coating">Coating</option>
+                        <option value="Shipping">Shipping</option>
+                        <option value="EDM">EDM</option>
+                        <option value="Machining">Machining</option>
+                        <option value="Quality Control">Quality Control</option>
+                        <option value="Analytics">Analytics</option>
+                    </select>
+                    <span class="text-red-500 text-xs invalid-feedback"></span>
+                </div>
+                
+                <div class="form-field">
+                    <label class="flex items-center">
+                        <input type="checkbox" id="isActive" name="isActive" value="true" checked 
+                               class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
+                        <span class="ml-2 text-sm text-gray-700">Active User</span>
+                    </label>
+                    <input type="hidden" name="isActive" value="false">
+                </div>
+            </div>
+            
+            <div class="mt-6 flex items-center justify-end space-x-3">
+                <button type="button" data-action="hide-modal" data-target="userModal"
+                        class="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    ? Cancel
+                </button>
+                <button type="submit" id="userSubmitBtn"
+                        class="px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <span class="submit-text">?? Create User</span>
+                    <span class="submit-loading hidden">
+                        <span class="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
+                        Creating...
+                    </span>
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
 <!-- Password Reset Modal -->
-<div id="passwordModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
-    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-        <div class="mt-3">
-            <h3 id="passwordModalTitle" class="text-lg font-medium text-gray-900 mb-4">Reset Password</h3>
-            
-            <form method="post" asp-page-handler="ResetPassword" id="passwordForm">
-                @Html.AntiForgeryToken()
-                <input type="hidden" id="resetUserId" name="PasswordReset.UserId" value="" />
-                
-                <!-- Validation Summary -->
-                <div id="passwordValidationSummary" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4"></div>
-                
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">New Password*</label>
-                        <input type="password" name="PasswordReset.NewPassword" id="newPassword" required minlength="6" maxlength="50" 
-                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                        <span class="text-red-500 text-xs" id="newPasswordError"></span>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Confirm Password*</label>
-                        <input type="password" name="PasswordReset.ConfirmPassword" id="confirmPassword" required minlength="6" maxlength="50" 
-                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                        <span class="text-red-500 text-xs" id="confirmPasswordError"></span>
-                    </div>
-                </div>
-                
-                <div class="flex items-center justify-end space-x-2 mt-6">
-                    <button type="button" onclick="AdminFunctions.hidePasswordModal()" 
-                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                        Cancel
-                    </button>
-                    <button type="submit" id="passwordSubmitBtn"
-                            class="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-                        <span class="submit-text">Reset Password</span>
-                        <span class="submit-loading hidden">
-                            <span class="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
-                            Resetting...
-                        </span>
-                    </button>
-                </div>
-            </form>
+<div id="passwordModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50" aria-hidden="true" role="dialog" aria-labelledby="passwordModalTitle">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 id="passwordModalTitle" class="text-lg font-medium text-gray-900">Reset Password</h3>
+            <button type="button" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600" data-action="hide-modal" data-target="passwordModal" aria-label="Close">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
         </div>
+        
+        <form id="passwordForm" method="post" asp-page-handler="ResetPassword" class="p-6">
+            @Html.AntiForgeryToken()
+            
+            <!-- Validation Summary -->
+            <div asp-validation-summary="All" class="alert alert-danger mb-4 hidden" role="alert"></div>
+            
+            <input type="hidden" id="passwordUserId" name="userId" value="">
+            
+            <div class="mb-4">
+                <p class="text-sm text-gray-600">Reset password for: <span id="passwordUsername" class="font-medium"></span></p>
+            </div>
+            
+            <div class="space-y-4">
+                <div class="form-field">
+                    <label for="newPassword" class="block text-sm font-medium text-gray-700">New Password</label>
+                    <input type="password" id="newPassword" name="newPassword" required minlength="6"
+                           class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                    <span class="text-red-500 text-xs invalid-feedback"></span>
+                </div>
+                
+                <div class="form-field">
+                    <label for="confirmPassword" class="block text-sm font-medium text-gray-700">Confirm Password</label>
+                    <input type="password" id="confirmPassword" name="confirmPassword" required minlength="6"
+                           class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                    <span class="text-red-500 text-xs invalid-feedback"></span>
+                </div>
+            </div>
+            
+            <div class="mt-6 flex items-center justify-end space-x-3">
+                <button type="button" data-action="hide-modal" data-target="passwordModal"
+                        class="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    ? Cancel
+                </button>
+                <button type="submit" id="passwordSubmitBtn"
+                        class="px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                    <span class="submit-text">?? Reset Password</span>
+                    <span class="submit-loading hidden">
+                        <span class="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
+                        Resetting...
+                    </span>
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -421,241 +374,238 @@
 <partial name="_AlertNotifications" />
 
 @section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    
     <script>
-        // Admin Functions Namespace
-        window.AdminFunctions = {
-            isEditMode: false,
+        // Users Page JavaScript - Using OpCentrix Admin Module
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            // Setup custom data action handlers
+            setupCustomActions();
+            
+            // Setup password confirmation validation
+            setupPasswordValidation();
+            
+            console.log('? [USERS] Page initialized successfully');
+        });
 
-            showCreateUserModal: function() {
-                this.isEditMode = false;
-                document.getElementById('userModalTitle').textContent = 'Add New User';
-                document.querySelector('#userSubmitBtn .submit-text').textContent = 'Create User';
-                document.getElementById('userForm').action = '?handler=CreateUser';
-                document.getElementById('editingUserId').value = '';
-                document.getElementById('passwordField').style.display = 'block';
-                document.getElementById('password').required = true;
+        /**
+         * Setup custom data action handlers
+         */
+        function setupCustomActions() {
+            document.addEventListener('click', function(e) {
+                const target = e.target;
                 
-                // Clear form and validation errors
-                this.clearUserForm();
-                this.clearValidationErrors('user');
-                
-                document.getElementById('userModal').classList.remove('hidden');
-                document.getElementById('username').focus();
-            },
-
-            editUser: function(id, username, fullName, email, role, department, isActive) {
-                this.isEditMode = true;
-                document.getElementById('userModalTitle').textContent = 'Edit User';
-                document.querySelector('#userSubmitBtn .submit-text').textContent = 'Update User';
-                document.getElementById('userForm').action = '?handler=EditUser';
-                document.getElementById('editingUserId').value = id;
-                document.getElementById('passwordField').style.display = 'none';
-                document.getElementById('password').required = false;
-                
-                // Populate form
-                document.getElementById('username').value = username;
-                document.getElementById('fullName').value = fullName;
-                document.getElementById('email').value = email;
-                document.getElementById('role').value = role;
-                document.getElementById('department').value = department;
-                document.getElementById('isActive').checked = isActive === 'true';
-                
-                this.clearValidationErrors('user');
-                
-                document.getElementById('userModal').classList.remove('hidden');
-                document.getElementById('username').focus();
-            },
-
-            hideUserModal: function() {
-                document.getElementById('userModal').classList.add('hidden');
-                this.clearUserForm();
-                this.clearValidationErrors('user');
-            },
-
-            showPasswordResetModal: function(userId, username) {
-                document.getElementById('passwordModalTitle').textContent = `Reset Password for ${username}`;
-                document.getElementById('resetUserId').value = userId;
-                document.getElementById('newPassword').value = '';
-                document.getElementById('confirmPassword').value = '';
-                this.clearValidationErrors('password');
-                document.getElementById('passwordModal').classList.remove('hidden');
-                document.getElementById('newPassword').focus();
-            },
-
-            hidePasswordModal: function() {
-                document.getElementById('passwordModal').classList.add('hidden');
-                this.clearValidationErrors('password');
-            },
-
-            clearUserForm: function() {
-                document.getElementById('username').value = '';
-                document.getElementById('fullName').value = '';
-                document.getElementById('email').value = '';
-                document.getElementById('password').value = '';
-                document.getElementById('role').value = 'Operator';
-                document.getElementById('department').value = '';
-                document.getElementById('isActive').checked = true;
-            },
-
-            clearValidationErrors: function(formType) {
-                const prefix = formType === 'password' ? 'password' : 'user';
-                const summaryId = prefix + 'ValidationSummary';
-                
-                // Hide validation summary
-                const summary = document.getElementById(summaryId);
-                if (summary) {
-                    summary.classList.add('hidden');
-                    summary.innerHTML = '';
+                // Handle edit user action
+                if (target.getAttribute('data-action') === 'edit-user') {
+                    e.preventDefault();
+                    showEditUserModal(target);
                 }
                 
-                // Clear individual field errors
-                const errorSpans = document.querySelectorAll(`#${prefix}Modal .text-red-500`);
-                errorSpans.forEach(span => span.textContent = '');
-                
-                // Remove error styling from inputs
-                const inputs = document.querySelectorAll(`#${prefix}Modal input, #${prefix}Modal select`);
-                inputs.forEach(input => input.classList.remove('border-red-500'));
-            },
+                // Handle password reset modal setup
+                if (target.getAttribute('data-action') === 'show-modal' && 
+                    target.getAttribute('data-target') === 'passwordModal') {
+                    e.preventDefault();
+                    showPasswordResetModal(target);
+                }
+            });
+        }
 
-            showLoadingState: function(button) {
-                const textSpan = button.querySelector('.submit-text');
-                const loadingSpan = button.querySelector('.submit-loading');
-                
-                if (textSpan) textSpan.classList.add('hidden');
-                if (loadingSpan) loadingSpan.classList.remove('hidden');
-                button.disabled = true;
-            },
+        /**
+         * Show edit user modal with data
+         */
+        function showEditUserModal(button) {
+            const userId = button.getAttribute('data-user-id');
+            const username = button.getAttribute('data-username');
+            const fullName = button.getAttribute('data-fullname');
+            const email = button.getAttribute('data-email');
+            const role = button.getAttribute('data-role');
+            const department = button.getAttribute('data-department');
+            const isActive = button.getAttribute('data-isactive') === 'true';
 
-            hideLoadingState: function(button) {
-                const textSpan = button.querySelector('.submit-text');
-                const loadingSpan = button.querySelector('.submit-loading');
-                
-                if (textSpan) textSpan.classList.remove('hidden');
-                if (loadingSpan) loadingSpan.classList.add('hidden');
-                button.disabled = false;
-            },
+            // Update modal title and form action
+            document.getElementById('userModalTitle').textContent = 'Edit User';
+            document.querySelector('#userSubmitBtn .submit-text').textContent = '?? Update User';
+            document.getElementById('userForm').action = '?handler=EditUser';
+            
+            // Populate form fields
+            document.getElementById('editingUserId').value = userId;
+            document.getElementById('username').value = username;
+            document.getElementById('fullName').value = fullName;
+            document.getElementById('email').value = email || '';
+            document.getElementById('role').value = role;
+            document.getElementById('department').value = department || '';
+            document.getElementById('isActive').checked = isActive;
+            
+            // Hide password field for editing
+            const passwordField = document.getElementById('passwordField');
+            passwordField.style.display = 'none';
+            document.getElementById('password').required = false;
+            
+            // Show modal
+            OpCentrixAdmin.Modal.show('userModal');
+        }
 
-            confirmAction: function(message) {
-                return confirm(message);
-            },
+        /**
+         * Show password reset modal with user data
+         */
+        function showPasswordResetModal(button) {
+            const userId = button.getAttribute('data-user-id');
+            const username = button.getAttribute('data-username');
+            
+            // Populate hidden fields
+            document.getElementById('passwordUserId').value = userId;
+            document.getElementById('passwordUsername').textContent = username;
+            
+            // Clear password fields
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+            
+            // Show modal
+            OpCentrixAdmin.Modal.show('passwordModal');
+        }
 
-            validateForm: function(formId) {
-                const form = document.getElementById(formId);
-                const requiredFields = form.querySelectorAll('[required]');
-                let isValid = true;
+        /**
+         * Setup password confirmation validation
+         */
+        function setupPasswordValidation() {
+            const newPasswordField = document.getElementById('newPassword');
+            const confirmPasswordField = document.getElementById('confirmPassword');
+            
+            if (newPasswordField && confirmPasswordField) {
+                // Add custom validation method for password confirmation
+                if (window.jQuery && window.jQuery.validator) {
+                    jQuery.validator.addMethod('passwordConfirmation', function(value, element) {
+                        return value === newPasswordField.value;
+                    }, 'Passwords do not match.');
+                    
+                    // Apply validation rule
+                    jQuery(confirmPasswordField).rules('add', {
+                        passwordConfirmation: true
+                    });
+                }
                 
-                requiredFields.forEach(field => {
-                    if (!field.value.trim()) {
-                        isValid = false;
-                        field.classList.add('border-red-500');
-                        const errorSpan = document.getElementById(field.id + 'Error');
-                        if (errorSpan) {
-                            errorSpan.textContent = 'This field is required.';
-                        }
-                    } else {
-                        field.classList.remove('border-red-500');
-                        const errorSpan = document.getElementById(field.id + 'Error');
-                        if (errorSpan) {
-                            errorSpan.textContent = '';
-                        }
-                    }
+                // Add real-time password confirmation check
+                confirmPasswordField.addEventListener('input', function() {
+                    validatePasswordConfirmation();
                 });
                 
-                return isValid;
-            }
-        };
-
-        // Form validation and submission
-        document.addEventListener('DOMContentLoaded', function() {
-            // User form validation
-            document.getElementById('userForm').addEventListener('submit', function(e) {
-                const submitBtn = document.getElementById('userSubmitBtn');
-                
-                if (!AdminFunctions.validateForm('userForm')) {
-                    e.preventDefault();
-                    showAlert('error', 'Please fill in all required fields.');
-                    return false;
-                }
-                
-                // Password validation for new users
-                if (!AdminFunctions.isEditMode) {
-                    const password = document.getElementById('password');
-                    if (password.value.length < 6) {
-                        e.preventDefault();
-                        password.classList.add('border-red-500');
-                        document.getElementById('passwordError').textContent = 'Password must be at least 6 characters long.';
-                        showAlert('error', 'Password must be at least 6 characters long.');
-                        return false;
+                newPasswordField.addEventListener('input', function() {
+                    if (confirmPasswordField.value) {
+                        validatePasswordConfirmation();
                     }
-                }
-                
-                AdminFunctions.showLoadingState(submitBtn);
-            });
+                });
+            }
+        }
 
-            // Password form validation
-            document.getElementById('passwordForm').addEventListener('submit', function(e) {
-                const submitBtn = document.getElementById('passwordSubmitBtn');
-                const newPassword = document.getElementById('newPassword');
-                const confirmPassword = document.getElementById('confirmPassword');
-                
-                if (!AdminFunctions.validateForm('passwordForm')) {
-                    e.preventDefault();
-                    showAlert('error', 'Please fill in all required fields.');
-                    return false;
-                }
-                
-                if (newPassword.value !== confirmPassword.value) {
-                    e.preventDefault();
-                    confirmPassword.classList.add('border-red-500');
-                    document.getElementById('confirmPasswordError').textContent = 'Passwords do not match.';
-                    showAlert('error', 'Passwords do not match.');
-                    return false;
-                }
-                
-                AdminFunctions.showLoadingState(submitBtn);
-            });
+        /**
+         * Validate password confirmation
+         */
+        function validatePasswordConfirmation() {
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const confirmField = document.getElementById('confirmPassword');
+            
+            if (confirmPassword && newPassword !== confirmPassword) {
+                confirmField.classList.add('border-red-500');
+                confirmField.classList.remove('border-green-500');
+                showFieldError(confirmField, 'Passwords do not match.');
+                return false;
+            } else if (confirmPassword) {
+                confirmField.classList.remove('border-red-500');
+                confirmField.classList.add('border-green-500');
+                hideFieldError(confirmField);
+                return true;
+            }
+            return true;
+        }
 
-            // Password confirmation validation
-            document.getElementById('confirmPassword').addEventListener('input', function() {
-                const newPassword = document.getElementById('newPassword').value;
-                const confirmPassword = this.value;
-                
-                if (newPassword !== confirmPassword) {
-                    this.classList.add('border-red-500');
-                    document.getElementById('confirmPasswordError').textContent = 'Passwords do not match.';
-                } else {
-                    this.classList.remove('border-red-500');
-                    document.getElementById('confirmPasswordError').textContent = '';
-                }
-            });
+        /**
+         * Show field error
+         */
+        function showFieldError(field, message) {
+            const errorSpan = field.parentNode.querySelector('.invalid-feedback');
+            if (errorSpan) {
+                errorSpan.textContent = message;
+                errorSpan.style.display = 'block';
+            }
+        }
 
-            // Close modals when clicking outside
-            window.addEventListener('click', function(event) {
-                const userModal = document.getElementById('userModal');
-                const passwordModal = document.getElementById('passwordModal');
-                
-                if (event.target === userModal) {
-                    AdminFunctions.hideUserModal();
-                }
-                if (event.target === passwordModal) {
-                    AdminFunctions.hidePasswordModal();
-                }
-            });
+        /**
+         * Hide field error
+         */
+        function hideFieldError(field) {
+            const errorSpan = field.parentNode.querySelector('.invalid-feedback');
+            if (errorSpan) {
+                errorSpan.textContent = '';
+                errorSpan.style.display = 'none';
+            }
+        }
 
-            // Keyboard shortcuts
-            document.addEventListener('keydown', function(e) {
-                // Escape to close modals
-                if (e.key === 'Escape') {
-                    AdminFunctions.hideUserModal();
-                    AdminFunctions.hidePasswordModal();
-                }
+        // Reset modal when opening for new user
+        document.addEventListener('click', function(e) {
+            if (e.target.getAttribute('data-action') === 'show-modal' && 
+                e.target.getAttribute('data-target') === 'userModal' &&
+                !e.target.getAttribute('data-user-id')) {
                 
-                // Ctrl+N to create new user
-                if (e.ctrlKey && e.key === 'n') {
-                    e.preventDefault();
-                    AdminFunctions.showCreateUserModal();
-                }
-            });
+                // Reset for new user creation
+                document.getElementById('userModalTitle').textContent = 'Add New User';
+                document.querySelector('#userSubmitBtn .submit-text').textContent = '?? Create User';
+                document.getElementById('userForm').action = '?handler=CreateUser';
+                document.getElementById('editingUserId').value = '';
+                
+                // Show password field for new users
+                const passwordField = document.getElementById('passwordField');
+                passwordField.style.display = 'block';
+                document.getElementById('password').required = true;
+                
+                // Clear form
+                OpCentrixAdmin.Form.reset('userForm');
+            }
         });
+
+        // Global functions for backward compatibility
+        window.UsersPage = {
+            showEditUserModal,
+            showPasswordResetModal,
+            validatePasswordConfirmation
+        };
     </script>
 }
+
+<style>
+    /* Enhanced styles for user management */
+    .form-field input:focus, 
+    .form-field select:focus {
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        border-color: #3b82f6;
+    }
+    
+    .form-field input.border-red-500:focus {
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+        border-color: #ef4444;
+    }
+    
+    .form-field input.border-green-500:focus {
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        border-color: #10b981;
+    }
+    
+    .invalid-feedback {
+        display: none;
+        margin-top: 0.25rem;
+    }
+    
+    /* Loading state styles */
+    .submit-loading {
+        display: none;
+    }
+    
+    button.loading .submit-text {
+        display: none;
+    }
+    
+    button.loading .submit-loading {
+        display: inline-flex !important;
+    }
+</style>

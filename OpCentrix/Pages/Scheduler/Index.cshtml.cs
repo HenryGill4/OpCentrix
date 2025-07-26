@@ -49,6 +49,14 @@ namespace OpCentrix.Pages.Scheduler
                 _logger.LogDebug("🔧 [SCHEDULER-{OperationId}] Getting scheduler data from service", operationId);
                 ViewModel = _schedulerService.GetSchedulerData(zoom, startDate);
 
+                // CRITICAL FIX: Load machines directly from machine management service
+                _logger.LogDebug("🔧 [SCHEDULER-{OperationId}] Loading machines from machine management service", operationId);
+                var activeMachines = await _machineService.GetActiveMachinesAsync();
+                ViewModel.Machines = activeMachines.Select(m => m.MachineId).ToList();
+                
+                _logger.LogInformation("🔧 [SCHEDULER-{OperationId}] Loaded {MachineCount} active machines: {Machines}",
+                    operationId, ViewModel.Machines.Count, string.Join(", ", ViewModel.Machines));
+
                 // PERFORMANCE OPTIMIZATION: Load only jobs within visible date range + buffer
                 _logger.LogDebug("🔧 [SCHEDULER-{OperationId}] Loading optimized job data", operationId);
                 await LoadOptimizedJobDataAsync(operationId);
@@ -238,7 +246,7 @@ namespace OpCentrix.Pages.Scheduler
 
         private async Task HandleLoadErrorAsync(string? zoom, DateTime? startDate, string operationId, Exception originalError)
         {
-            _logger.LogWarning("?? [SCHEDULER-{OperationId}] Providing fallback data due to load error: {ErrorMessage}",
+            _logger.LogWarning("⚠️ [SCHEDULER-{OperationId}] Providing fallback data due to load error: {ErrorMessage}",
                 operationId, originalError.Message);
 
             try
@@ -247,23 +255,43 @@ namespace OpCentrix.Pages.Scheduler
                 ViewModel = _schedulerService.GetSchedulerData(zoom, startDate);
                 Summary = new FooterSummaryViewModel();
 
-                // Try to load at least basic machine data
-                var machines = await _context.Jobs
-                    .Select(j => j.MachineId)
-                    .Distinct()
-                    .Take(10) // Limit for safety
-                    .ToListAsync();
-
-                if (machines.Any())
+                // CRITICAL FIX: Load machines properly in fallback scenario
+                try
                 {
-                    ViewModel.Machines = machines;
-                    _logger.LogDebug("? [SCHEDULER-{OperationId}] Loaded {MachineCount} machines for fallback",
-                        operationId, machines.Count);
+                    var activeMachines = await _machineService.GetActiveMachinesAsync();
+                    ViewModel.Machines = activeMachines.Select(m => m.MachineId).ToList();
+                    _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Loaded {MachineCount} machines for fallback",
+                        operationId, ViewModel.Machines.Count);
+                }
+                catch (Exception machineEx)
+                {
+                    _logger.LogError(machineEx, "❌ [SCHEDULER-{OperationId}] Failed to load machines in fallback, trying job-based machines: {ErrorMessage}",
+                        operationId, machineEx.Message);
+
+                    // Try to load at least basic machine data from jobs
+                    var machines = await _context.Jobs
+                        .Select(j => j.MachineId)
+                        .Distinct()
+                        .Take(10) // Limit for safety
+                        .ToListAsync();
+
+                    if (machines.Any())
+                    {
+                        ViewModel.Machines = machines;
+                        _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Loaded {MachineCount} machines from jobs for fallback",
+                            operationId, machines.Count);
+                    }
+                    else
+                    {
+                        // Absolute fallback - empty list will trigger empty state
+                        ViewModel.Machines = new List<string>();
+                        _logger.LogWarning("⚠️ [SCHEDULER-{OperationId}] No machines available - will show empty state", operationId);
+                    }
                 }
             }
             catch (Exception fallbackError)
             {
-                _logger.LogError(fallbackError, "? [SCHEDULER-{OperationId}] Failed to load fallback machine data: {ErrorMessage}",
+                _logger.LogError(fallbackError, "❌ [SCHEDULER-{OperationId}] Failed to load fallback data: {ErrorMessage}",
                     operationId, fallbackError.Message);
 
                 // Last resort fallback
@@ -271,16 +299,10 @@ namespace OpCentrix.Pages.Scheduler
                 {
                     StartDate = startDate ?? DateTime.UtcNow.Date,
                     Dates = new List<DateTime> { DateTime.UtcNow.Date },
-                    Machines = (await _machineService.GetActiveMachinesAsync()).Select(m => m.MachineId).ToList(),
+                    Machines = new List<string>(), // Empty - will trigger empty state
                     Jobs = new List<Job>(),
                     MachineRowHeights = new Dictionary<string, int>()
                 };
-                
-                // Set default heights for available machines
-                foreach (var machine in ViewModel.Machines)
-                {
-                    ViewModel.MachineRowHeights[machine] = 160;
-                }
                 
                 Summary = new FooterSummaryViewModel();
             }

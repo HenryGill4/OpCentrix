@@ -1,27 +1,35 @@
 @using OpCentrix.Models
 @model OpCentrix.Models.ViewModels.AddEditJobViewModel
 
-<!-- Enhanced Modal Container with improved accessibility and UX -->
-<div id="job-modal-container" class="modal-backdrop" onclick="closeJobModal()">
-    <div class="modal-content" onclick="event.stopPropagation()">
+<!-- Enhanced Modal Container with OpCentrix Design System -->
+<div class="modal-backdrop" 
+     style="position: fixed; inset: 0; background: var(--opcentrix-bg-overlay); z-index: var(--opcentrix-z-modal); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: var(--opcentrix-spacing-4);"
+     onclick="closeJobModal()">
+    <div class="opcentrix-card" 
+         style="max-width: 56rem; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: var(--opcentrix-shadow-2xl); margin: 0;"
+         onclick="event.stopPropagation()">
         <form hx-post="/Scheduler?handler=AddOrUpdateJob" 
               hx-target="#machine-row-@Model.Job.MachineId" 
               hx-swap="outerHTML"
               hx-on::before-request="showFormLoading()" 
               hx-on::after-request="handleFormResponse(event)"
-              class="modal-form" 
               id="job-form"
               novalidate>
             
             @Html.AntiForgeryToken()
             
             <!-- Modal Header -->
-            <div class="modal-header">
-                <h2 class="modal-title">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--opcentrix-spacing-6) var(--opcentrix-spacing-6) var(--opcentrix-spacing-4) var(--opcentrix-spacing-6); border-bottom: 2px solid var(--opcentrix-border); background: var(--opcentrix-bg-tertiary);">
+                <h2 style="font-size: var(--opcentrix-font-size-2xl); font-weight: 700; color: var(--opcentrix-text-primary); margin: 0; font-family: var(--opcentrix-font-family);">
                     @(Model.Job.Id == 0 ? "Schedule New SLS Job" : $"Edit Job #{Model.Job.Id}")
                 </h2>
-                <button type="button" onclick="closeJobModal()" class="modal-close-btn" aria-label="Close">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button type="button" 
+                        onclick="closeJobModal()" 
+                        style="background: none; border: none; color: var(--opcentrix-text-tertiary); padding: var(--opcentrix-spacing-2); cursor: pointer; border-radius: var(--opcentrix-radius); transition: all var(--opcentrix-transition-base); font-size: 0; line-height: 1;"
+                        onmouseover="this.style.background='var(--opcentrix-bg-tertiary)'; this.style.color='var(--opcentrix-text-primary)'"
+                        onmouseout="this.style.background='none'; this.style.color='var(--opcentrix-text-tertiary)'"
+                        aria-label="Close">
+                    <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                 </button>
@@ -30,17 +38,17 @@
             <!-- Error Display -->
             @if (Model.Errors?.Any() == true)
             {
-                <div class="error-container">
-                    <div class="error-header">
-                        <svg class="w-5 h-5 text-red-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <div style="margin: var(--opcentrix-spacing-6) var(--opcentrix-spacing-6) 0 var(--opcentrix-spacing-6); padding: var(--opcentrix-spacing-4); background: linear-gradient(135deg, var(--opcentrix-danger) 0%, var(--opcentrix-danger-dark) 100%); color: var(--opcentrix-text-on-primary); border: 1px solid var(--opcentrix-danger-dark); border-radius: var(--opcentrix-radius); box-shadow: var(--opcentrix-shadow); animation: shake 0.3s ease-in-out;">
+                    <div style="display: flex; align-items: center; margin-bottom: var(--opcentrix-spacing-2);">
+                        <svg style="width: 20px; height: 20px; margin-right: var(--opcentrix-spacing-2); flex-shrink: 0;" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
                         </svg>
-                        <h3 class="error-title">Please correct the following issues:</h3>
+                        <strong style="font-weight: 600; font-size: var(--opcentrix-font-size-sm);">Please correct the following issues:</strong>
                     </div>
-                    <ul class="error-list">
+                    <ul style="margin: 0; padding-left: var(--opcentrix-spacing-4); list-style-type: disc; font-size: var(--opcentrix-font-size-sm); line-height: var(--opcentrix-line-height-relaxed);">
                         @foreach (var error in Model.Errors)
                         {
-                            <li>@error</li>
+                            <li style="margin-bottom: var(--opcentrix-spacing-1);">@error</li>
                         }
                     </ul>
                 </div>
@@ -50,26 +58,26 @@
             <input type="hidden" name="Job.Id" value="@Model.Job.Id" />
             
             <!-- Form Content -->
-            <div class="modal-body">
+            <div style="padding: var(--opcentrix-spacing-6);">
                 <!-- Basic Job Information -->
-                <div class="form-section">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--opcentrix-spacing-6); margin-bottom: var(--opcentrix-spacing-6);">
                     <!-- Left Column -->
-                    <div class="form-column">
-                        <h3 class="form-section-title">Job Details</h3>
+                    <div style="display: flex; flex-direction: column; gap: var(--opcentrix-spacing-4);">
+                        <h3 style="font-size: var(--opcentrix-font-size-lg); font-weight: 600; color: var(--opcentrix-text-primary); border-bottom: 2px solid var(--opcentrix-border); padding-bottom: var(--opcentrix-spacing-2); margin: 0 0 var(--opcentrix-spacing-2) 0; font-family: var(--opcentrix-font-family);">Job Details</h3>
                         
-                        <div class="form-group">
-                            <label class="form-label required" for="machine-select">Machine</label>
-                            <select name="Job.MachineId" id="machine-select" class="form-select" required onchange="JobForm.filterPartsByMachine()">
+                        <div style="display: flex; flex-direction: column;">
+                            <label class="opcentrix-label opcentrix-label-required" for="machine-select" style="display: block; font-size: var(--opcentrix-font-size-sm); font-weight: 600; color: var(--opcentrix-text-secondary); margin-bottom: var(--opcentrix-spacing-2); line-height: var(--opcentrix-line-height-tight);">Machine</label>
+                            <select name="Job.MachineId" id="machine-select" class="opcentrix-input" required onchange="JobForm.filterPartsByMachine()" style="width: 100%; padding: var(--opcentrix-spacing-3) var(--opcentrix-spacing-4); border: 2px solid var(--opcentrix-border); border-radius: var(--opcentrix-radius); font-size: var(--opcentrix-font-size-sm); font-family: var(--opcentrix-font-family); transition: all var(--opcentrix-transition-base); background: var(--opcentrix-bg-secondary); color: var(--opcentrix-text-primary);">
                                 <option value="TI1" selected="@(Model.Job.MachineId == "TI1")">TI1 - Titanium Line 1 (TruPrint 3000)</option>
                                 <option value="TI2" selected="@(Model.Job.MachineId == "TI2")">TI2 - Titanium Line 2 (TruPrint 3000)</option>
                                 <option value="INC" selected="@(Model.Job.MachineId == "INC")">INC - Inconel Line (TruPrint 5000)</option>
                             </select>
-                            <small class="text-xs text-gray-500 mt-1">Each machine is configured for specific materials</small>
+                            <small style="color: var(--opcentrix-text-tertiary); font-size: var(--opcentrix-font-size-xs); margin-top: var(--opcentrix-spacing-1);">Each machine is configured for specific materials</small>
                         </div>
 
-                        <div class="form-group">
-                            <label class="form-label required" for="part-select">Part</label>
-                            <select name="Job.PartId" id="part-select" class="form-select" required onchange="updateJobFromPart()">
+                        <div style="display: flex; flex-direction: column;">
+                            <label class="opcentrix-label opcentrix-label-required" for="part-select" style="display: block; font-size: var(--opcentrix-font-size-sm); font-weight: 600; color: var(--opcentrix-text-secondary); margin-bottom: var(--opcentrix-spacing-2); line-height: var(--opcentrix-line-height-tight);">Part</label>
+                            <select name="Job.PartId" id="part-select" class="opcentrix-input" required onchange="updateJobFromPart()" style="width: 100%; padding: var(--opcentrix-spacing-3) var(--opcentrix-spacing-4); border: 2px solid var(--opcentrix-border); border-radius: var(--opcentrix-radius); font-size: var(--opcentrix-font-size-sm); font-family: var(--opcentrix-font-family); transition: all var(--opcentrix-transition-base); background: var(--opcentrix-bg-secondary); color: var(--opcentrix-text-primary);">
                                 <option value="">Select a part...</option>
                                 @foreach (var part in Model.Parts.OrderBy(p => p.PartNumber))
                                 {
@@ -94,19 +102,19 @@
                                     </option>
                                 }
                             </select>
-                            <small class="text-xs text-gray-500 mt-1">Only parts compatible with the selected machine are shown</small>
+                            <small style="color: var(--opcentrix-text-tertiary); font-size: var(--opcentrix-font-size-xs); margin-top: var(--opcentrix-spacing-1);">Only parts compatible with the selected machine are shown</small>
                         </div>
 
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label required" for="quantity-input">Quantity</label>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--opcentrix-spacing-4);">
+                            <div style="display: flex; flex-direction: column;">
+                                <label class="opcentrix-label opcentrix-label-required" for="quantity-input" style="display: block; font-size: var(--opcentrix-font-size-sm); font-weight: 600; color: var(--opcentrix-text-secondary); margin-bottom: var(--opcentrix-spacing-2); line-height: var(--opcentrix-line-height-tight);">Quantity</label>
                                 <input type="number" name="Job.Quantity" id="quantity-input" value="@Model.Job.Quantity" min="1" max="1000" 
-                                       class="form-input" required onchange="updateEndTimeFromQuantity()" />
+                                       class="opcentrix-input" required onchange="updateEndTimeFromQuantity()" style="width: 100%; padding: var(--opcentrix-spacing-3) var(--opcentrix-spacing-4); border: 2px solid var(--opcentrix-border); border-radius: var(--opcentrix-radius); font-size: var(--opcentrix-font-size-sm); font-family: var(--opcentrix-font-family); transition: all var(--opcentrix-transition-base); background: var(--opcentrix-bg-secondary); color: var(--opcentrix-text-primary);" />
                             </div>
                             
-                            <div class="form-group">
-                                <label class="form-label" for="priority-select">Priority</label>
-                                <select name="Job.Priority" id="priority-select" class="form-select">
+                            <div style="display: flex; flex-direction: column;">
+                                <label class="opcentrix-label" for="priority-select" style="display: block; font-size: var(--opcentrix-font-size-sm); font-weight: 600; color: var(--opcentrix-text-secondary); margin-bottom: var(--opcentrix-spacing-2); line-height: var(--opcentrix-line-height-tight);">Priority</label>
+                                <select name="Job.Priority" id="priority-select" class="opcentrix-input" style="width: 100%; padding: var(--opcentrix-spacing-3) var(--opcentrix-spacing-4); border: 2px solid var(--opcentrix-border); border-radius: var(--opcentrix-radius); font-size: var(--opcentrix-font-size-sm); font-family: var(--opcentrix-font-family); transition: all var(--opcentrix-transition-base); background: var(--opcentrix-bg-secondary); color: var(--opcentrix-text-primary);">
                                     <option value="1" selected="@(Model.Job.Priority == 1)">1 - Critical (Rush)</option>
                                     <option value="2" selected="@(Model.Job.Priority == 2)">2 - High Priority</option>
                                     <option value="3" selected="@(Model.Job.Priority == 3)">3 - Normal</option>
@@ -116,32 +124,32 @@
                             </div>
                         </div>
 
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label required" for="start-input">Start Date & Time</label>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--opcentrix-spacing-4);">
+                            <div style="display: flex; flex-direction: column;">
+                                <label class="opcentrix-label opcentrix-label-required" for="start-input" style="display: block; font-size: var(--opcentrix-font-size-sm); font-weight: 600; color: var(--opcentrix-text-secondary); margin-bottom: var(--opcentrix-spacing-2); line-height: var(--opcentrix-line-height-tight);">Start Date & Time</label>
                                 <input type="datetime-local" name="Job.ScheduledStart" id="start-input"
                                        value="@Model.Job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")" 
-                                       class="form-input" 
-                                       required onchange="updateEndTimeFromStart()" />
+                                       class="opcentrix-input" 
+                                       required onchange="updateEndTimeFromStart()" style="width: 100%; padding: var(--opcentrix-spacing-3) var(--opcentrix-spacing-4); border: 2px solid var(--opcentrix-border); border-radius: var(--opcentrix-radius); font-size: var(--opcentrix-font-size-sm); font-family: var(--opcentrix-font-family); transition: all var(--opcentrix-transition-base); background: var(--opcentrix-bg-secondary); color: var(--opcentrix-text-primary);" />
                             </div>
                             
-                            <div class="form-group">
-                                <label class="form-label required" for="end-input">End Date & Time</label>
+                            <div style="display: flex; flex-direction: column;">
+                                <label class="opcentrix-label opcentrix-label-required" for="end-input" style="display: block; font-size: var(--opcentrix-font-size-sm); font-weight: 600; color: var(--opcentrix-text-secondary); margin-bottom: var(--opcentrix-spacing-2); line-height: var(--opcentrix-line-height-tight);">End Date & Time</label>
                                 <input type="datetime-local" name="Job.ScheduledEnd" id="end-input"
                                        value="@Model.Job.ScheduledEnd.ToString("yyyy-MM-ddTHH:mm")" 
-                                       class="form-input" required />
-                                <small class="text-xs text-gray-500 mt-1">Duration: <span id="duration-display">@((Model.Job.ScheduledEnd - Model.Job.ScheduledStart).TotalHours.ToString("F1")) hours</span></small>
+                                       class="opcentrix-input" required style="width: 100%; padding: var(--opcentrix-spacing-3) var(--opcentrix-spacing-4); border: 2px solid var(--opcentrix-border); border-radius: var(--opcentrix-radius); font-size: var(--opcentrix-font-size-sm); font-family: var(--opcentrix-font-family); transition: all var(--opcentrix-transition-base); background: var(--opcentrix-bg-secondary); color: var(--opcentrix-text-primary);" />
+                                <small style="color: var(--opcentrix-text-tertiary); font-size: var(--opcentrix-font-size-xs); margin-top: var(--opcentrix-spacing-1);">Duration: <span id="duration-display">@((Model.Job.ScheduledEnd - Model.Job.ScheduledStart).TotalHours.ToString("F1")) hours</span></small>
                             </div>
                         </div>
                     </div>
 
                     <!-- Right Column -->
-                    <div class="form-column">
-                        <h3 class="form-section-title">SLS Process Parameters</h3>
+                    <div style="display: flex; flex-direction: column; gap: var(--opcentrix-spacing-4);">
+                        <h3 style="font-size: var(--opcentrix-font-size-lg); font-weight: 600; color: var(--opcentrix-text-primary); border-bottom: 2px solid var(--opcentrix-border); padding-bottom: var(--opcentrix-spacing-2); margin: 0 0 var(--opcentrix-spacing-2) 0; font-family: var(--opcentrix-font-family);">SLS Process Parameters</h3>
                         
-                        <div class="form-group">
-                            <label class="form-label required" for="sls-material">Material</label>
-                            <select name="Job.SlsMaterial" id="sls-material" class="form-select" required>
+                        <div style="display: flex; flex-direction: column;">
+                            <label class="opcentrix-label opcentrix-label-required" for="sls-material" style="display: block; font-size: var(--opcentrix-font-size-sm); font-weight: 600; color: var(--opcentrix-text-secondary); margin-bottom: var(--opcentrix-spacing-2); line-height: var(--opcentrix-line-height-tight);">Material</label>
+                            <select name="Job.SlsMaterial" id="sls-material" class="opcentrix-input" required style="width: 100%; padding: var(--opcentrix-spacing-3) var(--opcentrix-spacing-4); border: 2px solid var(--opcentrix-border); border-radius: var(--opcentrix-radius); font-size: var(--opcentrix-font-size-sm); font-family: var(--opcentrix-font-family); transition: all var(--opcentrix-transition-base); background: var(--opcentrix-bg-secondary); color: var(--opcentrix-text-primary);">
                                 <option value="Ti-6Al-4V Grade 5" 
                                         selected="@(Model.Job.SlsMaterial == "Ti-6Al-4V Grade 5")"
                                         data-compatible-machines="TI1,TI2">Ti-6Al-4V Grade 5 (Aerospace)</option>
@@ -155,74 +163,74 @@
                                         selected="@(Model.Job.SlsMaterial == "Inconel 625")"
                                         data-compatible-machines="INC">Inconel 625 (Corrosion Resistant)</option>
                             </select>
-                            <small class="text-xs text-gray-500 mt-1">Material options filtered by machine compatibility</small>
+                            <small style="color: var(--opcentrix-text-tertiary); font-size: var(--opcentrix-font-size-xs); margin-top: var(--opcentrix-spacing-1);">Material options filtered by machine compatibility</small>
                         </div>
 
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label" for="laser-power">Laser Power (W)</label>
-                                <input type="number" name="Job.LaserPowerWatts" id="laser-power" value="@Model.Job.LaserPowerWatts" min="50" max="400" step="1" class="form-input" />
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--opcentrix-spacing-4);">
+                            <div style="display: flex; flex-direction: column;">
+                                <label class="opcentrix-label" for="laser-power" style="display: block; font-size: var(--opcentrix-font-size-sm); font-weight: 600; color: var(--opcentrix-text-secondary); margin-bottom: var(--opcentrix-spacing-2); line-height: var(--opcentrix-line-height-tight);">Laser Power (W)</label>
+                                <input type="number" name="Job.LaserPowerWatts" id="laser-power" value="@Model.Job.LaserPowerWatts" min="50" max="400" step="1" class="opcentrix-input" style="width: 100%; padding: var(--opcentrix-spacing-3) var(--opcentrix-spacing-4); border: 2px solid var(--opcentrix-border); border-radius: var(--opcentrix-radius); font-size: var(--opcentrix-font-size-sm); font-family: var(--opcentrix-font-family); transition: all var(--opcentrix-transition-base); background: var(--opcentrix-bg-secondary); color: var(--opcentrix-text-primary);" />
                             </div>
                             
-                            <div class="form-group">
-                                <label class="form-label" for="scan-speed">Scan Speed (mm/s)</label>
-                                <input type="number" name="Job.ScanSpeedMmPerSec" id="scan-speed" value="@Model.Job.ScanSpeedMmPerSec" min="100" max="5000" step="10" class="form-input" />
-                            </div>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label" for="layer-thickness">Layer Thickness (?m)</label>
-                                <input type="number" name="Job.LayerThicknessMicrons" id="layer-thickness" value="@Model.Job.LayerThicknessMicrons" min="20" max="60" step="5" class="form-input" />
-                            </div>
-                            
-                            <div class="form-group">
-                                <label class="form-label" for="hatch-spacing">Hatch Spacing (?m)</label>
-                                <input type="number" name="Job.HatchSpacingMicrons" id="hatch-spacing" value="@Model.Job.HatchSpacingMicrons" min="50" max="200" step="5" class="form-input" />
+                            <div style="display: flex; flex-direction: column;">
+                                <label class="opcentrix-label" for="scan-speed" style="display: block; font-size: var(--opcentrix-font-size-sm); font-weight: 600; color: var(--opcentrix-text-secondary); margin-bottom: var(--opcentrix-spacing-2); line-height: var(--opcentrix-line-height-tight);">Scan Speed (mm/s)</label>
+                                <input type="number" name="Job.ScanSpeedMmPerSec" id="scan-speed" value="@Model.Job.ScanSpeedMmPerSec" min="100" max="5000" step="10" class="opcentrix-input" style="width: 100%; padding: var(--opcentrix-spacing-3) var(--opcentrix-spacing-4); border: 2px solid var(--opcentrix-border); border-radius: var(--opcentrix-radius); font-size: var(--opcentrix-font-size-sm); font-family: var(--opcentrix-font-family); transition: all var(--opcentrix-transition-base); background: var(--opcentrix-bg-secondary); color: var(--opcentrix-text-primary);" />
                             </div>
                         </div>
 
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label" for="build-temperature">Build Temperature (°C)</label>
-                                <input type="number" name="Job.BuildTemperatureCelsius" id="build-temperature" value="@Model.Job.BuildTemperatureCelsius" min="100" max="300" step="5" class="form-input" />
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--opcentrix-spacing-4);">
+                            <div style="display: flex; flex-direction: column;">
+                                <label class="opcentrix-label" for="layer-thickness" style="display: block; font-size: var(--opcentrix-font-size-sm); font-weight: 600; color: var(--opcentrix-text-secondary); margin-bottom: var(--opcentrix-spacing-2); line-height: var(--opcentrix-line-height-tight);">Layer Thickness (?m)</label>
+                                <input type="number" name="Job.LayerThicknessMicrons" id="layer-thickness" value="@Model.Job.LayerThicknessMicrons" min="20" max="60" step="5" class="opcentrix-input" style="width: 100%; padding: var(--opcentrix-spacing-3) var(--opcentrix-spacing-4); border: 2px solid var(--opcentrix-border); border-radius: var(--opcentrix-radius); font-size: var(--opcentrix-font-size-sm); font-family: var(--opcentrix-font-family); transition: all var(--opcentrix-transition-base); background: var(--opcentrix-bg-secondary); color: var(--opcentrix-text-primary);" />
                             </div>
                             
-                            <div class="form-group">
-                                <label class="form-label" for="powder-usage">Estimated Powder (kg)</label>
-                                <input type="number" name="Job.EstimatedPowderUsageKg" id="powder-usage" value="@Model.Job.EstimatedPowderUsageKg.ToString("F2")" min="0" max="50" step="0.1" class="form-input" />
+                            <div style="display: flex; flex-direction: column;">
+                                <label class="opcentrix-label" for="hatch-spacing" style="display: block; font-size: var(--opcentrix-font-size-sm); font-weight: 600; color: var(--opcentrix-text-secondary); margin-bottom: var(--opcentrix-spacing-2); line-height: var(--opcentrix-line-height-tight);">Hatch Spacing (?m)</label>
+                                <input type="number" name="Job.HatchSpacingMicrons" id="hatch-spacing" value="@Model.Job.HatchSpacingMicrons" min="50" max="200" step="5" class="opcentrix-input" style="width: 100%; padding: var(--opcentrix-spacing-3) var(--opcentrix-spacing-4); border: 2px solid var(--opcentrix-border); border-radius: var(--opcentrix-radius); font-size: var(--opcentrix-font-size-sm); font-family: var(--opcentrix-font-family); transition: all var(--opcentrix-transition-base); background: var(--opcentrix-bg-secondary); color: var(--opcentrix-text-primary);" />
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--opcentrix-spacing-4);">
+                            <div style="display: flex; flex-direction: column;">
+                                <label class="opcentrix-label" for="build-temperature" style="display: block; font-size: var(--opcentrix-font-size-sm); font-weight: 600; color: var(--opcentrix-text-secondary); margin-bottom: var(--opcentrix-spacing-2); line-height: var(--opcentrix-line-height-tight);">Build Temperature (°C)</label>
+                                <input type="number" name="Job.BuildTemperatureCelsius" id="build-temperature" value="@Model.Job.BuildTemperatureCelsius" min="100" max="300" step="5" class="opcentrix-input" style="width: 100%; padding: var(--opcentrix-spacing-3) var(--opcentrix-spacing-4); border: 2px solid var(--opcentrix-border); border-radius: var(--opcentrix-radius); font-size: var(--opcentrix-font-size-sm); font-family: var(--opcentrix-font-family); transition: all var(--opcentrix-transition-base); background: var(--opcentrix-bg-secondary); color: var(--opcentrix-text-primary);" />
+                            </div>
+                            
+                            <div style="display: flex; flex-direction: column;">
+                                <label class="opcentrix-label" for="powder-usage" style="display: block; font-size: var(--opcentrix-font-size-sm); font-weight: 600; color: var(--opcentrix-text-secondary); margin-bottom: var(--opcentrix-spacing-2); line-height: var(--opcentrix-line-height-tight);">Estimated Powder (kg)</label>
+                                <input type="number" name="Job.EstimatedPowderUsageKg" id="powder-usage" value="@Model.Job.EstimatedPowderUsageKg.ToString("F2")" min="0" max="50" step="0.1" class="opcentrix-input" style="width: 100%; padding: var(--opcentrix-spacing-3) var(--opcentrix-spacing-4); border: 2px solid var(--opcentrix-border); border-radius: var(--opcentrix-radius); font-size: var(--opcentrix-font-size-sm); font-family: var(--opcentrix-font-family); transition: all var(--opcentrix-transition-base); background: var(--opcentrix-bg-secondary); color: var(--opcentrix-text-primary);" />
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Additional Information -->
-                <div class="form-section">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label" for="order-number">Customer Order Number</label>
-                            <input type="text" name="Job.CustomerOrderNumber" id="order-number" value="@Model.Job.CustomerOrderNumber" maxlength="100" class="form-input" placeholder="CO-2024-001" />
+                <div style="margin-bottom: var(--opcentrix-spacing-6);">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--opcentrix-spacing-4); margin-bottom: var(--opcentrix-spacing-4);">
+                        <div style="display: flex; flex-direction: column;">
+                            <label class="opcentrix-label" for="order-number" style="display: block; font-size: var(--opcentrix-font-size-sm); font-weight: 600; color: var(--opcentrix-text-secondary); margin-bottom: var(--opcentrix-spacing-2); line-height: var(--opcentrix-line-height-tight);">Customer Order Number</label>
+                            <input type="text" name="Job.CustomerOrderNumber" id="order-number" value="@Model.Job.CustomerOrderNumber" maxlength="100" class="opcentrix-input" placeholder="CO-2024-001" style="width: 100%; padding: var(--opcentrix-spacing-3) var(--opcentrix-spacing-4); border: 2px solid var(--opcentrix-border); border-radius: var(--opcentrix-radius); font-size: var(--opcentrix-font-size-sm); font-family: var(--opcentrix-font-family); transition: all var(--opcentrix-transition-base); background: var(--opcentrix-bg-secondary); color: var(--opcentrix-text-primary);" />
                         </div>
                         
-                        <div class="form-group">
-                            <label class="form-label" for="operator-input">Operator</label>
-                            <input type="text" name="Job.Operator" id="operator-input" value="@Model.Job.Operator" maxlength="100" class="form-input" placeholder="Enter operator name" />
+                        <div style="display: flex; flex-direction: column;">
+                            <label class="opcentrix-label" for="operator-input" style="display: block; font-size: var(--opcentrix-font-size-sm); font-weight: 600; color: var(--opcentrix-text-secondary); margin-bottom: var(--opcentrix-spacing-2); line-height: var(--opcentrix-line-height-tight);">Operator</label>
+                            <input type="text" name="Job.Operator" id="operator-input" value="@Model.Job.Operator" maxlength="100" class="opcentrix-input" placeholder="Enter operator name" style="width: 100%; padding: var(--opcentrix-spacing-3) var(--opcentrix-spacing-4); border: 2px solid var(--opcentrix-border); border-radius: var(--opcentrix-radius); font-size: var(--opcentrix-font-size-sm); font-family: var(--opcentrix-font-family); transition: all var(--opcentrix-transition-base); background: var(--opcentrix-bg-secondary); color: var(--opcentrix-text-primary);" />
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label" for="notes-input">Special Instructions & Notes</label>
-                        <textarea name="Job.Notes" id="notes-input" rows="3" maxlength="1000" class="form-textarea" placeholder="Enter any special instructions, quality requirements, or notes for this job...">@Model.Job.Notes</textarea>
+                    <div style="display: flex; flex-direction: column;">
+                        <label class="opcentrix-label" for="notes-input" style="display: block; font-size: var(--opcentrix-font-size-sm); font-weight: 600; color: var(--opcentrix-text-secondary); margin-bottom: var(--opcentrix-spacing-2); line-height: var(--opcentrix-line-height-tight);">Special Instructions & Notes</label>
+                        <textarea name="Job.Notes" id="notes-input" rows="3" maxlength="1000" class="opcentrix-input" placeholder="Enter any special instructions, quality requirements, or notes for this job..." style="width: 100%; padding: var(--opcentrix-spacing-3) var(--opcentrix-spacing-4); border: 2px solid var(--opcentrix-border); border-radius: var(--opcentrix-radius); font-size: var(--opcentrix-font-size-sm); font-family: var(--opcentrix-font-family); transition: all var(--opcentrix-transition-base); background: var(--opcentrix-bg-secondary); color: var(--opcentrix-text-primary); resize: vertical; min-height: 80px;">@Model.Job.Notes</textarea>
                     </div>
                 </div>
             </div>
 
             <!-- Modal Footer -->
-            <div class="modal-footer">
-                <div class="footer-left">
-                    <div class="form-group">
-                        <label class="form-label" for="status-select">Status</label>
-                        <select name="Job.Status" id="status-select" class="form-select">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--opcentrix-spacing-4) var(--opcentrix-spacing-6) var(--opcentrix-spacing-6) var(--opcentrix-spacing-6); border-top: 2px solid var(--opcentrix-border); background: var(--opcentrix-bg-tertiary);">
+                <div style="display: flex; align-items: center; gap: var(--opcentrix-spacing-4);">
+                    <div style="display: flex; flex-direction: column;">
+                        <label class="opcentrix-label" for="status-select" style="display: block; font-size: var(--opcentrix-font-size-sm); font-weight: 600; color: var(--opcentrix-text-secondary); margin-bottom: var(--opcentrix-spacing-2); line-height: var(--opcentrix-line-height-tight);">Status</label>
+                        <select name="Job.Status" id="status-select" class="opcentrix-input" style="width: 180px; padding: var(--opcentrix-spacing-2) var(--opcentrix-spacing-3); border: 2px solid var(--opcentrix-border); border-radius: var(--opcentrix-radius); font-size: var(--opcentrix-font-size-sm); font-family: var(--opcentrix-font-family); transition: all var(--opcentrix-transition-base); background: var(--opcentrix-bg-secondary); color: var(--opcentrix-text-primary);">
                             <option value="Scheduled" selected="@(Model.Job.Status == "Scheduled")">Scheduled</option>
                             <option value="Preheating" selected="@(Model.Job.Status == "Preheating")">Preheating</option>
                             <option value="Building" selected="@(Model.Job.Status == "Building")">Building</option>
@@ -235,15 +243,15 @@
                         </select>
                     </div>
                     
-                    <div class="form-checkbox">
+                    <div style="display: flex; align-items: center; gap: var(--opcentrix-spacing-2); margin-top: var(--opcentrix-spacing-6);">
                         <input type="checkbox" name="Job.IsRushJob" value="true" 
                                checked="@Model.Job.IsRushJob"
-                               class="checkbox-input" id="rush-job" />
-                        <label for="rush-job" class="checkbox-label">Rush Job (Expedited Processing)</label>
+                               id="rush-job" style="border-radius: var(--opcentrix-radius-sm); border: 2px solid var(--opcentrix-border); color: var(--opcentrix-danger);" />
+                        <label for="rush-job" style="font-size: var(--opcentrix-font-size-sm); color: var(--opcentrix-text-secondary); font-weight: 500;">Rush Job (Expedited Processing)</label>
                     </div>
                 </div>
 
-                <div class="footer-right">
+                <div style="display: flex; gap: var(--opcentrix-spacing-3);">
                     @if (Model.Job.Id > 0)
                     {
                         <form style="display: inline;"
@@ -253,8 +261,8 @@
                               hx-confirm="Are you sure you want to delete this job? This action cannot be undone."
                               hx-on::after-request="closeJobModal()">
                             @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-danger">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <button type="submit" class="opcentrix-button opcentrix-button-danger" style="display: inline-flex; align-items: center; justify-content: center; gap: var(--opcentrix-spacing-2); padding: var(--opcentrix-spacing-3) var(--opcentrix-spacing-5); border-radius: var(--opcentrix-radius); font-weight: 600; font-size: var(--opcentrix-font-size-sm); line-height: 1; border: none; cursor: pointer; transition: all var(--opcentrix-transition-base); text-decoration: none; position: relative; overflow: hidden; white-space: nowrap; user-select: none; min-height: 40px; font-family: var(--opcentrix-font-family); background: var(--opcentrix-danger); color: var(--opcentrix-text-on-primary); box-shadow: var(--opcentrix-shadow);">
+                                <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                 </svg>
                                 Delete Job
@@ -262,15 +270,15 @@
                         </form>
                     }
                     
-                    <button type="button" onclick="closeJobModal()" class="btn btn-secondary">
+                    <button type="button" onclick="closeJobModal()" class="opcentrix-button opcentrix-button-secondary" style="display: inline-flex; align-items: center; justify-content: center; gap: var(--opcentrix-spacing-2); padding: var(--opcentrix-spacing-3) var(--opcentrix-spacing-5); border-radius: var(--opcentrix-radius); font-weight: 600; font-size: var(--opcentrix-font-size-sm); line-height: 1; border: none; cursor: pointer; transition: all var(--opcentrix-transition-base); text-decoration: none; position: relative; overflow: hidden; white-space: nowrap; user-select: none; min-height: 40px; font-family: var(--opcentrix-font-family); background: var(--opcentrix-bg-secondary); color: var(--opcentrix-text-primary); border: 2px solid var(--opcentrix-border); box-shadow: var(--opcentrix-shadow-xs);">
                         Cancel
                     </button>
                     
-                    <button type="submit" id="submit-job-btn" class="btn btn-primary">
+                    <button type="submit" id="submit-job-btn" class="opcentrix-button opcentrix-button-primary" style="display: inline-flex; align-items: center; justify-content: center; gap: var(--opcentrix-spacing-2); padding: var(--opcentrix-spacing-3) var(--opcentrix-spacing-5); border-radius: var(--opcentrix-radius); font-weight: 600; font-size: var(--opcentrix-font-size-sm); line-height: 1; border: none; cursor: pointer; transition: all var(--opcentrix-transition-base); text-decoration: none; position: relative; overflow: hidden; white-space: nowrap; user-select: none; min-height: 40px; font-family: var(--opcentrix-font-family); background: var(--opcentrix-primary); color: var(--opcentrix-text-on-primary); box-shadow: var(--opcentrix-shadow);">
                         <span id="submit-text">@(Model.Job.Id == 0 ? "Schedule Job" : "Update Job")</span>
-                        <svg id="submit-spinner" class="submit-spinner hidden" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        <svg id="submit-spinner" style="width: 16px; height: 16px; display: none; animation: spin 1s linear infinite;" fill="none" viewBox="0 0 24 24">
+                            <circle style="opacity: 0.25;" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path style="opacity: 0.75;" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
                     </button>
                 </div>
@@ -278,6 +286,56 @@
         </form>
     </div>
 </div>
+
+<!-- Add focus styles and animations -->
+<style>
+@@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+    20%, 40%, 60%, 80% { transform: translateX(2px); }
+}
+
+@@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.opcentrix-input:focus,
+.opcentrix-textarea:focus,
+.opcentrix-select:focus {
+    outline: none !important;
+    border-color: var(--opcentrix-primary) !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+    background: var(--opcentrix-bg-secondary) !important;
+}
+
+.opcentrix-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.opcentrix-button-primary:hover:not(:disabled) {
+    background: var(--opcentrix-primary-dark) !important;
+    box-shadow: var(--opcentrix-shadow-md) !important;
+}
+
+.opcentrix-button-secondary:hover:not(:disabled) {
+    background: var(--opcentrix-bg-tertiary) !important;
+    border-color: var(--opcentrix-border-medium) !important;
+    box-shadow: var(--opcentrix-shadow) !important;
+}
+
+.opcentrix-button-danger:hover:not(:disabled) {
+    background: var(--opcentrix-danger-dark) !important;
+    box-shadow: var(--opcentrix-shadow-md) !important;
+}
+
+@@media (max-width: 1024px) {
+    div[style*="grid-template-columns: 1fr 1fr"] {
+        display: flex !important;
+        flex-direction: column !important;
+    }
+}
+</style>
 
 <script>
 // Enhanced job form functionality with precise time calculations
@@ -511,7 +569,7 @@
                     }
                 } else {
                     durationDisplay.textContent = 'Invalid duration';
-                    durationDisplay.className = 'text-xs text-red-500 mt-1';
+                    durationDisplay.style.color = 'var(--opcentrix-danger)';
                 }
             } catch (error) {
                 console.warn('Error calculating duration:', error);
@@ -526,7 +584,7 @@
             
             if (submitBtn) submitBtn.disabled = true;
             if (submitText) submitText.textContent = 'Processing...';
-            if (submitSpinner) submitSpinner.classList.remove('hidden');
+            if (submitSpinner) submitSpinner.style.display = 'block';
         },
         
         hideFormLoading() {
@@ -536,7 +594,7 @@
             
             if (submitBtn) submitBtn.disabled = false;
             if (submitText) submitText.textContent = '@(Model.Job.Id == 0 ? "Schedule Job" : "Update Job")';
-            if (submitSpinner) submitSpinner.classList.add('hidden');
+            if (submitSpinner) submitSpinner.style.display = 'none';
         },
         
         // Handle HTMX form response
@@ -597,9 +655,12 @@
     });
     
     // Re-filter parts when machine selection changes
-    document.getElementById('machine-select').addEventListener('change', function() {
-        JobForm.filterPartsByMachine();
-    });
+    const machineSelect = document.getElementById('machine-select');
+    if (machineSelect) {
+        machineSelect.addEventListener('change', function() {
+            JobForm.filterPartsByMachine();
+        });
+    }
     
 })();
 </script>
