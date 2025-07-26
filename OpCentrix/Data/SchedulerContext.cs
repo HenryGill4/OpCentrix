@@ -42,6 +42,9 @@ namespace OpCentrix.Data
         public DbSet<BuildJobPart> BuildJobParts { get; set; }
         public DbSet<DelayLog> DelayLogs { get; set; }
 
+        // Task 6: Enhanced machine management
+        public DbSet<Material> Materials { get; set; }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             if (!optionsBuilder.IsConfigured)

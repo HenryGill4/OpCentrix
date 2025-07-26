@@ -477,6 +477,9 @@ public class AdminDataSeedingService : IAdminDataSeedingService
             // NEW: Seed default machines if none exist
             await SeedDefaultMachinesIfNoneExistAsync();
 
+            // Task 6: Seed materials for enhanced machine management
+            await SeedMaterialsAsync();
+
             _logger.LogInformation("Completed admin control system data seeding");
         }
         catch (Exception ex)
@@ -603,6 +606,50 @@ public class AdminDataSeedingService : IAdminDataSeedingService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error seeding default machines during admin data seeding");
+        }
+    }
+
+    /// <summary>
+    /// Seed materials for enhanced machine management
+    /// </summary>
+    private async Task SeedMaterialsAsync()
+    {
+        try
+        {
+            var existingMaterialCount = await _context.Materials.CountAsync();
+            if (existingMaterialCount > 0)
+            {
+                _logger.LogInformation("?? Materials already seeded ({Count} materials exist)", existingMaterialCount);
+                return;
+            }
+
+            var materials = Material.GetCommonSlsMaterials();
+            
+            foreach (var material in materials)
+            {
+                material.CreatedBy = "AdminDataSeeding";
+                material.LastModifiedBy = "AdminDataSeeding";
+                material.CreatedDate = DateTime.UtcNow;
+                material.LastModifiedDate = DateTime.UtcNow;
+                material.IsActive = true;
+            }
+
+            _context.Materials.AddRange(materials);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("? Seeded {Count} default materials for machine management", materials.Count);
+            
+            // Log material details
+            foreach (var material in materials)
+            {
+                _logger.LogInformation("   ?? {Code}: {Name} ({Type}) - ${Cost}/g", 
+                    material.MaterialCode, material.MaterialName, material.MaterialType, material.CostPerGram);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "? Error seeding materials");
+            throw;
         }
     }
 }

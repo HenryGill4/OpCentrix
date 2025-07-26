@@ -3,30 +3,35 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using OpCentrix.Models;
 using OpCentrix.Data;
+using OpCentrix.Services.Admin;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 
 namespace OpCentrix.Pages.Admin;
 
 /// <summary>
-/// Admin page for managing SLS machines
-/// Task 6: Machine Status and Dynamic Machine Management
+/// Enhanced admin page for managing machines with improved material selection
+/// Task 6: Machine Status and Dynamic Machine Management - ENHANCED
 /// </summary>
 [Authorize(Policy = "AdminOnly")]
 public class MachinesModel : PageModel
 {
     private readonly SchedulerContext _context;
+    private readonly IMaterialService _materialService;
     private readonly ILogger<MachinesModel> _logger;
 
-    public MachinesModel(SchedulerContext context, ILogger<MachinesModel> logger)
+    public MachinesModel(SchedulerContext context, IMaterialService materialService, ILogger<MachinesModel> logger)
     {
         _context = context;
+        _materialService = materialService;
         _logger = logger;
     }
 
     // Properties for the page
     public List<Machine> Machines { get; set; } = new();
     public List<MachineCapability> MachineCapabilities { get; set; } = new();
+    public List<Material> AvailableMaterials { get; set; } = new();
+    public List<string> MaterialTypes { get; set; } = new();
     public Dictionary<string, int> StatusStatistics { get; set; } = new();
     public int TotalMachines { get; set; }
     public int ActiveMachines { get; set; }
@@ -64,22 +69,26 @@ public class MachinesModel : PageModel
     {
         try
         {
-            _logger.LogInformation("Loading machine management page - Admin: {Admin}", User.Identity?.Name);
+            _logger.LogInformation("💻 Loading enhanced machine management page - Admin: {Admin}", User.Identity?.Name);
 
             await LoadMachinesAsync();
             await LoadMachineCapabilitiesAsync();
+            await LoadMaterialsAsync();
             await LoadStatisticsAsync();
 
-            _logger.LogInformation("Machine management page loaded - {MachineCount} machines found", Machines.Count);
+            _logger.LogInformation("✅ Enhanced machine management page loaded - {MachineCount} machines, {MaterialCount} materials found", 
+                Machines.Count, AvailableMaterials.Count);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error loading machine management page");
+            _logger.LogError(ex, "❌ Error loading enhanced machine management page");
             TempData["Error"] = "Error loading machine data. Please try again.";
             
             // Initialize with empty data on error
             Machines = new List<Machine>();
             MachineCapabilities = new List<MachineCapability>();
+            AvailableMaterials = new List<Material>();
+            MaterialTypes = new List<string>();
             StatusStatistics = new Dictionary<string, int>();
         }
     }
@@ -88,44 +97,43 @@ public class MachinesModel : PageModel
     {
         try
         {
+            _logger.LogInformation("🔧 Creating new machine: {MachineId}", MachineInput.MachineId);
+
             if (!ModelState.IsValid)
             {
-                await LoadMachinesAsync();
-                await LoadMachineCapabilitiesAsync();
-                await LoadStatisticsAsync();
+                await LoadPageDataAsync();
                 TempData["Error"] = "Please correct the validation errors and try again.";
                 return Page();
             }
 
-            // Check if machine ID already exists
-            var existingMachine = await _context.Machines
-                .FirstOrDefaultAsync(m => m.MachineId.ToLower() == MachineInput.MachineId.ToLower());
-
-            if (existingMachine != null)
+            // Enhanced validation with material compatibility
+            var validationErrors = await ValidateMachineAsync(MachineInput, null);
+            if (validationErrors.Count > 0)
             {
-                ModelState.AddModelError("MachineInput.MachineId", "Machine ID already exists.");
-                await LoadMachinesAsync();
-                await LoadMachineCapabilitiesAsync();
-                await LoadStatisticsAsync();
-                TempData["Error"] = "Machine ID already exists. Please choose a different ID.";
+                foreach (var error in validationErrors)
+                {
+                    ModelState.AddModelError("", error);
+                }
+                await LoadPageDataAsync();
+                TempData["Error"] = string.Join(" ", validationErrors);
                 return Page();
             }
 
-            var newMachine = CreateMachineFromForm();
+            var newMachine = await CreateMachineFromFormAsync();
 
             _context.Machines.Add(newMachine);
             await _context.SaveChangesAsync();
 
-            TempData["Success"] = $"Machine '{MachineInput.MachineId}' created successfully.";
-            _logger.LogInformation("Admin {Admin} created new machine: {MachineId} ({MachineName})", 
-                User.Identity?.Name, MachineInput.MachineId, MachineInput.MachineName);
+            TempData["Success"] = $"Machine '{MachineInput.MachineId}' created successfully with {MachineInput.SupportedMaterials.Split(',').Length} supported materials.";
+            _logger.LogInformation("✅ Admin {Admin} created new machine: {MachineId} ({MachineName}) with materials: {Materials}", 
+                User.Identity?.Name, MachineInput.MachineId, MachineInput.MachineName, MachineInput.SupportedMaterials);
             
             // Clear the form
             MachineInput = new MachineCreateEditModel();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating machine {MachineId}", MachineInput.MachineId);
+            _logger.LogError(ex, "❌ Error creating machine {MachineId}", MachineInput.MachineId);
             TempData["Error"] = "An error occurred while creating the machine.";
         }
 
@@ -142,11 +150,11 @@ public class MachinesModel : PageModel
                 return RedirectToPage();
             }
 
+            _logger.LogInformation("🔧 Editing machine ID: {MachineId}", EditingMachineId.Value);
+
             if (!ModelState.IsValid)
             {
-                await LoadMachinesAsync();
-                await LoadMachineCapabilitiesAsync();
-                await LoadStatisticsAsync();
+                await LoadPageDataAsync();
                 TempData["Error"] = "Please correct the validation errors and try again.";
                 return Page();
             }
@@ -158,52 +166,24 @@ public class MachinesModel : PageModel
                 return RedirectToPage();
             }
 
-            // Check if machine ID is being changed and if it conflicts
-            if (machine.MachineId.ToLower() != MachineInput.MachineId.ToLower())
+            // Enhanced validation
+            var validationErrors = await ValidateMachineAsync(MachineInput, machine.Id);
+            if (validationErrors.Count > 0)
             {
-                var existingMachine = await _context.Machines
-                    .FirstOrDefaultAsync(m => m.MachineId.ToLower() == MachineInput.MachineId.ToLower() && m.Id != machine.Id);
-
-                if (existingMachine != null)
+                foreach (var error in validationErrors)
                 {
-                    ModelState.AddModelError("MachineInput.MachineId", "Machine ID already exists.");
-                    await LoadMachinesAsync();
-                    await LoadMachineCapabilitiesAsync();
-                    await LoadStatisticsAsync();
-                    TempData["Error"] = "Machine ID already exists. Please choose a different ID.";
-                    return Page();
+                    ModelState.AddModelError("", error);
                 }
+                await LoadPageDataAsync();
+                TempData["Error"] = string.Join(" ", validationErrors);
+                return Page();
             }
 
-            // Update machine properties
-            machine.MachineId = MachineInput.MachineId;
-            machine.Name = MachineInput.MachineName;
-            machine.MachineType = MachineInput.MachineModel;
-            machine.SerialNumber = MachineInput.SerialNumber;
-            machine.Location = MachineInput.Location;
-            machine.SupportedMaterials = MachineInput.SupportedMaterials;
-            machine.CurrentMaterial = MachineInput.CurrentMaterial;
-            machine.Status = MachineInput.Status;
-            machine.IsActive = MachineInput.IsActive;
-            machine.IsAvailableForScheduling = MachineInput.IsAvailableForScheduling;
-            machine.Priority = MachineInput.Priority;
-            machine.BuildLengthMm = MachineInput.BuildLengthMm;
-            machine.BuildWidthMm = MachineInput.BuildWidthMm;
-            machine.BuildHeightMm = MachineInput.BuildHeightMm;
-            machine.MaxLaserPowerWatts = MachineInput.MaxLaserPowerWatts;
-            machine.MaxScanSpeedMmPerSec = MachineInput.MaxScanSpeedMmPerSec;
-            machine.MinLayerThicknessMicrons = MachineInput.MinLayerThicknessMicrons;
-            machine.MaxLayerThicknessMicrons = MachineInput.MaxLayerThicknessMicrons;
-            machine.MaintenanceIntervalHours = MachineInput.MaintenanceIntervalHours;
-            machine.OpcUaEndpointUrl = MachineInput.OpcUaEndpointUrl;
-            machine.OpcUaEnabled = MachineInput.OpcUaEnabled;
-            machine.LastModifiedBy = User.Identity?.Name ?? "Admin";
-            machine.LastModifiedDate = DateTime.UtcNow;
-
+            await UpdateMachineFromFormAsync(machine);
             await _context.SaveChangesAsync();
 
             TempData["Success"] = $"Machine '{machine.MachineId}' updated successfully.";
-            _logger.LogInformation("Admin {Admin} updated machine: {MachineId} ({MachineName})", 
+            _logger.LogInformation("✅ Admin {Admin} updated machine: {MachineId} ({MachineName})", 
                 User.Identity?.Name, machine.MachineId, machine.MachineName);
 
             // Clear editing state
@@ -212,7 +192,7 @@ public class MachinesModel : PageModel
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating machine ID {MachineId}", EditingMachineId);
+            _logger.LogError(ex, "❌ Error updating machine ID {MachineId}", EditingMachineId);
             TempData["Error"] = "An error occurred while updating the machine.";
         }
 
@@ -250,12 +230,12 @@ public class MachinesModel : PageModel
 
             var action = machine.IsActive ? "activated" : "deactivated";
             TempData["Success"] = $"Machine '{machine.MachineId}' {action} successfully.";
-            _logger.LogInformation("Admin {Admin} {Action} machine: {MachineId}", 
+            _logger.LogInformation("🔄 Admin {Admin} {Action} machine: {MachineId}", 
                 User.Identity?.Name, action, machine.MachineId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error toggling status for machine ID {MachineId}", machineId);
+            _logger.LogError(ex, "❌ Error toggling status for machine ID {MachineId}", machineId);
             TempData["Error"] = "An error occurred while updating machine status.";
         }
 
@@ -287,9 +267,9 @@ public class MachinesModel : PageModel
                 return RedirectToPage();
             }
 
-            // Remove related machine capabilities - FIXED: Use MachineId instead of MachineId
+            // Remove related machine capabilities
             var capabilities = await _context.MachineCapabilities
-                .Where(mc => mc.MachineId == machine.Id) // FIXED: Use machine.Id (int) not machine.MachineId (string)
+                .Where(mc => mc.MachineId == machine.Id)
                 .ToListAsync();
 
             if (capabilities.Any())
@@ -301,12 +281,12 @@ public class MachinesModel : PageModel
             await _context.SaveChangesAsync();
 
             TempData["Success"] = $"Machine '{machine.MachineId}' deleted successfully.";
-            _logger.LogWarning("Admin {Admin} deleted machine: {MachineId} ({MachineName})", 
+            _logger.LogWarning("🗑️ Admin {Admin} deleted machine: {MachineId} ({MachineName})", 
                 User.Identity?.Name, machine.MachineId, machine.MachineName);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting machine ID {MachineId}", machineId);
+            _logger.LogError(ex, "❌ Error deleting machine ID {MachineId}", machineId);
             TempData["Error"] = "An error occurred while deleting the machine.";
         }
 
@@ -319,9 +299,7 @@ public class MachinesModel : PageModel
         {
             if (!ModelState.IsValid)
             {
-                await LoadMachinesAsync();
-                await LoadMachineCapabilitiesAsync();
-                await LoadStatisticsAsync();
+                await LoadPageDataAsync();
                 TempData["Error"] = "Please correct the validation errors and try again.";
                 return Page();
             }
@@ -338,17 +316,17 @@ public class MachinesModel : PageModel
 
             var capability = new MachineCapability
             {
-                MachineId = machine.Id, // FIXED: Use machine.Id (int) not CapabilityInput.MachineId (string)
+                MachineId = machine.Id,
                 CapabilityType = CapabilityInput.CapabilityType,
                 CapabilityName = CapabilityInput.CapabilityName,
-                CapabilityValue = CapabilityInput.Description, // FIXED: Use Description instead of non-existent CapabilityValue
-                IsAvailable = !CapabilityInput.IsRequired, // FIXED: Use logical mapping - available if not required
-                Priority = 1, // FIXED: Use default priority since Priority doesn't exist in input model
+                CapabilityValue = CapabilityInput.Description,
+                IsAvailable = !CapabilityInput.IsRequired,
+                Priority = 1,
                 MinValue = CapabilityInput.MinValue,
                 MaxValue = CapabilityInput.MaxValue,
                 Unit = CapabilityInput.Unit,
-                Notes = CapabilityInput.Description, // FIXED: Use Description instead of non-existent Notes
-                RequiredCertification = "", // FIXED: Set empty string since RequiredCertification doesn't exist in input model
+                Notes = CapabilityInput.Description,
+                RequiredCertification = "",
                 CreatedBy = User.Identity?.Name ?? "Admin",
                 LastModifiedBy = User.Identity?.Name ?? "Admin",
                 CreatedDate = DateTime.UtcNow,
@@ -359,7 +337,7 @@ public class MachinesModel : PageModel
             await _context.SaveChangesAsync();
 
             TempData["Success"] = $"Capability '{CapabilityInput.CapabilityName}' added successfully.";
-            _logger.LogInformation("Admin {Admin} added capability: {CapabilityName} to machine: {MachineId}", 
+            _logger.LogInformation("⚙️ Admin {Admin} added capability: {CapabilityName} to machine: {MachineId}", 
                 User.Identity?.Name, CapabilityInput.CapabilityName, CapabilityInput.MachineId);
 
             // Clear the form
@@ -367,14 +345,22 @@ public class MachinesModel : PageModel
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error adding capability {CapabilityName}", CapabilityInput.CapabilityName);
+            _logger.LogError(ex, "❌ Error adding capability {CapabilityName}", CapabilityInput.CapabilityName);
             TempData["Error"] = "An error occurred while adding the capability.";
         }
 
         return RedirectToPage();
     }
 
-    // Helper methods
+    // Enhanced helper methods
+    private async Task LoadPageDataAsync()
+    {
+        await LoadMachinesAsync();
+        await LoadMachineCapabilitiesAsync();
+        await LoadMaterialsAsync();
+        await LoadStatisticsAsync();
+    }
+
     private async Task LoadMachinesAsync()
     {
         var query = _context.Machines.AsQueryable();
@@ -399,7 +385,8 @@ public class MachinesModel : PageModel
         // Apply material filter
         if (!string.IsNullOrEmpty(MaterialFilter))
         {
-            query = query.Where(m => m.SupportedMaterials.Contains(MaterialFilter));
+            query = query.Where(m => m.SupportedMaterials.Contains(MaterialFilter) || 
+                                   m.CurrentMaterial.Contains(MaterialFilter));
         }
 
         // Apply sorting
@@ -440,19 +427,148 @@ public class MachinesModel : PageModel
             .ToListAsync();
     }
 
+    private async Task LoadMaterialsAsync()
+    {
+        try
+        {
+            AvailableMaterials = await _materialService.GetActiveMaterialsAsync();
+            MaterialTypes = await _materialService.GetMaterialTypesAsync();
+            
+            _logger.LogInformation("📦 Loaded {MaterialCount} materials and {TypeCount} material types", 
+                AvailableMaterials.Count, MaterialTypes.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error loading materials");
+            AvailableMaterials = new List<Material>();
+            MaterialTypes = new List<string>();
+        }
+    }
+
     private async Task LoadStatisticsAsync()
     {
         TotalMachines = await _context.Machines.CountAsync();
         ActiveMachines = await _context.Machines.CountAsync(m => m.IsActive);
         OfflineMachines = await _context.Machines.CountAsync(m => m.Status == "Offline");
 
-        StatusStatistics = await _context.Machines
-            .GroupBy(m => m.Status)
-            .ToDictionaryAsync(g => g.Key, g => g.Count());
+        // Fixed: Use ToListAsync() first, then GroupBy and ToDictionary for in-memory compatibility
+        var machines = await _context.Machines.Select(m => m.Status).ToListAsync();
+        StatusStatistics = machines
+            .GroupBy(status => status)
+            .ToDictionary(g => g.Key, g => g.Count());
 
         AverageUtilization = await _context.Machines
             .Where(m => m.IsActive)
             .AverageAsync(m => (double?)m.AverageUtilizationPercent) ?? 0;
+    }
+
+    private async Task<List<string>> ValidateMachineAsync(MachineCreateEditModel input, int? existingMachineId)
+    {
+        var errors = new List<string>();
+
+        // Check if machine ID already exists
+        var existingMachine = await _context.Machines
+            .FirstOrDefaultAsync(m => m.MachineId.ToLower() == input.MachineId.ToLower() && 
+                                    (!existingMachineId.HasValue || m.Id != existingMachineId.Value));
+
+        if (existingMachine != null)
+        {
+            errors.Add($"Machine ID '{input.MachineId}' already exists.");
+        }
+
+        // Validate supported materials
+        if (!string.IsNullOrEmpty(input.SupportedMaterials))
+        {
+            var materialCodes = input.SupportedMaterials.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                                       .Select(m => m.Trim())
+                                                       .ToList();
+
+            var availableMaterialCodes = await _materialService.GetMaterialCodesAsync();
+            
+            foreach (var materialCode in materialCodes)
+            {
+                if (!availableMaterialCodes.Contains(materialCode, StringComparer.OrdinalIgnoreCase))
+                {
+                    errors.Add($"Material '{materialCode}' is not a valid material code.");
+                }
+            }
+        }
+
+        // Validate current material
+        if (!string.IsNullOrEmpty(input.CurrentMaterial))
+        {
+            var material = await _materialService.GetMaterialByCodeAsync(input.CurrentMaterial);
+            if (material == null)
+            {
+                errors.Add($"Current material '{input.CurrentMaterial}' is not a valid material code.");
+            }
+            else if (!string.IsNullOrEmpty(input.SupportedMaterials) && 
+                     !input.SupportedMaterials.Contains(input.CurrentMaterial, StringComparison.OrdinalIgnoreCase))
+            {
+                errors.Add($"Current material '{input.CurrentMaterial}' must be in the supported materials list.");
+            }
+        }
+
+        return errors;
+    }
+
+    private async Task<Machine> CreateMachineFromFormAsync()
+    {
+        return new Machine
+        {
+            MachineId = MachineInput.MachineId,
+            Name = MachineInput.MachineName,
+            MachineName = MachineInput.MachineName,
+            MachineType = MachineInput.MachineModel,
+            SerialNumber = MachineInput.SerialNumber,
+            Location = MachineInput.Location,
+            Status = MachineInput.Status,
+            IsActive = MachineInput.IsActive,
+            IsAvailableForScheduling = MachineInput.IsAvailableForScheduling,
+            BuildLengthMm = MachineInput.BuildLengthMm,
+            BuildWidthMm = MachineInput.BuildWidthMm,
+            BuildHeightMm = MachineInput.BuildHeightMm,
+            SupportedMaterials = MachineInput.SupportedMaterials,
+            CurrentMaterial = MachineInput.CurrentMaterial,
+            MaxLaserPowerWatts = MachineInput.MaxLaserPowerWatts,
+            MaxScanSpeedMmPerSec = MachineInput.MaxScanSpeedMmPerSec,
+            MinLayerThicknessMicrons = MachineInput.MinLayerThicknessMicrons,
+            MaxLayerThicknessMicrons = MachineInput.MaxLayerThicknessMicrons,
+            MaintenanceIntervalHours = MachineInput.MaintenanceIntervalHours,
+            OpcUaEndpointUrl = MachineInput.OpcUaEndpointUrl,
+            OpcUaEnabled = MachineInput.OpcUaEnabled,
+            Priority = MachineInput.Priority,
+            CreatedBy = User.Identity?.Name ?? "Admin",
+            LastModifiedBy = User.Identity?.Name ?? "Admin"
+        };
+    }
+
+    private async Task UpdateMachineFromFormAsync(Machine machine)
+    {
+        machine.MachineId = MachineInput.MachineId;
+        machine.Name = MachineInput.MachineName;
+        machine.MachineName = MachineInput.MachineName;
+        machine.MachineType = MachineInput.MachineModel;
+        machine.SerialNumber = MachineInput.SerialNumber;
+        machine.Location = MachineInput.Location;
+        machine.SupportedMaterials = MachineInput.SupportedMaterials;
+        machine.CurrentMaterial = MachineInput.CurrentMaterial;
+        machine.Status = MachineInput.Status;
+        machine.IsActive = MachineInput.IsActive;
+        machine.IsAvailableForScheduling = MachineInput.IsAvailableForScheduling;
+        machine.Priority = MachineInput.Priority;
+        machine.BuildLengthMm = MachineInput.BuildLengthMm;
+        machine.BuildWidthMm = MachineInput.BuildWidthMm;
+        machine.BuildHeightMm = MachineInput.BuildHeightMm;
+        machine.MaxLaserPowerWatts = MachineInput.MaxLaserPowerWatts;
+        machine.MaxScanSpeedMmPerSec = MachineInput.MaxScanSpeedMmPerSec;
+        machine.MinLayerThicknessMicrons = MachineInput.MinLayerThicknessMicrons;
+        machine.MaxLayerThicknessMicrons = MachineInput.MaxLayerThicknessMicrons;
+        machine.MaintenanceIntervalHours = MachineInput.MaintenanceIntervalHours;
+        machine.OpcUaEndpointUrl = MachineInput.OpcUaEndpointUrl;
+        machine.OpcUaEnabled = MachineInput.OpcUaEnabled;
+        machine.LastModifiedBy = User.Identity?.Name ?? "Admin";
+        machine.LastModifiedDate = DateTime.UtcNow;
     }
 
     public void LoadMachineForEditing(Machine machine)
@@ -496,41 +612,10 @@ public class MachinesModel : PageModel
         if (SortBy != column) return "↕";
         return SortDirection == "asc" ? "▲" : "▼";
     }
-
-        private Machine CreateMachineFromForm()
-        {
-            return new Machine
-            {
-                MachineId = MachineInput.MachineId,
-                Name = MachineInput.MachineName,
-                MachineName = MachineInput.MachineName,
-                MachineType = MachineInput.MachineModel,
-                SerialNumber = MachineInput.SerialNumber,
-                Location = MachineInput.Location,
-                Status = MachineInput.Status,
-                IsActive = MachineInput.IsActive,
-                IsAvailableForScheduling = MachineInput.IsAvailableForScheduling,
-                BuildLengthMm = MachineInput.BuildLengthMm,
-                BuildWidthMm = MachineInput.BuildWidthMm,
-                BuildHeightMm = MachineInput.BuildHeightMm,
-                SupportedMaterials = MachineInput.SupportedMaterials,
-                CurrentMaterial = MachineInput.CurrentMaterial,
-                MaxLaserPowerWatts = MachineInput.MaxLaserPowerWatts,
-                MaxScanSpeedMmPerSec = MachineInput.MaxScanSpeedMmPerSec,
-                MinLayerThicknessMicrons = MachineInput.MinLayerThicknessMicrons,
-                MaxLayerThicknessMicrons = MachineInput.MaxLayerThicknessMicrons,
-                MaintenanceIntervalHours = MachineInput.MaintenanceIntervalHours,
-                OpcUaEndpointUrl = MachineInput.OpcUaEndpointUrl,
-                OpcUaEnabled = MachineInput.OpcUaEnabled,
-                Priority = MachineInput.Priority,
-                CreatedBy = User.Identity?.Name ?? "Admin",
-                LastModifiedBy = User.Identity?.Name ?? "Admin"
-            };
-        }
 }
 
 /// <summary>
-/// Model for creating and editing machines
+/// Enhanced model for creating and editing machines with material support
 /// </summary>
 public class MachineCreateEditModel
 {

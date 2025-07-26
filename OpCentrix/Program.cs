@@ -120,6 +120,9 @@ builder.Services.AddScoped<IOpcUaService, OpcUaService>();
 // FIXED: Add missing multi-stage job service with correct namespace
 builder.Services.AddScoped<IMultiStageJobService, MultiStageJobService>();
 
+// Task 6: Enhanced machine management services
+builder.Services.AddScoped<IMaterialService, MaterialService>();
+
 // Logging configuration
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();

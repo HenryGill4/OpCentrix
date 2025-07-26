@@ -117,10 +117,17 @@
                 <label class="block text-sm font-medium text-gray-700">Material</label>
                 <select name="materialFilter" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                     <option value="">All Materials</option>
-                    <option value="Ti-6Al-4V" selected="@(Model.MaterialFilter == "Ti-6Al-4V")">Titanium (Ti-6Al-4V)</option>
-                    <option value="Inconel" selected="@(Model.MaterialFilter == "Inconel")">Inconel</option>
-                    <option value="Stainless Steel" selected="@(Model.MaterialFilter == "Stainless Steel")">Stainless Steel</option>
-                    <option value="Aluminum" selected="@(Model.MaterialFilter == "Aluminum")">Aluminum</option>
+                    @foreach (var materialType in Model.MaterialTypes)
+                    {
+                        <optgroup label="@materialType">
+                            @foreach (var material in Model.AvailableMaterials.Where(m => m.MaterialType == materialType))
+                            {
+                                <option value="@material.MaterialCode" selected="@(Model.MaterialFilter == material.MaterialCode)">
+                                    @material.MaterialCode - @material.MaterialName
+                                </option>
+                            }
+                        </optgroup>
+                    }
                 </select>
             </div>
             
@@ -415,15 +422,46 @@
                         
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Supported Materials*</label>
-                            <textarea name="MachineInput.SupportedMaterials" id="supportedMaterials" required maxlength="500" rows="3" 
-                                      placeholder="e.g., Ti-6Al-4V Grade 5,Ti-6Al-4V ELI Grade 23,Inconel 718"
-                                      class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
+                            <div class="mt-1 space-y-2">
+                                <!-- Material selection checkboxes -->
+                                <div class="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border border-gray-300 rounded-md p-2">
+                                    @foreach (var material in Model.AvailableMaterials)
+                                    {
+                                        <label class="flex items-center space-x-2 text-sm">
+                                            <input type="checkbox" 
+                                                   class="material-checkbox h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                                   data-material-code="@material.MaterialCode"
+                                                   data-material-name="@material.MaterialName"
+                                                   onchange="updateSupportedMaterials()">
+                                            <span class="truncate" title="@material.MaterialName">
+                                                <span class="font-medium text-@material.MaterialTypeColor">@material.MaterialCode</span>
+                                                <span class="text-gray-600 text-xs block">@material.MaterialType</span>
+                                            </span>
+                                        </label>
+                                    }
+                                </div>
+                                <!-- Hidden input for form submission -->
+                                <textarea name="MachineInput.SupportedMaterials" id="supportedMaterials" required maxlength="500" rows="2" 
+                                          placeholder="Selected materials will appear here..."
+                                          class="mt-2 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                          readonly></textarea>
+                                <p class="text-xs text-gray-500">Select materials above or manually enter comma-separated material codes</p>
+                            </div>
                         </div>
                         
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Current Material</label>
-                            <input type="text" name="MachineInput.CurrentMaterial" id="currentMaterial" maxlength="100" 
-                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                            <select name="MachineInput.CurrentMaterial" id="currentMaterial" 
+                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">No material loaded</option>
+                                @foreach (var material in Model.AvailableMaterials)
+                                {
+                                    <option value="@material.MaterialCode" data-material-type="@material.MaterialType">
+                                        @material.MaterialCode - @material.MaterialName
+                                    </option>
+                                }
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">Material currently loaded in the machine</p>
                         </div>
                         
                         <div class="grid grid-cols-2 gap-4">
@@ -725,8 +763,12 @@
             document.getElementById('machineModel').value = machineModel;
             document.getElementById('serialNumber').value = serialNumber;
             document.getElementById('location').value = location;
+            
+            // Handle materials
             document.getElementById('supportedMaterials').value = supportedMaterials;
+            loadMaterialsFromText(); // This will check the appropriate checkboxes
             document.getElementById('currentMaterial').value = currentMaterial;
+            
             document.getElementById('status').value = status;
             document.getElementById('isActive').checked = isActive;
             document.getElementById('isAvailableForScheduling').checked = isAvailableForScheduling;
@@ -757,14 +799,71 @@
             document.getElementById('capabilityModal').classList.add('hidden');
         }
 
+        // Enhanced material selection functionality
+        function updateSupportedMaterials() {
+            const checkboxes = document.querySelectorAll('.material-checkbox:checked');
+            const selectedMaterials = Array.from(checkboxes)
+                .map(cb => cb.getAttribute('data-material-code'))
+                .join(',');
+            
+            document.getElementById('supportedMaterials').value = selectedMaterials;
+            
+            // Update current material dropdown to only show supported materials
+            updateCurrentMaterialDropdown();
+        }
+
+        function updateCurrentMaterialDropdown() {
+            const supportedMaterials = document.getElementById('supportedMaterials').value.split(',').map(m => m.trim());
+            const currentMaterialSelect = document.getElementById('currentMaterial');
+            const options = currentMaterialSelect.querySelectorAll('option');
+            
+            options.forEach(option => {
+                if (option.value === '') {
+                    // Keep "No material loaded" option always visible
+                    option.style.display = '';
+                } else {
+                    // Show/hide based on supported materials
+                    option.style.display = supportedMaterials.includes(option.value) ? '' : 'none';
+                }
+            });
+        }
+
+        function loadMaterialsFromText() {
+            const supportedMaterials = document.getElementById('supportedMaterials').value;
+            const materialCodes = supportedMaterials.split(',').map(m => m.trim());
+            
+            // Clear all checkboxes first
+            document.querySelectorAll('.material-checkbox').forEach(cb => cb.checked = false);
+            
+            // Check the ones that match
+            materialCodes.forEach(code => {
+                const checkbox = document.querySelector(`[data-material-code="${code}"]`);
+                if (checkbox) {
+                    checkbox.checked = true;
+                }
+            });
+            
+            updateCurrentMaterialDropdown();
+        }
+
+        // Allow manual editing of supported materials
+        document.getElementById('supportedMaterials').addEventListener('input', function() {
+            loadMaterialsFromText();
+        });
+
         function clearMachineForm() {
             document.getElementById('machineId').value = '';
             document.getElementById('machineName').value = '';
             document.getElementById('machineModel').value = 'TruPrint 3000';
             document.getElementById('serialNumber').value = '';
             document.getElementById('location').value = '';
+            
+            // Clear material selections
+            document.querySelectorAll('.material-checkbox').forEach(cb => cb.checked = false);
             document.getElementById('supportedMaterials').value = '';
             document.getElementById('currentMaterial').value = '';
+            updateCurrentMaterialDropdown();
+            
             document.getElementById('status').value = 'Idle';
             document.getElementById('isActive').checked = true;
             document.getElementById('isAvailableForScheduling').checked = true;
