@@ -1,0 +1,84 @@
+@model List<OpCentrix.Models.ViewModels.MasterScheduleTimeSlot>
+
+@{
+    var timeSlots = Model ?? new List<OpCentrix.Models.ViewModels.MasterScheduleTimeSlot>();
+    var machines = timeSlots.GroupBy(t => t.MachineId).Select(g => g.Key).OrderBy(m => m).ToList();
+    var startTime = timeSlots.Any() ? timeSlots.Min(t => t.StartTime).Date : DateTime.Today;
+    var endTime = timeSlots.Any() ? timeSlots.Max(t => t.EndTime).Date.AddDays(1) : DateTime.Today.AddDays(7);
+    var timeSpan = endTime - startTime;
+    var days = (int)timeSpan.TotalDays;
+}
+
+@if (!timeSlots.Any())
+{
+    <div class="text-center py-8 text-gray-500">
+        <svg class="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+        </svg>
+        <p>No timeline data available for the selected period.</p>
+    </div>
+}
+else
+{
+    <div class="timeline-grid" style="grid-template-columns: 120px repeat(@days, minmax(80px, 1fr));">
+        <!-- Header Row -->
+        <div class="timeline-header">Machine</div>
+        @for (int day = 0; day < days; day++)
+        {
+            var date = startTime.AddDays(day);
+            <div class="timeline-header">
+                @date.ToString("MMM dd")
+                <div class="text-xs text-gray-400">@date.ToString("ddd")</div>
+            </div>
+        }
+        
+        <!-- Machine Rows -->
+        @foreach (var machine in machines)
+        {
+            <div class="timeline-machine">@machine</div>
+            
+            @for (int day = 0; day < days; day++)
+            {
+                var date = startTime.AddDays(day);
+                var daySlots = timeSlots.Where(t => t.MachineId == machine && 
+                                               t.StartTime.Date == date.Date).ToList();
+                
+                <div class="timeline-slot @(daySlots.Any() ? "slot-occupied" : "") @(daySlots.Any(s => s.IsConflict) ? "slot-conflict" : "") @(daySlots.Any(s => s.IsMaintenanceSlot) ? "slot-maintenance" : "")">
+                    @if (daySlots.Any())
+                    {
+                        @foreach (var slot in daySlots.Take(2))
+                        {
+                            <div class="text-xs mb-1" title="@slot.DisplayText">
+                                @slot.PartNumber
+                            </div>
+                        }
+                        @if (daySlots.Count > 2)
+                        {
+                            <div class="text-xs text-gray-400">+@(daySlots.Count - 2) more</div>
+                        }
+                    }
+                </div>
+            }
+        }
+    </div>
+    
+    <!-- Timeline Legend -->
+    <div class="mt-4 flex flex-wrap gap-4 text-xs">
+        <div class="flex items-center">
+            <div class="w-4 h-4 bg-blue-100 border border-blue-300 mr-2"></div>
+            <span>Scheduled Jobs</span>
+        </div>
+        <div class="flex items-center">
+            <div class="w-4 h-4 bg-red-100 border border-red-300 mr-2"></div>
+            <span>Conflicts</span>
+        </div>
+        <div class="flex items-center">
+            <div class="w-4 h-4 bg-yellow-100 border border-yellow-300 mr-2"></div>
+            <span>Maintenance</span>
+        </div>
+        <div class="flex items-center">
+            <div class="w-4 h-4 bg-gray-50 border border-gray-200 mr-2"></div>
+            <span>Available</span>
+        </div>
+    </div>
+}

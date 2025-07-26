@@ -8,18 +8,22 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Events;
+using System.Reflection;
 
 // Configure Serilog for global logging (Task 2.5)
 Log.Logger = new LoggerConfiguration()
-    .MinimumLevel.Information()
-    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-    .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
+    .MinimumLevel.Debug()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
     .Enrich.FromLogContext()
+    .Enrich.WithProperty("Application", "OpCentrix")
+    .Enrich.WithProperty("Version", Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown")
     .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}")
-    .WriteTo.File("logs/opcentrix-.log", 
+    .WriteTo.File(
+        path: Path.Combine("logs", "opcentrix-.log"),
         rollingInterval: RollingInterval.Day,
-        outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}",
-        retainedFileCountLimit: 30)
+        retainedFileCountLimit: 7,
+        outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] {SourceContext} {Message:lj} {Properties:j}{NewLine}{Exception}")
     .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
@@ -42,7 +46,12 @@ else
 }
 
 // Add services to the container
-builder.Services.AddRazorPages();
+builder.Services.AddRazorPages(options =>
+{
+    // Global authorization requirement
+    options.Conventions.AuthorizeFolder("/Admin", "AdminPolicy");
+    options.Conventions.AuthorizeFolder("/Scheduler", "SchedulerPolicy");
+});
 
 // Database configuration
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -78,11 +87,19 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 // Authorization policies
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("SchedulerAccess", policy =>
+    options.AddPolicy("SchedulerPolicy", policy =>
         policy.RequireAuthenticatedUser());
     
+    options.AddPolicy("AdminPolicy", policy =>
+        policy.RequireRole("Admin"));
+    
+    // Add the missing AdminOnly policy that pages are using
     options.AddPolicy("AdminOnly", policy =>
         policy.RequireRole("Admin"));
+    
+    // Add the missing SchedulerAccess policy that health endpoint uses
+    options.AddPolicy("SchedulerAccess", policy =>
+        policy.RequireAuthenticatedUser());
     
     options.AddPolicy("SupervisorAccess", policy =>
         policy.RequireRole("Admin", "Supervisor"));
@@ -93,9 +110,9 @@ builder.Services.AddAuthorization(options =>
 
 // Register application services
 builder.Services.AddScoped<ISchedulerService, SchedulerService>();
-builder.Services.AddScoped<SlsDataSeedingService>();
-builder.Services.AddScoped<PrintTrackingService>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+builder.Services.AddScoped<IMasterScheduleService, MasterScheduleService>(); // Task 12: Master Schedule Service
+builder.Services.AddScoped<SlsDataSeedingService>(); // SLS Data Seeding Service
 
 // Register database validation service
 builder.Services.AddScoped<DatabaseValidationService>();
@@ -113,6 +130,9 @@ builder.Services.AddScoped<OpCentrix.Services.Admin.IMachineManagementService, O
 
 // TASK 16: Database Management Service
 builder.Services.AddScoped<OpCentrix.Services.Admin.IDatabaseManagementService, OpCentrix.Services.Admin.DatabaseManagementService>();
+
+// TASK 13: Inspection Checkpoint Service
+builder.Services.AddScoped<OpCentrix.Services.Admin.IInspectionCheckpointService, OpCentrix.Services.Admin.InspectionCheckpointService>();
 
 // FIXED: Add missing OPC UA service
 builder.Services.AddScoped<IOpcUaService, OpcUaService>();

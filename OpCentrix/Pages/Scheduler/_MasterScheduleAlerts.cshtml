@@ -1,0 +1,295 @@
+@model List<OpCentrix.Models.ViewModels.ScheduleAlert>
+
+@{
+    var alerts = Model ?? new List<OpCentrix.Models.ViewModels.ScheduleAlert>();
+    var criticalAlerts = alerts.Where(a => a.Severity == "critical").ToList();
+    var highAlerts = alerts.Where(a => a.Severity == "high").ToList();
+    var otherAlerts = alerts.Where(a => a.Severity != "critical" && a.Severity != "high").ToList();
+}
+
+@if (!alerts.Any())
+{
+    <div class="text-center py-8">
+        <svg class="w-12 h-12 text-green-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">All Clear!</h3>
+        <p class="text-gray-500">No active alerts at this time.</p>
+    </div>
+}
+else
+{
+    <!-- Alert Summary -->
+    <div class="mb-4 grid grid-cols-2 gap-2 text-xs">
+        <div class="bg-red-50 text-red-700 px-2 py-1 rounded">
+            <span class="font-semibold">@criticalAlerts.Count</span> Critical
+        </div>
+        <div class="bg-orange-50 text-orange-700 px-2 py-1 rounded">
+            <span class="font-semibold">@highAlerts.Count</span> High
+        </div>
+    </div>
+    
+    <!-- Critical Alerts First -->
+    @foreach (var alert in criticalAlerts)
+    {
+        <div class="alert-item" style="--alert-color: @alert.SeverityColor">
+            <svg class="alert-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                @switch (alert.TypeIcon)
+                {
+                    case "clock":
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        break;
+                    case "exclamation-triangle":
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                        break;
+                    case "wrench":
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        break;
+                    case "shield-check":
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                        break;
+                    default:
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        break;
+                }
+            </svg>
+            
+            <div class="alert-content">
+                <div class="alert-title">@alert.Title</div>
+                <div class="alert-description">@alert.Description</div>
+                <div class="flex justify-between items-center mt-2">
+                    <div class="text-xs text-gray-500">
+                        @alert.CreatedDate.ToString("MMM dd, HH:mm")
+                        @if (!string.IsNullOrEmpty(alert.MachineId))
+                        {
+                            <span> • @alert.MachineId</span>
+                        }
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="px-2 py-1 text-xs font-bold rounded-full" style="background-color: @alert.SeverityColor; color: white;">
+                            @alert.Severity.ToUpper()
+                        </span>
+                        @if (!alert.IsResolved)
+                        {
+                            <button onclick="resolveAlert(@alert.Id)" 
+                                    class="resolve-alert-btn text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
+                                    data-alert-id="@alert.Id">
+                                Resolve
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    
+    <!-- High Priority Alerts -->
+    @foreach (var alert in highAlerts)
+    {
+        <div class="alert-item" style="--alert-color: @alert.SeverityColor">
+            <svg class="alert-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                @switch (alert.TypeIcon)
+                {
+                    case "clock":
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        break;
+                    case "exclamation-triangle":
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                        break;
+                    case "wrench":
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        break;
+                    case "shield-check":
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                        break;
+                    default:
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        break;
+                }
+            </svg>
+            
+            <div class="alert-content">
+                <div class="alert-title">@alert.Title</div>
+                <div class="alert-description">@alert.Description</div>
+                <div class="flex justify-between items-center mt-2">
+                    <div class="text-xs text-gray-500">
+                        @alert.CreatedDate.ToString("MMM dd, HH:mm")
+                        @if (!string.IsNullOrEmpty(alert.MachineId))
+                        {
+                            <span> • @alert.MachineId</span>
+                        }
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="px-2 py-1 text-xs font-bold rounded-full" style="background-color: @alert.SeverityColor; color: white;">
+                            @alert.Severity.ToUpper()
+                        </span>
+                        @if (!alert.IsResolved)
+                        {
+                            <button onclick="resolveAlert(@alert.Id)" 
+                                    class="resolve-alert-btn text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
+                                    data-alert-id="@alert.Id">
+                                Resolve
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    
+    <!-- Other Alerts (Collapsed if too many) -->
+    @if (otherAlerts.Any())
+    {
+        @if (otherAlerts.Count <= 3)
+        {
+            @foreach (var alert in otherAlerts)
+            {
+                <div class="alert-item" style="--alert-color: @alert.SeverityColor">
+                    <svg class="alert-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        @switch (alert.TypeIcon)
+                        {
+                            case "clock":
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                break;
+                            case "exclamation-triangle":
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                                break;
+                            case "wrench":
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                break;
+                            case "shield-check":
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                                break;
+                            default:
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                break;
+                        }
+                    </svg>
+                    
+                    <div class="alert-content">
+                        <div class="alert-title">@alert.Title</div>
+                        <div class="alert-description">@alert.Description</div>
+                        <div class="flex justify-between items-center mt-2">
+                            <div class="text-xs text-gray-500">
+                                @alert.CreatedDate.ToString("MMM dd, HH:mm")
+                                @if (!string.IsNullOrEmpty(alert.MachineId))
+                                {
+                                    <span> • @alert.MachineId</span>
+                                }
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="px-2 py-1 text-xs font-bold rounded-full" style="background-color: @alert.SeverityColor; color: white;">
+                                    @alert.Severity.ToUpper()
+                                </span>
+                                @if (!alert.IsResolved)
+                                {
+                                    <button onclick="resolveAlert(@alert.Id)" 
+                                            class="resolve-alert-btn text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
+                                            data-alert-id="@alert.Id">
+                                        Resolve
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <!-- Show first 2 and collapse the rest -->
+            @foreach (var alert in otherAlerts.Take(2))
+            {
+                <div class="alert-item" style="--alert-color: @alert.SeverityColor">
+                    <svg class="alert-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    
+                    <div class="alert-content">
+                        <div class="alert-title">@alert.Title</div>
+                        <div class="alert-description">@alert.Description</div>
+                        <div class="flex justify-between items-center mt-2">
+                            <div class="text-xs text-gray-500">@alert.CreatedDate.ToString("MMM dd, HH:mm")</div>
+                            <span class="px-2 py-1 text-xs font-bold rounded-full" style="background-color: @alert.SeverityColor; color: white;">
+                                @alert.Severity.ToUpper()
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            }
+            
+            <!-- Show count of remaining alerts -->
+            <div class="text-center py-2">
+                <button class="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                    Show @(otherAlerts.Count - 2) more alerts...
+                </button>
+            </div>
+        }
+    }
+}
+
+<!-- Action Buttons -->
+@if (alerts.Any(a => !a.IsResolved))
+{
+    <div class="mt-4 pt-4 border-t border-gray-200">
+        <div class="flex space-x-2">
+            <button onclick="resolveAllAlerts()" class="flex-1 px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors">
+                Resolve All
+            </button>
+            <button onclick="refreshAlerts()" class="px-3 py-2 bg-gray-100 text-gray-700 text-sm rounded hover:bg-gray-200 transition-colors">
+                <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+}
+
+<script>
+// Alert-specific functions
+function resolveAlert(alertId) {
+    console.log('? [ALERTS] Resolving alert:', alertId);
+    
+    fetch('/Scheduler/MasterSchedule?handler=ResolveAlert', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+        },
+        body: JSON.stringify({ alertId: parseInt(alertId) })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Remove the alert from UI immediately for better UX
+            const alertElement = document.querySelector(`[data-alert-id="${alertId}"]`).closest('.alert-item');
+            if (alertElement) {
+                alertElement.style.opacity = '0.5';
+                alertElement.style.pointerEvents = 'none';
+            }
+            
+            // Refresh alerts after a short delay
+            setTimeout(() => {
+                if (window.refreshAlerts) {
+                    window.refreshAlerts();
+                }
+            }, 1000);
+        }
+    })
+    .catch(error => {
+        console.error('? [ALERTS] Error resolving alert:', error);
+    });
+}
+
+function resolveAllAlerts() {
+    if (confirm('Are you sure you want to resolve all active alerts?')) {
+        console.log('? [ALERTS] Resolving all alerts');
+        
+        // This would need to be implemented in the backend
+        // For now, just refresh the alerts
+        if (window.refreshAlerts) {
+            window.refreshAlerts();
+        }
+    }
+}
+</script>

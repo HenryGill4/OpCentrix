@@ -1,0 +1,153 @@
+@model OpCentrix.Models.ViewModels.MasterScheduleMetrics
+
+@{
+    var metrics = Model ?? new OpCentrix.Models.ViewModels.MasterScheduleMetrics();
+}
+
+<!-- Key Metrics Dashboard -->
+<div class="metrics-grid">
+    
+    <!-- Total Jobs -->
+    <div class="metric-card" style="--metric-color: #3b82f6;">
+        <div class="metric-value">@metrics.TotalJobs</div>
+        <div class="metric-label">Total Jobs</div>
+        <div class="metric-trend trend-neutral">
+            @metrics.CompletedJobs completed (@metrics.CompletionRate.ToString("F1")%)
+        </div>
+    </div>
+    
+    <!-- On-Time Delivery -->
+    <div class="metric-card" style="--metric-color: @(metrics.OnTimeDeliveryPercent >= 90 ? "#10b981" : metrics.OnTimeDeliveryPercent >= 80 ? "#f59e0b" : "#ef4444");">
+        <div class="metric-value">@metrics.OnTimeDeliveryPercent.ToString("F1")<span style="font-size: 1rem;">%</span></div>
+        <div class="metric-label">On-Time Delivery</div>
+        <div class="metric-trend @(metrics.UtilizationTrend >= 0 ? "trend-up" : "trend-down")">
+            @(metrics.UtilizationTrend >= 0 ? "?" : "?") @Math.Abs(metrics.UtilizationTrend).ToString("F1")% vs last period
+        </div>
+    </div>
+    
+    <!-- Overall Efficiency -->
+    <div class="metric-card" style="--metric-color: @(metrics.OverallEfficiency >= 85 ? "#10b981" : metrics.OverallEfficiency >= 70 ? "#f59e0b" : "#ef4444");">
+        <div class="metric-value">@metrics.OverallEfficiency.ToString("F1")<span style="font-size: 1rem;">%</span></div>
+        <div class="metric-label">Overall Efficiency</div>
+        <div class="metric-trend @(metrics.EfficiencyTrend >= 0 ? "trend-up" : "trend-down")">
+            @(metrics.EfficiencyTrend >= 0 ? "?" : "?") @Math.Abs(metrics.EfficiencyTrend).ToString("F1")% vs last period
+        </div>
+    </div>
+    
+    <!-- Utilization -->
+    <div class="metric-card" style="--metric-color: @(metrics.UtilizationPercent >= 80 ? "#10b981" : metrics.UtilizationPercent >= 60 ? "#f59e0b" : "#ef4444");">
+        <div class="metric-value">@metrics.UtilizationPercent.ToString("F1")<span style="font-size: 1rem;">%</span></div>
+        <div class="metric-label">Resource Utilization</div>
+        <div class="metric-trend @(metrics.UtilizationTrend >= 0 ? "trend-up" : "trend-down")">
+            @(metrics.UtilizationTrend >= 0 ? "?" : "?") @Math.Abs(metrics.UtilizationTrend).ToString("F1")% vs last period
+        </div>
+    </div>
+    
+    <!-- Cost Performance -->
+    <div class="metric-card" style="--metric-color: @(metrics.CostVariancePercent <= 5 ? "#10b981" : metrics.CostVariancePercent <= 15 ? "#f59e0b" : "#ef4444");">
+        <div class="metric-value">@metrics.CostVariancePercent.ToString("F1")<span style="font-size: 1rem;">%</span></div>
+        <div class="metric-label">Cost Variance</div>
+        <div class="metric-trend @(metrics.CostTrend <= 0 ? "trend-up" : "trend-down")">
+            @(metrics.TotalEstimatedCost > 0 ? $"${metrics.TotalActualCost:N0} / ${metrics.TotalEstimatedCost:N0}" : "No cost data")
+        </div>
+    </div>
+    
+    <!-- Quality Score -->
+    <div class="metric-card" style="--metric-color: @(metrics.QualityScorePercent >= 95 ? "#10b981" : metrics.QualityScorePercent >= 90 ? "#f59e0b" : "#ef4444");">
+        <div class="metric-value">@metrics.QualityScorePercent.ToString("F1")<span style="font-size: 1rem;">%</span></div>
+        <div class="metric-label">Quality Score</div>
+        <div class="metric-trend @(metrics.QualityTrend >= 0 ? "trend-up" : "trend-down")">
+            @(metrics.QualityTrend >= 0 ? "?" : "?") @Math.Abs(metrics.QualityTrend).ToString("F1")% vs last period
+        </div>
+    </div>
+    
+    <!-- Active Machines -->
+    <div class="metric-card" style="--metric-color: #6366f1;">
+        <div class="metric-value">@metrics.OperationalMachines</div>
+        <div class="metric-label">Operational Machines</div>
+        <div class="metric-trend trend-neutral">
+            @metrics.MaintenanceMachines maintenance, @metrics.IdleMachines idle
+        </div>
+    </div>
+    
+    <!-- Performance Status -->
+    <div class="metric-card" style="--metric-color: @(metrics.PerformanceStatus == "Excellent" ? "#10b981" : metrics.PerformanceStatus == "Good" ? "#3b82f6" : metrics.PerformanceStatus == "Fair" ? "#f59e0b" : "#ef4444");">
+        <div class="metric-value" style="font-size: 1.5rem;">@metrics.PerformanceStatus</div>
+        <div class="metric-label">Performance Status</div>
+        <div class="metric-trend trend-neutral">
+            @if (metrics.DelayedJobs > 0)
+            {
+                <span class="text-red-600">@metrics.DelayedJobs delayed jobs</span>
+            }
+            else
+            {
+                <span class="text-green-600">No delays</span>
+            }
+        </div>
+    </div>
+    
+</div>
+
+<!-- Additional Performance Indicators -->
+<div class="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    
+    <!-- Critical Jobs Alert -->
+    @if (metrics.CriticalJobs > 0)
+    {
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div class="flex items-center">
+                <svg class="w-5 h-5 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                </svg>
+                <div>
+                    <div class="font-semibold text-red-800">@metrics.CriticalJobs Critical Jobs</div>
+                    <div class="text-sm text-red-600">Require immediate attention</div>
+                </div>
+            </div>
+        </div>
+    }
+    
+    <!-- Delayed Jobs Alert -->
+    @if (metrics.DelayedJobs > 0)
+    {
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div class="flex items-center">
+                <svg class="w-5 h-5 text-yellow-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <div>
+                    <div class="font-semibold text-yellow-800">@metrics.DelayedJobs Delayed Jobs</div>
+                    <div class="text-sm text-yellow-600">Avg delay: @metrics.AverageDelayHours.ToString("F1")h</div>
+                </div>
+            </div>
+        </div>
+    }
+    
+    <!-- Average Job Duration -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div class="flex items-center">
+            <svg class="w-5 h-5 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+            <div>
+                <div class="font-semibold text-blue-800">@metrics.AverageJobDurationHours.ToString("F1")h Avg Duration</div>
+                <div class="text-sm text-blue-600">Per job completion time</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Setup Time -->
+    <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+        <div class="flex items-center">
+            <svg class="w-5 h-5 text-purple-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            <div>
+                <div class="font-semibold text-purple-800">@metrics.AverageSetupTimeHours.ToString("F1")h Setup</div>
+                <div class="text-sm text-purple-600">Average setup time</div>
+            </div>
+        </div>
+    </div>
+    
+</div>
