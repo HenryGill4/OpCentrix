@@ -38,6 +38,9 @@ namespace OpCentrix.Pages.Admin
 
             try
             {
+                // CRITICAL FIX: Ensure existing parts have Name values
+                await EnsurePartNamesAsync(operationId);
+
                 // DEFENSIVE VALIDATION: Sanitize inputs to prevent format exceptions
                 PageNumber = Math.Max(1, Math.Min(1000, page)); // Clamp to reasonable range
                 SearchTerm = search?.Trim() ?? string.Empty;
@@ -188,6 +191,7 @@ namespace OpCentrix.Pages.Admin
                     
                     // Basic required fields with safe defaults
                     PartNumber = "", // Will be filled by user
+                    Name = "", // REQUIRED: Will be filled by user
                     Description = "", // Will be filled by user
                     Industry = "General",
                     Application = "General Component",
@@ -367,6 +371,7 @@ namespace OpCentrix.Pages.Admin
 
                 // Sanitize and validate string inputs to prevent format exceptions
                 part.PartNumber = part.PartNumber?.Trim()?.ToUpperInvariant() ?? string.Empty;
+                part.Name = part.Name?.Trim() ?? string.Empty;
                 part.Description = part.Description?.Trim() ?? string.Empty;
                 part.Material = part.Material?.Trim() ?? string.Empty;
                 part.SlsMaterial = part.SlsMaterial?.Trim() ?? string.Empty;
@@ -440,6 +445,18 @@ namespace OpCentrix.Pages.Admin
                         _logger.LogWarning("?? [PARTS-{OperationId}] Validation failed: Duplicate part number: {PartNumber}", 
                             operationId, part.PartNumber);
                     }
+                }
+
+                if (string.IsNullOrWhiteSpace(part.Name))
+                {
+                    validationErrors.Add("Part Name is required");
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Validation failed: Missing part name", operationId);
+                }
+                else if (part.Name.Length > 200)
+                {
+                    validationErrors.Add("Part Name cannot exceed 200 characters");
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Validation failed: Part name too long: {Length}", 
+                        operationId, part.Name.Length);
                 }
 
                 if (string.IsNullOrWhiteSpace(part.Description))
@@ -538,6 +555,8 @@ namespace OpCentrix.Pages.Admin
                     var changes = new List<string>();
                     if (existingPart.PartNumber != part.PartNumber)
                         changes.Add($"PartNumber: {existingPart.PartNumber} -> {part.PartNumber}");
+                    if (existingPart.Name != part.Name)
+                        changes.Add($"Name: {existingPart.Name} -> {part.Name}");
                     if (existingPart.Description != part.Description)
                         changes.Add($"Description: {existingPart.Description} -> {part.Description}");
                     if (Math.Abs(existingPart.EstimatedHours - part.EstimatedHours) > 0.01)
@@ -551,6 +570,7 @@ namespace OpCentrix.Pages.Admin
 
                     // Apply all updates with safe assignments
                     existingPart.PartNumber = part.PartNumber;
+                    existingPart.Name = part.Name;
                     existingPart.Description = part.Description;
                     existingPart.Material = part.Material;
                     existingPart.SlsMaterial = part.SlsMaterial;
@@ -860,6 +880,57 @@ namespace OpCentrix.Pages.Admin
             _logger.LogInformation("?? [PARTS-{OperationId}] Falling back to regular page load", operationId);
             await OnGetAsync();
             return Page();
+        }
+
+        private async Task EnsurePartNamesAsync(string operationId)
+        {
+            try
+            {
+                // Find parts that have empty or null names
+                var partsWithoutNames = await _context.Parts
+                    .Where(p => string.IsNullOrEmpty(p.Name))
+                    .ToListAsync();
+
+                if (partsWithoutNames.Any())
+                {
+                    _logger.LogInformation("?? [PARTS-{OperationId}] Found {Count} parts without names, updating...", 
+                        operationId, partsWithoutNames.Count);
+
+                    foreach (var part in partsWithoutNames)
+                    {
+                        // Set Name to be the same as Description initially, or create a default name
+                        if (!string.IsNullOrEmpty(part.Description))
+                        {
+                            part.Name = part.Description.Length > 200 
+                                ? part.Description.Substring(0, 200).Trim() 
+                                : part.Description.Trim();
+                        }
+                        else
+                        {
+                            // Create a default name based on part number
+                            part.Name = $"Part {part.PartNumber}";
+                        }
+
+                        _logger.LogDebug("?? [PARTS-{OperationId}] Updated part {PartNumber}: Name set to '{Name}'", 
+                            operationId, part.PartNumber, part.Name);
+                    }
+
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation("? [PARTS-{OperationId}] Successfully updated {Count} parts with default names", 
+                        operationId, partsWithoutNames.Count);
+                }
+                else
+                {
+                    _logger.LogDebug("? [PARTS-{OperationId}] All parts already have proper names", operationId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "? [PARTS-{OperationId}] Error ensuring part names: {ErrorMessage}", 
+                    operationId, ex.Message);
+                
+                // Don't throw - this is not critical for page loading
+            }
         }
     }
 }

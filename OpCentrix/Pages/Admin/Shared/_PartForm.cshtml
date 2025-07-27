@@ -1,12 +1,11 @@
 ﻿@model OpCentrix.Models.Part
 
 <form id="partForm" method="post" 
-      action="/Admin/Parts?handler=Save"
       hx-post="/Admin/Parts?handler=Save" 
       hx-trigger="submit"
-      hx-target="#modal-container .modal-content" 
-      hx-swap="innerHTML"
-      hx-on::before-request="console.log('🎯 [FORM] Submitting part form to:', event.detail.elt.getAttribute('hx-post') || event.detail.elt.action); console.log('🎯 [FORM] Form data:', new FormData(event.detail.elt)); OpCentrixAdmin.Loading.show(document.getElementById('submitBtn'));"
+      hx-target="this" 
+      hx-swap="outerHTML"
+      hx-on::before-request="console.log('🎯 [FORM] Submitting part form to:', event.detail.elt.getAttribute('hx-post')); console.log('🎯 [FORM] Form data:', new FormData(event.detail.elt)); OpCentrixAdmin.Loading.show(document.getElementById('submitBtn'));"
       hx-on::after-swap="console.log('🎯 [FORM] Form response received'); handlePartFormResponse(event);"
       hx-on::response-error="console.error('❌ [FORM] Submission error:', event.detail); OpCentrixAdmin.Alert.error('Form submission failed. Please try again.');"
       enctype="application/x-www-form-urlencoded">
@@ -47,7 +46,6 @@
     <input type="hidden" asp-for="Id" />
     <input type="hidden" asp-for="CreatedDate" />
     <input type="hidden" asp-for="CreatedBy" />
-    <input type="hidden" name="handler" value="Save" />
     @Html.AntiForgeryToken()
     
     <div class="p-6 max-h-[70vh] overflow-y-auto">
@@ -80,13 +78,34 @@
                     </select>
                 </div>
                 
+                <div>
+                    <label asp-for="Name" class="block text-sm font-medium text-gray-700 mb-1">
+                        Part Name <span class="text-red-500">*</span>
+                    </label>
+                    <input asp-for="Name" type="text" placeholder="Enter part name..." required
+                           class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                    <span asp-validation-for="Name" class="text-red-500 text-sm"></span>
+                    <p class="text-xs text-gray-500 mt-1">Descriptive name for the part</p>
+                </div>
+                
+                <div>
+                    <label asp-for="CustomerPartNumber" class="block text-sm font-medium text-gray-700 mb-1">
+                        Customer Part Number
+                    </label>
+                    <input asp-for="CustomerPartNumber" type="text" placeholder="Customer's part number..."
+                           class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                    <span asp-validation-for="CustomerPartNumber" class="text-red-500 text-sm"></span>
+                    <p class="text-xs text-gray-500 mt-1">Optional customer reference</p>
+                </div>
+                
                 <div class="md:col-span-2">
                     <label asp-for="Description" class="block text-sm font-medium text-gray-700 mb-1">
                         Description <span class="text-red-500">*</span>
                     </label>
-                    <input asp-for="Description" type="text" placeholder="Enter part description..." required
-                           class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                    <textarea asp-for="Description" placeholder="Enter detailed part description..." required rows="3"
+                           class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
                     <span asp-validation-for="Description" class="text-red-500 text-sm"></span>
+                    <p class="text-xs text-gray-500 mt-1">Detailed description of the part's purpose and features</p>
                 </div>
             </div>
         </div>
@@ -102,8 +121,8 @@
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Material Type</label>
-                    <select asp-for="Material" id="materialSelect" onchange="window.updateSlsMaterial && window.updateSlsMaterial()" 
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Material Type <span class="text-red-500">*</span></label>
+                    <select asp-for="Material" id="materialSelect" onchange="window.updateSlsMaterial && window.updateSlsMaterial()" required
                             class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-green-500 focus:border-green-500">
                         <option value="">Select material...</option>
                         <optgroup label="Titanium Alloys">
@@ -139,10 +158,11 @@
                 </div>
                 
                 <div>
-                    <label asp-for="SlsMaterial" class="block text-sm font-medium text-gray-700 mb-1">SLS Material</label>
-                    <input asp-for="SlsMaterial" id="slsMaterialInput" type="text" 
+                    <label asp-for="SlsMaterial" class="block text-sm font-medium text-gray-700 mb-1">SLS Material <span class="text-red-500">*</span></label>
+                    <input asp-for="SlsMaterial" id="slsMaterialInput" type="text" required
                            class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-gray-50" 
                            readonly />
+                    <span asp-validation-for="SlsMaterial" class="text-red-500 text-sm"></span>
                     <p class="text-xs text-gray-500 mt-1">Auto-filled based on material selection</p>
                 </div>
             </div>
@@ -384,8 +404,10 @@
         // Handle form response after HTMX submission
         window.handlePartFormResponse = function(event) {
             console.log('🔧 [FORM] Form response handler called');
+            console.log('🔧 [FORM] Event detail:', event.detail);
             
             const response = event.detail.xhr.responseText;
+            console.log('🔧 [FORM] Response text preview:', response.substring(0, 200));
             
             // Check if response contains validation errors
             if (response.includes('ValidationErrors') || response.includes('text-red-500')) {
@@ -394,16 +416,25 @@
                 return;
             }
             
-            // Check if response contains success script
+            // Check if response contains success script - this is the key fix!
             if (response.includes('<script>') && response.includes('Part saved successfully')) {
-                console.log('✅ [FORM] Success script response received - executing');
+                console.log('✅ [FORM] Success script response received - parsing and executing');
                 
-                // Extract part number for better messaging
-                const partNumberMatch = response.match(/Part saved successfully: ([^']+)/);
-                const partNumber = partNumberMatch ? partNumberMatch[1] : 'Part';
-                
-                // Execute success handling
-                OpCentrixAdmin.Parts.handleFormSuccess(partNumber, @Model.Id != 0);
+                // Extract and execute the success script
+                const scriptMatch = response.match(/<script>([\s\S]*?)<\/script>/);
+                if (scriptMatch) {
+                    console.log('✅ [FORM] Executing success script');
+                    try {
+                        // Execute the script content
+                        eval(scriptMatch[1]);
+                    } catch (error) {
+                        console.error('❌ [FORM] Error executing success script:', error);
+                        // Fallback: extract part number and call success handler
+                        const partNumberMatch = response.match(/Part saved successfully: ([^']+)/);
+                        const partNumber = partNumberMatch ? partNumberMatch[1] : 'Part';
+                        OpCentrixAdmin.Parts.handleFormSuccess(partNumber, @Model.Id != 0);
+                    }
+                }
                 return;
             }
             
@@ -693,52 +724,6 @@
         // Initialize form when loaded
         function initializeForm() {
             console.log('🔧 [FORM] Initializing part form...');
-            
-            // Add fallback form submission handler
-            const form = document.getElementById('partForm');
-            if (form) {
-                // Add a fallback submit handler that doesn't rely on HTMX
-                form.addEventListener('submit', function(e) {
-                    console.log('🔧 [FORM] Form submit event triggered');
-                    
-                    // Check if HTMX is handling this
-                    const hasHtmx = form.hasAttribute('hx-post');
-                    if (hasHtmx) {
-                        console.log('🔧 [FORM] HTMX should handle this submission');
-                        return; // Let HTMX handle it
-                    }
-                    
-                    // Fallback: handle manually
-                    console.log('🔧 [FORM] Using fallback submission handler');
-                    e.preventDefault();
-                    
-                    const formData = new FormData(form);
-                    formData.set('handler', 'Save'); // Ensure handler is set
-                    
-                    fetch('/Admin/Parts?handler=Save', {
-                        method: 'POST',
-                        body: formData
-                    })
-                    .then(response => response.text())
-                    .then(html => {
-                        console.log('✅ [FORM] Fallback submission successful');
-                        if (html.includes('Part saved successfully')) {
-                            console.log('✅ [FORM] Part saved - closing modal and refreshing');
-                            if (typeof OpCentrixAdmin !== 'undefined' && OpCentrixAdmin.Modal) {
-                                OpCentrixAdmin.Modal.hide('modal-container');
-                            }
-                            setTimeout(() => { window.location.reload(); }, 1500);
-                        } else {
-                            // Update modal content with response (likely validation errors)
-                            document.querySelector('#modal-container .modal-content').innerHTML = html;
-                        }
-                    })
-                    .catch(error => {
-                        console.error('❌ [FORM] Fallback submission failed:', error);
-                        alert('Error saving part: ' + error.message);
-                    });
-                });
-            }
             
             // Wait a bit for elements to be available
             setTimeout(() => {

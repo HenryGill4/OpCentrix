@@ -94,14 +94,64 @@ namespace OpCentrix.Data
             modelBuilder.Entity<Part>(entity =>
             {
                 entity.HasKey(e => e.Id);
-                entity.Property(e => e.PartNumber).IsRequired().HasMaxLength(20);
-                // FIXED: Use correct property names
-                entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.PartNumber).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Description).IsRequired().HasMaxLength(500);
+                entity.Property(e => e.Material).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.SlsMaterial).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Industry).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Application).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.CreatedBy).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.LastModifiedBy).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
                 entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
                 
+                // Configure decimal properties with proper precision
+                entity.Property(e => e.MaterialCostPerKg).HasPrecision(12, 2);
+                entity.Property(e => e.StandardLaborCostPerHour).HasPrecision(10, 2);
+                entity.Property(e => e.SetupCost).HasPrecision(10, 2);
+                entity.Property(e => e.PostProcessingCost).HasPrecision(10, 2);
+                entity.Property(e => e.QualityInspectionCost).HasPrecision(10, 2);
+                entity.Property(e => e.MachineOperatingCostPerHour).HasPrecision(10, 2);
+                entity.Property(e => e.ArgonCostPerHour).HasPrecision(10, 2);
+                entity.Property(e => e.AverageCostPerUnit).HasPrecision(10, 2);
+                entity.Property(e => e.StandardSellingPrice).HasPrecision(10, 2);
+                
+                // Configure string properties with appropriate lengths
+                entity.Property(e => e.PowderSpecification).HasMaxLength(100);
+                entity.Property(e => e.Dimensions).HasMaxLength(100);
+                entity.Property(e => e.SurfaceFinishRequirement).HasMaxLength(100);
+                entity.Property(e => e.ProcessType).HasMaxLength(50);
+                entity.Property(e => e.RequiredMachineType).HasMaxLength(100);
+                entity.Property(e => e.PreferredMachines).HasMaxLength(200);
+                entity.Property(e => e.QualityStandards).HasMaxLength(500);
+                entity.Property(e => e.ToleranceRequirements).HasMaxLength(500);
+                entity.Property(e => e.RequiredSkills).HasMaxLength(500);
+                entity.Property(e => e.RequiredCertifications).HasMaxLength(500);
+                entity.Property(e => e.RequiredTooling).HasMaxLength(500);
+                entity.Property(e => e.ConsumableMaterials).HasMaxLength(500);
+                entity.Property(e => e.SupportStrategy).HasMaxLength(200);
+                entity.Property(e => e.CustomerPartNumber).HasMaxLength(100);
+                entity.Property(e => e.PartCategory).HasMaxLength(100);
+                entity.Property(e => e.PartClass).HasMaxLength(10);
+                entity.Property(e => e.ProcessParameters).HasMaxLength(2000);
+                entity.Property(e => e.QualityCheckpoints).HasMaxLength(2000);
+                entity.Property(e => e.BuildFileTemplate).HasMaxLength(255);
+                entity.Property(e => e.CadFilePath).HasMaxLength(500);
+                entity.Property(e => e.CadFileVersion).HasMaxLength(100);
+                entity.Property(e => e.AvgDuration).HasMaxLength(50);
+                entity.Property(e => e.AdminOverrideReason).HasMaxLength(500);
+                entity.Property(e => e.AdminOverrideBy).HasMaxLength(100);
+                
                 // Unique constraint on part number
                 entity.HasIndex(e => e.PartNumber).IsUnique();
+                
+                // Additional indexes for performance
+                entity.HasIndex(e => e.Material);
+                entity.HasIndex(e => e.IsActive);
+                entity.HasIndex(e => e.Industry);
+                entity.HasIndex(e => e.PartCategory);
+                entity.HasIndex(e => e.CreatedDate);
             });
 
             // Configure Machine entity

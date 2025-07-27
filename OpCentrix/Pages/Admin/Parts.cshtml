@@ -261,6 +261,7 @@
             <thead class="bg-gray-50">
                 <tr>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Part Number</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Material</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
@@ -278,6 +279,13 @@
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="text-sm font-medium text-gray-900">@part.PartNumber</div>
                                 <div class="text-sm text-gray-500">ID: @part.Id</div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="text-sm font-medium text-gray-900">@part.Name</div>
+                                @if (!string.IsNullOrEmpty(part.CustomerPartNumber))
+                                {
+                                    <div class="text-sm text-gray-500">Customer: @part.CustomerPartNumber</div>
+                                }
                             </td>
                             <td class="px-6 py-4">
                                 <div class="text-sm text-gray-900">@part.Description</div>
@@ -343,7 +351,7 @@
                 else
                 {
                     <tr>
-                        <td colspan="7" class="px-6 py-4 text-center text-gray-500">
+                        <td colspan="8" class="px-6 py-4 text-center text-gray-500">
                             No parts found matching your criteria.
                         </td>
                     </tr>
@@ -415,12 +423,38 @@
             function setupHTMXIntegration() {
                 // Listen for successful form submissions in modal
                 document.addEventListener('htmx:afterRequest', function(event) {
+                    console.log('?? [HTMX] After request event:', event.detail);
+                    
                     if (event.target.closest('#modal-container') && event.detail.successful) {
                         const response = event.detail.xhr.responseText;
+                        console.log('?? [HTMX] Response preview:', response.substring(0, 200));
                         
                         // Check if response is a script (success response)
                         if (response.includes('<script>') && response.includes('Part saved successfully')) {
+                            console.log('? [HTMX] Success script detected - executing');
+                            
                             // Extract part number from response for better messaging
+                            const partNumberMatch = response.match(/Part saved successfully: ([^']+)/);
+                            const partNumber = partNumberMatch ? partNumberMatch[1] : 'Part';
+                            
+                            // Call the success handler directly
+                            OpCentrixAdmin.Parts.handleFormSuccess(partNumber, true);
+                        }
+                    }
+                });
+                
+                // Listen for HTMX after swap events
+                document.addEventListener('htmx:afterSwap', function(event) {
+                    console.log('?? [HTMX] After swap event:', event.detail);
+                    
+                    if (event.target.closest('#modal-container')) {
+                        const response = event.detail.xhr.responseText;
+                        
+                        // Check if response contains success script
+                        if (response.includes('<script>') && response.includes('Part saved successfully')) {
+                            console.log('? [HTMX] Success detected in swap - calling success handler');
+                            
+                            // Extract part number and call success handler
                             const partNumberMatch = response.match(/Part saved successfully: ([^']+)/);
                             const partNumber = partNumberMatch ? partNumberMatch[1] : 'Part';
                             
@@ -432,11 +466,13 @@
                 // Handle form errors
                 document.addEventListener('htmx:responseError', function(event) {
                     if (event.target.closest('#modal-container')) {
-                        console.error('HTMX form submission error:', event.detail);
+                        console.error('? [HTMX] Form submission error:', event.detail);
                         OpCentrixAdmin.Alert.error('Form submission failed. Please try again.');
                         
                         // Hide any loading states
-                        OpCentrixAdmin.Loading.hideAll();
+                        if (typeof OpCentrixAdmin !== 'undefined' && OpCentrixAdmin.Loading && OpCentrixAdmin.Loading.hideAll) {
+                            OpCentrixAdmin.Loading.hideAll();
+                        }
                     }
                 });
             }
