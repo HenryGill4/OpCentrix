@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json;
 
 namespace OpCentrix.Models
-{
+{   
     // Represents a part specification for SLS metal printing with comprehensive manufacturing data
     public class Part
     {
@@ -365,7 +365,7 @@ namespace OpCentrix.Models
         public double? AdminEstimatedHoursOverride { get; set; }
         
         [StringLength(500)]
-        public string AdminOverrideReason { get; set; } = string.Empty;
+        public string? AdminOverrideReason { get; set; }
         
         [StringLength(100)]
         public string AdminOverrideBy { get; set; } = string.Empty;

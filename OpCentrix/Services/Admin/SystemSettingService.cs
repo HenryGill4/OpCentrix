@@ -26,8 +26,8 @@ public class SystemSettingService : ISystemSettingService
 
     public SystemSettingService(SchedulerContext context, ILogger<SystemSettingService> logger)
     {
-        _context = context;
-        _logger = logger;
+        _context = context ?? throw new ArgumentNullException(nameof(context));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<List<SystemSetting>> GetAllSettingsAsync()
@@ -64,18 +64,21 @@ public class SystemSettingService : ISystemSettingService
 
     public async Task<T> GetSettingValueAsync<T>(string key, T defaultValue = default)
     {
+        if (string.IsNullOrWhiteSpace(key))
+            return defaultValue ?? default(T)!;
+            
         try
         {
             var setting = await GetSettingAsync(key);
             if (setting == null)
-                return defaultValue;
+                return defaultValue ?? default(T)!;
 
             return setting.GetValue<T>();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting setting value for {SettingKey}", key);
-            return defaultValue;
+            return defaultValue ?? default(T)!;
         }
     }
 

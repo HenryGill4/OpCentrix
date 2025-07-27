@@ -32,9 +32,9 @@ public class SystemConfigurationService : ISystemConfigurationService
         IConfiguration configuration,
         ILogger<SystemConfigurationService> logger)
     {
-        _systemSettingService = systemSettingService;
-        _configuration = configuration;
-        _logger = logger;
+        _systemSettingService = systemSettingService ?? throw new ArgumentNullException(nameof(systemSettingService));
+        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task LoadSettingsIntoConfigurationAsync()
@@ -75,6 +75,9 @@ public class SystemConfigurationService : ISystemConfigurationService
 
     public async Task<T> GetConfigurationValueAsync<T>(string key, T defaultValue = default)
     {
+        if (string.IsNullOrWhiteSpace(key))
+            return defaultValue ?? default(T)!;
+        
         try
         {
             // Check if cache needs refresh
@@ -97,15 +100,15 @@ public class SystemConfigurationService : ISystemConfigurationService
             // Fallback to live database query
             var liveValue = await _systemSettingService.GetSettingValueAsync<T>(key, defaultValue);
             
-            // Cache the result
-            _cachedSettings[key] = liveValue;
+            // Cache the result (handle null safely)
+            _cachedSettings[key] = liveValue ?? (object)"";
             
             return liveValue;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting configuration value for {Key}", key);
-            return defaultValue;
+            return defaultValue ?? default(T)!;
         }
     }
 
@@ -144,7 +147,7 @@ public class SystemConfigurationService : ISystemConfigurationService
 
     private bool TryConvertValue<T>(object value, out T result)
     {
-        result = default;
+        result = default(T)!;
         
         try
         {
@@ -154,9 +157,22 @@ public class SystemConfigurationService : ISystemConfigurationService
                 return true;
             }
 
+            // Handle null values
+            if (value == null)
+            {
+                result = default(T)!;
+                return typeof(T).IsClass || Nullable.GetUnderlyingType(typeof(T)) != null;
+            }
+
             // Handle string conversions to various types
             if (value is string stringValue)
             {
+                if (string.IsNullOrEmpty(stringValue))
+                {
+                    result = default(T)!;
+                    return typeof(T).IsClass || Nullable.GetUnderlyingType(typeof(T)) != null;
+                }
+                
                 var targetType = typeof(T);
                 
                 if (targetType == typeof(int) && int.TryParse(stringValue, out var intVal))
@@ -191,7 +207,8 @@ public class SystemConfigurationService : ISystemConfigurationService
             }
 
             // Use Convert.ChangeType as fallback
-            result = (T)Convert.ChangeType(value, typeof(T));
+            var converted = Convert.ChangeType(value, typeof(T));
+            result = converted != null ? (T)converted : default(T)!;
             return true;
         }
         catch

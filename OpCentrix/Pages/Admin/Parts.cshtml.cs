@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using OpCentrix.Data;
@@ -6,7 +6,7 @@ using OpCentrix.Models;
 using OpCentrix.Authorization;
 using System.Text.Json;
 
-namespace OpCentrix.Pages.Admin
+namespace OpCentrix.Pages.Admin         
 {
     [AdminOnly]
     public class PartsModel : PageModel
@@ -471,27 +471,28 @@ namespace OpCentrix.Pages.Admin
                         operationId, part.Description.Length);
                 }
 
-                // Task 7: Admin Override Validation
+                // Task 7: Admin Override Validation - FIXED: Handle nullable override reason properly
                 if (part.AdminEstimatedHoursOverride.HasValue)
                 {
                     if (part.AdminEstimatedHoursOverride.Value <= 0 || part.AdminEstimatedHoursOverride.Value > 200)
                     {
                         validationErrors.Add("Admin override duration must be between 0.25 and 200 hours");
-                        _logger.LogWarning("?? [PARTS-{OperationId}] Validation failed: Invalid override duration: {Hours}", 
+                        _logger.LogWarning("⚠️ [PARTS-{OperationId}] Validation failed: Invalid override duration: {Hours}", 
                             operationId, part.AdminEstimatedHoursOverride.Value);
                     }
                     
                     if (string.IsNullOrWhiteSpace(part.AdminOverrideReason))
                     {
                         validationErrors.Add("Override reason is required when admin override duration is set");
-                        _logger.LogWarning("?? [PARTS-{OperationId}] Validation failed: Missing override reason", operationId);
+                        _logger.LogWarning("⚠️ [PARTS-{OperationId}] Validation failed: Missing override reason", operationId);
                     }
-                    else if (part.AdminOverrideReason.Length > 500)
-                    {
-                        validationErrors.Add("Override reason cannot exceed 500 characters");
-                        _logger.LogWarning("?? [PARTS-{OperationId}] Validation failed: Override reason too long: {Length}", 
-                            operationId, part.AdminOverrideReason.Length);
-                    }
+                }
+                else
+                {
+                    // CRITICAL FIX: Set AdminOverrideReason to empty string for NOT NULL constraint
+                    part.AdminOverrideReason = string.Empty;
+                    part.AdminOverrideBy = string.Empty;
+                    part.AdminOverrideDate = null;
                 }
 
                 if (validationErrors.Any())
@@ -525,9 +526,15 @@ namespace OpCentrix.Pages.Admin
                     {
                         part.AdminOverrideBy = currentUser;
                         part.AdminOverrideDate = now;
-                        part.AdminOverrideReason = part.AdminOverrideReason?.Trim() ?? string.Empty;
-                        _logger.LogInformation("? [PARTS-{OperationId}] New part created with admin override: {Hours}h by {User} - {Reason}", 
+                        part.AdminOverrideReason = part.AdminOverrideReason?.Trim() ?? string.Empty; // Ensure not null
+                        _logger.LogInformation("✅ [PARTS-{OperationId}] New part created with admin override: {Hours}h by {User} - {Reason}", 
                             operationId, part.AdminEstimatedHoursOverride.Value, currentUser, part.AdminOverrideReason);
+                    }
+                    else
+                    {
+                        part.AdminOverrideReason = string.Empty; // NOT NULL constraint fix
+                        part.AdminOverrideBy = string.Empty;
+                        part.AdminOverrideDate = null;
                     }
                     
                     // CRITICAL FIX: Ensure all required fields have values
@@ -613,22 +620,24 @@ namespace OpCentrix.Pages.Admin
                     }
                     
                     existingPart.AdminEstimatedHoursOverride = part.AdminEstimatedHoursOverride;
-                    existingPart.AdminOverrideReason = part.AdminOverrideReason?.Trim() ?? string.Empty;
+                    existingPart.AdminOverrideReason = part.AdminOverrideReason?.Trim(); // Keep null if not provided
                     
                     // Set admin override metadata when override is applied
                     if (part.AdminEstimatedHoursOverride.HasValue && (overrideChanged || string.IsNullOrEmpty(existingPart.AdminOverrideBy)))
                     {
                         existingPart.AdminOverrideBy = currentUser;
                         existingPart.AdminOverrideDate = now;
-                        _logger.LogInformation("? [PARTS-{OperationId}] Admin override applied: {Hours}h by {User} - {Reason}", 
+                        existingPart.AdminOverrideReason = part.AdminOverrideReason?.Trim() ?? string.Empty; // Ensure not null
+                        _logger.LogInformation("✅ [PARTS-{OperationId}] Admin override applied: {Hours}h by {User} - {Reason}", 
                             operationId, part.AdminEstimatedHoursOverride.Value, currentUser, part.AdminOverrideReason);
                     }
                     else if (!part.AdminEstimatedHoursOverride.HasValue)
                     {
                         // Clear override metadata when override is removed
+                        existingPart.AdminOverrideReason = string.Empty; // NOT NULL constraint fix
                         existingPart.AdminOverrideBy = string.Empty;
                         existingPart.AdminOverrideDate = null;
-                        _logger.LogInformation("? [PARTS-{OperationId}] Admin override removed by {User}", operationId, currentUser);
+                        _logger.LogInformation("✅ [PARTS-{OperationId}] Admin override removed by {User}", operationId, currentUser);
                     }
 
                     existingPart.LastModifiedDate = now;

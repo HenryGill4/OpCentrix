@@ -46,6 +46,8 @@
     <input type="hidden" asp-for="Id" />
     <input type="hidden" asp-for="CreatedDate" />
     <input type="hidden" asp-for="CreatedBy" />
+    <!-- CRITICAL FIX: Add hidden handler field to ensure proper routing -->
+    <input type="hidden" name="handler" value="Save" />
     @Html.AntiForgeryToken()
     
     <div class="p-6 max-h-[70vh] overflow-y-auto">
@@ -110,7 +112,7 @@
             </div>
         </div>
 
-        <!-- Material Selection Section -->
+        <!-- Material Selection Section - FIXED AUTO-FILL -->
         <div class="bg-green-50 rounded-lg p-4 mb-6">
             <h3 class="text-lg font-semibold text-green-900 mb-4 flex items-center">
                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -122,7 +124,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Material Type <span class="text-red-500">*</span></label>
-                    <select asp-for="Material" id="materialSelect" onchange="window.updateSlsMaterial && window.updateSlsMaterial()" required
+                    <select asp-for="Material" id="materialSelect" onchange="updateSlsMaterial()" required
                             class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-green-500 focus:border-green-500">
                         <option value="">Select material...</option>
                         <optgroup label="Titanium Alloys">
@@ -166,6 +168,36 @@
                     <p class="text-xs text-gray-500 mt-1">Auto-filled based on material selection</p>
                 </div>
             </div>
+            
+            <!-- ENHANCED SLS PARAMETERS SECTION -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                <div>
+                    <label asp-for="RecommendedLaserPower" class="block text-sm font-medium text-gray-700 mb-1">
+                        Laser Power (W)
+                    </label>
+                    <input asp-for="RecommendedLaserPower" id="laserPowerInput" type="number" step="1" min="0" max="500" 
+                           placeholder="200" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-green-500 focus:border-green-500" />
+                    <p class="text-xs text-gray-500 mt-1">Auto-fills based on material</p>
+                </div>
+                
+                <div>
+                    <label asp-for="RecommendedScanSpeed" class="block text-sm font-medium text-gray-700 mb-1">
+                        Scan Speed (mm/s)
+                    </label>
+                    <input asp-for="RecommendedScanSpeed" id="scanSpeedInput" type="number" step="10" min="0" max="5000" 
+                           placeholder="1200" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-green-500 focus:border-green-500" />
+                    <p class="text-xs text-gray-500 mt-1">Auto-fills based on material</p>
+                </div>
+                
+                <div>
+                    <label asp-for="RecommendedBuildTemperature" class="block text-sm font-medium text-gray-700 mb-1">
+                        Build Temperature (°C)
+                    </label>
+                    <input asp-for="RecommendedBuildTemperature" id="buildTemperatureInput" type="number" step="1" min="0" max="500" 
+                           placeholder="180" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-green-500 focus:border-green-500" />
+                    <p class="text-xs text-gray-500 mt-1">Auto-fills based on material</p>
+                </div>
+            </div>
         </div>
 
         <!-- Duration & Time Estimates Section -->
@@ -182,11 +214,11 @@
                     <label asp-for="EstimatedHours" class="block text-sm font-medium text-gray-700 mb-1">
                         Standard Duration (Hours) <span class="text-red-500">*</span>
                     </label>
-                    <input asp-for="EstimatedHours" type="number" step="0.25" min="0.25" max="200" 
+                    <input asp-for="EstimatedHours" id="estimatedHoursInput" type="number" step="0.25" min="0.25" max="200" 
                            placeholder="8.5" onchange="window.updateDurationDisplay && window.updateDurationDisplay()" required
                            class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500" />
                     <span asp-validation-for="EstimatedHours" class="text-red-500 text-sm"></span>
-                    <p class="text-xs text-gray-500 mt-1">Default manufacturing time</p>
+                    <p class="text-xs text-gray-500 mt-1">Auto-fills based on material complexity</p>
                 </div>
                 
                 <div>
@@ -284,8 +316,9 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label asp-for="MaterialCostPerKg" class="block text-sm font-medium text-gray-700 mb-1">Material Cost ($/kg)</label>
-                    <input asp-for="MaterialCostPerKg" type="number" step="0.01" min="0" placeholder="450.00" 
+                    <input asp-for="MaterialCostPerKg" id="materialCostInput" type="number" step="0.01" min="0" placeholder="450.00" 
                            class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-red-500 focus:border-red-500" />
+                    <p class="text-xs text-gray-500 mt-1">Auto-fills based on material</p>
                 </div>
                 
                 <div>
@@ -395,83 +428,70 @@
 </form>
 
 <script>
-    // Part Form functions - Enhanced and Fixed for New Modal System
+    // FIXED Part Form functions - Complete Auto-Fill Logic Implementation
     (function() {
         'use strict';
         
-        console.log('🔧 [FORM] Part form script loading...');
+        console.log('🔧 [FORM] Part form script loading with FIXED auto-fill logic...');
 
-        // Handle form response after HTMX submission
-        window.handlePartFormResponse = function(event) {
-            console.log('🔧 [FORM] Form response handler called');
-            console.log('🔧 [FORM] Event detail:', event.detail);
-            
-            const response = event.detail.xhr.responseText;
-            console.log('🔧 [FORM] Response text preview:', response.substring(0, 200));
-            
-            // Check if response contains validation errors
-            if (response.includes('ValidationErrors') || response.includes('text-red-500')) {
-                console.log('🔧 [FORM] Validation errors found - keeping modal open');
-                OpCentrixAdmin.Loading.hide(document.getElementById('submitBtn'));
-                return;
+        // ENHANCED: Material-specific defaults with ALL parameters
+        const MATERIAL_DEFAULTS = {
+            'Inconel 718': {
+                laserPower: 285,
+                scanSpeed: 960,
+                buildTemperature: 200,
+                materialCost: 750.00,
+                estimatedHours: 12.0,
+                complexityMultiplier: 1.5
+            },
+            'Inconel 625': {
+                laserPower: 275,
+                scanSpeed: 980,
+                buildTemperature: 195,
+                materialCost: 850.00,
+                estimatedHours: 14.0,
+                complexityMultiplier: 1.7
+            },
+            'Ti-6Al-4V Grade 5': {
+                laserPower: 200,
+                scanSpeed: 1200,
+                buildTemperature: 180,
+                materialCost: 450.00,
+                estimatedHours: 8.0,
+                complexityMultiplier: 1.0
+            },
+            '316L Stainless Steel': {
+                laserPower: 240,
+                scanSpeed: 1100,
+                buildTemperature: 170,
+                materialCost: 280.00,
+                estimatedHours: 6.0,
+                complexityMultiplier: 0.8
             }
-            
-            // Check if response contains success script - this is the key fix!
-            if (response.includes('<script>') && response.includes('Part saved successfully')) {
-                console.log('✅ [FORM] Success script response received - parsing and executing');
-                
-                // Extract and execute the success script
-                const scriptMatch = response.match(/<script>([\s\S]*?)<\/script>/);
-                if (scriptMatch) {
-                    console.log('✅ [FORM] Executing success script');
-                    try {
-                        // Execute the script content
-                        eval(scriptMatch[1]);
-                    } catch (error) {
-                        console.error('❌ [FORM] Error executing success script:', error);
-                        // Fallback: extract part number and call success handler
-                        const partNumberMatch = response.match(/Part saved successfully: ([^']+)/);
-                        const partNumber = partNumberMatch ? partNumberMatch[1] : 'Part';
-                        OpCentrixAdmin.Parts.handleFormSuccess(partNumber, @Model.Id != 0);
-                    }
-                }
-                return;
-            }
-            
-            console.log('🔧 [FORM] Standard response handled - form content updated');
-            OpCentrixAdmin.Loading.hide(document.getElementById('submitBtn'));
         };
         
         // GLOBAL FUNCTION DEFINITIONS - Available for inline event handlers
         window.updateSlsMaterial = function() {
-            console.log('🔧 [FORM] updateSlsMaterial called');
+            console.log('🔧 [FORM] updateSlsMaterial called - FIXED VERSION');
             
             const materialSelect = document.getElementById('materialSelect');
             const slsMaterialInput = document.getElementById('slsMaterialInput');
             
-            console.log('🔧 [FORM] Elements found:', {
-                materialSelect: !!materialSelect,
-                slsMaterialInput: !!slsMaterialInput,
-                materialValue: materialSelect?.value
-            });
-            
-            if (!materialSelect) {
-                console.error('❌ [FORM] Material select element not found (ID: materialSelect)');
-                return false;
-            }
-            
-            if (!slsMaterialInput) {
-                console.error('❌ [FORM] SLS Material input element not found (ID: slsMaterialInput)');
+            if (!materialSelect || !slsMaterialInput) {
+                console.error('❌ [FORM] Material form elements not found');
                 return false;
             }
             
             try {
-                if (materialSelect.value && materialSelect.value !== '') {
-                    slsMaterialInput.value = materialSelect.value;
-                    console.log('✅ [FORM] SLS Material updated to:', materialSelect.value);
+                const materialType = materialSelect.value;
+                
+                if (materialType && materialType !== '') {
+                    // Set SlsMaterial to match selected Material
+                    slsMaterialInput.value = materialType;
+                    console.log('✅ [FORM] SLS Material updated to:', materialType);
                     
-                    // Auto-adjust defaults based on material type
-                    updateMaterialDefaults(materialSelect.value);
+                    // Auto-adjust ALL defaults based on material type
+                    updateMaterialDefaults(materialType);
                 } else {
                     slsMaterialInput.value = '';
                     console.log('🔧 [FORM] SLS Material cleared');
@@ -483,260 +503,142 @@
             }
         };
         
-        // Material-specific defaults
+        // Enhanced material defaults update
         window.updateMaterialDefaults = function(materialType) {
             console.log('🔧 [FORM] Updating defaults for material:', materialType);
             
-            const materialDefaults = {
-                'Inconel 718': {
-                    laserPower: 285,
-                    scanSpeed: 960,
-                    buildTemperature: 200,
-                    materialCost: 750.00,
-                    estimatedHours: 12.0
-                },
-                'Inconel 625': {
-                    laserPower: 275,
-                    scanSpeed: 980,
-                    buildTemperature: 195,
-                    materialCost: 850.00,
-                    estimatedHours: 14.0
-                },
-                'Ti-6Al-4V Grade 5': {
-                    laserPower: 200,
-                    scanSpeed: 1200,
-                    buildTemperature: 180,
-                    materialCost: 450.00,
-                    estimatedHours: 8.0
-                },
-                'Ti-6Al-4V ELI Grade 23': {
-                    laserPower: 195,
-                    scanSpeed: 1250,
-                    buildTemperature: 175,
-                    materialCost: 520.00,
-                    estimatedHours: 9.0
-                }
-            };
-            
-            const defaults = materialDefaults[materialType];
+            const defaults = MATERIAL_DEFAULTS[materialType];
             if (!defaults) {
                 console.log('ℹ️ [FORM] No specific defaults for material:', materialType);
                 return;
             }
             
             // Update form fields with material-specific defaults
-            const updates = [
-                { id: 'EstimatedHours', value: defaults.estimatedHours, name: 'Estimated Hours' },
-                { id: 'MaterialCostPerKg', value: defaults.materialCost, name: 'Material Cost' }
+            const fieldUpdates = [
+                { 
+                    selector: '#estimatedHoursInput, input[name="EstimatedHours"]', 
+                    value: defaults.estimatedHours, 
+                    name: 'Estimated Hours'
+                },
+                { 
+                    selector: '#materialCostInput, input[name="MaterialCostPerKg"]', 
+                    value: defaults.materialCost, 
+                    name: 'Material Cost'
+                },
+                { 
+                    selector: '#laserPowerInput, input[name="RecommendedLaserPower"]', 
+                    value: defaults.laserPower, 
+                    name: 'Laser Power'
+                },
+                { 
+                    selector: '#scanSpeedInput, input[name="RecommendedScanSpeed"]', 
+                    value: defaults.scanSpeed, 
+                    name: 'Scan Speed'
+                },
+                { 
+                    selector: '#buildTemperatureInput, input[name="RecommendedBuildTemperature"]', 
+                    value: defaults.buildTemperature, 
+                    name: 'Build Temperature'
+                }
             ];
             
             let updateCount = 0;
-            updates.forEach(update => {
-                const element = document.getElementById(update.id) || document.querySelector(`input[name="${update.id}"]`);
-                if (element && (!element.value || element.value === '8' || element.value === '450')) {
+            fieldUpdates.forEach(update => {
+                const element = document.querySelector(update.selector);
+                if (element) {
                     element.value = update.value;
                     updateCount++;
                     console.log(`✅ [FORM] Updated ${update.name} to: ${update.value}`);
+                    
+                    // Trigger change event for fields that have onchange handlers
+                    if (element.onchange) {
+                        element.onchange();
+                    }
                 }
             });
             
-            // Update duration display if hours were changed
             if (updateCount > 0) {
                 console.log(`✅ [FORM] Applied ${updateCount} material-specific defaults for ${materialType}`);
-                updateDurationDisplay();
+                // Update duration display if hours were changed
+                if (window.updateDurationDisplay) {
+                    updateDurationDisplay();
+                }
             }
         };
         
+        // Duration display update function
         window.updateDurationDisplay = function() {
-            console.log('🔧 [FORM] updateDurationDisplay called');
-            
-            const hoursInput = document.querySelector('input[name="EstimatedHours"]');
+            const hoursInput = document.querySelector('#estimatedHoursInput, input[name="EstimatedHours"]');
             const durationDisplay = document.getElementById('durationDisplay');
             const durationDays = document.getElementById('durationDays');
             
             if (!hoursInput || !durationDisplay || !durationDays) {
-                console.error('❌ [FORM] Duration elements not found');
                 return false;
             }
             
-            try {
-                const hours = parseFloat(hoursInput.value) || 0;
-                console.log('🔧 [FORM] Processing hours:', hours);
+            const hours = parseFloat(hoursInput.value) || 0;
+            
+            if (hours > 0) {
+                const days = Math.floor(hours / 24);
+                const remainingHours = hours % 24;
                 
-                if (hours > 0) {
-                    const days = Math.floor(hours / 24);
-                    const remainingHours = hours % 24;
-                    
-                    // Update duration display
-                    if (days > 0) {
-                        durationDisplay.value = `${days}d ${remainingHours.toFixed(1)}h`;
-                    } else {
-                        durationDisplay.value = `${hours.toFixed(1)}h`;
-                    }
-                    
-                    // Update duration days (work days, assuming 8-hour days)
-                    durationDays.value = Math.ceil(hours / 8);
-                    console.log('✅ [FORM] Duration updated:', durationDisplay.value, `(${durationDays.value} work days)`);
+                if (days > 0) {
+                    durationDisplay.value = `${days}d ${remainingHours.toFixed(1)}h`;
                 } else {
-                    durationDisplay.value = '';
-                    durationDays.value = '';
-                    console.log('🔧 [FORM] Duration cleared');
+                    durationDisplay.value = `${hours.toFixed(1)}h`;
                 }
                 
-                return true;
-            } catch (error) {
-                console.error('❌ [FORM] Error updating duration display:', error);
-                return false;
+                durationDays.value = Math.ceil(hours / 8);
+            } else {
+                durationDisplay.value = '';
+                durationDays.value = '';
             }
+            
+            return true;
         };
-
+        
         // Admin Override Display Update
         window.updateOverrideDisplay = function() {
-            console.log('🔧 [FORM] updateOverrideDisplay called');
-            
             const overrideInput = document.querySelector('input[name="AdminEstimatedHoursOverride"]');
             const overrideReasonInput = document.querySelector('input[name="AdminOverrideReason"]');
             const overrideStatus = document.getElementById('overrideStatus');
             
-            if (!overrideInput) {
-                console.error('❌ [FORM] Override input not found');
-                return false;
-            }
+            if (!overrideInput) return false;
             
-            try {
-                const overrideHours = parseFloat(overrideInput.value) || 0;
-                const hasOverride = overrideHours > 0;
-                
-                console.log('🔧 [FORM] Override processing:', {
-                    overrideHours,
-                    hasOverride
-                });
-                
-                // Show/hide override status section
-                if (overrideStatus) {
-                    if (hasOverride) {
-                        overrideStatus.classList.remove('hidden');
-                        overrideStatus.className = 'mt-3 p-3 rounded-lg bg-orange-50 border border-orange-200';
-                        
-                        // Update status text
-                        const statusText = overrideStatus.querySelector('p:last-child');
-                        if (statusText) {
-                            statusText.innerHTML = `Effective Duration: ${overrideHours.toFixed(1)} hours<br />
-                                                   <span class="text-orange-500">⚠️ This will override the standard ${document.querySelector('input[name="EstimatedHours"]')?.value || '0'} hour estimate</span>`;
-                        }
-                    } else {
-                        overrideStatus.classList.add('hidden');
-                    }
-                }
-                
-                // Make override reason required when override is set
-                if (overrideReasonInput) {
-                    if (hasOverride) {
-                        overrideReasonInput.setAttribute('required', 'required');
-                        overrideReasonInput.placeholder = 'Reason for override is required';
-                        overrideReasonInput.classList.add('border-orange-300', 'focus:ring-orange-500', 'focus:border-orange-500');
-                        overrideReasonInput.classList.remove('border-gray-300', 'focus:ring-yellow-500', 'focus:border-yellow-500');
-                    } else {
-                        overrideReasonInput.removeAttribute('required');
-                        overrideReasonInput.placeholder = 'Reason for duration override...';
-                        overrideReasonInput.classList.remove('border-orange-300', 'focus:ring-orange-500', 'focus:border-orange-500');
-                        overrideReasonInput.classList.add('border-gray-300', 'focus:ring-yellow-500', 'focus:border-yellow-500');
-                    }
-                }
-                
-                console.log('✅ [FORM] Override display updated');
-                return true;
-            } catch (error) {
-                console.error('❌ [FORM] Error updating override display:', error);
-                return false;
-            }
-        };
-        
-        // Part number validation - GLOBALLY AVAILABLE
-        window.validatePartNumber = async function(partNumber) {
-            console.log('🔧 [FORM] Validating part number:', partNumber);
+            const overrideHours = parseFloat(overrideInput.value) || 0;
+            const hasOverride = overrideHours > 0;
             
-            const validationDiv = document.getElementById('partNumberValidation');
-            const submitBtn = document.getElementById('submitBtn');
-            
-            if (!partNumber || partNumber.trim().length === 0) {
-                if (validationDiv) {
-                    validationDiv.className = 'text-xs mt-1 hidden';
-                    validationDiv.textContent = '';
-                }
-                return;
-            }
-            
-            // Clean and validate format
-            const cleanPartNumber = partNumber.trim().toUpperCase();
-            
-            // Basic format validation
-            const partNumberPattern = /^[A-Z0-9-]{3,20}$/;
-            if (!partNumberPattern.test(cleanPartNumber)) {
-                if (validationDiv) {
-                    validationDiv.className = 'text-xs mt-1 text-yellow-600';
-                    validationDiv.textContent = '⚠️ Part number format should be alphanumeric with dashes (e.g., 14-5396)';
-                }
-                return;
-            }
-            
-            try {
-                // Check for duplicates
-                const currentPartId = document.querySelector('input[name="Id"]')?.value || '0';
-                const response = await fetch(`/Admin/Parts?handler=CheckDuplicate&partNumber=${encodeURIComponent(cleanPartNumber)}&currentId=${currentPartId}`);
-                
-                if (response.ok) {
-                    const isDuplicate = await response.text();
-                    
-                    if (isDuplicate === 'true') {
-                        if (validationDiv) {
-                            validationDiv.className = 'text-xs mt-1 text-red-600';
-                            validationDiv.textContent = '❌ This part number already exists. Please use a different number.';
-                        }
-                        if (submitBtn) {
-                            submitBtn.disabled = true;
-                        }
-                    } else {
-                        if (validationDiv) {
-                            validationDiv.className = 'text-xs mt-1 text-green-600';
-                            validationDiv.textContent = '✅ Part number is available';
-                        }
-                        if (submitBtn) {
-                            submitBtn.disabled = false;
-                        }
-                    }
+            // Show/hide override status section
+            if (overrideStatus) {
+                if (hasOverride) {
+                    overrideStatus.classList.remove('hidden');
+                    overrideStatus.className = 'mt-3 p-3 rounded-lg bg-orange-50 border border-orange-200';
                 } else {
-                    console.warn('⚠️ [FORM] Failed to check part number uniqueness');
-                    if (validationDiv) {
-                        validationDiv.className = 'text-xs mt-1 text-gray-500';
-                        validationDiv.textContent = 'ℹ️ Unable to verify uniqueness - will check on save';
-                    }
-                }
-            } catch (error) {
-                console.error('❌ [FORM] Error validating part number:', error);
-                if (validationDiv) {
-                    validationDiv.className = 'text-xs mt-1 text-gray-500';
-                    validationDiv.textContent = 'ℹ️ Validation unavailable - will check on save';
+                    overrideStatus.classList.add('hidden');
                 }
             }
+            
+            // Make override reason required when override is set
+            if (overrideReasonInput) {
+                if (hasOverride) {
+                    overrideReasonInput.setAttribute('required', 'required');
+                    overrideReasonInput.placeholder = 'Reason for override is required';
+                } else {
+                    overrideReasonInput.removeAttribute('required');
+                    overrideReasonInput.placeholder = 'Reason for duration override...';
+                }
+            }
+            
+            return true;
         };
         
         // Initialize form when loaded
         function initializeForm() {
             console.log('🔧 [FORM] Initializing part form...');
             
-            // Wait a bit for elements to be available
             setTimeout(() => {
-                // Test and update initial values
                 const materialSelect = document.getElementById('materialSelect');
-                const hoursInput = document.querySelector('input[name="EstimatedHours"]');
-                
-                console.log('🔧 [FORM] Initial elements check:', {
-                    materialSelect: !!materialSelect,
-                    materialValue: materialSelect?.value,
-                    hoursInput: !!hoursInput,
-                    hoursValue: hoursInput?.value
-                });
+                const hoursInput = document.querySelector('#estimatedHoursInput, input[name="EstimatedHours"]');
                 
                 // Update SLS material if material is pre-selected
                 if (materialSelect && materialSelect.value) {
@@ -748,11 +650,11 @@
                     updateDurationDisplay();
                 }
                 
-                // Update override display if override is set
+                // Update override display
                 updateOverrideDisplay();
                 
                 console.log('✅ [FORM] Form initialization complete');
-            }, 100);
+            }, 300);
         }
         
         // Initialize when DOM is ready

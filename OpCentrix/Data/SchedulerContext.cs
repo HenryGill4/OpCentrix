@@ -12,7 +12,7 @@ namespace OpCentrix.Data
 
         // Core scheduling tables
         public DbSet<Job> Jobs { get; set; }
-        public DbSet<Part> Parts { get; set; }
+        public DbSet<Part> Parts { get; set; }  
         public DbSet<Machine> Machines { get; set; }
         public DbSet<User> Users { get; set; }
         public DbSet<UserSettings> UserSettings { get; set; }
@@ -140,7 +140,7 @@ namespace OpCentrix.Data
                 entity.Property(e => e.CadFilePath).HasMaxLength(500);
                 entity.Property(e => e.CadFileVersion).HasMaxLength(100);
                 entity.Property(e => e.AvgDuration).HasMaxLength(50);
-                entity.Property(e => e.AdminOverrideReason).HasMaxLength(500);
+                entity.Property(e => e.AdminOverrideReason).HasMaxLength(500); // FIXED: Remove IsRequired to make nullable
                 entity.Property(e => e.AdminOverrideBy).HasMaxLength(100);
                 
                 // Unique constraint on part number

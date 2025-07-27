@@ -1,0 +1,25 @@
+﻿OpCentrix Database Quick Reference
+=================================
+
+DATABASE FILE: scheduler.db (560 KB)
+TOTAL TABLES: 23 entities in SchedulerContext
+
+CORE TABLES:
+- Jobs (scheduling)
+- Parts (part library)  
+- Machines (equipment)
+- Users (authentication)
+
+KEY RELATIONSHIPS:
+- Jobs -> Parts (PartNumber)
+- Jobs -> Machines (MachineId)
+- JobStages -> Jobs (multi-stage workflow)
+- MachineCapabilities -> Machines
+
+PERFORMANCE INDEXES:
+- Jobs: (MachineId, ScheduledStart)
+- Parts: PartNumber (unique)
+- Machines: MachineId (unique)
+
+CONNECTION: "Data Source=scheduler.db"
+
