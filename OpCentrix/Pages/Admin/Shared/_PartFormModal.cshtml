@@ -1,0 +1,342 @@
+@model OpCentrix.Models.Part
+
+<!-- Modal Header -->
+<div class="d-flex justify-content-between align-items-center p-4 border-b border-gray-200">
+    <h4 class="text-lg font-semibold text-gray-900">
+        <i class="fas fa-cogs me-2"></i>
+        @(Model.Id == 0 ? "Add New Part" : $"Edit Part: {Model.PartNumber}")
+    </h4>
+    <button type="button" class="btn-close" onclick="hideModal()" aria-label="Close">
+        <i class="fas fa-times"></i>
+    </button>
+</div>
+
+<!-- Modal Body -->
+<div class="p-4 max-h-96 overflow-y-auto">
+    <form method="post" id="partForm" asp-antiforgery="true">
+        <input type="hidden" asp-for="Id" />
+        
+        <!-- Tab Navigation -->
+        <ul class="nav nav-tabs" id="partFormTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="basic-tab" data-bs-toggle="tab" data-bs-target="#basic" type="button" role="tab">
+                    <i class="fas fa-info-circle me-2"></i>Basic Info
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="material-tab" data-bs-toggle="tab" data-bs-target="#material" type="button" role="tab">
+                    <i class="fas fa-flask me-2"></i>Material & Process
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="physical-tab" data-bs-toggle="tab" data-bs-target="#physical" type="button" role="tab">
+                    <i class="fas fa-cube me-2"></i>Physical Properties
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="cost-tab" data-bs-toggle="tab" data-bs-target="#cost" type="button" role="tab">
+                    <i class="fas fa-dollar-sign me-2"></i>Cost & Timing
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="requirements-tab" data-bs-toggle="tab" data-bs-target="#requirements" type="button" role="tab">
+                    <i class="fas fa-certificate me-2"></i>Quality & Requirements
+                </button>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content" id="partFormTabsContent">
+            <!-- Basic Information Tab -->
+            <div class="tab-pane fade show active" id="basic" role="tabpanel">
+                <div class="row g-3 mt-2">
+                    <div class="col-md-4">
+                        <label asp-for="PartNumber" class="form-label required">Part Number</label>
+                        <input asp-for="PartNumber" class="form-control" required />
+                        <span asp-validation-for="PartNumber" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-8">
+                        <label asp-for="Name" class="form-label required">Part Name</label>
+                        <input asp-for="Name" class="form-control" required />
+                        <span asp-validation-for="Name" class="text-danger"></span>
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="Description" class="form-label required">Description</label>
+                        <textarea asp-for="Description" class="form-control" rows="3" required></textarea>
+                        <span asp-validation-for="Description" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="CustomerPartNumber" class="form-label">Customer Part Number</label>
+                        <input asp-for="CustomerPartNumber" class="form-control" />
+                        <span asp-validation-for="CustomerPartNumber" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="Industry" class="form-label required">Industry</label>
+                        <select asp-for="Industry" class="form-select" required>
+                            <option value="">Select Industry</option>
+                            <option value="Aerospace">Aerospace</option>
+                            <option value="Automotive">Automotive</option>
+                            <option value="Medical">Medical</option>
+                            <option value="Oil & Gas">Oil & Gas</option>
+                            <option value="Defense">Defense</option>
+                            <option value="Marine">Marine</option>
+                            <option value="General">General</option>
+                            <option value="Research">Research</option>
+                        </select>
+                        <span asp-validation-for="Industry" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="Application" class="form-label required">Application</label>
+                        <select asp-for="Application" class="form-select" required>
+                            <option value="">Select Application</option>
+                            <option value="Prototype">Prototype</option>
+                            <option value="Production">Production</option>
+                            <option value="Tooling">Tooling</option>
+                            <option value="Repair">Repair</option>
+                            <option value="Structural Component">Structural Component</option>
+                            <option value="Heat Exchanger">Heat Exchanger</option>
+                            <option value="Valve Body">Valve Body</option>
+                            <option value="Impeller">Impeller</option>
+                            <option value="Surgical Instrument">Surgical Instrument</option>
+                            <option value="UAV Frame">UAV Frame</option>
+                            <option value="General Component">General Component</option>
+                        </select>
+                        <span asp-validation-for="Application" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="PartCategory" class="form-label">Category</label>
+                        <select asp-for="PartCategory" class="form-select">
+                            <option value="Prototype">Prototype</option>
+                            <option value="Production">Production</option>
+                            <option value="Tooling">Tooling</option>
+                            <option value="Repair">Repair</option>
+                        </select>
+                        <span asp-validation-for="PartCategory" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="PartClass" class="form-label">Part Class</label>
+                        <select asp-for="PartClass" class="form-select">
+                            <option value="A">A - Critical</option>
+                            <option value="B">B - Important</option>
+                            <option value="C">C - Standard</option>
+                        </select>
+                        <span asp-validation-for="PartClass" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check mt-4">
+                            <input asp-for="IsActive" class="form-check-input" type="checkbox" />
+                            <label asp-for="IsActive" class="form-check-label">Active</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Material & Process Tab -->
+            <div class="tab-pane fade" id="material" role="tabpanel">
+                <div class="row g-3 mt-2">
+                    <div class="col-md-6">
+                        <label asp-for="Material" class="form-label required">Material</label>
+                        <select asp-for="Material" class="form-select" id="materialSelect" onchange="onMaterialChange(this.value)" required>
+                            <option value="">Select Material</option>
+                            <option value="Ti-6Al-4V Grade 5">Ti-6Al-4V Grade 5</option>
+                            <option value="Ti-6Al-4V ELI Grade 23">Ti-6Al-4V ELI Grade 23</option>
+                            <option value="Inconel 718">Inconel 718</option>
+                            <option value="Inconel 625">Inconel 625</option>
+                            <option value="316L Stainless Steel">316L Stainless Steel</option>
+                            <option value="17-4 PH Stainless Steel">17-4 PH Stainless Steel</option>
+                            <option value="AlSi10Mg">AlSi10Mg</option>
+                            <option value="CoCrMo">CoCrMo</option>
+                        </select>
+                        <span asp-validation-for="Material" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="SlsMaterial" class="form-label required">SLS Material</label>
+                        <input asp-for="SlsMaterial" class="form-control" required />
+                        <span asp-validation-for="SlsMaterial" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="EstimatedHours" class="form-label required">Estimated Hours</label>
+                        <input asp-for="EstimatedHours" type="number" step="0.1" min="0.1" class="form-control" required />
+                        <span asp-validation-for="EstimatedHours" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="PowderRequirementKg" class="form-label">Powder Requirement (kg)</label>
+                        <input asp-for="PowderRequirementKg" type="number" step="0.1" class="form-control" />
+                        <span asp-validation-for="PowderRequirementKg" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Physical Properties Tab -->
+            <div class="tab-pane fade" id="physical" role="tabpanel">
+                <div class="row g-3 mt-2">
+                    <div class="col-md-3">
+                        <label asp-for="LengthMm" class="form-label">Length (mm)</label>
+                        <input asp-for="LengthMm" type="number" step="0.1" class="form-control" />
+                        <span asp-validation-for="LengthMm" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-3">
+                        <label asp-for="WidthMm" class="form-label">Width (mm)</label>
+                        <input asp-for="WidthMm" type="number" step="0.1" class="form-control" />
+                        <span asp-validation-for="WidthMm" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-3">
+                        <label asp-for="HeightMm" class="form-label">Height (mm)</label>
+                        <input asp-for="HeightMm" type="number" step="0.1" class="form-control" />
+                        <span asp-validation-for="HeightMm" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-3">
+                        <label asp-for="WeightGrams" class="form-label">Weight (g)</label>
+                        <input asp-for="WeightGrams" type="number" step="0.1" class="form-control" />
+                        <span asp-validation-for="WeightGrams" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cost & Timing Tab -->
+            <div class="tab-pane fade" id="cost" role="tabpanel">
+                <div class="row g-3 mt-2">
+                    <div class="col-md-6">
+                        <label asp-for="AdminEstimatedHoursOverride" class="form-label">Admin Override Hours</label>
+                        <input asp-for="AdminEstimatedHoursOverride" type="number" step="0.1" min="0.1" class="form-control" />
+                        <span asp-validation-for="AdminEstimatedHoursOverride" class="text-danger"></span>
+                        <div class="form-text">Leave blank to use standard estimated hours</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="MaterialCostPerKg" class="form-label">Material Cost ($/kg)</label>
+                        <input asp-for="MaterialCostPerKg" type="number" step="0.01" class="form-control" />
+                        <span asp-validation-for="MaterialCostPerKg" class="text-danger"></span>
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="AdminOverrideReason" class="form-label">Admin Override Reason</label>
+                        <textarea asp-for="AdminOverrideReason" class="form-control" rows="2" placeholder="Explain why the standard duration was overridden..."></textarea>
+                        <span asp-validation-for="AdminOverrideReason" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quality & Requirements Tab -->
+            <div class="tab-pane fade" id="requirements" role="tabpanel">
+                <div class="row g-3 mt-2">
+                    <div class="col-md-6">
+                        <label asp-for="ProcessType" class="form-label">Process Type</label>
+                        <select asp-for="ProcessType" class="form-select">
+                            <option value="SLS Metal">SLS Metal</option>
+                            <option value="SLS Polymer">SLS Polymer</option>
+                            <option value="DMLS">DMLS</option>
+                            <option value="EBM">EBM</option>
+                        </select>
+                        <span asp-validation-for="ProcessType" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="RequiredMachineType" class="form-label">Required Machine Type</label>
+                        <input asp-for="RequiredMachineType" class="form-control" placeholder="e.g., TruPrint 3000" />
+                        <span asp-validation-for="RequiredMachineType" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input asp-for="RequiresInspection" class="form-check-input" type="checkbox" />
+                            <label asp-for="RequiresInspection" class="form-check-label">Requires Inspection</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input asp-for="RequiresCertification" class="form-check-input" type="checkbox" />
+                            <label asp-for="RequiresCertification" class="form-check-label">Requires Certification</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input asp-for="RequiresFDA" class="form-check-input" type="checkbox" />
+                            <label asp-for="RequiresFDA" class="form-check-label">Requires FDA</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Modal Footer -->
+<div class="p-4 border-t border-gray-200 bg-gray-50 d-flex justify-content-end gap-2">
+    <button type="button" class="btn btn-secondary" data-action="cancel">Cancel</button>
+    <button type="submit" form="partForm" class="btn btn-primary">
+        <i class="fas fa-save me-2"></i>Save Part
+    </button>
+</div>
+
+<script>
+    // Material auto-fill data - simplified for modal
+    const MATERIAL_DEFAULTS = {
+        'Ti-6Al-4V Grade 5': {
+            slsMaterial: 'Ti-6Al-4V Grade 5',
+            materialCost: 450.00,
+            estimatedHours: 8.0
+        },
+        'Ti-6Al-4V ELI Grade 23': {
+            slsMaterial: 'Ti-6Al-4V ELI Grade 23',
+            materialCost: 550.00,
+            estimatedHours: 8.5
+        },
+        'Inconel 718': {
+            slsMaterial: 'Inconel 718',
+            materialCost: 750.00,
+            estimatedHours: 12.0
+        },
+        'Inconel 625': {
+            slsMaterial: 'Inconel 625',
+            materialCost: 800.00,
+            estimatedHours: 12.5
+        },
+        '316L Stainless Steel': {
+            slsMaterial: '316L Stainless Steel',
+            materialCost: 150.00,
+            estimatedHours: 6.0
+        },
+        '17-4 PH Stainless Steel': {
+            slsMaterial: '17-4 PH Stainless Steel',
+            materialCost: 180.00,
+            estimatedHours: 7.0
+        },
+        'AlSi10Mg': {
+            slsMaterial: 'AlSi10Mg',
+            materialCost: 80.00,
+            estimatedHours: 5.0
+        },
+        'CoCrMo': {
+            slsMaterial: 'CoCrMo',
+            materialCost: 650.00,
+            estimatedHours: 10.0
+        }
+    };
+
+    // Global function for material change
+    window.onMaterialChange = function(selectedMaterial) {
+        const defaults = MATERIAL_DEFAULTS[selectedMaterial];
+        if (!defaults) return;
+
+        // Update form fields with material defaults
+        const fieldMappings = {
+            'SlsMaterial': defaults.slsMaterial,
+            'MaterialCostPerKg': defaults.materialCost,
+            'EstimatedHours': defaults.estimatedHours
+        };
+
+        Object.keys(fieldMappings).forEach(fieldName => {
+            const field = document.querySelector(`[name="${fieldName}"]`);
+            if (field && !field.value) { // Only set if field is empty
+                field.value = fieldMappings[fieldName];
+            }
+        });
+    };
+
+    // Initialize Bootstrap tabs
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof bootstrap !== 'undefined') {
+            const triggerTabList = [].slice.call(document.querySelectorAll('#partFormTabs button'));
+            triggerTabList.forEach(function(triggerEl) {
+                const tabTrigger = new bootstrap.Tab(triggerEl);
+            });
+        }
+    });
+</script>

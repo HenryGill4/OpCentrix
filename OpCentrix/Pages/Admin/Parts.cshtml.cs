@@ -1,14 +1,14 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using OpCentrix.Data;
 using OpCentrix.Models;
-using OpCentrix.Authorization;
-using System.Text.Json;
+using System.ComponentModel.DataAnnotations;
 
-namespace OpCentrix.Pages.Admin         
+namespace OpCentrix.Pages.Admin
 {
-    [AdminOnly]
+    [Authorize(Policy = "AdminOnly")]
     public class PartsModel : PageModel
     {
         private readonly SchedulerContext _context;
@@ -20,925 +20,546 @@ namespace OpCentrix.Pages.Admin
             _logger = logger;
         }
 
-        // Pagination and filtering properties
-        public List<Part> Parts { get; set; } = new();
+        // Properties for the parts list
+        public IList<Part> Parts { get; set; } = new List<Part>();
+        
+        // Search and filter properties
+        [BindProperty(SupportsGet = true)]
+        public string? SearchTerm { get; set; }
+        
+        [BindProperty(SupportsGet = true)]
+        public string? MaterialFilter { get; set; }
+        
+        [BindProperty(SupportsGet = true)]
+        public string? IndustryFilter { get; set; }
+        
+        [BindProperty(SupportsGet = true)]
+        public string? CategoryFilter { get; set; }
+        
+        [BindProperty(SupportsGet = true)]
+        public bool? ActiveOnly { get; set; } = true;
+        
+        [BindProperty(SupportsGet = true)]
+        public string? SortOrder { get; set; }
+        
+        [BindProperty(SupportsGet = true)]
         public int PageNumber { get; set; } = 1;
-        public int PageSize { get; set; } = 20;
+        
         public int TotalPages { get; set; }
-        public int TotalParts { get; set; }
-        public string SearchTerm { get; set; } = string.Empty;
-        public string MaterialFilter { get; set; } = string.Empty;
-        public string ActiveFilter { get; set; } = string.Empty;
+        public int PageSize { get; set; } = 25;
 
-        public async Task OnGetAsync(int page = 1, string search = "", string material = "", string active = "")
+        // Properties for the part form
+        [BindProperty]
+        public Part Part { get; set; } = new Part();
+        
+        [BindProperty]
+        public string? Action { get; set; }
+
+        // Lists for dropdowns
+        public List<string> AvailableMaterials { get; set; } = new List<string>();
+        public List<string> AvailableIndustries { get; set; } = new List<string>();
+        public List<string> AvailableCategories { get; set; } = new List<string>();
+
+        public async Task<IActionResult> OnGetAsync()
         {
-            var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogInformation("?? [PARTS-{OperationId}] Loading parts page: page={Page}, search='{Search}', material='{Material}', active='{Active}'", 
-                operationId, page, search, material, active);
-
             try
             {
-                // CRITICAL FIX: Ensure existing parts have Name values
-                await EnsurePartNamesAsync(operationId);
-
-                // DEFENSIVE VALIDATION: Sanitize inputs to prevent format exceptions
-                PageNumber = Math.Max(1, Math.Min(1000, page)); // Clamp to reasonable range
-                SearchTerm = search?.Trim() ?? string.Empty;
-                MaterialFilter = material?.Trim() ?? string.Empty;
-                ActiveFilter = active?.Trim() ?? string.Empty;
-
-                // Validate search term length to prevent excessive queries
-                if (SearchTerm.Length > 100)
-                {
-                    SearchTerm = SearchTerm.Substring(0, 100);
-                    _logger.LogWarning("?? [PARTS-{OperationId}] Search term truncated to 100 characters", operationId);
-                }
-
-                // Validate material filter
-                if (MaterialFilter.Length > 50)
-                {
-                    MaterialFilter = MaterialFilter.Substring(0, 50);
-                    _logger.LogWarning("?? [PARTS-{OperationId}] Material filter truncated to 50 characters", operationId);
-                }
-
-                _logger.LogDebug("?? [PARTS-{OperationId}] Building query with validated filters", operationId);
-
-                // Build query with filters
-                var query = _context.Parts.AsQueryable();
-
-                if (!string.IsNullOrEmpty(SearchTerm))
-                {
-                    query = query.Where(p => p.PartNumber.Contains(SearchTerm) || 
-                                           p.Description.Contains(SearchTerm));
-                    _logger.LogDebug("?? [PARTS-{OperationId}] Applied search filter: '{SearchTerm}'", operationId, SearchTerm);
-                }
-
-                if (!string.IsNullOrEmpty(MaterialFilter))
-                {
-                    query = query.Where(p => p.Material.Contains(MaterialFilter));
-                    _logger.LogDebug("?? [PARTS-{OperationId}] Applied material filter: '{MaterialFilter}'", operationId, MaterialFilter);
-                }
-
-                if (!string.IsNullOrEmpty(ActiveFilter))
-                {
-                    // DEFENSIVE: Safer bool parsing to prevent ArgumentException
-                    if (string.Equals(ActiveFilter, "true", StringComparison.OrdinalIgnoreCase))
-                    {
-                        query = query.Where(p => p.IsActive == true);
-                        _logger.LogDebug("?? [PARTS-{OperationId}] Applied active filter: true", operationId);
-                    }
-                    else if (string.Equals(ActiveFilter, "false", StringComparison.OrdinalIgnoreCase))
-                    {
-                        query = query.Where(p => p.IsActive == false);
-                        _logger.LogDebug("?? [PARTS-{OperationId}] Applied active filter: false", operationId);
-                    }
-                    else
-                    {
-                        _logger.LogWarning("?? [PARTS-{OperationId}] Invalid active filter value: '{ActiveFilter}', ignoring", 
-                            operationId, ActiveFilter);
-                        ActiveFilter = string.Empty; // Clear invalid value
-                    }
-                }
-
-                // Get total count for pagination
-                TotalParts = await query.CountAsync();
-                TotalPages = (int)Math.Ceiling(TotalParts / (double)PageSize);
-                
-                // Validate page number against total pages
-                if (PageNumber > TotalPages && TotalPages > 0)
-                {
-                    PageNumber = TotalPages;
-                    _logger.LogWarning("?? [PARTS-{OperationId}] Page number adjusted to {PageNumber} (max available)", 
-                        operationId, PageNumber);
-                }
-                
-                _logger.LogDebug("?? [PARTS-{OperationId}] Query statistics: {TotalParts} total parts, {TotalPages} pages", 
-                    operationId, TotalParts, TotalPages);
-
-                // Get parts for current page
-                Parts = await query
-                    .OrderBy(p => p.PartNumber)
-                    .Skip((PageNumber - 1) * PageSize)
-                    .Take(PageSize)
-                    .AsNoTracking()
-                    .ToListAsync();
-
-                _logger.LogInformation("? [PARTS-{OperationId}] Parts page loaded successfully: {PartsCount} parts on page {Page}/{TotalPages}", 
-                    operationId, Parts.Count, PageNumber, TotalPages);
-            }
-            catch (FormatException fEx)
-            {
-                _logger.LogError(fEx, "?? [PARTS-{OperationId}] Format error loading parts page: {ErrorMessage}", 
-                    operationId, fEx.Message);
-                
-                // Provide fallback data with safe defaults
-                Parts = new List<Part>();
-                TotalParts = 0;
-                TotalPages = 0;
-                PageNumber = 1;
-                SearchTerm = string.Empty;
-                MaterialFilter = string.Empty;
-                ActiveFilter = string.Empty;
-                
-                TempData["ErrorMessage"] = $"Data format error (ID: {operationId}). Please check your search parameters.";
-            }
-            catch (ArgumentException aEx)
-            {
-                _logger.LogError(aEx, "?? [PARTS-{OperationId}] Argument error loading parts page: {ErrorMessage}", 
-                    operationId, aEx.Message);
-                
-                // Provide fallback data with safe defaults
-                Parts = new List<Part>();
-                TotalParts = 0;
-                TotalPages = 0;
-                PageNumber = 1;
-                SearchTerm = string.Empty;
-                MaterialFilter = string.Empty;
-                ActiveFilter = string.Empty;
-                
-                TempData["ErrorMessage"] = $"Invalid parameter error (ID: {operationId}). Parameters have been reset.";
+                await LoadPartsAsync();
+                await LoadDropdownDataAsync();
+                return Page();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "? [PARTS-{OperationId}] Error loading parts page: {ErrorMessage}", 
-                    operationId, ex.Message);
-                
-                // Provide fallback data
-                Parts = new List<Part>();
-                TotalParts = 0;
-                TotalPages = 0;
-                
-                // Add error message for user
-                TempData["ErrorMessage"] = $"Error loading parts (ID: {operationId}): {ex.Message}";
+                _logger.LogError(ex, "Error loading parts page");
+                TempData["ErrorMessage"] = "Error loading parts. Please try again.";
+                return Page();
             }
         }
 
-        public async Task<IActionResult> OnGetAddAsync()
+        public async Task<IActionResult> OnPostCreateAsync()
         {
-            var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogDebug("?? [PARTS-{OperationId}] Opening add part modal", operationId);
-
             try
             {
-                var newPart = new Part
+                if (!ModelState.IsValid)
                 {
-                    // CRITICAL FIX: Set comprehensive defaults to prevent NOT NULL and format errors
-                    IsActive = true,
-                    CreatedDate = DateTime.UtcNow,
-                    CreatedBy = User.Identity?.Name ?? "System",
-                    LastModifiedDate = DateTime.UtcNow,
-                    LastModifiedBy = User.Identity?.Name ?? "System",
-                    
-                    // Basic required fields with safe defaults
-                    PartNumber = "", // Will be filled by user
-                    Name = "", // REQUIRED: Will be filled by user
-                    Description = "", // Will be filled by user
-                    Industry = "General",
-                    Application = "General Component",
-                    
-                    // Manufacturing defaults
-                    EstimatedHours = 8.0,
-                    AvgDuration = "8.0h",
-                    AvgDurationDays = 1,
-                    
-                    // Cost defaults to prevent decimal conversion errors
-                    MaterialCostPerKg = 450.00m, // Default for titanium, will adjust for Inconel
-                    StandardLaborCostPerHour = 85.00m,
-                    SetupCost = 125.00m,
-                    
-                    // SLS parameter defaults to prevent conversion errors
-                    RecommendedLaserPower = 200,
-                    RecommendedScanSpeed = 1200,
-                    RecommendedBuildTemperature = 180,
-                    RecommendedLayerThickness = 30,
-                    RecommendedHatchSpacing = 120,
-                    RequiredArgonPurity = 99.9,
-                    MaxOxygenContent = 50,
-                    
-                    // Time parameter defaults
-                    PreheatingTimeMinutes = 60,
-                    CoolingTimeMinutes = 120,
-                    PostProcessingTimeMinutes = 90,
-                    
-                    // Dimensional defaults (set to 0 for non-nullable fields)
-                    WeightGrams = 0,
-                    LengthMm = 0,
-                    WidthMm = 0,
-                    HeightMm = 0,
-                    VolumeMm3 = 0,
-                    PowderRequirementKg = 1.5,
-                    
-                    // Material defaults - start with titanium
-                    Material = "Ti-6Al-4V Grade 5",
-                    SlsMaterial = "Ti-6Al-4V Grade 5",
-                    
-                    // Classification defaults
-                    PartCategory = "Production",
-                    PartClass = "B",
-                    
-                    // Audit fields
-                    TotalJobsCompleted = 0,
-                    TotalUnitsProduced = 0
-                };
+                    await LoadPartsAsync();
+                    await LoadDropdownDataAsync();
+                    TempData["ErrorMessage"] = "Please correct the validation errors.";
+                    return Page();
+                }
 
-                _logger.LogDebug("? [PARTS-{OperationId}] Add part modal prepared with comprehensive defaults", operationId);
-                return Partial("Shared/_PartForm", newPart);
+                // Set audit fields
+                Part.CreatedBy = User.Identity?.Name ?? "System";
+                Part.LastModifiedBy = User.Identity?.Name ?? "System";
+                Part.CreatedDate = DateTime.UtcNow;
+                Part.LastModifiedDate = DateTime.UtcNow;
+
+                // Validate part number uniqueness
+                if (await _context.Parts.AnyAsync(p => p.PartNumber == Part.PartNumber))
+                {
+                    ModelState.AddModelError("Part.PartNumber", "Part number already exists.");
+                    await LoadPartsAsync();
+                    await LoadDropdownDataAsync();
+                    return Page();
+                }
+
+                _context.Parts.Add(Part);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Part {PartNumber} created by {User}", Part.PartNumber, User.Identity?.Name);
+                TempData["SuccessMessage"] = $"Part '{Part.PartNumber}' created successfully.";
+                
+                return RedirectToPage();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "? [PARTS-{OperationId}] Error opening add part modal: {ErrorMessage}", 
-                    operationId, ex.Message);
-                
-                return Content($@"
-                    <script>
-                        console.error('Error opening add part modal (ID: {operationId}): {ex.Message}');
-                        if (typeof showErrorNotification === 'function') {{
-                            showErrorNotification('Error opening add part form (ID: {operationId}): {ex.Message}', 8000);
-                        }} else {{
-                            alert('Error opening add part form (ID: {operationId}): {ex.Message}');
-                        }}
-                        if (typeof hideModal === 'function') {{ hideModal(); }}
-                    </script>
-                ", "text/html");
+                _logger.LogError(ex, "Error creating part {PartNumber}", Part.PartNumber);
+                TempData["ErrorMessage"] = "Error creating part. Please try again.";
+                await LoadPartsAsync();
+                await LoadDropdownDataAsync();
+                return Page();
             }
         }
 
-        public async Task<IActionResult> OnGetEditAsync(int id)
+        public async Task<IActionResult> OnPostEditAsync(int id)
         {
-            var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogDebug("?? [PARTS-{OperationId}] Opening edit part modal for ID: {PartId}", operationId, id);
-
             try
             {
-                if (id <= 0)
+                var existingPart = await _context.Parts.FindAsync(id);
+                if (existingPart == null)
                 {
-                    _logger.LogWarning("?? [PARTS-{OperationId}] Invalid part ID: {PartId}", operationId, id);
-                    throw new ArgumentException($"Invalid part ID: {id}");
+                    TempData["ErrorMessage"] = "Part not found.";
+                    return RedirectToPage();
                 }
 
-                var part = await _context.Parts.FindAsync(id);
+                // Update properties manually to avoid overriding navigation properties
+                existingPart.PartNumber = Part.PartNumber;
+                existingPart.Name = Part.Name;
+                existingPart.Description = Part.Description;
+                existingPart.Material = Part.Material;
+                existingPart.SlsMaterial = Part.SlsMaterial;
+                existingPart.Industry = Part.Industry;
+                existingPart.Application = Part.Application;
+                existingPart.PartCategory = Part.PartCategory;
+                existingPart.PartClass = Part.PartClass;
+                existingPart.CustomerPartNumber = Part.CustomerPartNumber;
+                existingPart.IsActive = Part.IsActive;
                 
-                if (part == null)
-                {
-                    _logger.LogWarning("?? [PARTS-{OperationId}] Part not found with ID: {PartId}", operationId, id);
-                    
-                    return Content($@"
-                        <script>
-                            console.warn('Part not found (ID: {operationId}): Part ID {id} does not exist');
-                            if (typeof showErrorNotification === 'function') {{
-                                showErrorNotification('Part not found (ID: {operationId})', 6000);
-                            }} else {{
-                                alert('Part not found (ID: {operationId})');
-                            }}
-                            if (typeof hideModal === 'function') {{ hideModal(); }}
-                        </script>
-                    ", "text/html");
-                }
-
-                _logger.LogDebug("? [PARTS-{OperationId}] Edit part modal prepared for part: {PartNumber}", 
-                    operationId, part.PartNumber);
+                // Physical properties
+                existingPart.WeightGrams = Part.WeightGrams;
+                existingPart.LengthMm = Part.LengthMm;
+                existingPart.WidthMm = Part.WidthMm;
+                existingPart.HeightMm = Part.HeightMm;
+                existingPart.VolumeMm3 = Part.VolumeMm3;
+                existingPart.Dimensions = Part.Dimensions;
                 
-                return Partial("Shared/_PartForm", part);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "? [PARTS-{OperationId}] Error opening edit part modal for ID {PartId}: {ErrorMessage}", 
-                    operationId, id, ex.Message);
+                // Process parameters
+                existingPart.RecommendedLaserPower = Part.RecommendedLaserPower;
+                existingPart.RecommendedScanSpeed = Part.RecommendedScanSpeed;
+                existingPart.RecommendedLayerThickness = Part.RecommendedLayerThickness;
+                existingPart.RecommendedHatchSpacing = Part.RecommendedHatchSpacing;
+                existingPart.RecommendedBuildTemperature = Part.RecommendedBuildTemperature;
+                existingPart.RequiredArgonPurity = Part.RequiredArgonPurity;
+                existingPart.MaxOxygenContent = Part.MaxOxygenContent;
                 
-                return Content($@"
-                    <script>
-                        console.error('Error opening edit part modal (ID: {operationId}): {ex.Message}');
-                        if (typeof showErrorNotification === 'function') {{
-                            showErrorNotification('Error opening edit form (ID: {operationId}): {ex.Message}', 8000);
-                        }} else {{
-                            alert('Error opening edit form (ID: {operationId}): {ex.Message}');
-                        }}
-                        if (typeof hideModal === 'function') {{ hideModal(); }}
-                    </script>
-                ", "text/html");
-            }
-        }
-
-        public async Task<IActionResult> OnGetCheckDuplicateAsync(string partNumber, int currentId = 0)
-        {
-            var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogDebug("?? [PARTS-{OperationId}] Checking duplicate for part number: {PartNumber} (excluding ID: {CurrentId})", 
-                operationId, partNumber, currentId);
-
-            try
-            {
-                if (string.IsNullOrWhiteSpace(partNumber))
-                {
-                    return Content("false");
-                }
-
-                // Clean and standardize part number
-                var cleanPartNumber = partNumber.Trim().ToUpperInvariant();
-
-                // Check if part number exists (excluding current part if editing)
-                var isDuplicate = await _context.Parts
-                    .AnyAsync(p => p.PartNumber == cleanPartNumber && p.Id != currentId);
-
-                _logger.LogDebug("? [PARTS-{OperationId}] Duplicate check result: {IsDuplicate} for part number: {PartNumber}", 
-                    operationId, isDuplicate, cleanPartNumber);
-
-                return Content(isDuplicate.ToString().ToLower());
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "? [PARTS-{OperationId}] Error checking duplicate part number: {ErrorMessage}", 
-                    operationId, ex.Message);
+                // Material and powder
+                existingPart.PowderSpecification = Part.PowderSpecification;
+                existingPart.PowderRequirementKg = Part.PowderRequirementKg;
                 
-                // Return false on error to allow form submission (server-side validation will catch it)
-                return Content("false");
-            }
-        }
-
-        public async Task<IActionResult> OnPostSaveAsync([FromForm] Part part)
-        {
-            var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogInformation("?? [PARTS-{OperationId}] OnPostSaveAsync called - Processing part save: Id={PartId}, PartNumber='{PartNumber}', Description='{Description}'", 
-                operationId, part?.Id ?? -1, part?.PartNumber ?? "NULL", part?.Description ?? "NULL");
-
-            try
-            {
-                // CRITICAL FIX: Defensive input sanitization to prevent FormatException/ArgumentException
-                if (part == null)
-                {
-                    _logger.LogError("? [PARTS-{OperationId}] Part object is null", operationId);
-                    throw new ArgumentNullException(nameof(part), "Part data is required");
-                }
-
-                // Sanitize and validate string inputs to prevent format exceptions
-                part.PartNumber = part.PartNumber?.Trim()?.ToUpperInvariant() ?? string.Empty;
-                part.Name = part.Name?.Trim() ?? string.Empty;
-                part.Description = part.Description?.Trim() ?? string.Empty;
-                part.Material = part.Material?.Trim() ?? string.Empty;
-                part.SlsMaterial = part.SlsMaterial?.Trim() ?? string.Empty;
-                part.Industry = part.Industry?.Trim() ?? "General";
-                part.Application = part.Application?.Trim() ?? "General Component";
-                part.PartCategory = part.PartCategory?.Trim() ?? string.Empty;
-                part.PartClass = part.PartClass?.Trim() ?? string.Empty;
-
-                // CRITICAL FIX: Validate and sanitize numeric inputs to prevent TypeConverter errors
-                if (part.EstimatedHours <= 0 || part.EstimatedHours > 1000 || double.IsNaN(part.EstimatedHours) || double.IsInfinity(part.EstimatedHours))
-                {
-                    _logger.LogWarning("?? [PARTS-{OperationId}] Invalid EstimatedHours value: {EstimatedHours}, setting to default", 
-                        operationId, part.EstimatedHours);
-                    part.EstimatedHours = 8.0; // Safe default
-                }
-
-                // Sanitize dimensional inputs
-                part.LengthMm = SanitizeDouble(part.LengthMm, "LengthMm", operationId);
-                part.WidthMm = SanitizeDouble(part.WidthMm, "WidthMm", operationId);
-                part.HeightMm = SanitizeDouble(part.HeightMm, "HeightMm", operationId);
-                part.WeightGrams = SanitizeDouble(part.WeightGrams, "WeightGrams", operationId);
-                part.VolumeMm3 = SanitizeDouble(part.VolumeMm3, "VolumeMm3", operationId);
-                part.PowderRequirementKg = SanitizeDouble(part.PowderRequirementKg, "PowderRequirementKg", operationId);
-
-                // Sanitize process parameters
-                part.RecommendedLaserPower = SanitizeDouble(part.RecommendedLaserPower, "RecommendedLaserPower", operationId);
-                part.RecommendedScanSpeed = SanitizeDouble(part.RecommendedScanSpeed, "RecommendedScanSpeed", operationId);
-                part.RecommendedBuildTemperature = SanitizeDouble(part.RecommendedBuildTemperature, "RecommendedBuildTemperature", operationId);
-                part.RecommendedLayerThickness = SanitizeDouble(part.RecommendedLayerThickness, "RecommendedLayerThickness", operationId);
-                part.RecommendedHatchSpacing = SanitizeDouble(part.RecommendedHatchSpacing, "RecommendedHatchSpacing", operationId);
-
-                // Sanitize process quality parameters
-                part.RequiredArgonPurity = SanitizeDouble(part.RequiredArgonPurity, "RequiredArgonPurity", operationId);
-                part.MaxOxygenContent = SanitizeDouble(part.MaxOxygenContent, "MaxOxygenContent", operationId);
-
-                // Sanitize time parameters
-                part.PreheatingTimeMinutes = SanitizeDouble(part.PreheatingTimeMinutes, "PreheatingTimeMinutes", operationId);
-                part.CoolingTimeMinutes = SanitizeDouble(part.CoolingTimeMinutes, "CoolingTimeMinutes", operationId);
-                part.PostProcessingTimeMinutes = SanitizeDouble(part.PostProcessingTimeMinutes, "PostProcessingTimeMinutes", operationId);
-
-                // Sanitize cost parameters with safe decimal conversion
-                part.MaterialCostPerKg = SanitizeDecimal(part.MaterialCostPerKg, "MaterialCostPerKg", operationId);
-                part.StandardLaborCostPerHour = SanitizeDecimal(part.StandardLaborCostPerHour, "StandardLaborCostPerHour", operationId);
-                part.SetupCost = SanitizeDecimal(part.SetupCost, "SetupCost", operationId);
-                _logger.LogDebug("? [PARTS-{OperationId}] Input sanitization completed successfully", operationId);
-
-                // Enhanced validation with detailed logging
-                var validationErrors = new List<string>();
+                // Surface and quality
+                existingPart.SurfaceFinishRequirement = Part.SurfaceFinishRequirement;
+                existingPart.MaxSurfaceRoughnessRa = Part.MaxSurfaceRoughnessRa;
+                existingPart.RequiresInspection = Part.RequiresInspection;
+                existingPart.RequiresCertification = Part.RequiresCertification;
+                existingPart.RequiresFDA = Part.RequiresFDA;
+                existingPart.RequiresAS9100 = Part.RequiresAS9100;
+                existingPart.RequiresNADCAP = Part.RequiresNADCAP;
                 
-                if (string.IsNullOrWhiteSpace(part.PartNumber))
+                // Support requirements
+                existingPart.RequiresSupports = Part.RequiresSupports;
+                existingPart.SupportStrategy = Part.SupportStrategy;
+                existingPart.SupportRemovalTimeMinutes = Part.SupportRemovalTimeMinutes;
+                
+                // Timing
+                existingPart.EstimatedHours = Part.EstimatedHours;
+                existingPart.SetupTimeMinutes = Part.SetupTimeMinutes;
+                existingPart.PowderChangeoverTimeMinutes = Part.PowderChangeoverTimeMinutes;
+                existingPart.PreheatingTimeMinutes = Part.PreheatingTimeMinutes;
+                existingPart.CoolingTimeMinutes = Part.CoolingTimeMinutes;
+                existingPart.PostProcessingTimeMinutes = Part.PostProcessingTimeMinutes;
+                
+                // Admin override fields
+                existingPart.AdminEstimatedHoursOverride = Part.AdminEstimatedHoursOverride;
+                existingPart.AdminOverrideReason = Part.AdminOverrideReason;
+                if (Part.AdminEstimatedHoursOverride.HasValue)
                 {
-                    validationErrors.Add("Part Number is required");
-                    _logger.LogWarning("?? [PARTS-{OperationId}] Validation failed: Missing part number", operationId);
+                    existingPart.AdminOverrideBy = User.Identity?.Name ?? "System";
+                    existingPart.AdminOverrideDate = DateTime.UtcNow;
                 }
-                else if (part.PartNumber.Length > 50)
-                {
-                    validationErrors.Add("Part Number cannot exceed 50 characters");
-                    _logger.LogWarning("?? [PARTS-{OperationId}] Validation failed: Part number too long: {Length}", 
-                        operationId, part.PartNumber.Length);
-                }
-                else
-                {
-                    // CRITICAL FIX: Check for duplicate part numbers
-                    var existingPart = await _context.Parts
-                        .Where(p => p.PartNumber == part.PartNumber && p.Id != part.Id)
-                        .FirstOrDefaultAsync();
-                    
-                    if (existingPart != null)
-                    {
-                        validationErrors.Add($"Part Number '{part.PartNumber}' already exists (ID: {existingPart.Id})");
-                        _logger.LogWarning("?? [PARTS-{OperationId}] Validation failed: Duplicate part number: {PartNumber}", 
-                            operationId, part.PartNumber);
-                    }
-                }
-
-                if (string.IsNullOrWhiteSpace(part.Name))
-                {
-                    validationErrors.Add("Part Name is required");
-                    _logger.LogWarning("?? [PARTS-{OperationId}] Validation failed: Missing part name", operationId);
-                }
-                else if (part.Name.Length > 200)
-                {
-                    validationErrors.Add("Part Name cannot exceed 200 characters");
-                    _logger.LogWarning("?? [PARTS-{OperationId}] Validation failed: Part name too long: {Length}", 
-                        operationId, part.Name.Length);
-                }
-
-                if (string.IsNullOrWhiteSpace(part.Description))
-                {
-                    validationErrors.Add("Description is required");
-                    _logger.LogWarning("?? [PARTS-{OperationId}] Validation failed: Missing description", operationId);
-                }
-                else if (part.Description.Length > 500)
-                {
-                    validationErrors.Add("Description cannot exceed 500 characters");
-                    _logger.LogWarning("?? [PARTS-{OperationId}] Validation failed: Description too long: {Length}", 
-                        operationId, part.Description.Length);
-                }
-
-                // Task 7: Admin Override Validation - FIXED: Handle nullable override reason properly
-                if (part.AdminEstimatedHoursOverride.HasValue)
-                {
-                    if (part.AdminEstimatedHoursOverride.Value <= 0 || part.AdminEstimatedHoursOverride.Value > 200)
-                    {
-                        validationErrors.Add("Admin override duration must be between 0.25 and 200 hours");
-                        _logger.LogWarning("⚠️ [PARTS-{OperationId}] Validation failed: Invalid override duration: {Hours}", 
-                            operationId, part.AdminEstimatedHoursOverride.Value);
-                    }
-                    
-                    if (string.IsNullOrWhiteSpace(part.AdminOverrideReason))
-                    {
-                        validationErrors.Add("Override reason is required when admin override duration is set");
-                        _logger.LogWarning("⚠️ [PARTS-{OperationId}] Validation failed: Missing override reason", operationId);
-                    }
-                }
-                else
-                {
-                    // CRITICAL FIX: Set AdminOverrideReason to empty string for NOT NULL constraint
-                    part.AdminOverrideReason = string.Empty;
-                    part.AdminOverrideBy = string.Empty;
-                    part.AdminOverrideDate = null;
-                }
-
-                if (validationErrors.Any())
-                {
-                    _logger.LogWarning("? [PARTS-{OperationId}] Part save failed validation: {ErrorCount} errors", 
-                        operationId, validationErrors.Count);
-                    
-                    ViewData["ValidationErrors"] = validationErrors;
-                    return Partial("Shared/_PartForm", part);
-                }
-
-                var currentUser = User.Identity?.Name ?? "System";
-                var now = DateTime.UtcNow;
-
-                if (part.Id == 0)
-                {
-                    // Create new part
-                    _logger.LogDebug("? [PARTS-{OperationId}] Creating new part: {PartNumber}", operationId, part.PartNumber);
-                    
-                    part.CreatedDate = now;
-                    part.CreatedBy = currentUser;
-                    part.LastModifiedDate = now;
-                    part.LastModifiedBy = currentUser;
-                    
-                    // Set calculated fields with safe conversions
-                    part.AvgDuration = $"{part.EstimatedHours:F1}h";
-                    part.AvgDurationDays = (int)Math.Ceiling(Math.Max(part.EstimatedHours / 8, 1));
-                    
-                    // Task 7: Set admin override metadata for new parts
-                    if (part.AdminEstimatedHoursOverride.HasValue)
-                    {
-                        part.AdminOverrideBy = currentUser;
-                        part.AdminOverrideDate = now;
-                        part.AdminOverrideReason = part.AdminOverrideReason?.Trim() ?? string.Empty; // Ensure not null
-                        _logger.LogInformation("✅ [PARTS-{OperationId}] New part created with admin override: {Hours}h by {User} - {Reason}", 
-                            operationId, part.AdminEstimatedHoursOverride.Value, currentUser, part.AdminOverrideReason);
-                    }
-                    else
-                    {
-                        part.AdminOverrideReason = string.Empty; // NOT NULL constraint fix
-                        part.AdminOverrideBy = string.Empty;
-                        part.AdminOverrideDate = null;
-                    }
-                    
-                    // CRITICAL FIX: Ensure all required fields have values
-                    part.IsActive = part.IsActive; // Keep user selection
-                    part.TotalJobsCompleted = 0;
-                    part.TotalUnitsProduced = 0;
-                    
-                    await _context.Parts.AddAsync(part);
-                    _logger.LogDebug("? [PARTS-{OperationId}] New part added to context", operationId);
-                }
-                else
-                {
-                    // Update existing part
-                    _logger.LogDebug("?? [PARTS-{OperationId}] Updating existing part: {PartNumber} (ID: {PartId})", 
-                        operationId, part.PartNumber, part.Id);
-                    
-                    var existingPart = await _context.Parts.FindAsync(part.Id);
-                    if (existingPart == null)
-                    {
-                        _logger.LogWarning("?? [PARTS-{OperationId}] Part not found for update: ID {PartId}", operationId, part.Id);
-                        throw new InvalidOperationException($"Part with ID {part.Id} not found for update");
-                    }
-
-                    // Log changes for audit trail
-                    var changes = new List<string>();
-                    if (existingPart.PartNumber != part.PartNumber)
-                        changes.Add($"PartNumber: {existingPart.PartNumber} -> {part.PartNumber}");
-                    if (existingPart.Name != part.Name)
-                        changes.Add($"Name: {existingPart.Name} -> {part.Name}");
-                    if (existingPart.Description != part.Description)
-                        changes.Add($"Description: {existingPart.Description} -> {part.Description}");
-                    if (Math.Abs(existingPart.EstimatedHours - part.EstimatedHours) > 0.01)
-                        changes.Add($"EstimatedHours: {existingPart.EstimatedHours} -> {part.EstimatedHours}");
-                    
-                    if (changes.Any())
-                    {
-                        _logger.LogDebug("?? [PARTS-{OperationId}] Part changes detected: {Changes}", 
-                            operationId, string.Join("; ", changes));
-                    }
-
-                    // Apply all updates with safe assignments
-                    existingPart.PartNumber = part.PartNumber;
-                    existingPart.Name = part.Name;
-                    existingPart.Description = part.Description;
-                    existingPart.Material = part.Material;
-                    existingPart.SlsMaterial = part.SlsMaterial;
-                    existingPart.EstimatedHours = part.EstimatedHours;
-                    existingPart.AvgDuration = $"{part.EstimatedHours:F1}h";
-                    existingPart.AvgDurationDays = (int)Math.Ceiling(Math.Max(part.EstimatedHours / 8, 1));
-                    
-                    // Update all other fields
-                    existingPart.Industry = part.Industry;
-                    existingPart.Application = part.Application;
-                    existingPart.PartCategory = part.PartCategory;
-                    existingPart.PartClass = part.PartClass;
-                    existingPart.IsActive = part.IsActive;
-                    existingPart.LengthMm = part.LengthMm;
-                    existingPart.WidthMm = part.WidthMm;
-                    existingPart.HeightMm = part.HeightMm;
-                    existingPart.WeightGrams = part.WeightGrams;
-                    existingPart.VolumeMm3 = part.VolumeMm3;
-                    existingPart.PowderRequirementKg = part.PowderRequirementKg;
-                    existingPart.RecommendedLaserPower = part.RecommendedLaserPower;
-                    existingPart.RecommendedScanSpeed = part.RecommendedScanSpeed;
-                    existingPart.RecommendedBuildTemperature = part.RecommendedBuildTemperature;
-                    existingPart.RecommendedLayerThickness = part.RecommendedLayerThickness;
-                    existingPart.RecommendedHatchSpacing = part.RecommendedHatchSpacing;
-                    existingPart.RequiredArgonPurity = part.RequiredArgonPurity;
-                    existingPart.MaxOxygenContent = part.MaxOxygenContent;
-                    existingPart.PreheatingTimeMinutes = part.PreheatingTimeMinutes;
-                    existingPart.CoolingTimeMinutes = part.CoolingTimeMinutes;
-                    existingPart.PostProcessingTimeMinutes = part.PostProcessingTimeMinutes;
-                    existingPart.MaterialCostPerKg = part.MaterialCostPerKg;
-                    existingPart.StandardLaborCostPerHour = part.StandardLaborCostPerHour;
-                    existingPart.SetupCost = part.SetupCost;
-                    
-                    // Task 7: Update admin override fields
-                    var overrideChanged = false;
-                    if (existingPart.AdminEstimatedHoursOverride != part.AdminEstimatedHoursOverride)
-                    {
-                        overrideChanged = true;
-                        changes.Add($"AdminOverride: {existingPart.AdminEstimatedHoursOverride?.ToString("F1") ?? "None"} -> {part.AdminEstimatedHoursOverride?.ToString("F1") ?? "None"}");
-                    }
-                    
-                    existingPart.AdminEstimatedHoursOverride = part.AdminEstimatedHoursOverride;
-                    existingPart.AdminOverrideReason = part.AdminOverrideReason?.Trim(); // Keep null if not provided
-                    
-                    // Set admin override metadata when override is applied
-                    if (part.AdminEstimatedHoursOverride.HasValue && (overrideChanged || string.IsNullOrEmpty(existingPart.AdminOverrideBy)))
-                    {
-                        existingPart.AdminOverrideBy = currentUser;
-                        existingPart.AdminOverrideDate = now;
-                        existingPart.AdminOverrideReason = part.AdminOverrideReason?.Trim() ?? string.Empty; // Ensure not null
-                        _logger.LogInformation("✅ [PARTS-{OperationId}] Admin override applied: {Hours}h by {User} - {Reason}", 
-                            operationId, part.AdminEstimatedHoursOverride.Value, currentUser, part.AdminOverrideReason);
-                    }
-                    else if (!part.AdminEstimatedHoursOverride.HasValue)
-                    {
-                        // Clear override metadata when override is removed
-                        existingPart.AdminOverrideReason = string.Empty; // NOT NULL constraint fix
-                        existingPart.AdminOverrideBy = string.Empty;
-                        existingPart.AdminOverrideDate = null;
-                        _logger.LogInformation("✅ [PARTS-{OperationId}] Admin override removed by {User}", operationId, currentUser);
-                    }
-
-                    existingPart.LastModifiedDate = now;
-                    existingPart.LastModifiedBy = currentUser;
-                    
-                    _logger.LogDebug("? [PARTS-{OperationId}] Part updated successfully", operationId);
-                }
+                
+                // Cost data
+                existingPart.MaterialCostPerKg = Part.MaterialCostPerKg;
+                existingPart.StandardLaborCostPerHour = Part.StandardLaborCostPerHour;
+                existingPart.SetupCost = Part.SetupCost;
+                existingPart.PostProcessingCost = Part.PostProcessingCost;
+                existingPart.QualityInspectionCost = Part.QualityInspectionCost;
+                existingPart.MachineOperatingCostPerHour = Part.MachineOperatingCostPerHour;
+                existingPart.ArgonCostPerHour = Part.ArgonCostPerHour;
+                existingPart.StandardSellingPrice = Part.StandardSellingPrice;
+                
+                // Requirements and certifications
+                existingPart.ProcessType = Part.ProcessType;
+                existingPart.RequiredMachineType = Part.RequiredMachineType;
+                existingPart.PreferredMachines = Part.PreferredMachines;
+                existingPart.QualityStandards = Part.QualityStandards;
+                existingPart.ToleranceRequirements = Part.ToleranceRequirements;
+                existingPart.RequiredSkills = Part.RequiredSkills;
+                existingPart.RequiredCertifications = Part.RequiredCertifications;
+                existingPart.RequiredTooling = Part.RequiredTooling;
+                existingPart.ConsumableMaterials = Part.ConsumableMaterials;
+                
+                // File information
+                existingPart.BuildFileTemplate = Part.BuildFileTemplate;
+                existingPart.CadFilePath = Part.CadFilePath;
+                existingPart.CadFileVersion = Part.CadFileVersion;
+                
+                // Set audit fields
+                existingPart.LastModifiedBy = User.Identity?.Name ?? "System";
+                existingPart.LastModifiedDate = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
-                _logger.LogInformation("? [PARTS-{OperationId}] Part saved successfully: Id={PartId}, PartNumber='{PartNumber}'", 
-                    operationId, part.Id, part.PartNumber);
+
+                _logger.LogInformation("Part {PartNumber} updated by {User}", Part.PartNumber, User.Identity?.Name);
+                TempData["SuccessMessage"] = $"Part '{Part.PartNumber}' updated successfully.";
                 
-                return Content($@"
-                    <script>
-                        console.log('? Part saved successfully (ID: {operationId}): {part.PartNumber}');
-                        if (typeof OpCentrixAdmin !== 'undefined' && OpCentrixAdmin.Parts && OpCentrixAdmin.Parts.handleFormSuccess) {{
-                            OpCentrixAdmin.Parts.handleFormSuccess('{part.PartNumber}', {(part.Id != 0).ToString().ToLower()});
-                        }} else {{
-                            console.log('?? Refreshing page - OpCentrixAdmin.Parts not available'); 
-                            if (typeof OpCentrixAdmin !== 'undefined' && OpCentrixAdmin.Modal && OpCentrixAdmin.Modal.hide) {{
-                                OpCentrixAdmin.Modal.hide('modal-container');
-                            }}
-                            setTimeout(() => {{ window.location.reload(); }}, 1500);
-                        }}
-                        if (typeof OpCentrixAdmin !== 'undefined' && OpCentrixAdmin.Alert && OpCentrixAdmin.Alert.success) {{
-                            OpCentrixAdmin.Alert.success('Part saved successfully: {part.PartNumber}', 4000);
-                        }}
-                    </script>
-                ", "text/html");
-            }
-            catch (FormatException fEx)
-            {
-                _logger.LogError(fEx, "?? [PARTS-{OperationId}] Format error saving part: {ErrorMessage}", 
-                    operationId, fEx.Message);
-                
-                return Content($@"
-                    <script>
-                        console.error('Format error saving part (ID: {operationId}): {fEx.Message}');
-                        if (typeof showErrorNotification === 'function') {{
-                            showErrorNotification('Format error saving part (ID: {operationId}): {fEx.Message}', 8000);
-                        }} else {{
-                            alert('Format error saving part (ID: {operationId}): {fEx.Message}');
-                        }}
-                    </script>
-                ", "text/html");
-            }
-            catch (ArgumentException aEx)
-            {
-                _logger.LogError(aEx, "?? [PARTS-{OperationId}] Argument error saving part: {ErrorMessage}", 
-                    operationId, aEx.Message);
-                
-                return Content($@"
-                    <script>
-                        console.error('Argument error saving part (ID: {operationId}): {aEx.Message}');
-                        if (typeof showErrorNotification === 'function') {{
-                            showErrorNotification('Argument error saving part (ID: {operationId}): {aEx.Message}', 8000);
-                        }} else {{
-                            alert('Argument error saving part (ID: {operationId}): {aEx.Message}');
-                        }}
-                    </script>
-                ", "text/html");
+                return RedirectToPage();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "? [PARTS-{OperationId}] Unexpected error saving part: {ErrorMessage}", 
-                    operationId, ex.Message);
-                
-                return Content($@"
-                    <script>
-                        console.error('Unexpected error saving part (ID: {operationId}): {ex.Message}');
-                        if (typeof showErrorNotification === 'function') {{
-                            showErrorNotification('Unexpected error saving part (ID: {operationId}): {ex.Message}', 8000);
-                        }} else {{
-                            alert('Unexpected error saving part (ID: {operationId}): {ex.Message}');
-                        }}
-                    </script>
-                ", "text/html");
+                _logger.LogError(ex, "Error updating part {PartNumber}", Part.PartNumber);
+                TempData["ErrorMessage"] = "Error updating part. Please try again.";
+                await LoadPartsAsync();
+                await LoadDropdownDataAsync();
+                return Page();
             }
         }
 
         public async Task<IActionResult> OnPostDeleteAsync(int id)
         {
-            var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogInformation("??? [PARTS-{OperationId}] Processing part deletion: ID={PartId}", operationId, id);
-
             try
             {
-                if (id <= 0)
-                {
-                    _logger.LogWarning("?? [PARTS-{OperationId}] Invalid part ID for deletion: {PartId}", operationId, id);
-                    return Content($@"
-                        <script>
-                            console.error('Invalid part ID for deletion (ID: {operationId}): {id}');
-                            if (typeof showErrorNotification === 'function') {{
-                                showErrorNotification('Invalid part ID for deletion (ID: {operationId})', 6000);
-                            }}
-                        </script>
-                    ", "text/html");
-                }
-
-                var part = await _context.Parts.FindAsync(id);
+                var part = await _context.Parts
+                    .Include(p => p.Jobs)
+                    .FirstOrDefaultAsync(p => p.Id == id);
+                    
                 if (part == null)
                 {
-                    _logger.LogWarning("?? [PARTS-{OperationId}] Part not found for deletion: ID {PartId}", operationId, id);
-                    return Content($@"
-                        <script>
-                            console.error('Part not found for deletion (ID: {operationId}): {id}');
-                            if (typeof showErrorNotification === 'function') {{
-                                showErrorNotification('Part not found for deletion (ID: {operationId})', 6000);
-                            }}
-                        </script>
-                    ", "text/html");
+                    TempData["ErrorMessage"] = "Part not found.";
+                    return RedirectToPage();
                 }
 
-                // Check if part is being used in active jobs
-                var activeJobsCount = await _context.Jobs
-                    .Where(j => j.PartNumber == part.PartNumber)
-                    .CountAsync();
-
-                if (activeJobsCount > 0)
+                // Check if part has associated jobs
+                if (part.Jobs.Any())
                 {
-                    _logger.LogWarning("?? [PARTS-{OperationId}] Cannot delete part {PartNumber}: {JobCount} active jobs exist", 
-                        operationId, part.PartNumber, activeJobsCount);
-                    
-                    return Content($@"
-                        <script>
-                            console.error('Cannot delete part (ID: {operationId}): Part is used in {activeJobsCount} active jobs');
-                            if (typeof showErrorNotification === 'function') {{
-                                showErrorNotification('Cannot delete part: It is used in {activeJobsCount} active jobs. Please complete or cancel those jobs first.', 8000);
-                            }} else {{
-                                alert('Cannot delete part: It is used in {activeJobsCount} active jobs. Please complete or cancel those jobs first.');
-                            }}
-                        </script>
-                    ", "text/html");
+                    TempData["ErrorMessage"] = $"Cannot delete part '{part.PartNumber}' because it has associated jobs. Set it to inactive instead.";
+                    return RedirectToPage();
                 }
 
-                // Log the deletion
-                _logger.LogInformation("??? [PARTS-{OperationId}] Deleting part: {PartNumber} (ID: {PartId})", 
-                    operationId, part.PartNumber, part.Id);
-
+                var partNumber = part.PartNumber;
                 _context.Parts.Remove(part);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("? [PARTS-{OperationId}] Part deleted successfully: {PartNumber} (ID: {PartId})", 
-                    operationId, part.PartNumber, part.Id);
-
-                return Content($@"
-                    <script>
-                        console.log('? Part deleted successfully (ID: {operationId}): {part.PartNumber}');
-                        if (typeof showSuccessNotification === 'function') {{
-                            showSuccessNotification('Part deleted successfully: {part.PartNumber}', 4000);
-                        }}
-                        // Refresh the page to show updated parts list
-                        window.location.reload();
-                    </script>
-                ", "text/html");
+                _logger.LogInformation("Part {PartNumber} deleted by {User}", partNumber, User.Identity?.Name);
+                TempData["SuccessMessage"] = $"Part '{partNumber}' deleted successfully.";
+                
+                return RedirectToPage();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "? [PARTS-{OperationId}] Error deleting part: {ErrorMessage}", operationId, ex.Message);
-                
-                return Content($@"
-                    <script>
-                        console.error('Error deleting part (ID: {operationId}): {ex.Message}');
-                        if (typeof showErrorNotification === 'function') {{
-                            showErrorNotification('Error deleting part (ID: {operationId}): {ex.Message}', 8000);
-                        }} else {{
-                            alert('Error deleting part (ID: {operationId}): {ex.Message}');
-                        }}
-                    </script>
-                ", "text/html");
+                _logger.LogError(ex, "Error deleting part with ID {PartId}", id);
+                TempData["ErrorMessage"] = "Error deleting part. Please try again.";
+                return RedirectToPage();
             }
         }
 
-        // CRITICAL FIX: Helper methods for safe data sanitization
-        private double SanitizeDouble(double value, string fieldName, string operationId)
-        {
-            if (double.IsNaN(value) || double.IsInfinity(value))
-            {
-                _logger.LogWarning("?? [PARTS-{OperationId}] Invalid double value for {FieldName}: {Value}, setting to 0", 
-                    operationId, fieldName, value);
-                return 0;
-            }
-            
-            if (value < 0 || value > 1000000) // Reasonable bounds
-            {
-                _logger.LogWarning("?? [PARTS-{OperationId}] Out of range double value for {FieldName}: {Value}, setting to 0", 
-                    operationId, fieldName, value);
-                return 0;
-            }
-            
-            return Math.Round(value, 3); // Round to prevent precision issues
-        }
-
-        private decimal SanitizeDecimal(decimal value, string fieldName, string operationId)
-        {
-            if (value < 0 || value > 1000000) // Reasonable bounds
-            {
-                _logger.LogWarning("?? [PARTS-{OperationId}] Out of range decimal value for {FieldName}: {Value}, setting to 0", 
-                    operationId, fieldName, value);
-                return 0;
-            }
-            
-            return Math.Round(value, 2); // Round to prevent precision issues
-        }
-
-        public async Task<IActionResult> OnPostAsync()
-        {
-            var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogWarning("?? [PARTS-{OperationId}] Default OnPostAsync called - no specific handler found. Request details:", operationId);
-            _logger.LogWarning("?? [PARTS-{OperationId}] - QueryString: {QueryString}", operationId, Request.QueryString.ToString());
-            _logger.LogWarning("?? [PARTS-{OperationId}] - Method: {Method}", operationId, Request.Method);
-            _logger.LogWarning("?? [PARTS-{OperationId}] - ContentType: {ContentType}", operationId, Request.ContentType);
-            
-            // Log form data
-            if (Request.HasFormContentType)
-            {
-                foreach (var key in Request.Form.Keys)
-                {
-                    _logger.LogDebug("?? [PARTS-{OperationId}] - Form[{Key}]: {Value}", operationId, key, Request.Form[key]);
-                }
-            }
-
-            // Check if this is a Save request that fell through
-            if (Request.Query.ContainsKey("handler") && Request.Query["handler"] == "Save")
-            {
-                _logger.LogWarning("?? [PARTS-{OperationId}] Save handler request detected in default POST - redirecting", operationId);
-                
-                // Try to extract part data from form
-                var part = new Part();
-                await TryUpdateModelAsync(part);
-                
-                return await OnPostSaveAsync(part);
-            }
-
-            // Also check if form has handler field
-            if (Request.HasFormContentType && Request.Form.ContainsKey("handler") && Request.Form["handler"] == "Save")
-            {
-                _logger.LogWarning("?? [PARTS-{OperationId}] Save handler detected in form data - redirecting", operationId);
-                
-                // Try to extract part data from form
-                var part = new Part();
-                await TryUpdateModelAsync(part);
-                
-                return await OnPostSaveAsync(part);
-            }
-
-            // Load the parts page as fallback
-            _logger.LogInformation("?? [PARTS-{OperationId}] Falling back to regular page load", operationId);
-            await OnGetAsync();
-            return Page();
-        }
-
-        private async Task EnsurePartNamesAsync(string operationId)
+        public async Task<IActionResult> OnGetPartDataAsync(int id)
         {
             try
             {
-                // Find parts that have empty or null names
-                var partsWithoutNames = await _context.Parts
-                    .Where(p => string.IsNullOrEmpty(p.Name))
-                    .ToListAsync();
-
-                if (partsWithoutNames.Any())
+                var part = await _context.Parts.FindAsync(id);
+                if (part == null)
                 {
-                    _logger.LogInformation("?? [PARTS-{OperationId}] Found {Count} parts without names, updating...", 
-                        operationId, partsWithoutNames.Count);
-
-                    foreach (var part in partsWithoutNames)
-                    {
-                        // Set Name to be the same as Description initially, or create a default name
-                        if (!string.IsNullOrEmpty(part.Description))
-                        {
-                            part.Name = part.Description.Length > 200 
-                                ? part.Description.Substring(0, 200).Trim() 
-                                : part.Description.Trim();
-                        }
-                        else
-                        {
-                            // Create a default name based on part number
-                            part.Name = $"Part {part.PartNumber}";
-                        }
-
-                        _logger.LogDebug("?? [PARTS-{OperationId}] Updated part {PartNumber}: Name set to '{Name}'", 
-                            operationId, part.PartNumber, part.Name);
-                    }
-
-                    await _context.SaveChangesAsync();
-                    _logger.LogInformation("? [PARTS-{OperationId}] Successfully updated {Count} parts with default names", 
-                        operationId, partsWithoutNames.Count);
+                    return NotFound();
                 }
-                else
-                {
-                    _logger.LogDebug("? [PARTS-{OperationId}] All parts already have proper names", operationId);
-                }
+
+                return new JsonResult(part);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "? [PARTS-{OperationId}] Error ensuring part names: {ErrorMessage}", 
-                    operationId, ex.Message);
+                _logger.LogError(ex, "Error getting part data for ID {PartId}", id);
+                return BadRequest("Error retrieving part data.");
+            }
+        }
+
+        public async Task<IActionResult> OnGetAddFormAsync()
+        {
+            try
+            {
+                // Initialize a new part with default values
+                Part = new Part
+                {
+                    Material = "Ti-6Al-4V Grade 5",
+                    SlsMaterial = "Ti-6Al-4V Grade 5",
+                    Industry = "General",
+                    Application = "General Component",
+                    PartCategory = "Prototype",
+                    PartClass = "B",
+                    ProcessType = "SLS Metal",
+                    RequiredMachineType = "TruPrint 3000",
+                    IsActive = true,
+                    EstimatedHours = 8.0,
+                    CreatedDate = DateTime.UtcNow,
+                    LastModifiedDate = DateTime.UtcNow
+                };
+
+                return Partial("Shared/_PartFormModal", Part);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading add part form");
+                return BadRequest("Error loading form.");
+            }
+        }
+
+        public async Task<IActionResult> OnGetEditFormAsync(int id)
+        {
+            try
+            {
+                var part = await _context.Parts.FindAsync(id);
+                if (part == null)
+                {
+                    return NotFound();
+                }
+
+                Part = part;
+                return Partial("Shared/_PartFormModal", Part);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading edit part form for ID {PartId}", id);
+                return BadRequest("Error loading part data.");
+            }
+        }
+
+        private async Task LoadPartsAsync()
+        {
+            try
+            {
+                var query = _context.Parts.AsQueryable();
+
+                // Apply filters
+                if (ActiveOnly.HasValue && ActiveOnly.Value)
+                {
+                    query = query.Where(p => p.IsActive);
+                }
+
+                if (!string.IsNullOrEmpty(SearchTerm))
+                {
+                    query = query.Where(p => 
+                        p.PartNumber.Contains(SearchTerm) ||
+                        p.Name.Contains(SearchTerm) ||
+                        (p.Description != null && p.Description.Contains(SearchTerm)) ||
+                        (p.CustomerPartNumber != null && p.CustomerPartNumber.Contains(SearchTerm)));
+                }
+
+                if (!string.IsNullOrEmpty(MaterialFilter))
+                {
+                    query = query.Where(p => p.Material == MaterialFilter);
+                }
+
+                if (!string.IsNullOrEmpty(IndustryFilter))
+                {
+                    query = query.Where(p => p.Industry == IndustryFilter);
+                }
+
+                if (!string.IsNullOrEmpty(CategoryFilter))
+                {
+                    query = query.Where(p => p.PartCategory == CategoryFilter);
+                }
+
+                // Apply sorting
+                query = SortOrder switch
+                {
+                    "partnumber_desc" => query.OrderByDescending(p => p.PartNumber),
+                    "name" => query.OrderBy(p => p.Name),
+                    "name_desc" => query.OrderByDescending(p => p.Name),
+                    "material" => query.OrderBy(p => p.Material),
+                    "material_desc" => query.OrderByDescending(p => p.Material),
+                    "industry" => query.OrderBy(p => p.Industry),
+                    "industry_desc" => query.OrderByDescending(p => p.Industry),
+                    "created" => query.OrderBy(p => p.CreatedDate),
+                    "created_desc" => query.OrderByDescending(p => p.CreatedDate),
+                    _ => query.OrderBy(p => p.PartNumber)
+                };
+
+                // Calculate pagination
+                var totalCount = await query.CountAsync();
+                TotalPages = (int)Math.Ceiling(totalCount / (double)PageSize);
+
+                // Apply pagination - using ToListAsync directly to let EF handle the NULL values
+                Parts = await query
+                    .Skip((PageNumber - 1) * PageSize)
+                    .Take(PageSize)
+                    .ToListAsync();
+
+                // Post-process to ensure no NULL values in critical fields
+                foreach (var part in Parts)
+                {
+                    part.Description ??= string.Empty;
+                    part.CustomerPartNumber ??= string.Empty;
+                    part.Industry ??= "General";
+                    part.Application ??= "General Component";
+                    part.PartClass ??= "B";
+                    part.CreatedBy ??= "System";
+                    part.LastModifiedBy ??= "System";
+                    part.AdminOverrideReason ??= string.Empty;
+                    part.AdminOverrideBy ??= string.Empty;
+                    part.AvgDuration ??= "8h 0m";
+                    part.Dimensions ??= string.Empty;
+                }
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("The data is NULL at ordinal"))
+            {
+                // Handle the specific NULL value error by fixing the database and retrying
+                _logger.LogWarning("Detected NULL values in database causing data reader error. Attempting to fix...");
                 
-                // Don't throw - this is not critical for page loading
+                await FixNullValuesInDatabaseAsync();
+                
+                // Retry the query after fixing NULL values
+                var query = _context.Parts.AsQueryable();
+
+                // Reapply all filters and sorting (simplified retry)
+                if (ActiveOnly.HasValue && ActiveOnly.Value)
+                {
+                    query = query.Where(p => p.IsActive);
+                }
+
+                if (!string.IsNullOrEmpty(SearchTerm))
+                {
+                    query = query.Where(p => 
+                        p.PartNumber.Contains(SearchTerm) ||
+                        p.Name.Contains(SearchTerm));
+                }
+
+                if (!string.IsNullOrEmpty(MaterialFilter))
+                {
+                    query = query.Where(p => p.Material == MaterialFilter);
+                }
+
+                if (!string.IsNullOrEmpty(IndustryFilter))
+                {
+                    query = query.Where(p => p.Industry == IndustryFilter);
+                }
+
+                if (!string.IsNullOrEmpty(CategoryFilter))
+                {
+                    query = query.Where(p => p.PartCategory == CategoryFilter);
+                }
+
+                query = SortOrder switch
+                {
+                    "partnumber_desc" => query.OrderByDescending(p => p.PartNumber),
+                    "name" => query.OrderBy(p => p.Name),
+                    "name_desc" => query.OrderByDescending(p => p.Name),
+                    "material" => query.OrderBy(p => p.Material),
+                    "material_desc" => query.OrderByDescending(p => p.Material),
+                    "industry" => query.OrderBy(p => p.Industry),
+                    "industry_desc" => query.OrderByDescending(p => p.Industry),
+                    "created" => query.OrderBy(p => p.CreatedDate),
+                    "created_desc" => query.OrderByDescending(p => p.CreatedDate),
+                    _ => query.OrderBy(p => p.PartNumber)
+                };
+
+                var totalCount = await query.CountAsync();
+                TotalPages = (int)Math.Ceiling(totalCount / (double)PageSize);
+
+                Parts = await query
+                    .Skip((PageNumber - 1) * PageSize)
+                    .Take(PageSize)
+                    .ToListAsync();
+
+                _logger.LogInformation("Successfully loaded parts after fixing NULL values");
+            }
+        }
+
+        private async Task LoadDropdownDataAsync()
+        {
+            AvailableMaterials = await _context.Parts
+                .Where(p => !string.IsNullOrEmpty(p.Material))
+                .Select(p => p.Material)
+                .Distinct()
+                .OrderBy(m => m)
+                .ToListAsync();
+
+            AvailableIndustries = await _context.Parts
+                .Where(p => !string.IsNullOrEmpty(p.Industry))
+                .Select(p => p.Industry ?? "General")
+                .Distinct()
+                .OrderBy(i => i)
+                .ToListAsync();
+
+            AvailableCategories = await _context.Parts
+                .Where(p => !string.IsNullOrEmpty(p.PartCategory))
+                .Select(p => p.PartCategory)
+                .Distinct()
+                .OrderBy(c => c)
+                .ToListAsync();
+        }
+
+        /// <summary>
+        /// Fixes NULL values in the database that may cause InvalidOperationException
+        /// during data loading. Called automatically when NULL value errors are detected.
+        /// </summary>
+        private async Task FixNullValuesInDatabaseAsync()
+        {
+            try
+            {
+                _logger.LogInformation("Fixing NULL values in Parts table to prevent data reader errors");
+                
+                var sql = """
+                    UPDATE Parts 
+                    SET 
+                        AdminOverrideReason = COALESCE(AdminOverrideReason, ''),
+                        AdminOverrideBy = COALESCE(AdminOverrideBy, ''),
+                        Description = COALESCE(Description, ''),
+                        CustomerPartNumber = COALESCE(CustomerPartNumber, ''),
+                        Industry = COALESCE(Industry, 'General'),
+                        Application = COALESCE(Application, 'General Component'),
+                        PartClass = COALESCE(PartClass, 'B'),
+                        CreatedBy = COALESCE(CreatedBy, 'System'),
+                        LastModifiedBy = COALESCE(LastModifiedBy, 'System'),
+                        AvgDuration = COALESCE(AvgDuration, '8h 0m'),
+                        Dimensions = COALESCE(Dimensions, '')
+                    WHERE 
+                        AdminOverrideReason IS NULL 
+                        OR AdminOverrideBy IS NULL
+                        OR Description IS NULL
+                        OR CustomerPartNumber IS NULL
+                        OR Industry IS NULL
+                        OR Application IS NULL
+                        OR PartClass IS NULL
+                        OR CreatedBy IS NULL
+                        OR LastModifiedBy IS NULL
+                        OR AvgDuration IS NULL
+                        OR Dimensions IS NULL
+                    """;
+                
+                var rowsAffected = await _context.Database.ExecuteSqlRawAsync(sql);
+                _logger.LogInformation("Fixed {RowsAffected} rows with NULL values in Parts table", rowsAffected);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to fix NULL values in database");
             }
         }
     }

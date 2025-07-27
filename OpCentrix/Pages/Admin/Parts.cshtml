@@ -1,491 +1,554 @@
 @page
 @model OpCentrix.Pages.Admin.PartsModel
 @{
-    ViewData["Title"] = "Manage Parts";
+    ViewData["Title"] = "Parts Management";
+    ViewData["ActivePage"] = "Parts";
     Layout = "~/Pages/Admin/Shared/_AdminLayout.cshtml";
 }
 
-<!-- Parts JavaScript - Load immediately to ensure functions are available -->
-<script>
-// Parts Page Management - Load immediately for onclick handlers
-(function() {
-    'use strict';
-    
-    // Function to initialize Parts functions
-    function initializeParts() {
-        if (!window.OpCentrixAdmin) {
-            console.log('? [PARTS] OpCentrixAdmin not ready yet, retrying...');
-            setTimeout(initializeParts, 100); // Retry in 100ms
-            return;
-        }
-
-        // Initialize parts management
-        window.OpCentrixAdmin.Parts = window.OpCentrixAdmin.Parts || {};
-
-        /**
-         * Show add part modal
-         */
-        window.OpCentrixAdmin.Parts.showAddModal = async function() {
-            const operationId = window.OpCentrixAdmin.generateOperationId();
-            console.log(`?? [PARTS-${operationId}] Opening add part modal`);
-
-            try {
-                // Show loading in modal container
-                const modalContainer = document.getElementById('modal-container');
-                if (!modalContainer) {
-                    throw new Error('Modal container not found');
-                }
-                
-                const modalContent = modalContainer.querySelector('.modal-content');
-                if (!modalContent) {
-                    throw new Error('Modal content container not found');
-                }
-                
-                modalContent.innerHTML = `
-                    <div class="flex items-center justify-center p-12">
-                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                        <span class="ml-3 text-gray-600">Loading form...</span>
-                    </div>
-                `;
-                
-                window.OpCentrixAdmin.Modal.show('modal-container');
-
-                // Load the form content
-                const response = await fetch('/Admin/Parts?handler=Add');
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-
-                const htmlContent = await response.text();
-                modalContent.innerHTML = htmlContent;
-
-                console.log(`? [PARTS-${operationId}] Add part modal loaded successfully`);
-
-            } catch (error) {
-                console.error(`? [PARTS-${operationId}] Error loading add part modal:`, error);
-                window.OpCentrixAdmin.Alert.error(`Failed to load add part form: ${error.message}`);
-                window.OpCentrixAdmin.Modal.hide('modal-container');
-            }
-        };
-
-        /**
-         * Show edit part modal
-         */
-        window.OpCentrixAdmin.Parts.showEditModal = async function(partId) {
-            const operationId = window.OpCentrixAdmin.generateOperationId();
-            console.log(`?? [PARTS-${operationId}] Opening edit part modal for ID: ${partId}`);
-
-            try {
-                if (!partId || partId <= 0) {
-                    throw new Error(`Invalid part ID: ${partId}`);
-                }
-
-                // Show loading in modal container
-                const modalContainer = document.getElementById('modal-container');
-                if (!modalContainer) {
-                    throw new Error('Modal container not found');
-                }
-                
-                const modalContent = modalContainer.querySelector('.modal-content');
-                if (!modalContent) {
-                    throw new Error('Modal content container not found');
-                }
-                
-                modalContent.innerHTML = `
-                    <div class="flex items-center justify-center p-12">
-                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                        <span class="ml-3 text-gray-600">Loading part data...</span>
-                    </div>
-                `;
-                
-                window.OpCentrixAdmin.Modal.show('modal-container');
-
-                // Load the form content
-                const response = await fetch(`/Admin/Parts?handler=Edit&id=${partId}`);
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-
-                const htmlContent = await response.text();
-                modalContent.innerHTML = htmlContent;
-
-                console.log(`? [PARTS-${operationId}] Edit part modal loaded successfully for ID: ${partId}`);
-
-            } catch (error) {
-                console.error(`? [PARTS-${operationId}] Error loading edit part modal:`, error);
-                window.OpCentrixAdmin.Alert.error(`Failed to load edit part form: ${error.message}`);
-                window.OpCentrixAdmin.Modal.hide('modal-container');
-            }
-        };
-
-        /**
-         * Delete part with confirmation
-         */
-        window.OpCentrixAdmin.Parts.deletePart = function(partId, partNumber) {
-            const operationId = window.OpCentrixAdmin.generateOperationId();
-            console.log(`??? [PARTS-${operationId}] Delete request for part: ${partNumber} (ID: ${partId})`);
-
-            const confirmed = window.OpCentrixAdmin.Confirm.delete(partNumber, async () => {
-                try {
-                    console.log(`?? [PARTS-${operationId}] Proceeding with delete for part: ${partNumber}`);
-
-                    // Create form data for CSRF token
-                    const formData = new FormData();
-                    const token = document.querySelector('input[name="__RequestVerificationToken"]');
-                    if (token) {
-                        formData.append('__RequestVerificationToken', token.value);
-                    }
-
-                    const response = await fetch(`/Admin/Parts?handler=Delete&id=${partId}`, {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                    }
-
-                    const result = await response.text();
-                    
-                    // Check if response contains error
-                    if (result.includes('error') || result.includes('Error')) {
-                        throw new Error('Server returned an error response');
-                    }
-
-                    console.log(`? [PARTS-${operationId}] Part deleted successfully: ${partNumber}`);
-                    window.OpCentrixAdmin.Alert.success(`Part "${partNumber}" deleted successfully`);
-                    
-                    // Refresh the page to update the parts list
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1500);
-
-                } catch (error) {
-                    console.error(`? [PARTS-${operationId}] Error deleting part:`, error);
-                    window.OpCentrixAdmin.Alert.error(`Failed to delete part "${partNumber}": ${error.message}`);
-                }
-            });
-
-            if (!confirmed) {
-                console.log(`? [PARTS-${operationId}] User cancelled delete for part: ${partNumber}`);
-            }
-        };
-
-        /**
-         * Handle successful form submission
-         */
-        window.OpCentrixAdmin.Parts.handleFormSuccess = function(partNumber, isEdit = false) {
-            const operationId = window.OpCentrixAdmin.generateOperationId();
-            const action = isEdit ? 'updated' : 'created';
-            
-            console.log(`? [PARTS-${operationId}] Part ${action} successfully: ${partNumber}`);
-            
-            window.OpCentrixAdmin.Modal.hide('modal-container');
-            window.OpCentrixAdmin.Alert.success(`Part "${partNumber}" ${action} successfully`);
-            
-            // Refresh the page to update the parts list
-            setTimeout(() => {
-                window.location.reload();
-            }, 1500);
-        };
-
-        console.log('? [PARTS] Parts management functions loaded and available');
-    }
-
-    // Start initialization process
-    initializeParts();
-
-})();
-</script>
-
-<div class="mb-6">
-    <div class="flex justify-between items-center">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-900">Manage Parts</h1>
-            <p class="text-gray-600 mt-1">Create, edit, and manage manufacturing parts</p>
-        </div>
-        <button type="button"
-                onclick="OpCentrixAdmin.Parts.showAddModal()"
-                class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center">
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-            </svg>
-            Add New Part
-        </button>
-    </div>
-</div>
-
-<!-- Filters -->
-<div class="bg-white rounded-lg shadow p-6 mb-6">
-    <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
-            <input type="text" name="search" value="@Model.SearchTerm" placeholder="Part number, description, material..." 
-                   class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
-        </div>
-        
-        <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Material</label>
-            <input type="text" name="material" value="@Model.MaterialFilter" placeholder="Material type..." 
-                   class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
-        </div>
-        
-        <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-            <select name="active" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                <option value="">All Parts</option>
-                <option value="true" selected="@(Model.ActiveFilter == "true")">Active Only</option>
-                <option value="false" selected="@(Model.ActiveFilter == "false")">Inactive Only</option>
-            </select>
-        </div>
-        
-        <div class="flex items-end">
-            <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-                Filter
-            </button>
-        </div>
-    </form>
-</div>
-
-<!-- Results Summary -->
-<div class="mb-4">
-    <p class="text-sm text-gray-600">
-        Showing @((Model.PageNumber - 1) * Model.PageSize + 1) to @(Math.Min(Model.PageNumber * Model.PageSize, Model.TotalParts)) of @Model.TotalParts parts
-    </p>
-</div>
-
-<!-- Parts Table -->
-<div class="bg-white rounded-lg shadow overflow-hidden">
-    <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Part Number</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Material</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Costs</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200" id="parts-table-body">
-                @if (Model.Parts.Any())
-                {
-                    @foreach (var part in Model.Parts)
-                    {
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm font-medium text-gray-900">@part.PartNumber</div>
-                                <div class="text-sm text-gray-500">ID: @part.Id</div>
-                            </td>
-                            <td class="px-6 py-4">
-                                <div class="text-sm font-medium text-gray-900">@part.Name</div>
-                                @if (!string.IsNullOrEmpty(part.CustomerPartNumber))
-                                {
-                                    <div class="text-sm text-gray-500">Customer: @part.CustomerPartNumber</div>
-                                }
-                            </td>
-                            <td class="px-6 py-4">
-                                <div class="text-sm text-gray-900">@part.Description</div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                    @part.Material
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                @if (part.HasAdminOverride)
-                                {
-                                    <div class="flex items-center space-x-2">
-                                        <div>
-                                            <div class="font-medium text-orange-700">@part.EffectiveDurationDisplay</div>
-                                            <div class="text-xs text-gray-500">Standard: @part.EstimatedHours hrs</div>
-                                        </div>
-                                        <svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Admin Override Active">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                                        </svg>
-                                    </div>
-                                }
-                                else
-                                {
-                                    <div>@part.AvgDuration</div>
-                                    <div class="text-xs text-gray-500">@part.EstimatedHours hrs</div>
-                                }
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                <div>Material: @part.MaterialCostPerKg.ToString("C")</div>
-                                <div class="text-xs text-gray-500">Labor: @part.StandardLaborCostPerHour.ToString("C")/hr</div>
-                                <div class="text-xs text-gray-500">Setup: @part.SetupCost.ToString("C")</div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                @if (part.IsActive)
-                                {
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                        Active
-                                    </span>
-                                }
-                                else
-                                {
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                        Inactive
-                                    </span>
-                                }
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                                <button type="button" 
-                                        onclick="OpCentrixAdmin.Parts.showEditModal(@part.Id)"
-                                        class="text-blue-600 hover:text-blue-900 transition">
-                                    Edit
-                                </button>
-                                <button type="button" 
-                                        onclick="OpCentrixAdmin.Parts.deletePart(@part.Id, '@part.PartNumber')"
-                                        class="text-red-600 hover:text-red-900 transition">
-                                    Delete
-                                </button>
-                            </td>
-                        </tr>
-                    }
-                }
-                else
-                {
-                    <tr>
-                        <td colspan="8" class="px-6 py-4 text-center text-gray-500">
-                            No parts found matching your criteria.
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<!-- Pagination -->
-@if (Model.TotalPages > 1)
-{
-    <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 mt-6 rounded-lg shadow">
-        <div class="flex-1 flex justify-between sm:hidden">
-            @if (Model.PageNumber > 1)
-            {
-                <a href="?page=@(Model.PageNumber - 1)&search=@Model.SearchTerm&material=@Model.MaterialFilter&active=@Model.ActiveFilter" 
-                   class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                    Previous
-                </a>
-            }
-            @if (Model.PageNumber < Model.TotalPages)
-            {
-                <a href="?page=@(Model.PageNumber + 1)&search=@Model.SearchTerm&material=@Model.MaterialFilter&active=@Model.ActiveFilter" 
-                   class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                    Next
-                </a>
-            }
-        </div>
-        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-            <div>
-                <p class="text-sm text-gray-700">
-                    Page <span class="font-medium">@Model.PageNumber</span> of <span class="font-medium">@Model.TotalPages</span>
-                </p>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Page Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-0">Parts Management</h1>
+                    <p class="text-muted">Manage SLS manufacturing parts and specifications</p>
+                </div>
+                <button type="button" class="btn btn-primary" onclick="showAddPartModal()">
+                    <i class="fas fa-plus me-2"></i>Add Part
+                </button>
             </div>
-            <div>
-                <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                    @for (int i = Math.Max(1, Model.PageNumber - 2); i <= Math.Min(Model.TotalPages, Model.PageNumber + 2); i++)
-                    {
-                        @if (i == Model.PageNumber)
-                        {
-                            <span class="relative inline-flex items-center px-4 py-2 border border-blue-500 bg-blue-50 text-sm font-medium text-blue-600">
-                                @i
-                            </span>
-                        }
-                        else
-                        {
-                            <a href="?page=@i&search=@Model.SearchTerm&material=@Model.MaterialFilter&active=@Model.ActiveFilter" 
-                               class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                                @i
+
+            <!-- Success/Error Messages -->
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>@TempData["SuccessMessage"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+
+            @if (TempData["ErrorMessage"] != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-circle me-2"></i>@TempData["ErrorMessage"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+
+            <!-- Search and Filter Card -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-search me-2"></i>Search & Filter
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="searchTerm" class="form-label">Search</label>
+                            <input type="text" class="form-control" id="searchTerm" name="SearchTerm" 
+                                   value="@Model.SearchTerm" placeholder="Part number, name, description...">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="materialFilter" class="form-label">Material</label>
+                            <select class="form-select" id="materialFilter" name="MaterialFilter">
+                                <option value="">All Materials</option>
+                                @foreach (var material in Model.AvailableMaterials)
+                                {
+                                    <option value="@material" selected="@(Model.MaterialFilter == material)">@material</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="industryFilter" class="form-label">Industry</label>
+                            <select class="form-select" id="industryFilter" name="IndustryFilter">
+                                <option value="">All Industries</option>
+                                @foreach (var industry in Model.AvailableIndustries)
+                                {
+                                    <option value="@industry" selected="@(Model.IndustryFilter == industry)">@industry</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="categoryFilter" class="form-label">Category</label>
+                            <select class="form-select" id="categoryFilter" name="CategoryFilter">
+                                <option value="">All Categories</option>
+                                @foreach (var category in Model.AvailableCategories)
+                                {
+                                    <option value="@category" selected="@(Model.CategoryFilter == category)">@category</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="sortOrder" class="form-label">Sort By</label>
+                            <select class="form-select" id="sortOrder" name="SortOrder">
+                                <option value="" selected="@(string.IsNullOrEmpty(Model.SortOrder))">Part Number ?</option>
+                                <option value="partnumber_desc" selected="@(Model.SortOrder == "partnumber_desc")">Part Number ?</option>
+                                <option value="name" selected="@(Model.SortOrder == "name")">Name ?</option>
+                                <option value="name_desc" selected="@(Model.SortOrder == "name_desc")">Name ?</option>
+                                <option value="material" selected="@(Model.SortOrder == "material")">Material ?</option>
+                                <option value="material_desc" selected="@(Model.SortOrder == "material_desc")">Material ?</option>
+                                <option value="created" selected="@(Model.SortOrder == "created")">Created ?</option>
+                                <option value="created_desc" selected="@(Model.SortOrder == "created_desc")">Created ?</option>
+                            </select>
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-outline-primary">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="activeOnly" name="ActiveOnly" 
+                                       value="true" checked="@(Model.ActiveOnly == true)" onchange="this.form.submit()">
+                                <label class="form-check-label" for="activeOnly">
+                                    Show active parts only
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <a href="/Admin/Parts" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-times me-1"></i>Clear Filters
                             </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Parts Table Card -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-cogs me-2"></i>Parts (@Model.Parts.Count)
+                    </h6>
+                    <div class="text-muted small">
+                        Page @Model.PageNumber of @Model.TotalPages
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    @if (Model.Parts.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Part Number</th>
+                                        <th>Name</th>
+                                        <th>Material</th>
+                                        <th>Industry</th>
+                                        <th>Category</th>
+                                        <th>Est. Hours</th>
+                                        <th>Status</th>
+                                        <th>Created</th>
+                                        <th class="text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var part in Model.Parts)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <strong>@part.PartNumber</strong>
+                                                @if (!string.IsNullOrEmpty(part.CustomerPartNumber))
+                                                {
+                                                    <br><small class="text-muted">Customer: @part.CustomerPartNumber</small>
+                                                }
+                                            </td>
+                                            <td>
+                                                @part.Name
+                                                @if (!string.IsNullOrEmpty(part.Description))
+                                                {
+                                                    <br><small class="text-muted">@(part.Description.Length > 50 ? part.Description.Substring(0, 50) + "..." : part.Description)</small>
+                                                }
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-info">@part.Material</span>
+                                                @if (part.SlsMaterial != part.Material)
+                                                {
+                                                    <br><small class="text-muted">SLS: @part.SlsMaterial</small>
+                                                }
+                                            </td>
+                                            <td>@part.Industry</td>
+                                            <td>
+                                                <span class="badge bg-secondary">@part.PartCategory</span>
+                                                @if (!string.IsNullOrEmpty(part.PartClass))
+                                                {
+                                                    <span class="badge bg-outline-dark ms-1">Class @part.PartClass</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (part.HasAdminOverride)
+                                                {
+                                                    <span class="text-warning">
+                                                        <i class="fas fa-user-shield" title="Admin Override"></i>
+                                                        @(part.EffectiveDurationHours.ToString("F1") + "h")
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    @(part.EstimatedHours.ToString("F1") + "h")
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (part.IsActive)
+                                                {
+                                                    <span class="badge bg-success">Active</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-danger">Inactive</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    @part.CreatedDate.ToString("MM/dd/yyyy")
+                                                    <br>by @part.CreatedBy
+                                                </small>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="btn-group btn-group-sm" role="group">
+                                                    <button type="button" class="btn btn-outline-primary" 
+                                                            onclick="showEditPartModal(@part.Id)" title="Edit">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline-info" 
+                                                            onclick="viewPartDetails(@part.Id)" title="View Details">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline-danger" 
+                                                            onclick="showDeleteConfirmation(@part.Id, '@part.PartNumber')" title="Delete">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        @if (Model.TotalPages > 1)
+                        {
+                            <div class="card-footer">
+                                <nav aria-label="Parts pagination">
+                                    <ul class="pagination pagination-sm justify-content-center mb-0">
+                                        @if (Model.PageNumber > 1)
+                                        {
+                                            <li class="page-item">
+                                                <a class="page-link" href="?PageNumber=@(Model.PageNumber - 1)&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&SortOrder=@Model.SortOrder&ActiveOnly=@Model.ActiveOnly">Previous</a>
+                                            </li>
+                                        }
+
+                                        @for (int i = Math.Max(1, Model.PageNumber - 2); i <= Math.Min(Model.TotalPages, Model.PageNumber + 2); i++)
+                                        {
+                                            <li class="page-item @(i == Model.PageNumber ? "active" : "")">
+                                                <a class="page-link" href="?PageNumber=@i&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&SortOrder=@Model.SortOrder&ActiveOnly=@Model.ActiveOnly">@i</a>
+                                            </li>
+                                        }
+
+                                        @if (Model.PageNumber < Model.TotalPages)
+                                        {
+                                            <li class="page-item">
+                                                <a class="page-link" href="?PageNumber=@(Model.PageNumber + 1)&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&SortOrder=@Model.SortOrder&ActiveOnly=@Model.ActiveOnly">Next</a>
+                                            </li>
+                                        }
+                                    </ul>
+                                </nav>
+                            </div>
                         }
                     }
-                </nav>
+                    else
+                    {
+                        <div class="text-center p-5">
+                            <i class="fas fa-cogs fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No parts found</h5>
+                            <p class="text-muted">Try adjusting your search criteria or add a new part.</p>
+                            <button type="button" class="btn btn-primary" onclick="showAddPartModal()">
+                                <i class="fas fa-plus me-2"></i>Add First Part
+                            </button>
+                        </div>
+                    }
+                </div>
             </div>
         </div>
     </div>
-}
+</div>
 
 @section Scripts {
-    <script>
-        // HTMX Integration for Parts Forms - runs after DOM is ready
-        (function() {
-            'use strict';
+<script>
+    let currentPartId = null;
 
-            /**
-             * Setup HTMX integration for parts forms
-             */
-            function setupHTMXIntegration() {
-                // Listen for successful form submissions in modal
-                document.addEventListener('htmx:afterRequest', function(event) {
-                    console.log('?? [HTMX] After request event:', event.detail);
-                    
-                    if (event.target.closest('#modal-container') && event.detail.successful) {
-                        const response = event.detail.xhr.responseText;
-                        console.log('?? [HTMX] Response preview:', response.substring(0, 200));
-                        
-                        // Check if response is a script (success response)
-                        if (response.includes('<script>') && response.includes('Part saved successfully')) {
-                            console.log('? [HTMX] Success script detected - executing');
-                            
-                            // Extract part number from response for better messaging
-                            const partNumberMatch = response.match(/Part saved successfully: ([^']+)/);
-                            const partNumber = partNumberMatch ? partNumberMatch[1] : 'Part';
-                            
-                            // Call the success handler directly
-                            OpCentrixAdmin.Parts.handleFormSuccess(partNumber, true);
-                        }
-                    }
-                });
+    // Show Add Part Modal using admin layout modal system
+    async function showAddPartModal() {
+        try {
+            console.log('?? [PARTS] Opening add part modal');
+            
+            // Show modal container
+            const modalContainer = document.getElementById('modal-container');
+            const modalContent = modalContainer.querySelector('.modal-content');
+            
+            if (!modalContainer || !modalContent) {
+                console.error('? [PARTS] Modal container not found');
+                alert('Modal system not available');
+                return;
+            }
+            
+            // Show loading state
+            modalContent.innerHTML = `
+                <div class="p-8 text-center">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+                    <div class="text-gray-600">Loading part form...</div>
+                </div>
+            `;
+            
+            // Show modal
+            modalContainer.classList.remove('hidden');
+            modalContainer.classList.add('flex');
+            
+            // Load form content
+            const response = await fetch('/Admin/Parts?handler=AddForm');
+            if (response.ok) {
+                const html = await response.text();
+                modalContent.innerHTML = html;
                 
-                // Listen for HTMX after swap events
-                document.addEventListener('htmx:afterSwap', function(event) {
-                    console.log('?? [HTMX] After swap event:', event.detail);
-                    
-                    if (event.target.closest('#modal-container')) {
-                        const response = event.detail.xhr.responseText;
-                        
-                        // Check if response contains success script
-                        if (response.includes('<script>') && response.includes('Part saved successfully')) {
-                            console.log('? [HTMX] Success detected in swap - calling success handler');
-                            
-                            // Extract part number and call success handler
-                            const partNumberMatch = response.match(/Part saved successfully: ([^']+)/);
-                            const partNumber = partNumberMatch ? partNumberMatch[1] : 'Part';
-                            
-                            OpCentrixAdmin.Parts.handleFormSuccess(partNumber, true);
-                        }
-                    }
-                });
-
-                // Handle form errors
-                document.addEventListener('htmx:responseError', function(event) {
-                    if (event.target.closest('#modal-container')) {
-                        console.error('? [HTMX] Form submission error:', event.detail);
-                        OpCentrixAdmin.Alert.error('Form submission failed. Please try again.');
-                        
-                        // Hide any loading states
-                        if (typeof OpCentrixAdmin !== 'undefined' && OpCentrixAdmin.Loading && OpCentrixAdmin.Loading.hideAll) {
-                            OpCentrixAdmin.Loading.hideAll();
-                        }
-                    }
-                });
-            }
-
-            // Initialize when DOM is ready
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', setupHTMXIntegration);
+                // Initialize form
+                currentPartId = null;
+                initializePartForm('create');
+                
+                console.log('? [PARTS] Add modal loaded successfully');
             } else {
-                setupHTMXIntegration();
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
+        } catch (error) {
+            console.error('? [PARTS] Error loading add modal:', error);
+            showModalError('Error loading form. Please try again.');
+        }
+    }
 
-            console.log('? [PARTS] HTMX integration initialized successfully');
+    // Show Edit Part Modal
+    async function showEditPartModal(partId) {
+        try {
+            console.log('?? [PARTS] Opening edit part modal for ID:', partId);
+            
+            const modalContainer = document.getElementById('modal-container');
+            const modalContent = modalContainer.querySelector('.modal-content');
+            
+            if (!modalContainer || !modalContent) {
+                console.error('? [PARTS] Modal container not found');
+                alert('Modal system not available');
+                return;
+            }
+            
+            // Show loading state
+            modalContent.innerHTML = `
+                <div class="p-8 text-center">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+                    <div class="text-gray-600">Loading part data...</div>
+                </div>
+            `;
+            
+            // Show modal
+            modalContainer.classList.remove('hidden');
+            modalContainer.classList.add('flex');
+            
+            // Load form with part data
+            const response = await fetch(`/Admin/Parts?handler=EditForm&id=${partId}`);
+            if (response.ok) {
+                const html = await response.text();
+                modalContent.innerHTML = html;
+                
+                // Initialize form
+                currentPartId = partId;
+                initializePartForm('edit', partId);
+                
+                console.log('? [PARTS] Edit modal loaded successfully');
+            } else {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+        } catch (error) {
+            console.error('? [PARTS] Error loading edit modal:', error);
+            showModalError('Error loading part data. Please try again.');
+        }
+    }
 
-        })();
-    </script>
+    // Show Delete Confirmation
+    function showDeleteConfirmation(partId, partNumber) {
+        if (confirm(`Are you sure you want to delete part "${partNumber}"?\n\nThis action cannot be undone. If this part has associated jobs, it cannot be deleted.`)) {
+            deletePart(partId);
+        }
+    }
+
+    // Delete Part
+    async function deletePart(partId) {
+        try {
+            console.log('?? [PARTS] Deleting part ID:', partId);
+            
+            const formData = new FormData();
+            formData.append('id', partId);
+            formData.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]')?.value);
+            
+            const response = await fetch('/Admin/Parts?handler=Delete', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                console.log('? [PARTS] Part deleted successfully');
+                window.location.reload();
+            } else {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+        } catch (error) {
+            console.error('? [PARTS] Delete error:', error);
+            alert('Error deleting part. Please try again.');
+        }
+    }
+
+    // Initialize Part Form
+    function initializePartForm(mode, partId = null) {
+        const form = document.querySelector('#modal-container form');
+        if (!form) {
+            console.warn('?? [PARTS] No form found in modal');
+            return;
+        }
+        
+        // Set form action based on mode
+        if (mode === 'create') {
+            form.action = '/Admin/Parts?handler=Create';
+        } else if (mode === 'edit' && partId) {
+            form.action = `/Admin/Parts?handler=Edit&id=${partId}`;
+        }
+        
+        // Add form submit handler
+        form.addEventListener('submit', handleFormSubmit);
+        
+        // Add cancel button handler
+        const cancelBtn = form.querySelector('[data-action="cancel"], .btn-secondary');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', hideModal);
+        }
+        
+        // Initialize any material change handlers
+        const materialSelect = form.querySelector('#materialSelect, [name*="Material"]');
+        if (materialSelect) {
+            materialSelect.addEventListener('change', function() {
+                if (window.onMaterialChange) {
+                    window.onMaterialChange(this.value);
+                }
+            });
+        }
+    }
+
+    // Handle Form Submission
+    async function handleFormSubmit(event) {
+        event.preventDefault();
+        
+        const form = event.target;
+        const formData = new FormData(form);
+        
+        try {
+            console.log('?? [PARTS] Submitting form:', form.action);
+            
+            // Show loading state on submit button
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<div class="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>Saving...';
+                submitBtn.disabled = true;
+            }
+            
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                }
+            });
+            
+            if (response.ok) {
+                console.log('? [PARTS] Form submitted successfully');
+                hideModal();
+                window.location.reload();
+            } else {
+                // Handle validation errors - reload form with errors
+                const html = await response.text();
+                const modalContent = document.querySelector('#modal-container .modal-content');
+                modalContent.innerHTML = html;
+                initializePartForm(currentPartId ? 'edit' : 'create', currentPartId);
+                console.log('?? [PARTS] Form submission returned validation errors');
+            }
+        } catch (error) {
+            console.error('? [PARTS] Form submission error:', error);
+            showModalError('Error saving part. Please try again.');
+        }
+    }
+
+    // View Part Details
+    function viewPartDetails(partId) {
+        window.open(`/Admin/Parts/Details/${partId}`, '_blank');
+    }
+
+    // Hide Modal
+    function hideModal() {
+        const modalContainer = document.getElementById('modal-container');
+        if (modalContainer) {
+            modalContainer.classList.add('hidden');
+            modalContainer.classList.remove('flex');
+            
+            // Clear modal content after animation
+            setTimeout(() => {
+                const modalContent = modalContainer.querySelector('.modal-content');
+                if (modalContent) {
+                    modalContent.innerHTML = '';
+                }
+            }, 300);
+        }
+        currentPartId = null;
+    }
+
+    // Show Modal Error
+    function showModalError(message) {
+        const modalContent = document.querySelector('#modal-container .modal-content');
+        if (modalContent) {
+            modalContent.innerHTML = `
+                <div class="p-8 text-center">
+                    <div class="text-red-500 mb-4">
+                        <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Error</h3>
+                    <p class="text-gray-600 mb-6">${message}</p>
+                    <button type="button" class="btn btn-secondary" onclick="hideModal()">Close</button>
+                </div>
+            `;
+        }
+    }
+
+    // Close modal when clicking outside (on overlay)
+    document.addEventListener('click', function(event) {
+        const modalContainer = document.getElementById('modal-container');
+        if (event.target === modalContainer) {
+            hideModal();
+        }
+    });
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            const modalContainer = document.getElementById('modal-container');
+            if (modalContainer && !modalContainer.classList.contains('hidden')) {
+                hideModal();
+            }
+        }
+    });
+</script>
 }

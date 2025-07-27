@@ -1,0 +1,13 @@
+@model OpCentrix.Models.Part
+
+<form id="partForm" onsubmit="return savePart(this);">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    
+    <!-- Your existing form fields here -->
+    
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Part</button>
+    </div>
+</form>

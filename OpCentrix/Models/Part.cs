@@ -11,7 +11,7 @@ namespace OpCentrix.Models
         
         [Required]
         [StringLength(50)]
-        [RegularExpression(@"^\d{2}-\d{4}$", ErrorMessage = "Part number must be in format XX-XXXX (e.g., 14-5396)")]
+        [Display(Name = "Part Number")]
         public string PartNumber { get; set; } = string.Empty;
 
         // ADDED: Missing Name property
@@ -365,7 +365,7 @@ namespace OpCentrix.Models
         public double? AdminEstimatedHoursOverride { get; set; }
         
         [StringLength(500)]
-        public string? AdminOverrideReason { get; set; }
+        public string AdminOverrideReason { get; set; } = string.Empty;
         
         [StringLength(100)]
         public string AdminOverrideBy { get; set; } = string.Empty;
