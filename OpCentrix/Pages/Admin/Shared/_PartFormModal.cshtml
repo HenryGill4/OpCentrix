@@ -24,6 +24,73 @@
     .invalid-feedback {
         display: block;
     }
+
+    /* Ensure modal has proper z-index and interaction */
+    .modal {
+        z-index: 1055 !important;
+    }
+    
+    .modal-backdrop {
+        z-index: 1050 !important;
+    }
+    
+    /* Force button visibility and styling */
+    .modal-footer .btn {
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+        position: relative !important;
+        z-index: 10 !important;
+        min-height: 38px !important;
+        font-weight: 500 !important;
+        border-width: 2px !important;
+        transition: all 0.2s ease !important;
+    }
+    
+    /* Explicit button styling to override any conflicts */
+    .modal-footer .btn-secondary {
+        background-color: #6c757d !important;
+        border-color: #6c757d !important;
+        color: #ffffff !important;
+    }
+    
+    .modal-footer .btn-secondary:hover,
+    .modal-footer .btn-secondary:focus,
+    .modal-footer .btn-secondary:active {
+        background-color: #5c636a !important;
+        border-color: #565e64 !important;
+        color: #ffffff !important;
+        box-shadow: 0 0 0 0.2rem rgba(108, 117, 125, 0.25) !important;
+    }
+    
+    .modal-footer .btn-primary {
+        background-color: #0d6efd !important;
+        border-color: #0d6efd !important;
+        color: #ffffff !important;
+    }
+    
+    .modal-footer .btn-primary:hover,
+    .modal-footer .btn-primary:focus,
+    .modal-footer .btn-primary:active {
+        background-color: #0b5ed7 !important;
+        border-color: #0a58ca !important;
+        color: #ffffff !important;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25) !important;
+    }
+    
+    /* Prevent any overlay interference */
+    .modal-content {
+        position: relative !important;
+        z-index: 1060 !important;
+    }
+    
+    /* Fix any loading states that might interfere */
+    #savePartBtn:disabled {
+        background-color: #6c757d !important;
+        border-color: #6c757d !important;
+        color: #ffffff !important;
+        opacity: 0.65 !important;
+    }
 </style>
 
 <!-- Modal Header -->
@@ -37,7 +104,16 @@
 
 <!-- Modal Body -->
 <div class="modal-body">
-    <form method="post" id="partForm" asp-antiforgery="true" novalidate>
+    <form method="post" id="partForm" 
+          asp-page="/Admin/Parts" 
+          asp-page-handler="@(Model.Id == 0 ? "Create" : "Edit")"
+          asp-antiforgery="true" 
+          hx-post="/Admin/Parts?handler=@(Model.Id == 0 ? "Create" : "Edit")"
+          hx-target="#partModalContent"
+          hx-swap="innerHTML"
+          hx-indicator=".htmx-indicator"
+          novalidate>
+        
         <input type="hidden" asp-for="Id" />
         <input type="hidden" asp-for="CreatedDate" />
         <input type="hidden" asp-for="CreatedBy" />
@@ -520,12 +596,12 @@
     </form>
 </div>
 
-<!-- Modal Footer -->
-<div class="modal-footer bg-light">
-    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+<!-- Modal Footer with Enhanced Button Styling -->
+<div class="modal-footer bg-light d-flex justify-content-end gap-2">
+    <button type="button" class="btn btn-secondary px-4 py-2" data-bs-dismiss="modal" style="background-color: #6c757d !important; border-color: #6c757d !important; color: #fff !important;">
         <i class="fas fa-times me-2"></i>Cancel
     </button>
-    <button type="submit" form="partForm" class="btn btn-primary" id="savePartBtn">
+    <button type="submit" form="partForm" class="btn btn-primary px-4 py-2" id="savePartBtn" style="background-color: #0d6efd !important; border-color: #0d6efd !important; color: #fff !important;">
         <i class="fas fa-save me-2"></i>Save Part
     </button>
 </div>
@@ -749,13 +825,13 @@
         }, 4000);
     }
 
-    // Form validation and submission
+    // Enhanced form submission handling
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.getElementById('partForm');
         const saveBtn = document.getElementById('savePartBtn');
         
         if (form) {
-            // Enhanced form validation
+            // Enhanced form validation and submission
             form.addEventListener('submit', function(e) {
                 console.log('?? Form submission started');
                 
@@ -805,6 +881,64 @@
         console.log('? Part form modal initialized');
     });
 
+    // Enhanced HTMX event handling for successful form submission
+    document.addEventListener('htmx:afterRequest', function(event) {
+        if (event.target.id === 'partForm') {
+            const saveBtn = document.getElementById('savePartBtn');
+            
+            if (event.detail.successful) {
+                console.log('? Part saved successfully');
+                
+                // Show success message in response script
+                const responseScript = event.detail.xhr.responseText;
+                if (responseScript.includes('success')) {
+                    // Close modal and refresh page
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('partModal'));
+                    if (modal) {
+                        modal.hide();
+                    }
+                    
+                    // Show success notification
+                    showSuccessNotification('Part saved successfully!');
+                    
+                    // Refresh the page to show the new/updated part
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                }
+            } else {
+                console.log('? Form submission failed');
+                
+                // Re-enable button on error
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fas fa-save me-2"></i>Save Part';
+                }
+            }
+        }
+    });
+
+    // Show success notification
+    function showSuccessNotification(message) {
+        const notification = document.createElement('div');
+        notification.className = 'alert alert-success alert-dismissible fade show position-fixed';
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+        notification.innerHTML = `
+            <i class="fas fa-check-circle me-2"></i>
+            <strong>${message}</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto-remove after 3 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 3000);
+    }
+
     // Comprehensive form validation
     function validatePartForm() {
         let isValid = true;
@@ -813,157 +947,87 @@
         // Required fields validation
         const requiredFields = [
             'PartNumber', 'Name', 'Description', 'Material', 
-            'SlsMaterial', 'Industry', 'Application', 'EstimatedHours'
+            'SlsMaterial', 'EstimatedHours', 'PowderRequirementKg',
+            'ProcessType', 'LengthMm', 'WidthMm', 'HeightMm', 
+            'WeightGrams', 'VolumeMm3', 'RecommendedLaserPower', 
+            'RecommendedScanSpeed', 'RecommendedLayerThickness',
+            'SetupTimeMinutes', 'PreheatingTimeMinutes', 'CoolingTimeMinutes',
+            'MaterialCostPerKg', 'StandardLaborCostPerHour'
         ];
 
-        requiredFields.forEach(fieldName => {
-            const field = document.querySelector(`[name="${fieldName}"]`);
-            if (field && (!field.value || field.value.trim() === '')) {
-                markFieldInvalid(field, `${fieldName} is required`);
-                errors.push(`${fieldName} is required`);
+        requiredFields.forEach(field => {
+            const input = document.querySelector(`[name="${field}"]`);
+            if (input && !input.value) {
                 isValid = false;
-            } else if (field) {
-                markFieldValid(field);
+                errors.push(`${field} is required`);
+                
+                // Highlight the invalid field
+                input.classList.add('is-invalid');
+            } else {
+                // Remove invalid class if present
+                const invalidFeedback = document.querySelector(`.invalid-feedback[data-valmsg-for="${field}"]`);
+                if (invalidFeedback) {
+                    invalidFeedback.innerHTML = '';
+                }
+                
+                const inputGroup = input.closest('.form-floating');
+                if (inputGroup) {
+                    inputGroup.classList.remove('is-invalid');
+                }
             }
         });
 
-        // Business rule validations
-        const estimatedHours = document.querySelector('[name="EstimatedHours"]');
-        if (estimatedHours && estimatedHours.value) {
-            const hours = parseFloat(estimatedHours.value);
-            if (hours <= 0 || hours > 200) {
-                markFieldInvalid(estimatedHours, 'Estimated hours must be between 0.1 and 200');
-                errors.push('Invalid estimated hours');
-                isValid = false;
+        if (!isValid) {
+            // Show error messages
+            const errorSummary = document.getElementById('errorSummary');
+            if (errorSummary) {
+                errorSummary.innerHTML = errors.join('<br>');
+                errorSummary.classList.add('alert', 'alert-danger', 'mt-3');
             }
-        }
-
-        // Admin override validation
-        const overrideHours = document.querySelector('[name="AdminEstimatedHoursOverride"]');
-        const overrideReason = document.querySelector('[name="AdminOverrideReason"]');
-        
-        if (overrideHours && overrideHours.value && (!overrideReason || !overrideReason.value.trim())) {
-            markFieldInvalid(overrideReason, 'Override reason is required when override hours are specified');
-            errors.push('Override reason required');
-            isValid = false;
-        }
-
-        // Physical dimensions validation
-        const length = document.querySelector('[name="LengthMm"]');
-        const width = document.querySelector('[name="WidthMm"]');
-        const height = document.querySelector('[name="HeightMm"]');
-
-        if (length && length.value && parseFloat(length.value) > 250) {
-            markFieldInvalid(length, 'Length exceeds TruPrint 3000 build envelope (250mm)');
-            errors.push('Length too large');
-            isValid = false;
-        }
-
-        if (width && width.value && parseFloat(width.value) > 250) {
-            markFieldInvalid(width, 'Width exceeds TruPrint 3000 build envelope (250mm)');
-            errors.push('Width too large');
-            isValid = false;
-        }
-
-        if (height && height.value && parseFloat(height.value) > 300) {
-            markFieldInvalid(height, 'Height exceeds TruPrint 3000 build height (300mm)');
-            errors.push('Height too large');
-            isValid = false;
-        }
-
-        if (errors.length > 0) {
-            console.log('? Validation errors:', errors);
-            showValidationSummary(errors);
+        } else {
+            // Remove error summary if present
+            const errorSummary = document.getElementById('errorSummary');
+            if (errorSummary) {
+                errorSummary.innerHTML = '';
+                errorSummary.classList.remove('alert', 'alert-danger');
+            }
         }
 
         return isValid;
     }
 
-    // Individual field validation
+    // Field-specific validation
     function validateField(field) {
-        const value = field.value;
-        const name = field.name;
+        const fieldName = field.name;
+        const value = field.value.trim();
 
-        // Clear previous validation state
-        field.classList.remove('is-invalid', 'is-valid');
-        
-        const feedbackEl = field.parentNode.querySelector('.invalid-feedback');
-        if (feedbackEl) {
-            feedbackEl.textContent = '';
+        // Remove existing error feedback
+        field.classList.remove('is-invalid');
+        const invalidFeedback = document.querySelector(`.invalid-feedback[data-valmsg-for="${fieldName}"]`);
+        if (invalidFeedback) {
+            invalidFeedback.innerHTML = '';
         }
 
-        // Required field check
-        if (field.hasAttribute('required') && (!value || value.trim() === '')) {
-            markFieldInvalid(field, 'This field is required');
+        // Validation rules
+        if (value === '') {
+            field.classList.add('is-invalid');
+            showError(field, `${fieldName} is required`);
             return false;
         }
 
-        // Type-specific validation
-        if (field.type === 'number' && value) {
-            const num = parseFloat(value);
-            const min = parseFloat(field.min);
-            const max = parseFloat(field.max);
+        // Additional custom validation rules can be added here
+        // For example, specific patterns, ranges, or dependencies between fields
 
-            if (min && num < min) {
-                markFieldInvalid(field, `Value must be at least ${min}`);
-                return false;
-            }
-
-            if (max && num > max) {
-                markFieldInvalid(field, `Value must not exceed ${max}`);
-                return false;
-            }
-        }
-
-        markFieldValid(field);
         return true;
     }
 
-    // Visual validation feedback
-    function markFieldInvalid(field, message) {
-        field.classList.add('is-invalid');
-        field.classList.remove('is-valid');
-        
-        const feedbackEl = field.parentNode.querySelector('.invalid-feedback');
-        if (feedbackEl) {
-            feedbackEl.textContent = message;
+    // Show error message for a specific field
+    function showError(field, message) {
+        const fieldName = field.name;
+        const invalidFeedback = document.querySelector(`.invalid-feedback[data-valmsg-for="${fieldName}"]`);
+        if (invalidFeedback) {
+            invalidFeedback.innerHTML = message;
         }
     }
-
-    function markFieldValid(field) {
-        field.classList.add('is-valid');
-        field.classList.remove('is-invalid');
-        
-        const feedbackEl = field.parentNode.querySelector('.invalid-feedback');
-        if (feedbackEl) {
-            feedbackEl.textContent = '';
-        }
-    }
-
-    // Show validation summary
-    function showValidationSummary(errors) {
-        const summary = document.createElement('div');
-        summary.className = 'alert alert-danger alert-dismissible fade show position-fixed';
-        summary.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
-        summary.innerHTML = `
-            <h6><i class="fas fa-exclamation-triangle me-2"></i>Please fix the following errors:</h6>
-            <ul class="mb-0">
-                ${errors.map(error => `<li>${error}</li>`).join('')}
-            </ul>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        
-        document.body.appendChild(summary);
-        
-        // Auto-remove after 8 seconds
-        setTimeout(() => {
-            if (summary.parentNode) {
-                summary.parentNode.removeChild(summary);
-            }
-        }, 8000);
-    }
-
-    console.log('? Enhanced part form modal script loaded');
-
 })();
 </script>

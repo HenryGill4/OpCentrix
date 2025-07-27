@@ -16,6 +16,113 @@
     .loading-spinner { display: none; }
     .modal-xl { max-width: 90%; }
     .part-stats { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); }
+
+    /* Fix button visibility issues */
+    .modal-footer .btn {
+        background-color: transparent !important;
+        border: 2px solid !important;
+        color: inherit !important;
+        font-weight: 500 !important;
+        transition: all 0.2s ease !important;
+    }
+    
+    .modal-footer .btn-secondary {
+        background-color: #6c757d !important;
+        border-color: #6c757d !important;
+        color: #fff !important;
+    }
+    
+    .modal-footer .btn-secondary:hover {
+        background-color: #5c636a !important;
+        border-color: #545b62 !important;
+        color: #fff !important;
+    }
+    
+    .modal-footer .btn-primary {
+        background-color: #0d6efd !important;
+        border-color: #0d6efd !important;
+        color: #fff !important;
+    }
+    
+    .modal-footer .btn-primary:hover {
+        background-color: #0b5ed7 !important;
+        border-color: #0a58ca !important;
+        color: #fff !important;
+    }
+    
+    /* Ensure proper modal z-index layering */
+    .modal {
+        z-index: 1055 !important;
+    }
+    
+    .modal-backdrop {
+        z-index: 1050 !important;
+    }
+    
+    /* Fix action button visibility in main page */
+    .btn-group .btn {
+        background-color: transparent !important;
+        border: 1px solid !important;
+        color: inherit !important;
+        min-height: 38px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .btn-outline-primary {
+        background-color: #fff !important;
+        border-color: #0d6efd !important;
+        color: #0d6efd !important;
+    }
+    
+    .btn-outline-primary:hover {
+        background-color: #0d6efd !important;
+        border-color: #0d6efd !important;
+        color: #fff !important;
+    }
+    
+    .btn-outline-info {
+        background-color: #fff !important;
+        border-color: #0dcaf0 !important;
+        color: #0dcaf0 !important;
+    }
+    
+    .btn-outline-info:hover {
+        background-color: #0dcaf0 !important;
+        border-color: #0dcaf0 !important;
+        color: #000 !important;
+    }
+    
+    .btn-outline-danger {
+        background-color: #fff !important;
+        border-color: #dc3545 !important;
+        color: #dc3545 !important;
+    }
+    
+    .btn-outline-danger:hover {
+        background-color: #dc3545 !important;
+        border-color: #dc3545 !important;
+        color: #fff !important;
+    }
+    
+    /* Ensure all buttons are visible and clickable */
+    .btn {
+        position: relative !important;
+        z-index: 1 !important;
+        pointer-events: auto !important;
+        opacity: 1 !important;
+    }
+    
+    /* Fix any overlay issues */
+    .loading-overlay {
+        z-index: 9999 !important;
+        pointer-events: none !important;
+    }
+    
+    .loading-overlay.active {
+        pointer-events: auto !important;
+    }
 </style>
 
 <div class="container-fluid">
@@ -247,14 +354,29 @@
                                         </span>
                                     </td>
                                     <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <button type="button" class="btn btn-outline-primary" onclick="handleEditPartClick(this, @part.Id)" data-bs-toggle="tooltip" title="Edit Part">
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button type="button" 
+                                                    class="btn btn-outline-primary" 
+                                                    onclick="handleEditPartClick(this, @part.Id)" 
+                                                    data-bs-toggle="tooltip" 
+                                                    title="Edit Part"
+                                                    style="background-color: #fff !important; border-color: #0d6efd !important; color: #0d6efd !important;">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <button type="button" class="btn btn-outline-info" onclick="showPartDetails(@part.Id)" data-bs-toggle="tooltip" title="View Details">
+                                            <button type="button" 
+                                                    class="btn btn-outline-info" 
+                                                    onclick="showPartDetails(@part.Id)" 
+                                                    data-bs-toggle="tooltip" 
+                                                    title="View Details"
+                                                    style="background-color: #fff !important; border-color: #0dcaf0 !important; color: #0dcaf0 !important;">
                                                 <i class="fas fa-eye"></i>
                                             </button>
-                                            <button type="button" class="btn btn-outline-danger" onclick="handleDeletePartClick(@part.Id, '@part.PartNumber', '@part.Name')" data-bs-toggle="tooltip" title="Delete Part">
+                                            <button type="button" 
+                                                    class="btn btn-outline-danger" 
+                                                    onclick="handleDeletePartClick(@part.Id, '@part.PartNumber', '@part.Name')" 
+                                                    data-bs-toggle="tooltip" 
+                                                    title="Delete Part"
+                                                    style="background-color: #fff !important; border-color: #dc3545 !important; color: #dc3545 !important;">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </div>
@@ -317,7 +439,7 @@
 </div>
 
 <!-- Modal for Part Form -->
-<div class="modal fade" id="partModal" tabindex="-1" aria-labelledby="partModalLabel" aria-hidden="true">
+<div class="modal fade" id="partModal" tabindex="-1" aria-labelledby="partModalLabel" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div id="partModalContent">
@@ -341,7 +463,7 @@
 (function() {
     'use strict';
 
-    // Global functions for button handlers
+    // Global functions for button handlers with enhanced error handling and visibility fixes
     window.handleAddPartClick = function(button) {
         console.log('?? [PARTS] Add part button clicked');
         
@@ -349,6 +471,9 @@
             button.disabled = true;
             button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Loading...';
         }
+
+        // Hide any loading overlays that might interfere
+        hideLoadingOverlay();
 
         // Try multiple methods for loading the modal
         const methods = [
@@ -418,6 +543,9 @@
             button.disabled = true;
             button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
         }
+
+        // Hide any loading overlays that might interfere
+        hideLoadingOverlay();
 
         // Try multiple methods for loading the edit modal
         const methods = [
@@ -513,7 +641,7 @@
         }
     };
 
-    // Fetch-based modal loading fallback
+    // Enhanced fetch-based modal loading with better error handling
     function loadPartForm(url) {
         return fetch(url, {
             method: 'GET',
@@ -532,9 +660,31 @@
             if (modalContent) {
                 modalContent.innerHTML = html;
                 
-                // Show the modal
-                const modal = new bootstrap.Modal(document.getElementById('partModal'));
-                modal.show();
+                // Ensure modal has proper z-index and is visible
+                const modal = document.getElementById('partModal');
+                if (modal) {
+                    // Fix z-index issues
+                    modal.style.zIndex = '1055';
+                    
+                    // Show the modal using Bootstrap
+                    if (typeof bootstrap !== 'undefined') {
+                        const bsModal = new bootstrap.Modal(modal, {
+                            backdrop: 'static',
+                            keyboard: true
+                        });
+                        bsModal.show();
+                    } else {
+                        // Fallback manual show
+                        modal.style.display = 'block';
+                        modal.classList.add('show');
+                        document.body.classList.add('modal-open');
+                    }
+                    
+                    // Ensure buttons are visible and clickable
+                    setTimeout(() => {
+                        fixModalButtonVisibility();
+                    }, 100);
+                }
                 
                 console.log('? [PARTS] Modal loaded successfully');
                 return true;
@@ -544,6 +694,42 @@
         .catch(error => {
             console.error('? [PARTS] Error loading modal:', error);
             return false;
+        });
+    }
+
+    // Fix modal button visibility issues
+    function fixModalButtonVisibility() {
+        const modalButtons = document.querySelectorAll('.modal-footer .btn');
+        modalButtons.forEach(button => {
+            // Force visibility
+            button.style.opacity = '1';
+            button.style.visibility = 'visible';
+            button.style.pointerEvents = 'auto';
+            button.style.position = 'relative';
+            button.style.zIndex = '10';
+            
+            // Ensure proper colors
+            if (button.classList.contains('btn-primary')) {
+                button.style.backgroundColor = '#0d6efd';
+                button.style.borderColor = '#0d6efd';
+                button.style.color = '#ffffff';
+            } else if (button.classList.contains('btn-secondary')) {
+                button.style.backgroundColor = '#6c757d';
+                button.style.borderColor = '#6c757d';
+                button.style.color = '#ffffff';
+            }
+        });
+        
+        console.log('?? [PARTS] Fixed modal button visibility');
+    }
+
+    // Hide any loading overlays that might interfere with modal interaction
+    function hideLoadingOverlay() {
+        const overlays = document.querySelectorAll('.loading-overlay, .htmx-indicator');
+        overlays.forEach(overlay => {
+            overlay.style.display = 'none';
+            overlay.style.pointerEvents = 'none';
+            overlay.classList.add('hidden');
         });
     }
 
@@ -594,12 +780,95 @@
         window.location.href = url.toString();
     };
 
-    // Notification system
+    // Initialize tooltips and modal event handlers
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Bootstrap tooltips
+        if (typeof bootstrap !== 'undefined') {
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        }
+
+        // Enhanced modal event handling for z-index and interaction fixes
+        const partModal = document.getElementById('partModal');
+        if (partModal) {
+            partModal.addEventListener('shown.bs.modal', function() {
+                console.log('? [PARTS] Modal shown, fixing visibility issues');
+                
+                // Ensure proper z-index layering
+                this.style.zIndex = '1055';
+                const backdrop = document.querySelector('.modal-backdrop');
+                if (backdrop) {
+                    backdrop.style.zIndex = '1050';
+                }
+                
+                // Fix button visibility
+                setTimeout(() => {
+                    fixModalButtonVisibility();
+                }, 50);
+                
+                // Focus first input for accessibility
+                const firstInput = this.querySelector('input, select, textarea');
+                if (firstInput) {
+                    firstInput.focus();
+                }
+            });
+            
+            partModal.addEventListener('hidden.bs.modal', function() {
+                console.log('? [PARTS] Modal hidden, cleaning up');
+                
+                // Clear modal content
+                const modalContent = document.getElementById('partModalContent');
+                if (modalContent) {
+                    modalContent.innerHTML = '';
+                }
+                
+                // Ensure body scroll is restored
+                document.body.style.overflow = '';
+                document.body.classList.remove('modal-open');
+                
+                // Remove any lingering backdrops
+                const backdrops = document.querySelectorAll('.modal-backdrop');
+                backdrops.forEach(backdrop => {
+                    if (backdrop.parentNode) {
+                        backdrop.parentNode.removeChild(backdrop);
+                    }
+                });
+            });
+        }
+
+        console.log('? [PARTS] Page initialized successfully');
+    });
+
+    // Global modal management functions
+    window.ensureModalVisibility = function() {
+        const modal = document.getElementById('partModal');
+        if (modal && modal.classList.contains('show')) {
+            // Fix z-index issues
+            modal.style.zIndex = '1055';
+            
+            const backdrop = document.querySelector('.modal-backdrop');
+            if (backdrop) {
+                backdrop.style.zIndex = '1050';
+            }
+            
+            // Fix button visibility
+            fixModalButtonVisibility();
+            
+            // Ensure no other overlays are interfering
+            hideLoadingOverlay();
+            
+            console.log('?? [PARTS] Modal visibility ensured');
+        }
+    };
+
+    // Enhanced notification system with proper z-index
     function showNotification(message, type = 'info') {
-        // Create a simple toast notification
+        // Create a simple toast notification with high z-index
         const toast = document.createElement('div');
         toast.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
-        toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; pointer-events: auto;';
         toast.innerHTML = `
             ${message}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -615,38 +884,61 @@
         }, 5000);
     }
 
-    // Initialize tooltips
-    document.addEventListener('DOMContentLoaded', function() {
-        // Initialize Bootstrap tooltips
-        if (typeof bootstrap !== 'undefined') {
-            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-            tooltipTriggerList.map(function (tooltipTriggerEl) {
-                return new bootstrap.Tooltip(tooltipTriggerEl);
+    // Debug function for troubleshooting modal and button issues
+    window.debugPartsModal = function() {
+        console.group('?? Parts Modal Debug Information');
+        
+        const modal = document.getElementById('partModal');
+        console.log('Modal element:', modal);
+        console.log('Modal display:', modal ? window.getComputedStyle(modal).display : 'N/A');
+        console.log('Modal z-index:', modal ? window.getComputedStyle(modal).zIndex : 'N/A');
+        
+        const backdrop = document.querySelector('.modal-backdrop');
+        console.log('Backdrop element:', backdrop);
+        console.log('Backdrop z-index:', backdrop ? window.getComputedStyle(backdrop).zIndex : 'N/A');
+        
+        const buttons = document.querySelectorAll('.modal-footer .btn');
+        console.log('Modal buttons found:', buttons.length);
+        buttons.forEach((btn, index) => {
+            const styles = window.getComputedStyle(btn);
+            console.log(`Button ${index + 1}:`, {
+                opacity: styles.opacity,
+                visibility: styles.visibility,
+                backgroundColor: styles.backgroundColor,
+                color: styles.color,
+                zIndex: styles.zIndex,
+                pointerEvents: styles.pointerEvents
             });
-        }
-
-        console.log('? [PARTS] Page initialized successfully');
-    });
-
-    // Debug function for troubleshooting
-    window.debugPartsPage = function() {
-        console.group('?? Parts Page Debug Information');
+        });
+        
+        const overlays = document.querySelectorAll('.loading-overlay, .htmx-indicator');
+        console.log('Loading overlays found:', overlays.length);
+        overlays.forEach((overlay, index) => {
+            const styles = window.getComputedStyle(overlay);
+            console.log(`Overlay ${index + 1}:`, {
+                display: styles.display,
+                zIndex: styles.zIndex,
+                pointerEvents: styles.pointerEvents
+            });
+        });
+        
         console.log('Bootstrap available:', typeof bootstrap !== 'undefined');
-        console.log('PartManagement available:', typeof window.PartManagement !== 'undefined');
-        console.log('OpCentrixAdmin available:', typeof window.OpCentrixAdmin !== 'undefined');
-        console.log('UI available:', typeof window.UI !== 'undefined');
         console.log('Current page URL:', window.location.href);
         console.log('Total parts:', @Model.TotalCount);
         console.log('Current page:', @Model.PageNumber, 'of', @Model.TotalPages);
+        
         console.groupEnd();
     };
 
-    // Auto-diagnostic after 2 seconds
+    // Auto-diagnostic and fix attempt
     setTimeout(() => {
-        if (typeof window.debugPartsPage === 'function') {
-            window.debugPartsPage();
+        // Auto-fix any visibility issues on page load
+        ensureModalVisibility();
+        
+        // Run debug in development
+        if (window.location.hostname === 'localhost') {
+            debugPartsModal();
         }
-    }, 2000);
-
+    }, 1000);
 })();
 </script>

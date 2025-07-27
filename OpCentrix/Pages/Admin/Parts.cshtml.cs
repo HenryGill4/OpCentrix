@@ -109,9 +109,8 @@ namespace OpCentrix.Pages.Admin
 
                 if (!ModelState.IsValid)
                 {
-                    await LoadPageDataAsync();
-                    TempData["ErrorMessage"] = "Please correct the validation errors.";
-                    return Page();
+                    await LoadDropdownDataAsync();
+                    return Partial("Shared/_PartFormModal", Part);
                 }
 
                 // Enhanced validation
@@ -122,9 +121,8 @@ namespace OpCentrix.Pages.Admin
                     {
                         ModelState.AddModelError("", error);
                     }
-                    await LoadPageDataAsync();
-                    TempData["ErrorMessage"] = string.Join(" ", validationErrors);
-                    return Page();
+                    await LoadDropdownDataAsync();
+                    return Partial("Shared/_PartFormModal", Part);
                 }
 
                 // Set audit fields and defaults
@@ -140,16 +138,50 @@ namespace OpCentrix.Pages.Admin
                 await _context.SaveChangesAsync();
 
                 _logger.LogInformation("? Part {PartNumber} created successfully by {User}", Part.PartNumber, User.Identity?.Name);
-                TempData["SuccessMessage"] = $"Part '{Part.PartNumber}' ({Part.Name}) created successfully.";
                 
-                return RedirectToPage();
+                // Return success response for HTMX
+                return Content($@"
+                    <script>
+                        console.log('? Part saved successfully - closing modal and refreshing parts list');
+                        
+                        // Close the modal
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('partModal'));
+                        if (modal) {{
+                            modal.hide();
+                        }}
+                        
+                        // Show success notification
+                        const notification = document.createElement('div');
+                        notification.className = 'alert alert-success alert-dismissible fade show position-fixed';
+                        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+                        notification.innerHTML = `
+                            <i class='fas fa-check-circle me-2'></i>
+                            <strong>Part '{Part.PartNumber}' ({Part.Name}) created successfully!</strong>
+                            <button type='button' class='btn-close' data-bs-dismiss='alert'></button>
+                        `;
+                        document.body.appendChild(notification);
+                        
+                        // Auto-remove notification after 4 seconds
+                        setTimeout(() => {{
+                            if (notification.parentNode) {{
+                                notification.parentNode.removeChild(notification);
+                            }}
+                        }}, 4000);
+                        
+                        // Refresh the page to show the new part immediately
+                        setTimeout(() => {{
+                            console.log('?? Refreshing page to show new part');
+                            window.location.reload();
+                        }}, 500);
+                    </script>
+                ", "text/html");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "? Error creating part {PartNumber}", Part.PartNumber);
-                TempData["ErrorMessage"] = "Error creating part. Please try again.";
-                await LoadPageDataAsync();
-                return Page();
+                ModelState.AddModelError("", "Error creating part. Please try again.");
+                await LoadDropdownDataAsync();
+                return Partial("Shared/_PartFormModal", Part);
             }
         }
 
@@ -161,16 +193,16 @@ namespace OpCentrix.Pages.Admin
 
                 if (!ModelState.IsValid)
                 {
-                    await LoadPageDataAsync();
-                    TempData["ErrorMessage"] = "Please correct the validation errors.";
-                    return Page();
+                    await LoadDropdownDataAsync();
+                    return Partial("Shared/_PartFormModal", Part);
                 }
 
                 var existingPart = await _context.Parts.FindAsync(id);
                 if (existingPart == null)
                 {
-                    TempData["ErrorMessage"] = "Part not found.";
-                    return RedirectToPage();
+                    ModelState.AddModelError("", "Part not found.");
+                    await LoadDropdownDataAsync();
+                    return Partial("Shared/_PartFormModal", Part);
                 }
 
                 // Enhanced validation
@@ -181,9 +213,8 @@ namespace OpCentrix.Pages.Admin
                     {
                         ModelState.AddModelError("", error);
                     }
-                    await LoadPageDataAsync();
-                    TempData["ErrorMessage"] = string.Join(" ", validationErrors);
-                    return Page();
+                    await LoadDropdownDataAsync();
+                    return Partial("Shared/_PartFormModal", Part);
                 }
 
                 // Update all properties comprehensively
@@ -196,16 +227,50 @@ namespace OpCentrix.Pages.Admin
                 await _context.SaveChangesAsync();
 
                 _logger.LogInformation("? Part {PartNumber} updated successfully by {User}", existingPart.PartNumber, User.Identity?.Name);
-                TempData["SuccessMessage"] = $"Part '{existingPart.PartNumber}' ({existingPart.Name}) updated successfully.";
                 
-                return RedirectToPage();
+                // Return success response for HTMX
+                return Content($@"
+                    <script>
+                        console.log('? Part updated successfully - closing modal and refreshing parts list');
+                        
+                        // Close the modal
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('partModal'));
+                        if (modal) {{
+                            modal.hide();
+                        }}
+                        
+                        // Show success notification
+                        const notification = document.createElement('div');
+                        notification.className = 'alert alert-success alert-dismissible fade show position-fixed';
+                        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+                        notification.innerHTML = `
+                            <i class='fas fa-check-circle me-2'></i>
+                            <strong>Part '{existingPart.PartNumber}' ({existingPart.Name}) updated successfully!</strong>
+                            <button type='button' class='btn-close' data-bs-dismiss='alert'></button>
+                        `;
+                        document.body.appendChild(notification);
+                        
+                        // Auto-remove notification after 4 seconds
+                        setTimeout(() => {{
+                            if (notification.parentNode) {{
+                                notification.parentNode.removeChild(notification);
+                            }}
+                        }}, 4000);
+                        
+                        // Refresh the page to show the updated part immediately
+                        setTimeout(() => {{
+                            console.log('?? Refreshing page to show updated part');
+                            window.location.reload();
+                        }}, 500);
+                    </script>
+                ", "text/html");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "? Error updating part ID {PartId}", id);
-                TempData["ErrorMessage"] = "Error updating part. Please try again.";
-                await LoadPageDataAsync();
-                return Page();
+                ModelState.AddModelError("", "Error updating part. Please try again.");
+                await LoadDropdownDataAsync();
+                return Partial("Shared/_PartFormModal", Part);
             }
         }
 
