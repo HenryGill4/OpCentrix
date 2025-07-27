@@ -24,6 +24,16 @@ public class InspectionCheckpoint
     public virtual Part Part { get; set; } = null!;
 
     /// <summary>
+    /// Optional reference to a defect category
+    /// </summary>
+    public int? DefectCategoryId { get; set; }
+
+    /// <summary>
+    /// Navigation property to DefectCategory
+    /// </summary>
+    public virtual DefectCategory? DefectCategory { get; set; }
+
+    /// <summary>
     /// Checkpoint name or title
     /// </summary>
     [Required]

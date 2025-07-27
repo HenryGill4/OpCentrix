@@ -14,13 +14,13 @@ public class MachineCapability
     public int Id { get; set; }
 
     /// <summary>
-    /// Reference to the machine (FIXED: Generic Machine instead of SlsMachine)
+    /// Reference to the machine (uses Machine.Id integer primary key)
     /// </summary>
     [Required]
     public int MachineId { get; set; }
 
     /// <summary>
-    /// Navigation property to Machine (FIXED: Generic Machine)
+    /// Navigation property to Machine
     /// </summary>
     public virtual Machine Machine { get; set; } = null!;
 

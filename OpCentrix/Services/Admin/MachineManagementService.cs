@@ -262,14 +262,14 @@ public class MachineManagementService : IMachineManagementService
 
             // Check if machine has associated capabilities
             var capabilityCount = await _context.MachineCapabilities
-                .Where(mc => mc.MachineId == id)
+                .Where(mc => mc.MachineId == machine.Id)
                 .CountAsync();
 
             if (capabilityCount > 0)
             {
                 // Remove associated capabilities first
                 var capabilities = await _context.MachineCapabilities
-                    .Where(mc => mc.MachineId == id)
+                    .Where(mc => mc.MachineId == machine.Id)
                     .ToListAsync();
 
                 _context.MachineCapabilities.RemoveRange(capabilities);

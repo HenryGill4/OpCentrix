@@ -24,6 +24,16 @@ public class JobNote
     public virtual Job Job { get; set; } = null!;
 
     /// <summary>
+    /// Optional reference to the part (useful for part-specific notes)
+    /// </summary>
+    public int? PartId { get; set; }
+
+    /// <summary>
+    /// Navigation property to part
+    /// </summary>
+    public virtual Part? Part { get; set; }
+
+    /// <summary>
     /// Step or stage this note applies to (e.g., "Setup", "Printing", "Cooling", "Post-Processing")
     /// </summary>
     [Required]

@@ -394,6 +394,11 @@ namespace OpCentrix.Models
         /// </summary>
         public virtual ICollection<JobNote> JobNotes { get; set; } = new List<JobNote>();
 
+        /// <summary>
+        /// Inspection checkpoints for this part - Task 13: Quality control
+        /// </summary>
+        public virtual ICollection<InspectionCheckpoint> InspectionCheckpoints { get; set; } = new List<InspectionCheckpoint>();
+
         #endregion
         
         #region Helper Methods for SLS Operations
