@@ -125,6 +125,11 @@
     }
 </style>
 
+<!-- FIXED: Add antiforgery token for the page -->
+<form style="display: none;">
+    @Html.AntiForgeryToken()
+</form>
+
 <div class="container-fluid">
     <!-- Header Section with Statistics -->
     <div class="row mb-4">
@@ -138,7 +143,12 @@
                     <p class="text-muted mb-0">Manage SLS manufacturing parts and specifications</p>
                 </div>
                 <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-primary" onclick="handleAddPartClick(this)" data-bs-toggle="tooltip" title="Add New Part">
+                    <!-- FIXED: Use handleAddPartClick similar to delete function -->
+                    <button type="button" 
+                            class="btn btn-primary" 
+                            onclick="handleAddPartClick()"
+                            data-bs-toggle="tooltip" 
+                            title="Add New Part">
                         <i class="fas fa-plus me-2"></i>Add New Part
                     </button>
                     <button type="button" class="btn btn-outline-secondary" onclick="window.location.reload()" data-bs-toggle="tooltip" title="Refresh">
@@ -355,9 +365,10 @@
                                     </td>
                                     <td>
                                         <div class="btn-group btn-group-sm" role="group">
+                                            <!-- FIXED: Use handleEditPartClick similar to delete function -->
                                             <button type="button" 
                                                     class="btn btn-outline-primary" 
-                                                    onclick="handleEditPartClick(this, @part.Id)" 
+                                                    onclick="handleEditPartClick(@part.Id)"
                                                     data-bs-toggle="tooltip" 
                                                     title="Edit Part"
                                                     style="background-color: #fff !important; border-color: #0d6efd !important; color: #0d6efd !important;">
@@ -371,6 +382,7 @@
                                                     style="background-color: #fff !important; border-color: #0dcaf0 !important; color: #0dcaf0 !important;">
                                                 <i class="fas fa-eye"></i>
                                             </button>
+                                            <!-- FIXED: Updated Delete button to use standard form POST -->
                                             <button type="button" 
                                                     class="btn btn-outline-danger" 
                                                     onclick="handleDeletePartClick(@part.Id, '@part.PartNumber', '@part.Name')" 
@@ -429,7 +441,10 @@
                     <i class="fas fa-inbox text-muted fa-3x mb-3"></i>
                     <h5 class="text-muted">No parts found</h5>
                     <p class="text-muted">Try adjusting your search criteria or add a new part.</p>
-                    <button type="button" class="btn btn-primary" onclick="handleAddPartClick(this)">
+                    <!-- FIXED: Use handleAddPartClick similar to delete function -->
+                    <button type="button" 
+                            class="btn btn-primary" 
+                            onclick="handleAddPartClick()">
                         <i class="fas fa-plus me-2"></i>Add First Part
                     </button>
                 </div>
@@ -458,176 +473,320 @@
     </div>
 </div>
 
+<!-- Enhanced JavaScript for Parts page with FIXED antiforgery token handling -->
 <script>
-// Enhanced JavaScript for Parts page
-(function() {
-    'use strict';
+    // Global antiforgery token management
+    let antiforgeryToken = '';
 
-    // Global functions for button handlers with enhanced error handling and visibility fixes
-    window.handleAddPartClick = function(button) {
-        console.log('?? [PARTS] Add part button clicked');
+    // Initialize antiforgery token
+    function initializeAntiforgeryToken() {
+        const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+        if (tokenInput) {
+            antiforgeryToken = tokenInput.value;
+            console.log('?? Antiforgery token initialized');
+        } else {
+            console.warn('?? Antiforgery token not found');
+        }
+    }
+
+    // Get fresh antiforgery token
+    function getAntiforgeryToken() {
+        return antiforgeryToken;
+    }
+
+    // LOAD PART FORM FUNCTION: Moved outside IIFE for global access
+    function loadPartForm(action, partId = null) {
+        console.log('?? Loading part form:', action, partId);
         
-        if (button) {
-            button.disabled = true;
-            button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Loading...';
+        // Validate inputs
+        if (!action || (action !== 'add' && action !== 'edit')) {
+            console.error('? Invalid action:', action);
+            return;
         }
-
-        // Hide any loading overlays that might interfere
-        hideLoadingOverlay();
-
-        // Try multiple methods for loading the modal
-        const methods = [
-            () => {
-                if (typeof window.PartManagement !== 'undefined' && window.PartManagement.showAddForm) {
-                    console.log('? [PARTS] Using PartManagement module');
-                    return window.PartManagement.showAddForm();
-                }
-                return false;
-            },
-            () => {
-                if (typeof window.OpCentrixAdmin !== 'undefined' && window.OpCentrixAdmin.Parts && window.OpCentrixAdmin.Parts.showAddModal) {
-                    console.log('? [PARTS] Using OpCentrixAdmin.Parts module');
-                    return window.OpCentrixAdmin.Parts.showAddModal();
-                }
-                return false;
-            },
-            () => {
-                if (typeof window.UI !== 'undefined' && window.UI.loadModal) {
-                    console.log('? [PARTS] Using UI.loadModal');
-                    return window.UI.loadModal('/Admin/Parts?handler=AddForm', 'partModal');
-                }
-                return false;
-            },
-            () => {
-                console.log('?? [PARTS] Using fetch fallback');
-                return loadPartForm('/Admin/Parts?handler=AddForm');
-            },
-            () => {
-                console.log('?? [PARTS] Using redirect fallback');
-                window.location.href = '/Admin/Parts?Action=Add';
-                return true;
-            }
-        ];
-
-        // Try each method until one succeeds
-        let success = false;
-        for (const method of methods) {
-            try {
-                if (method()) {
-                    success = true;
-                    break;
-                }
-            } catch (error) {
-                console.log('? [PARTS] Method failed:', error.message);
-            }
+        
+        if (action === 'edit' && (!partId || partId <= 0)) {
+            console.error('? Invalid partId for edit:', partId);
+            return;
         }
-
-        // Reset button state
-        setTimeout(() => {
-            if (button) {
-                button.disabled = false;
-                button.innerHTML = '<i class="fas fa-plus me-2"></i>Add New Part';
-            }
-        }, 2000);
-
-        if (!success) {
-            console.error('? [PARTS] All add part methods failed');
-            showNotification('Error loading form. Please refresh the page and try again.', 'error');
+        
+        // Build URL
+        let url = '/Admin/Parts?handler=';
+        if (action === 'add') {
+            url += 'Add';
+        } else if (action === 'edit') {
+            url += `Edit&id=${partId}`;
         }
+        
+        // Get modal elements
+        const modal = document.getElementById('partModal');
+        const modalContent = document.getElementById('partModalContent');
+        
+        if (!modal || !modalContent) {
+            console.error('? Modal elements not found');
+            // Fallback: redirect to full page
+            window.location.href = url;
+            return;
+        }
+        
+        // Show loading state immediately
+        modalContent.innerHTML = `
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <div class="d-flex align-items-center">
+                        <div class="spinner-border spinner-border-sm me-2" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        Loading ${action === 'add' ? 'Add Part' : 'Edit Part'} Form...
+                    </div>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center py-5">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="text-muted">Please wait while we load the form...</p>
+            </div>
+        `;
+        
+        // Show modal immediately with loading content
+        try {
+            if (typeof bootstrap !== 'undefined') {
+                const bootstrapModal = new bootstrap.Modal(modal, {
+                    backdrop: 'static',
+                    keyboard: true
+                });
+                bootstrapModal.show();
+            } else {
+                // Fallback for environments without Bootstrap
+                modal.style.display = 'block';
+                modal.classList.add('show');
+                document.body.classList.add('modal-open');
+            }
+            console.log('? Modal shown with loading state');
+        } catch (error) {
+            console.error('? Error showing modal:', error);
+            // Fallback: redirect to full page
+            window.location.href = url;
+            return;
+        }
+        
+        // Create AbortController for request cancellation
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+        
+        // Fetch form content with proper headers and error handling
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'X-Requested-With': 'XMLHttpRequest',
+                'HX-Request': 'true',
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            },
+            signal: controller.signal,
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status} ${response.statusText}`);
+            }
+            
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('text/html')) {
+                throw new Error('Invalid response type: Expected HTML content');
+            }
+            
+            return response.text();
+        })
+        .then(html => {
+            if (!html || html.trim() === '') {
+                throw new Error('Empty response received from server');
+            }
+            
+            // Check if response contains error indicators
+            if (html.includes('error') && html.includes('404')) {
+                throw new Error('Form not found (404)');
+            }
+            
+            if (html.includes('<!DOCTYPE html>')) {
+                throw new Error('Received full page instead of form partial');
+            }
+            
+            // Load content into modal
+            modalContent.innerHTML = html;
+            
+            // Initialize form after loading
+            setTimeout(() => {
+                initializeFormComponents();
+                setModalFocus();
+            }, 100);
+            
+            console.log('? Part form loaded successfully');
+        })
+        .catch(error => {
+            clearTimeout(timeoutId);
+            console.error('? Error loading part form:', error);
+            
+            // Show user-friendly error message
+            const errorMessage = getErrorMessage(error);
+            modalContent.innerHTML = createErrorModal(action, errorMessage, url);
+        });
+    }
+    
+    // Helper function to get user-friendly error messages
+    function getErrorMessage(error) {
+        if (error.name === 'AbortError') {
+            return 'Request timed out. Please check your internet connection and try again.';
+        }
+        
+        const message = error.message || 'Unknown error occurred';
+        
+        if (message.includes('404')) {
+            return 'The requested form could not be found. Please refresh the page and try again.';
+        }
+        
+        if (message.includes('500')) {
+            return 'Server error occurred. Please try again in a few moments.';
+        }
+        
+        if (message.includes('full page')) {
+            return 'Configuration error detected. Please refresh the page and try again.';
+        }
+        
+        if (message.includes('Network')) {
+            return 'Network connection error. Please check your internet connection.';
+        }
+        
+        return `Error: ${message}`;
+    }
+    
+    // Helper function to create error modal content
+    function createErrorModal(action, errorMessage, fallbackUrl) {
+        return `
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Error Loading ${action === 'add' ? 'Add Part' : 'Edit Part'} Form
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger d-flex align-items-center" role="alert">
+                    <i class="fas fa-exclamation-circle me-3 fa-lg"></i>
+                    <div>
+                        <strong>Unable to load form:</strong><br>
+                        ${errorMessage}
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <h6 class="text-muted">What you can do:</h6>
+                    <ul class="text-muted small">
+                        <li>Try refreshing the page and attempting again</li>
+                        <li>Check your internet connection</li>
+                        <li>Contact support if the problem persists</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Close
+                </button>
+                <button type="button" class="btn btn-primary" onclick="window.location.reload()">
+                    <i class="fas fa-sync-alt me-2"></i>Refresh Page
+                </button>
+                <button type="button" class="btn btn-info" onclick="window.open('${fallbackUrl}', '_blank')">
+                    <i class="fas fa-external-link-alt me-2"></i>Open in New Tab
+                </button>
+            </div>
+        `;
+    }
+    
+    // Initialize form components after modal content loads
+    function initializeFormComponents() {
+        try {
+            // Initialize Bootstrap tooltips
+            const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+            tooltipTriggerList.forEach(tooltipTriggerEl => {
+                if (typeof bootstrap !== 'undefined') {
+                    new bootstrap.Tooltip(tooltipTriggerEl);
+                }
+            });
+            
+            // Initialize form validation
+            const forms = document.querySelectorAll('form');
+            forms.forEach(form => {
+                if (form.checkValidity) {
+                    form.addEventListener('submit', function(event) {
+                        if (!form.checkValidity()) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                        }
+                        form.classList.add('was-validated');
+                    });
+                }
+            });
+            
+            console.log('? Form components initialized');
+        } catch (error) {
+            console.warn('?? Error initializing form components:', error);
+        }
+    }
+    
+    // Set focus to first input in modal
+    function setModalFocus() {
+        try {
+            const modal = document.getElementById('partModal');
+            if (modal) {
+                const firstInput = modal.querySelector('input:not([type="hidden"]), select, textarea');
+                if (firstInput && typeof firstInput.focus === 'function') {
+                    setTimeout(() => {
+                        firstInput.focus();
+                    }, 200);
+                }
+            }
+        } catch (error) {
+            console.warn('?? Error setting modal focus:', error);
+        }
+    }
+
+    // SIMPLE GLOBAL FUNCTIONS: Similar to handleDeletePartClick - these work reliably
+    window.handleAddPartClick = function() {
+        console.log('?? Add part button clicked');
+        loadPartForm('add');
+    };
+    
+    window.handleEditPartClick = function(partId) {
+        console.log('?? Edit part button clicked for ID:', partId);
+        if (!partId || partId <= 0) {
+            console.error('? Invalid part ID:', partId);
+            return;
+        }
+        loadPartForm('edit', partId);
     };
 
-    window.handleEditPartClick = function(button, partId) {
-        console.log('?? [PARTS] Edit part button clicked for ID:', partId);
-        
-        if (button) {
-            button.disabled = true;
-            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-        }
-
-        // Hide any loading overlays that might interfere
-        hideLoadingOverlay();
-
-        // Try multiple methods for loading the edit modal
-        const methods = [
-            () => {
-                if (typeof window.PartManagement !== 'undefined' && window.PartManagement.showEditForm) {
-                    console.log('? [PARTS] Using PartManagement.showEditForm');
-                    return window.PartManagement.showEditForm(partId);
-                }
-                return false;
-            },
-            () => {
-                if (typeof window.OpCentrixAdmin !== 'undefined' && window.OpCentrixAdmin.Parts && window.OpCentrixAdmin.Parts.showEditModal) {
-                    console.log('? [PARTS] Using OpCentrixAdmin.Parts.showEditModal');
-                    return window.OpCentrixAdmin.Parts.showEditModal(partId);
-                }
-                return false;
-            },
-            () => {
-                if (typeof window.UI !== 'undefined' && window.UI.loadModal) {
-                    console.log('? [PARTS] Using UI.loadModal for edit');
-                    return window.UI.loadModal(`/Admin/Parts?handler=EditForm&id=${partId}`, 'partModal');
-                }
-                return false;
-            },
-            () => {
-                console.log('?? [PARTS] Using fetch fallback for edit');
-                return loadPartForm(`/Admin/Parts?handler=EditForm&id=${partId}`);
-            },
-            () => {
-                console.log('?? [PARTS] Using redirect fallback for edit');
-                window.location.href = `/Admin/Parts?Action=Edit&Id=${partId}`;
-                return true;
-            }
-        ];
-
-        // Try each method until one succeeds
-        let success = false;
-        for (const method of methods) {
-            try {
-                if (method()) {
-                    success = true;
-                    break;
-                }
-            } catch (error) {
-                console.log('? [PARTS] Edit method failed:', error.message);
-            }
-        }
-
-        // Reset button state
-        setTimeout(() => {
-            if (button) {
-                button.disabled = false;
-                button.innerHTML = '<i class="fas fa-edit"></i>';
-            }
-        }, 2000);
-
-        if (!success) {
-            console.error('? [PARTS] All edit part methods failed');
-            showNotification('Error loading edit form. Please refresh the page and try again.', 'error');
-        }
-    };
-
+    // FIXED: Enhanced delete function with proper antiforgery token
     window.handleDeletePartClick = function(partId, partNumber, partName) {
-        console.log('??? [PARTS] Delete part button clicked for:', partNumber);
+        console.log('??? Delete part button clicked for:', partNumber);
         
         const message = `Are you sure you want to delete part "${partNumber}" (${partName})?\n\nThis action cannot be undone.`;
         
         if (confirm(message)) {
-            // Create a form to submit the delete request
+            console.log('? Delete confirmed, submitting form with antiforgery token');
+            
             const form = document.createElement('form');
             form.method = 'post';
             form.action = '/Admin/Parts?handler=Delete';
             
             // Add antiforgery token
-            const token = document.querySelector('input[name="__RequestVerificationToken"]');
-            if (token) {
-                const tokenInput = document.createElement('input');
-                tokenInput.type = 'hidden';
-                tokenInput.name = '__RequestVerificationToken';
-                tokenInput.value = token.value;
-                form.appendChild(tokenInput);
-            }
+            const tokenInput = document.createElement('input');
+            tokenInput.type = 'hidden';
+            tokenInput.name = '__RequestVerificationToken';
+            tokenInput.value = getAntiforgeryToken();
+            form.appendChild(tokenInput);
             
             // Add part ID
             const idInput = document.createElement('input');
@@ -638,307 +797,293 @@
             
             document.body.appendChild(form);
             form.submit();
+        } else {
+            console.log('? Delete cancelled');
         }
     };
 
-    // Enhanced fetch-based modal loading with better error handling
-    function loadPartForm(url) {
-        return fetch(url, {
-            method: 'GET',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-            return response.text();
-        })
-        .then(html => {
-            const modalContent = document.getElementById('partModalContent');
-            if (modalContent) {
-                modalContent.innerHTML = html;
-                
-                // Ensure modal has proper z-index and is visible
-                const modal = document.getElementById('partModal');
-                if (modal) {
-                    // Fix z-index issues
-                    modal.style.zIndex = '1055';
-                    
-                    // Show the modal using Bootstrap
-                    if (typeof bootstrap !== 'undefined') {
-                        const bsModal = new bootstrap.Modal(modal, {
-                            backdrop: 'static',
-                            keyboard: true
-                        });
-                        bsModal.show();
-                    } else {
-                        // Fallback manual show
-                        modal.style.display = 'block';
-                        modal.classList.add('show');
-                        document.body.classList.add('modal-open');
-                    }
-                    
-                    // Ensure buttons are visible and clickable
-                    setTimeout(() => {
-                        fixModalButtonVisibility();
-                    }, 100);
+    // MODERN MODAL MANAGEMENT: Using best practices for reliability
+    window.OpCentrixAdmin = window.OpCentrixAdmin || {};
+    
+    window.OpCentrixAdmin.Modal = {
+        // Show modal with modern error handling
+        show: function(modalId) {
+            console.log('?? Opening modal:', modalId);
+            
+            try {
+                const modal = document.getElementById(modalId);
+                if (!modal) {
+                    console.error('? Modal element not found:', modalId);
+                    return false;
                 }
                 
-                console.log('? [PARTS] Modal loaded successfully');
+                // Ensure proper z-index
+                modal.style.zIndex = '1055';
+                
+                if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                    // Use Bootstrap 5 Modal API
+                    let bsModal = bootstrap.Modal.getInstance(modal);
+                    if (!bsModal) {
+                        bsModal = new bootstrap.Modal(modal, {
+                            backdrop: 'static',
+                            keyboard: true,
+                            focus: true
+                        });
+                    }
+                    bsModal.show();
+                } else {
+                    // Fallback for environments without Bootstrap
+                    modal.style.display = 'block';
+                    modal.classList.add('show');
+                    modal.setAttribute('aria-hidden', 'false');
+                    document.body.classList.add('modal-open');
+                    
+                    // Create backdrop if it doesn't exist
+                    if (!document.querySelector('.modal-backdrop')) {
+                        const backdrop = document.createElement('div');
+                        backdrop.className = 'modal-backdrop fade show';
+                        backdrop.style.zIndex = '1050';
+                        document.body.appendChild(backdrop);
+                    }
+                }
+                
+                // Fix button visibility after a short delay
+                setTimeout(() => {
+                    this.fixButtonVisibility();
+                }, 150);
+                
+                console.log('? Modal opened successfully');
                 return true;
+                
+            } catch (error) {
+                console.error('? Error opening modal:', error);
+                return false;
             }
-            return false;
-        })
-        .catch(error => {
-            console.error('? [PARTS] Error loading modal:', error);
-            return false;
-        });
-    }
-
-    // Fix modal button visibility issues
-    function fixModalButtonVisibility() {
-        const modalButtons = document.querySelectorAll('.modal-footer .btn');
-        modalButtons.forEach(button => {
-            // Force visibility
-            button.style.opacity = '1';
-            button.style.visibility = 'visible';
-            button.style.pointerEvents = 'auto';
-            button.style.position = 'relative';
-            button.style.zIndex = '10';
-            
-            // Ensure proper colors
-            if (button.classList.contains('btn-primary')) {
-                button.style.backgroundColor = '#0d6efd';
-                button.style.borderColor = '#0d6efd';
-                button.style.color = '#ffffff';
-            } else if (button.classList.contains('btn-secondary')) {
-                button.style.backgroundColor = '#6c757d';
-                button.style.borderColor = '#6c757d';
-                button.style.color = '#ffffff';
-            }
-        });
+        },
         
-        console.log('?? [PARTS] Fixed modal button visibility');
-    }
+        // Hide modal with proper cleanup
+        hide: function(modalId) {
+            console.log('?? Closing modal:', modalId);
+            
+            try {
+                const modal = document.getElementById(modalId);
+                if (!modal) {
+                    console.warn('?? Modal element not found for hiding:', modalId);
+                    return false;
+                }
+                
+                if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                    // Use Bootstrap 5 Modal API
+                    const bsModal = bootstrap.Modal.getInstance(modal);
+                    if (bsModal) {
+                        bsModal.hide();
+                    } else {
+                        // Fallback if instance not found
+                        modal.style.display = 'none';
+                        modal.classList.remove('show');
+                    }
+                } else {
+                    // Manual modal hiding
+                    modal.style.display = 'none';
+                    modal.classList.remove('show');
+                    modal.setAttribute('aria-hidden', 'true');
+                    document.body.classList.remove('modal-open');
+                    
+                    // Remove backdrop
+                    const backdrop = document.querySelector('.modal-backdrop');
+                    if (backdrop) {
+                        backdrop.remove();
+                    }
+                }
+                
+                // Clean up modal content after animation
+                setTimeout(() => {
+                    const content = document.getElementById(modalId + 'Content');
+                    if (content) {
+                        content.innerHTML = '';
+                    }
+                }, 350);
+                
+                console.log('? Modal closed successfully');
+                return true;
+                
+            } catch (error) {
+                console.error('? Error closing modal:', error);
+                return false;
+            }
+        },
+        
+        // Fix button visibility issues that sometimes occur
+        fixButtonVisibility: function() {
+            try {
+                const modalButtons = document.querySelectorAll('.modal-footer .btn');
+                if (modalButtons.length === 0) {
+                    console.log('?? No modal buttons found to fix');
+                    return;
+                }
+                
+                modalButtons.forEach(button => {
+                    // Reset all styles
+                    button.style.opacity = '1';
+                    button.style.visibility = 'visible';
+                    button.style.pointerEvents = 'auto';
+                    button.style.position = 'relative';
+                    button.style.zIndex = '10';
+                    button.style.display = 'inline-block';
+                    
+                    // Apply proper Bootstrap button styles
+                    if (button.classList.contains('btn-primary')) {
+                        button.style.backgroundColor = '#0d6efd';
+                        button.style.borderColor = '#0d6efd';
+                        button.style.color = '#ffffff';
+                    } else if (button.classList.contains('btn-secondary')) {
+                        button.style.backgroundColor = '#6c757d';
+                        button.style.borderColor = '#6c757d';
+                        button.style.color = '#ffffff';
+                    } else if (button.classList.contains('btn-outline-secondary')) {
+                        button.style.backgroundColor = 'transparent';
+                        button.style.borderColor = '#6c757d';
+                        button.style.color = '#6c757d';
+                    }
+                    
+                    // Ensure button is interactive
+                    button.disabled = false;
+                });
+                
+                console.log('?? Fixed visibility for', modalButtons.length, 'modal buttons');
+                
+            } catch (error) {
+                console.error('? Error fixing button visibility:', error);
+            }
+        }
+    };
 
-    // Hide any loading overlays that might interfere with modal interaction
-    function hideLoadingOverlay() {
-        const overlays = document.querySelectorAll('.loading-overlay, .htmx-indicator');
-        overlays.forEach(overlay => {
-            overlay.style.display = 'none';
-            overlay.style.pointerEvents = 'none';
-            overlay.classList.add('hidden');
-        });
-    }
-
-    // Additional utility functions
+    // Part details view function (unchanged)
     window.showPartDetails = function(partId) {
-        fetch(`/Admin/Parts?handler=PartData&id=${partId}`)
-            .then(response => response.json())
+        console.log('??? Showing part details for ID:', partId);
+        
+        fetch(`/Admin/Parts?handler=PartData&id=${partId}`, {
+            headers: {
+                'RequestVerificationToken': getAntiforgeryToken()
+            }
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                return response.json();
+            })
             .then(part => {
                 const details = `
-                    <div class="modal-header">
+                    <div class="modal-header bg-info text-white">
                         <h5 class="modal-title">Part Details: ${part.partNumber}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
                         <div class="row">
                             <div class="col-md-6">
-                                <h6>Basic Information</h6>
-                                <p><strong>Name:</strong> ${part.name}</p>
-                                <p><strong>Description:</strong> ${part.description}</p>
-                                <p><strong>Industry:</strong> ${part.industry}</p>
-                                <p><strong>Application:</strong> ${part.application}</p>
+                                <h6 class="text-primary">Basic Information</h6>
+                                <p><strong>Name:</strong> ${part.name || 'N/A'}</p>
+                                <p><strong>Description:</strong> ${part.description || 'N/A'}</p>
+                                <p><strong>Industry:</strong> ${part.industry || 'N/A'}</p>
+                                <p><strong>Application:</strong> ${part.application || 'N/A'}</p>
+                                <p><strong>Category:</strong> ${part.partCategory || 'N/A'}</p>
+                                <p><strong>Class:</strong> ${part.partClass || 'N/A'}</p>
                             </div>
                             <div class="col-md-6">
-                                <h6>Manufacturing</h6>
-                                <p><strong>Material:</strong> ${part.material}</p>
-                                <p><strong>SLS Material:</strong> ${part.slsMaterial}</p>
-                                <p><strong>Estimated Hours:</strong> ${part.estimatedHours}h</p>
-                                <p><strong>Process Type:</strong> ${part.processType}</p>
+                                <h6 class="text-primary">Manufacturing Details</h6>
+                                <p><strong>Material:</strong> ${part.material || 'N/A'}</p>
+                                <p><strong>SLS Material:</strong> ${part.slsMaterial || 'N/A'}</p>
+                                <p><strong>Estimated Hours:</strong> ${part.estimatedHours || 0}h</p>
+                                <p><strong>Process Type:</strong> ${part.processType || 'N/A'}</p>
+                                <p><strong>Required Machine:</strong> ${part.requiredMachineType || 'N/A'}</p>
+                                <p><strong>Material Cost:</strong> $${part.materialCostPerKg || 0}/kg</p>
                             </div>
                         </div>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <h6 class="text-primary">Physical Properties</h6>
+                                <p><strong>Dimensions:</strong> ${part.lengthMm || 0} × ${part.widthMm || 0} × ${part.heightMm || 0} mm</p>
+                                <p><strong>Weight:</strong> ${part.weightGrams || 0}g</p>
+                                <p><strong>Volume:</strong> ${part.volumeMm3 || 0}mm³</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-primary">Quality Requirements</h6>
+                                <p><strong>Requires Inspection:</strong> ${part.requiresInspection ? 'Yes' : 'No'}</p>
+                                <p><strong>Requires Certification:</strong> ${part.requiresCertification ? 'Yes' : 'No'}</p>
+                                <p><strong>FDA Required:</strong> ${part.requiresFDA ? 'Yes' : 'No'}</p>
+                                <p><strong>AS9100 Required:</strong> ${part.requiresAS9100 ? 'Yes' : 'No'}</p>
+                                <p><strong>NADCAP Required:</strong> ${part.requiresNADCAP ? 'Yes' : 'No'}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     </div>
                 `;
                 
                 document.getElementById('partModalContent').innerHTML = details;
-                const modal = new bootstrap.Modal(document.getElementById('partModal'));
-                modal.show();
+                OpCentrixAdmin.Modal.show('partModal');
+                
+                console.log('? Part details loaded successfully');
             })
             .catch(error => {
-                console.error('Error loading part details:', error);
-                showNotification('Error loading part details.', 'error');
+                console.error('? Error loading part details:', error);
+                
+                const errorContent = `
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title">Error</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Error loading part details: ${error.message}
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                `;
+                
+                document.getElementById('partModalContent').innerHTML = errorContent;
+                OpCentrixAdmin.Modal.show('partModal');
             });
     };
 
+    // Page size change function
     window.changePageSize = function(newSize) {
         const url = new URL(window.location);
         url.searchParams.set('PageSize', newSize);
-        url.searchParams.set('PageNumber', '1'); // Reset to first page
+        url.searchParams.set('PageNumber', '1');
         window.location.href = url.toString();
     };
 
-    // Initialize tooltips and modal event handlers
+    // MODERN PAGE INITIALIZATION: Using best practices and proper error handling
     document.addEventListener('DOMContentLoaded', function() {
-        // Initialize Bootstrap tooltips
-        if (typeof bootstrap !== 'undefined') {
-            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-            tooltipTriggerList.map(function (tooltipTriggerEl) {
-                return new bootstrap.Tooltip(tooltipTriggerEl);
-            });
-        }
-
-        // Enhanced modal event handling for z-index and interaction fixes
-        const partModal = document.getElementById('partModal');
-        if (partModal) {
-            partModal.addEventListener('shown.bs.modal', function() {
-                console.log('? [PARTS] Modal shown, fixing visibility issues');
-                
-                // Ensure proper z-index layering
-                this.style.zIndex = '1055';
-                const backdrop = document.querySelector('.modal-backdrop');
-                if (backdrop) {
-                    backdrop.style.zIndex = '1050';
-                }
-                
-                // Fix button visibility
-                setTimeout(() => {
-                    fixModalButtonVisibility();
-                }, 50);
-                
-                // Focus first input for accessibility
-                const firstInput = this.querySelector('input, select, textarea');
-                if (firstInput) {
-                    firstInput.focus();
-                }
-            });
+        console.log('?? Initializing Parts page with simplified approach');
+        
+        try {
+            // Initialize antiforgery token
+            initializeAntiforgeryToken();
             
-            partModal.addEventListener('hidden.bs.modal', function() {
-                console.log('? [PARTS] Modal hidden, cleaning up');
-                
-                // Clear modal content
-                const modalContent = document.getElementById('partModalContent');
-                if (modalContent) {
-                    modalContent.innerHTML = '';
-                }
-                
-                // Ensure body scroll is restored
-                document.body.style.overflow = '';
-                document.body.classList.remove('modal-open');
-                
-                // Remove any lingering backdrops
-                const backdrops = document.querySelectorAll('.modal-backdrop');
-                backdrops.forEach(backdrop => {
-                    if (backdrop.parentNode) {
-                        backdrop.parentNode.removeChild(backdrop);
-                    }
+            // Initialize Bootstrap tooltips if available
+            if (typeof bootstrap !== 'undefined') {
+                const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+                tooltipTriggerList.forEach(tooltipTriggerEl => {
+                    new bootstrap.Tooltip(tooltipTriggerEl, {
+                        trigger: 'hover',
+                        delay: { show: 500, hide: 100 }
+                    });
                 });
-            });
+            }
+            
+            console.log('? Parts page initialized successfully');
+            
+        } catch (error) {
+            console.error('? Error initializing parts page:', error);
         }
-
-        console.log('? [PARTS] Page initialized successfully');
     });
 
-    // Global modal management functions
-    window.ensureModalVisibility = function() {
-        const modal = document.getElementById('partModal');
-        if (modal && modal.classList.contains('show')) {
-            // Fix z-index issues
-            modal.style.zIndex = '1055';
-            
-            const backdrop = document.querySelector('.modal-backdrop');
-            if (backdrop) {
-                backdrop.style.zIndex = '1050';
-            }
-            
-            // Fix button visibility
-            fixModalButtonVisibility();
-            
-            // Ensure no other overlays are interfering
-            hideLoadingOverlay();
-            
-            console.log('?? [PARTS] Modal visibility ensured');
-        }
-    };
-
-    // Enhanced notification system with proper z-index
-    function showNotification(message, type = 'info') {
-        // Create a simple toast notification with high z-index
-        const toast = document.createElement('div');
-        toast.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
-        toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; pointer-events: auto;';
-        toast.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        
-        document.body.appendChild(toast);
-        
-        // Auto-remove after 5 seconds
-        setTimeout(() => {
-            if (toast.parentNode) {
-                toast.parentNode.removeChild(toast);
-            }
-        }, 5000);
-    }
-
-    // Debug function for troubleshooting modal and button issues
-    window.debugPartsModal = function() {
-        console.group('?? Parts Modal Debug Information');
-        
-        const modal = document.getElementById('partModal');
-        console.log('Modal element:', modal);
-        console.log('Modal display:', modal ? window.getComputedStyle(modal).display : 'N/A');
-        console.log('Modal z-index:', modal ? window.getComputedStyle(modal).zIndex : 'N/A');
-        
-        const backdrop = document.querySelector('.modal-backdrop');
-        console.log('Backdrop element:', backdrop);
-        console.log('Backdrop z-index:', backdrop ? window.getComputedStyle(backdrop).zIndex : 'N/A');
-        
-        const buttons = document.querySelectorAll('.modal-footer .btn');
-        console.log('Modal buttons found:', buttons.length);
-        buttons.forEach((btn, index) => {
-            const styles = window.getComputedStyle(btn);
-            console.log(`Button ${index + 1}:`, {
-                opacity: styles.opacity,
-                visibility: styles.visibility,
-                backgroundColor: styles.backgroundColor,
-                color: styles.color,
-                zIndex: styles.zIndex,
-                pointerEvents: styles.pointerEvents
-            });
-        });
-        
-        const overlays = document.querySelectorAll('.loading-overlay, .htmx-indicator');
-        console.log('Loading overlays found:', overlays.length);
-        overlays.forEach((overlay, index) => {
-            const styles = window.getComputedStyle(overlay);
-            console.log(`Overlay ${index + 1}:`, {
-                display: styles.display,
-                zIndex: styles.zIndex,
-                pointerEvents: styles.pointerEvents
-            });
-        });
-        
-        console.log('Bootstrap available:', typeof bootstrap !== 'undefined');
-        console.log('Current page URL:', window.location.href);
-        console.log('Total parts:', @Model.TotalCount);
-        console.log('Current page:', @Model.PageNumber, 'of', @Model.TotalPages);
-        
-        console.groupEnd();
-    };
-
-    // Auto-diagnostic and fix attempt
-    setTimeout(() => {
-        // Auto-fix any visibility issues on page load
-        ensureModalVisibility();
-        
-        // Run debug in development
-        if (window.location.hostname === 'localhost') {
-            debugPartsModal();
-        }
-    }, 1000);
-})();
+    console.log('?? Parts page script loaded successfully');
 </script>

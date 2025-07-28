@@ -104,15 +104,15 @@
 
 <!-- Modal Body -->
 <div class="modal-body">
+    <!-- FIXED: Proper form with antiforgery token -->
     <form method="post" id="partForm" 
           asp-page="/Admin/Parts" 
           asp-page-handler="@(Model.Id == 0 ? "Create" : "Edit")"
-          asp-antiforgery="true" 
-          hx-post="/Admin/Parts?handler=@(Model.Id == 0 ? "Create" : "Edit")"
-          hx-target="#partModalContent"
-          hx-swap="innerHTML"
-          hx-indicator=".htmx-indicator"
+          asp-antiforgery="true"
           novalidate>
+        
+        <!-- FIXED: Explicit antiforgery token -->
+        @Html.AntiForgeryToken()
         
         <input type="hidden" asp-for="Id" />
         <input type="hidden" asp-for="CreatedDate" />
@@ -825,7 +825,7 @@
         }, 4000);
     }
 
-    // Enhanced form submission handling
+    // FIXED: Enhanced form submission handling with proper token validation
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.getElementById('partForm');
         const saveBtn = document.getElementById('savePartBtn');
@@ -857,7 +857,23 @@
                     return false;
                 }
 
-                console.log('? Form validation passed, submitting...');
+                // FIXED: Ensure antiforgery token is present
+                const token = form.querySelector('input[name="__RequestVerificationToken"]');
+                if (!token || !token.value) {
+                    console.error('? Missing antiforgery token');
+                    e.preventDefault();
+                    
+                    // Re-enable button
+                    if (saveBtn) {
+                        saveBtn.disabled = false;
+                        saveBtn.innerHTML = '<i class="fas fa-save me-2"></i>Save Part';
+                    }
+                    
+                    showErrorNotification('Security token missing. Please refresh the form and try again.');
+                    return false;
+                }
+
+                console.log('? Form validation passed, submitting with antiforgery token...');
                 return true;
             });
 
@@ -878,45 +894,29 @@
             });
         }
 
-        console.log('? Part form modal initialized');
+        console.log('? Part form modal initialized with antiforgery token support');
     });
 
-    // Enhanced HTMX event handling for successful form submission
-    document.addEventListener('htmx:afterRequest', function(event) {
-        if (event.target.id === 'partForm') {
-            const saveBtn = document.getElementById('savePartBtn');
-            
-            if (event.detail.successful) {
-                console.log('? Part saved successfully');
-                
-                // Show success message in response script
-                const responseScript = event.detail.xhr.responseText;
-                if (responseScript.includes('success')) {
-                    // Close modal and refresh page
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('partModal'));
-                    if (modal) {
-                        modal.hide();
-                    }
-                    
-                    // Show success notification
-                    showSuccessNotification('Part saved successfully!');
-                    
-                    // Refresh the page to show the new/updated part
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
-                }
-            } else {
-                console.log('? Form submission failed');
-                
-                // Re-enable button on error
-                if (saveBtn) {
-                    saveBtn.disabled = false;
-                    saveBtn.innerHTML = '<i class="fas fa-save me-2"></i>Save Part';
-                }
+    // Show error notification
+    function showErrorNotification(message) {
+        const notification = document.createElement('div');
+        notification.className = 'alert alert-danger alert-dismissible fade show position-fixed';
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+        notification.innerHTML = `
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Error:</strong> ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
             }
-        }
-    });
+        }, 5000);
+    }
 
     // Show success notification
     function showSuccessNotification(message) {
@@ -947,50 +947,25 @@
         // Required fields validation
         const requiredFields = [
             'PartNumber', 'Name', 'Description', 'Material', 
-            'SlsMaterial', 'EstimatedHours', 'PowderRequirementKg',
-            'ProcessType', 'LengthMm', 'WidthMm', 'HeightMm', 
-            'WeightGrams', 'VolumeMm3', 'RecommendedLaserPower', 
-            'RecommendedScanSpeed', 'RecommendedLayerThickness',
-            'SetupTimeMinutes', 'PreheatingTimeMinutes', 'CoolingTimeMinutes',
-            'MaterialCostPerKg', 'StandardLaborCostPerHour'
+            'SlsMaterial', 'EstimatedHours', 'Industry', 'Application'
         ];
 
         requiredFields.forEach(field => {
             const input = document.querySelector(`[name="${field}"]`);
-            if (input && !input.value) {
+            if (input && !input.value.trim()) {
                 isValid = false;
                 errors.push(`${field} is required`);
                 
                 // Highlight the invalid field
                 input.classList.add('is-invalid');
-            } else {
+            } else if (input) {
                 // Remove invalid class if present
-                const invalidFeedback = document.querySelector(`.invalid-feedback[data-valmsg-for="${field}"]`);
-                if (invalidFeedback) {
-                    invalidFeedback.innerHTML = '';
-                }
-                
-                const inputGroup = input.closest('.form-floating');
-                if (inputGroup) {
-                    inputGroup.classList.remove('is-invalid');
-                }
+                input.classList.remove('is-invalid');
             }
         });
 
         if (!isValid) {
-            // Show error messages
-            const errorSummary = document.getElementById('errorSummary');
-            if (errorSummary) {
-                errorSummary.innerHTML = errors.join('<br>');
-                errorSummary.classList.add('alert', 'alert-danger', 'mt-3');
-            }
-        } else {
-            // Remove error summary if present
-            const errorSummary = document.getElementById('errorSummary');
-            if (errorSummary) {
-                errorSummary.innerHTML = '';
-                errorSummary.classList.remove('alert', 'alert-danger');
-            }
+            console.error('? Validation errors:', errors);
         }
 
         return isValid;
@@ -1003,31 +978,14 @@
 
         // Remove existing error feedback
         field.classList.remove('is-invalid');
-        const invalidFeedback = document.querySelector(`.invalid-feedback[data-valmsg-for="${fieldName}"]`);
-        if (invalidFeedback) {
-            invalidFeedback.innerHTML = '';
-        }
 
-        // Validation rules
-        if (value === '') {
+        // Basic required field validation
+        if (!value && field.hasAttribute('required')) {
             field.classList.add('is-invalid');
-            showError(field, `${fieldName} is required`);
             return false;
         }
 
-        // Additional custom validation rules can be added here
-        // For example, specific patterns, ranges, or dependencies between fields
-
         return true;
-    }
-
-    // Show error message for a specific field
-    function showError(field, message) {
-        const fieldName = field.name;
-        const invalidFeedback = document.querySelector(`.invalid-feedback[data-valmsg-for="${fieldName}"]`);
-        if (invalidFeedback) {
-            invalidFeedback.innerHTML = message;
-        }
     }
 })();
 </script>

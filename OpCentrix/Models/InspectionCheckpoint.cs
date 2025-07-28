@@ -6,6 +6,7 @@ namespace OpCentrix.Models;
 /// <summary>
 /// Represents quality inspection checkpoints for parts
 /// Defines the inspection steps and requirements for each part
+/// FIXED: Removed duplicate DefectCategoryId1 property to fix database schema error
 /// </summary>
 public class InspectionCheckpoint
 {
@@ -25,11 +26,13 @@ public class InspectionCheckpoint
 
     /// <summary>
     /// Optional reference to a defect category
+    /// FIXED: Single DefectCategoryId property to prevent schema issues
     /// </summary>
     public int? DefectCategoryId { get; set; }
 
     /// <summary>
     /// Navigation property to DefectCategory
+    /// FIXED: Proper nullable navigation property
     /// </summary>
     public virtual DefectCategory? DefectCategory { get; set; }
 

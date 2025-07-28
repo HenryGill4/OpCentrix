@@ -9,8 +9,10 @@ namespace OpCentrix.Pages.Api
     /// <summary>
     /// API endpoint for receiving client-side error logs
     /// Enhanced with comprehensive error tracking for click-through testing
+    /// FIXED: Disable antiforgery validation for API endpoints
     /// </summary>
     [AllowAnonymous]
+    [IgnoreAntiforgeryToken] // FIXED: API endpoints don't need CSRF protection
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public class ErrorLogModel : PageModel
     {
@@ -59,7 +61,7 @@ namespace OpCentrix.Pages.Api
                 var ipAddress = Request.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
 
                 // Log the error with comprehensive details
-                _logger.LogError("?? [CLIENT-ERROR-{OperationId}] {Category} error in {Operation}: {ErrorMessage}\n" +
+                _logger.LogError("? [CLIENT-ERROR-{OperationId}] {Category} error in {Operation}: {ErrorMessage}\n" +
                     "?? Context: URL={Url}, User={User}, IP={IP}\n" +
                     "?? Browser: {UserAgent}\n" +
                     "?? Details: {ErrorDetails}\n" +

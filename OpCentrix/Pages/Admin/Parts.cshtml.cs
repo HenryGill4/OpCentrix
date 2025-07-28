@@ -101,6 +101,153 @@ namespace OpCentrix.Pages.Admin
             }
         }
 
+        // FIXED: Add handler for HTMX modal requests
+        public async Task<IActionResult> OnGetAddAsync()
+        {
+            try
+            {
+                _logger.LogInformation("?? Loading add part form");
+                
+                // Initialize a new part with intelligent defaults
+                Part = CreateNewPartWithDefaults();
+                
+                await LoadDropdownDataAsync();
+                
+                // FIXED: Check for both HTMX and XMLHttpRequest headers for modal requests
+                bool isAjaxRequest = Request.Headers.ContainsKey("HX-Request") || 
+                                   Request.Headers.ContainsKey("X-Requested-With");
+                
+                if (isAjaxRequest)
+                {
+                    _logger.LogDebug("? Returning partial view for modal request");
+                    return Partial("Shared/_PartFormModal", Part);
+                }
+                
+                _logger.LogDebug("?? Returning full page view");
+                return Page();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "? Error loading add part form");
+                
+                // For AJAX requests, return error partial
+                bool isAjaxRequestForError = Request.Headers.ContainsKey("HX-Request") || 
+                                           Request.Headers.ContainsKey("X-Requested-With");
+                
+                if (isAjaxRequestForError)
+                {
+                    return Content($@"
+                        <div class='modal-header bg-danger text-white'>
+                            <h5 class='modal-title'>Error Loading Form</h5>
+                            <button type='button' class='btn-close btn-close-white' data-bs-dismiss='modal'></button>
+                        </div>
+                        <div class='modal-body'>
+                            <div class='alert alert-danger'>
+                                <i class='fas fa-exclamation-triangle me-2'></i>
+                                <strong>Error:</strong> {ex.Message}
+                                <br><small>Please try refreshing the page and attempting again.</small>
+                            </div>
+                        </div>
+                        <div class='modal-footer'>
+                            <button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button>
+                            <button type='button' class='btn btn-primary' onclick='window.location.reload()'>Refresh Page</button>
+                        </div>
+                    ", "text/html");
+                }
+                
+                return BadRequest("Error loading form.");
+            }
+        }
+
+        // FIXED: Add handler for HTMX edit modal requests
+        public async Task<IActionResult> OnGetEditAsync(int id)
+        {
+            try
+            {
+                _logger.LogInformation("?? Loading edit part form for ID: {PartId}", id);
+                
+                var part = await _context.Parts.FindAsync(id);
+                if (part == null)
+                {
+                    _logger.LogWarning("? Part not found for ID: {PartId}", id);
+                    
+                    // For AJAX requests, return error partial
+                    bool isAjaxRequestForNotFound = Request.Headers.ContainsKey("HX-Request") || 
+                                                  Request.Headers.ContainsKey("X-Requested-With");
+                    
+                    if (isAjaxRequestForNotFound)
+                    {
+                        return Content($@"
+                            <div class='modal-header bg-warning text-dark'>
+                                <h5 class='modal-title'>Part Not Found</h5>
+                                <button type='button' class='btn-close' data-bs-dismiss='modal'></button>
+                            </div>
+                            <div class='modal-body'>
+                                <div class='alert alert-warning'>
+                                    <i class='fas fa-exclamation-triangle me-2'></i>
+                                    <strong>Part not found:</strong> The part with ID {id} could not be located.
+                                    <br><small>It may have been deleted or moved.</small>
+                                </div>
+                            </div>
+                            <div class='modal-footer'>
+                                <button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button>
+                                <button type='button' class='btn btn-primary' onclick='window.location.reload()'>Refresh Page</button>
+                            </div>
+                        ", "text/html");
+                    }
+                    
+                    return NotFound();
+                }
+
+                Part = part;
+                await LoadDropdownDataAsync();
+                
+                // FIXED: Check for both HTMX and XMLHttpRequest headers for modal requests
+                bool isAjaxRequest = Request.Headers.ContainsKey("HX-Request") || 
+                                   Request.Headers.ContainsKey("X-Requested-With");
+                
+                if (isAjaxRequest)
+                {
+                    _logger.LogDebug("? Returning partial view for edit modal request");
+                    return Partial("Shared/_PartFormModal", Part);
+                }
+                
+                _logger.LogDebug("?? Returning full page view for edit");
+                return Page();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "? Error loading edit part form for ID {PartId}", id);
+                
+                // For AJAX requests, return error partial
+                bool isAjaxRequestForError = Request.Headers.ContainsKey("HX-Request") || 
+                                           Request.Headers.ContainsKey("X-Requested-With");
+                
+                if (isAjaxRequestForError)
+                {
+                    return Content($@"
+                        <div class='modal-header bg-danger text-white'>
+                            <h5 class='modal-title'>Error Loading Part</h5>
+                            <button type='button' class='btn-close btn-close-white' data-bs-dismiss='modal'></button>
+                        </div>
+                        <div class='modal-body'>
+                            <div class='alert alert-danger'>
+                                <i class='fas fa-exclamation-triangle me-2'></i>
+                                <strong>Error loading part {id}:</strong> {ex.Message}
+                                <br><small>Please try refreshing the page and attempting again.</small>
+                            </div>
+                        </div>
+                        <div class='modal-footer'>
+                            <button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button>
+                            <button type='button' class='btn btn-primary' onclick='window.location.reload()'>Refresh Page</button>
+                        </div>
+                    ", "text/html");
+                }
+                
+                return BadRequest("Error loading part data.");
+            }
+        }
+
         public async Task<IActionResult> OnPostCreateAsync()
         {
             try
@@ -139,40 +286,66 @@ namespace OpCentrix.Pages.Admin
 
                 _logger.LogInformation("? Part {PartNumber} created successfully by {User}", Part.PartNumber, User.Identity?.Name);
                 
-                // Return success response for HTMX
+                // FIXED: Better success response that preserves styling during reload
                 return Content($@"
                     <script>
-                        console.log('? Part saved successfully - closing modal and refreshing parts list');
+                        console.log('? Part saved successfully - starting completion sequence');
                         
-                        // Close the modal
-                        const modal = bootstrap.Modal.getInstance(document.getElementById('partModal'));
-                        if (modal) {{
-                            modal.hide();
+                        // Create a completion promise chain to ensure everything finishes
+                        async function completePartSaveSequence() {{
+                            try {{
+                                // Step 1: Close the modal with animation
+                                console.log('?? Step 1: Closing modal...');
+                                const modal = bootstrap.Modal.getInstance(document.getElementById('partModal'));
+                                if (modal) {{
+                                    modal.hide();
+                                }}
+                                
+                                // Wait for modal close animation to complete
+                                await new Promise(resolve => setTimeout(resolve, 350));
+                                
+                                // Step 2: Show success notification
+                                console.log('?? Step 2: Showing success notification...');
+                                const notification = document.createElement('div');
+                                notification.className = 'alert alert-success alert-dismissible fade show position-fixed';
+                                notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+                                notification.innerHTML = `
+                                    <i class='fas fa-check-circle me-2'></i>
+                                    <strong>Part '{Part.PartNumber}' ({Part.Name}) created successfully!</strong>
+                                    <button type='button' class='btn-close' data-bs-dismiss='alert'></button>
+                                `;
+                                document.body.appendChild(notification);
+                                
+                                // Wait for notification to be visible
+                                await new Promise(resolve => setTimeout(resolve, 100));
+                                
+                                // Step 3: Wait for user to see the notification
+                                console.log('?? Step 3: Displaying notification for user...');
+                                await new Promise(resolve => setTimeout(resolve, 1500));
+                                
+                                // Step 4: Fade out notification before navigation
+                                console.log('?? Step 4: Preparing for navigation...');
+                                if (notification.parentNode) {{
+                                    notification.style.transition = 'opacity 0.3s ease-out';
+                                    notification.style.opacity = '0';
+                                }}
+                                
+                                // Wait for fade out
+                                await new Promise(resolve => setTimeout(resolve, 300));
+                                
+                                // Step 5: Now safe to navigate - all JS operations complete
+                                console.log('?? Step 5: All operations complete, navigating to refresh parts list...');
+                                window.location.href = '/Admin/Parts';
+                                
+                            }} catch (error) {{
+                                console.error('? Error in part save sequence:', error);
+                                // Fallback navigation if anything fails
+                                window.location.href = '/Admin/Parts';
+                            }}
                         }}
                         
-                        // Show success notification
-                        const notification = document.createElement('div');
-                        notification.className = 'alert alert-success alert-dismissible fade show position-fixed';
-                        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
-                        notification.innerHTML = `
-                            <i class='fas fa-check-circle me-2'></i>
-                            <strong>Part '{Part.PartNumber}' ({Part.Name}) created successfully!</strong>
-                            <button type='button' class='btn-close' data-bs-dismiss='alert'></button>
-                        `;
-                        document.body.appendChild(notification);
-                        
-                        // Auto-remove notification after 4 seconds
-                        setTimeout(() => {{
-                            if (notification.parentNode) {{
-                                notification.parentNode.removeChild(notification);
-                            }}
-                        }}, 4000);
-                        
-                        // Refresh the page to show the new part immediately
-                        setTimeout(() => {{
-                            console.log('?? Refreshing page to show new part');
-                            window.location.reload();
-                        }}, 500);
+                        // Start the completion sequence
+                        completePartSaveSequence();
                     </script>
                 ", "text/html");
             }
@@ -228,40 +401,66 @@ namespace OpCentrix.Pages.Admin
 
                 _logger.LogInformation("? Part {PartNumber} updated successfully by {User}", existingPart.PartNumber, User.Identity?.Name);
                 
-                // Return success response for HTMX
+                // FIXED: Better success response that preserves styling during reload
                 return Content($@"
                     <script>
-                        console.log('? Part updated successfully - closing modal and refreshing parts list');
+                        console.log('? Part updated successfully - starting completion sequence');
                         
-                        // Close the modal
-                        const modal = bootstrap.Modal.getInstance(document.getElementById('partModal'));
-                        if (modal) {{
-                            modal.hide();
+                        // Create a completion promise chain to ensure everything finishes
+                        async function completePartUpdateSequence() {{
+                            try {{
+                                // Step 1: Close the modal with animation
+                                console.log('?? Step 1: Closing modal...');
+                                const modal = bootstrap.Modal.getInstance(document.getElementById('partModal'));
+                                if (modal) {{
+                                    modal.hide();
+                                }}
+                                
+                                // Wait for modal close animation to complete
+                                await new Promise(resolve => setTimeout(resolve, 350));
+                                
+                                // Step 2: Show success notification
+                                console.log('?? Step 2: Showing success notification...');
+                                const notification = document.createElement('div');
+                                notification.className = 'alert alert-success alert-dismissible fade show position-fixed';
+                                notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+                                notification.innerHTML = `
+                                    <i class='fas fa-check-circle me-2'></i>
+                                    <strong>Part '{existingPart.PartNumber}' ({existingPart.Name}) updated successfully!</strong>
+                                    <button type='button' class='btn-close' data-bs-dismiss='alert'></button>
+                                `;
+                                document.body.appendChild(notification);
+                                
+                                // Wait for notification to be visible
+                                await new Promise(resolve => setTimeout(resolve, 100));
+                                
+                                // Step 3: Wait for user to see the notification
+                                console.log('?? Step 3: Displaying notification for user...');
+                                await new Promise(resolve => setTimeout(resolve, 1500));
+                                
+                                // Step 4: Fade out notification before navigation
+                                console.log('?? Step 4: Preparing for navigation...');
+                                if (notification.parentNode) {{
+                                    notification.style.transition = 'opacity 0.3s ease-out';
+                                    notification.style.opacity = '0';
+                                }}
+                                
+                                // Wait for fade out
+                                await new Promise(resolve => setTimeout(resolve, 300));
+                                
+                                // Step 5: Now safe to navigate - all JS operations complete
+                                console.log('?? Step 5: All operations complete, navigating to refresh parts list...');
+                                window.location.href = '/Admin/Parts';
+                                
+                            }} catch (error) {{
+                                console.error('? Error in part update sequence:', error);
+                                // Fallback navigation if anything fails
+                                window.location.href = '/Admin/Parts';
+                            }}
                         }}
                         
-                        // Show success notification
-                        const notification = document.createElement('div');
-                        notification.className = 'alert alert-success alert-dismissible fade show position-fixed';
-                        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
-                        notification.innerHTML = `
-                            <i class='fas fa-check-circle me-2'></i>
-                            <strong>Part '{existingPart.PartNumber}' ({existingPart.Name}) updated successfully!</strong>
-                            <button type='button' class='btn-close' data-bs-dismiss='alert'></button>
-                        `;
-                        document.body.appendChild(notification);
-                        
-                        // Auto-remove notification after 4 seconds
-                        setTimeout(() => {{
-                            if (notification.parentNode) {{
-                                notification.parentNode.removeChild(notification);
-                            }}
-                        }}, 4000);
-                        
-                        // Refresh the page to show the updated part immediately
-                        setTimeout(() => {{
-                            console.log('?? Refreshing page to show updated part');
-                            window.location.reload();
-                        }}, 500);
+                        // Start the completion sequence
+                        completePartUpdateSequence();
                     </script>
                 ", "text/html");
             }
@@ -302,15 +501,23 @@ namespace OpCentrix.Pages.Admin
                 var partNumber = part.PartNumber;
                 var partName = part.Name;
 
-                // Remove related inspection checkpoints first
-                var checkpoints = await _context.InspectionCheckpoints
-                    .Where(ic => ic.PartId == id)
-                    .ToListAsync();
-                    
-                if (checkpoints.Any())
+                // FIXED: Remove related inspection checkpoints first with error handling
+                try
                 {
-                    _context.InspectionCheckpoints.RemoveRange(checkpoints);
-                    _logger.LogInformation("?? Removed {Count} inspection checkpoints for part {PartNumber}", checkpoints.Count, partNumber);
+                    var checkpoints = await _context.InspectionCheckpoints
+                        .Where(ic => ic.PartId == id)
+                        .ToListAsync();
+                        
+                    if (checkpoints.Any())
+                    {
+                        _context.InspectionCheckpoints.RemoveRange(checkpoints);
+                        _logger.LogInformation("?? Removed {Count} inspection checkpoints for part {PartNumber}", checkpoints.Count, partNumber);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "?? Error removing inspection checkpoints for part {PartNumber}, continuing with deletion", partNumber);
+                    // Continue with part deletion even if checkpoint removal fails
                 }
 
                 _context.Parts.Remove(part);
@@ -380,42 +587,15 @@ namespace OpCentrix.Pages.Admin
             }
         }
 
+        // LEGACY HANDLERS - Keep for backward compatibility
         public async Task<IActionResult> OnGetAddFormAsync()
         {
-            try
-            {
-                // Initialize a new part with intelligent defaults
-                Part = CreateNewPartWithDefaults();
-                
-                await LoadDropdownDataAsync();
-                return Partial("Shared/_PartFormModal", Part);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "? Error loading add part form");
-                return BadRequest("Error loading form.");
-            }
+            return await OnGetAddAsync();
         }
 
         public async Task<IActionResult> OnGetEditFormAsync(int id)
         {
-            try
-            {
-                var part = await _context.Parts.FindAsync(id);
-                if (part == null)
-                {
-                    return NotFound();
-                }
-
-                Part = part;
-                await LoadDropdownDataAsync();
-                return Partial("Shared/_PartFormModal", Part);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "? Error loading edit part form for ID {PartId}", id);
-                return BadRequest("Error loading part data.");
-            }
+            return await OnGetEditAsync(id);
         }
 
         /// <summary>

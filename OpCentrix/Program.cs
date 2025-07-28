@@ -45,12 +45,26 @@ else
     builder.Logging.SetMinimumLevel(LogLevel.Information);
 }
 
+// FIXED: Add proper antiforgery configuration
+builder.Services.AddAntiforgery(options =>
+{
+    options.HeaderName = "RequestVerificationToken";
+    options.Cookie.Name = "__RequestVerificationToken";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Strict;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    options.SuppressXFrameOptionsHeader = false;
+});
+
 // Add services to the container
 builder.Services.AddRazorPages(options =>
 {
     // Global authorization requirement
     options.Conventions.AuthorizeFolder("/Admin", "AdminPolicy");
     options.Conventions.AuthorizeFolder("/Scheduler", "SchedulerPolicy");
+    
+    // FIXED: Configure antiforgery for all pages
+    options.Conventions.ConfigureFilter(new Microsoft.AspNetCore.Mvc.AutoValidateAntiforgeryTokenAttribute());
 });
 
 // Database configuration
@@ -263,7 +277,7 @@ using (var scope = app.Services.CreateScope())
 // Log application startup with correct URL
 var startupLogger = app.Services.GetRequiredService<ILogger<Program>>();
 var urls = builder.Configuration.GetValue<string>("Urls") ?? "http://localhost:5090";
-startupLogger.LogInformation("? OpCentrix SLS Scheduler started successfully");
+startupLogger.LogInformation("?? OpCentrix SLS Scheduler started successfully");
 startupLogger.LogInformation("Environment: {Environment}", app.Environment.EnvironmentName);
 startupLogger.LogInformation("URL: {Url}", urls);
 startupLogger.LogInformation("Login Page: {LoginUrl}", $"{urls}/Account/Login");
