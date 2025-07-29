@@ -762,29 +762,108 @@ namespace OpCentrix.Pages.Admin
 
         /// <summary>
         /// Ensure part has all required default values to prevent NULL errors
+        /// ENHANCED: Comprehensive defaults for ALL database NOT NULL constraints
         /// </summary>
         private void EnsurePartDefaults(Part part)
         {
+            // Basic Information - NOT NULL fields
             part.Description ??= "";
             part.CustomerPartNumber ??= "";
-            part.Dimensions ??= "";
+            part.Industry ??= "General";
+            part.Application ??= "General Component";
+            
+            // Material and Process - NOT NULL fields
+            part.Material ??= "Ti-6Al-4V Grade 5";
+            part.SlsMaterial ??= "Ti-6Al-4V Grade 5";
             part.PowderSpecification ??= "15-45 micron particle size";
+            part.ProcessType ??= "SLS Metal";
+            part.RequiredMachineType ??= "TruPrint 3000";
+            part.PreferredMachines ??= "TI1,TI2";
+            
+            // Physical Properties - NOT NULL fields
+            part.Dimensions ??= "";
+            
+            // Quality and Surface - NOT NULL fields
             part.SurfaceFinishRequirement ??= "As-built";
             part.QualityStandards ??= "ASTM F3001, ISO 17296";
             part.ToleranceRequirements ??= "±0.1mm typical";
+            
+            // Skills and Requirements - NOT NULL fields
             part.RequiredSkills ??= "SLS Operation,Powder Handling";
             part.RequiredCertifications ??= "SLS Operation Certification";
             part.RequiredTooling ??= "Build Platform,Powder Sieve";
             part.ConsumableMaterials ??= "Argon Gas,Build Platform Coating";
             part.SupportStrategy ??= "Minimal supports on overhangs > 45°";
+            
+            // File and Template Information - NOT NULL fields
             part.ProcessParameters ??= "{}";
             part.QualityCheckpoints ??= "{}";
             part.BuildFileTemplate ??= "";
             part.CadFilePath ??= "";
             part.CadFileVersion ??= "";
+            
+            // Duration and Display - NOT NULL fields
             part.AvgDuration ??= "8h 0m";
+            
+            // Admin Override Fields - NOT NULL fields
             part.AdminOverrideReason ??= "";
             part.AdminOverrideBy ??= "";
+            
+            // NUMERIC DEFAULTS - Ensure all numeric NOT NULL fields have valid values
+            if (part.PowderRequirementKg <= 0) part.PowderRequirementKg = 0.5;
+            if (part.RecommendedLaserPower <= 0) part.RecommendedLaserPower = 200;
+            if (part.RecommendedScanSpeed <= 0) part.RecommendedScanSpeed = 1200;
+            if (part.RecommendedLayerThickness <= 0) part.RecommendedLayerThickness = 30;
+            if (part.RecommendedHatchSpacing <= 0) part.RecommendedHatchSpacing = 120;
+            if (part.RecommendedBuildTemperature <= 0) part.RecommendedBuildTemperature = 180;
+            if (part.RequiredArgonPurity <= 0) part.RequiredArgonPurity = 99.9;
+            if (part.MaxOxygenContent <= 0) part.MaxOxygenContent = 50;
+            if (part.WeightGrams <= 0) part.WeightGrams = 0;
+            if (part.VolumeMm3 <= 0) part.VolumeMm3 = 0;
+            if (part.HeightMm <= 0) part.HeightMm = 0;
+            if (part.LengthMm <= 0) part.LengthMm = 0;
+            if (part.WidthMm <= 0) part.WidthMm = 0;
+            if (part.MaxSurfaceRoughnessRa <= 0) part.MaxSurfaceRoughnessRa = 25;
+            
+            // Cost Fields - NOT NULL decimals
+            if (part.MaterialCostPerKg <= 0) part.MaterialCostPerKg = 450.00m;
+            if (part.StandardLaborCostPerHour <= 0) part.StandardLaborCostPerHour = 85.00m;
+            if (part.SetupCost <= 0) part.SetupCost = 150.00m;
+            if (part.PostProcessingCost <= 0) part.PostProcessingCost = 75.00m;
+            if (part.QualityInspectionCost <= 0) part.QualityInspectionCost = 50.00m;
+            if (part.MachineOperatingCostPerHour <= 0) part.MachineOperatingCostPerHour = 125.00m;
+            if (part.ArgonCostPerHour <= 0) part.ArgonCostPerHour = 15.00m;
+            if (part.AverageCostPerUnit < 0) part.AverageCostPerUnit = 0;
+            if (part.StandardSellingPrice < 0) part.StandardSellingPrice = 0;
+            
+            // Time Fields - NOT NULL numerics
+            if (part.SetupTimeMinutes <= 0) part.SetupTimeMinutes = 45;
+            if (part.PowderChangeoverTimeMinutes <= 0) part.PowderChangeoverTimeMinutes = 30;
+            if (part.PreheatingTimeMinutes <= 0) part.PreheatingTimeMinutes = 60;
+            if (part.CoolingTimeMinutes <= 0) part.CoolingTimeMinutes = 240;
+            if (part.PostProcessingTimeMinutes <= 0) part.PostProcessingTimeMinutes = 45;
+            if (part.SupportRemovalTimeMinutes < 0) part.SupportRemovalTimeMinutes = 0;
+            
+            // Performance and Quality Metrics - NOT NULL fields
+            if (part.AverageActualHours < 0) part.AverageActualHours = 0;
+            if (part.AverageEfficiencyPercent <= 0) part.AverageEfficiencyPercent = 100;
+            if (part.AverageQualityScore <= 0) part.AverageQualityScore = 100;
+            if (part.AverageDefectRate < 0) part.AverageDefectRate = 0;
+            if (part.AveragePowderUtilization <= 0) part.AveragePowderUtilization = 85;
+            if (part.TotalJobsCompleted < 0) part.TotalJobsCompleted = 0;
+            if (part.TotalUnitsProduced < 0) part.TotalUnitsProduced = 0;
+            
+            // Duration Days - NOT NULL integer
+            if (part.AvgDurationDays <= 0) part.AvgDurationDays = 1;
+            
+            // Core Business Fields
+            part.PartCategory ??= "Prototype";
+            part.PartClass ??= "B";
+            
+            // Ensure EstimatedHours is valid (this is critical)
+            if (part.EstimatedHours <= 0) part.EstimatedHours = 8.0;
+            
+            _logger.LogDebug("? Applied comprehensive defaults to part {PartNumber}", part.PartNumber);
         }
 
         /// <summary>

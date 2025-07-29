@@ -29,19 +29,18 @@ namespace OpCentrix.Models
         
         #region SLS-Specific Manufacturing Properties
         
-        // SLS Material Specifications - FIXED: Added [Required] to match database NOT NULL constraints
+        // SLS Material Specifications
         [Required]
         [StringLength(100)]
         public string SlsMaterial { get; set; } = "Ti-6Al-4V Grade 5";
         
-        [Required] // Database has NOT NULL constraint
         [StringLength(100)]
         public string PowderSpecification { get; set; } = "15-45 micron particle size";
         
         [Range(0, 50)]
         public double PowderRequirementKg { get; set; } = 0.5;
         
-        // Build Parameters - FIXED: These are NOT NULL in database
+        // Build Parameters
         [Range(0, 2000)]
         public double RecommendedLaserPower { get; set; } = 200;
         
@@ -54,7 +53,7 @@ namespace OpCentrix.Models
         [Range(50, 200)]
         public double RecommendedHatchSpacing { get; set; } = 120;
         
-        // Build Environment Requirements - FIXED: These are NOT NULL in database
+        // Build Environment Requirements
         [Range(0, 500)]
         public double RecommendedBuildTemperature { get; set; } = 180;
         
@@ -71,7 +70,6 @@ namespace OpCentrix.Models
         [Range(0, 1000)]
         public double WeightGrams { get; set; } = 0;
         
-        [Required] // Database has NOT NULL constraint
         [StringLength(100)]
         public string Dimensions { get; set; } = string.Empty; // "L x W x H in mm"
         
@@ -87,8 +85,7 @@ namespace OpCentrix.Models
         [Range(0, 250)]
         public double WidthMm { get; set; } = 0;
         
-        // Surface finish requirements - FIXED: Added [Required] to match database
-        [Required] // Database has NOT NULL constraint
+        // Surface finish requirements
         [StringLength(100)]
         public string SurfaceFinishRequirement { get; set; } = "As-built";
         
@@ -124,20 +121,17 @@ namespace OpCentrix.Models
         
         #region Manufacturing Data Enhanced for SLS
         
-        // Process information - FIXED: Added [Required] to match database NOT NULL constraints
-        [Required] // Database has NOT NULL constraint
+        // Process information
         [StringLength(50)]
         public string ProcessType { get; set; } = "SLS Metal"; // SLS, SLA, FDM, etc.
         
-        [Required] // Database has NOT NULL constraint
         [StringLength(100)]
         public string RequiredMachineType { get; set; } = "TruPrint 3000";
         
-        [Required] // Database has NOT NULL constraint
         [StringLength(200)]
         public string PreferredMachines { get; set; } = "TI1,TI2"; // Comma-separated list
         
-        // SLS-specific setup and timing - FIXED: These are NOT NULL in database
+        // SLS-specific setup and timing
         [Range(0, 300)]
         public double SetupTimeMinutes { get; set; } = 45;
         
@@ -153,12 +147,10 @@ namespace OpCentrix.Models
         [Range(0, 180)]
         public double PostProcessingTimeMinutes { get; set; } = 45;
         
-        // Quality requirements for SLS - FIXED: Added [Required] to match database NOT NULL constraints
-        [Required] // Database has NOT NULL constraint
+        // Quality requirements for SLS
         [StringLength(500)]
         public string QualityStandards { get; set; } = "ASTM F3001, ISO 17296";
         
-        [Required] // Database has NOT NULL constraint
         [StringLength(500)]
         public string ToleranceRequirements { get; set; } = "±0.1mm typical, ±0.05mm critical dimensions";
         
@@ -170,26 +162,21 @@ namespace OpCentrix.Models
         
         #region SLS Resource Requirements
         
-        [Required] // Database has NOT NULL constraint
         [StringLength(500)]
         public string RequiredSkills { get; set; } = "SLS Operation,Powder Handling,Inert Gas Safety,Post-Processing";
         
-        [Required] // Database has NOT NULL constraint
         [StringLength(500)]
         public string RequiredCertifications { get; set; } = "SLS Operation Certification,Powder Safety Training";
         
-        [Required] // Database has NOT NULL constraint
         [StringLength(500)]
         public string RequiredTooling { get; set; } = "Build Platform,Powder Sieve,Support Removal Tools";
         
-        [Required] // Database has NOT NULL constraint
         [StringLength(500)]
         public string ConsumableMaterials { get; set; } = "Argon Gas,Build Platform Coating";
         
         // Support structure requirements
         public bool RequiresSupports { get; set; } = false;
         
-        [Required] // Database has NOT NULL constraint
         [StringLength(200)]
         public string SupportStrategy { get; set; } = "Minimal supports on overhangs > 45°";
         
@@ -200,25 +187,20 @@ namespace OpCentrix.Models
         
         #region Customer and Classification Enhanced
         
-        [Required] // Database has NOT NULL constraint
         [StringLength(100)]
         public string CustomerPartNumber { get; set; } = string.Empty;
         
-        [Required] // Database has NOT NULL constraint
         [StringLength(100)]
         public string PartCategory { get; set; } = "Prototype"; // Prototype, Production, Tooling, Repair
         
-        [Required] // Database has NOT NULL constraint
         [StringLength(10)]
         public string PartClass { get; set; } = "B"; // A=Critical, B=Important, C=Standard
         
         public bool IsActive { get; set; } = true;
         
-        [Required] // Database has NOT NULL constraint
         [StringLength(100)]
         public string Industry { get; set; } = "General"; // Set default value to prevent NOT NULL errors
         
-        [Required] // Database has NOT NULL constraint
         [StringLength(100)]
         public string Application { get; set; } = "General Component"; // Set default value to prevent NOT NULL errors
         
@@ -231,7 +213,7 @@ namespace OpCentrix.Models
         
         #region Historical Performance Data Enhanced
         
-        // Historical averages (calculated from completed jobs) - FIXED: These are NOT NULL in database
+        // Historical averages (calculated from completed jobs)
         public double AverageActualHours { get; set; } = 0;
         
         [Range(0, 200)]
@@ -246,12 +228,12 @@ namespace OpCentrix.Models
         [Range(0, 100)]
         public double AveragePowderUtilization { get; set; } = 85;
         
-        // Volume data - FIXED: These are NOT NULL in database
+        // Volume data
         public int TotalJobsCompleted { get; set; } = 0;
         public int TotalUnitsProduced { get; set; } = 0;
         public DateTime? LastProduced { get; set; }
         
-        // Financial performance - FIXED: These are NOT NULL in database
+        // Financial performance
         [Column(TypeName = "decimal(10,2)")]
         public decimal AverageCostPerUnit { get; set; } = 0;
         
@@ -262,40 +244,33 @@ namespace OpCentrix.Models
         
         #region Process Parameters Enhanced for SLS
         
-        // Process-specific data (stored as JSON for flexibility) - FIXED: Added [Required] to match database NOT NULL constraints
-        [Required] // Database has NOT NULL constraint
+        // Process-specific data (stored as JSON for flexibility)
         [StringLength(2000)]
         public string ProcessParameters { get; set; } = "{}";
         
-        [Required] // Database has NOT NULL constraint
         [StringLength(2000)]
         public string QualityCheckpoints { get; set; } = "{}";
         
-        // Build file information - FIXED: Added [Required] to match database NOT NULL constraints
-        [Required] // Database has NOT NULL constraint
+        // Build file information
         [StringLength(255)]
         public string BuildFileTemplate { get; set; } = string.Empty; // Template .slm file
         
-        [Required] // Database has NOT NULL constraint
         [StringLength(500)]
         public string CadFilePath { get; set; } = string.Empty; // Original CAD file
         
-        [Required] // Database has NOT NULL constraint
         [StringLength(100)]
         public string CadFileVersion { get; set; } = string.Empty;
         
         #endregion
         
-        #region Audit Trail - FIXED: Added [Required] to match database NOT NULL constraints
+        #region Audit Trail
         
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
         public DateTime LastModifiedDate { get; set; } = DateTime.UtcNow;
         
-        [Required] // Database has NOT NULL constraint
         [StringLength(100)]
         public string CreatedBy { get; set; } = string.Empty;
         
-        [Required] // Database has NOT NULL constraint
         [StringLength(100)]
         public string LastModifiedBy { get; set; } = string.Empty;
         
@@ -377,8 +352,7 @@ namespace OpCentrix.Models
         
         #region Duration and Time Management Enhanced
         
-        // Duration estimates - FIXED: Added [Required] to match database NOT NULL constraints
-        [Required] // Database has NOT NULL constraint
+        // Duration estimates
         [StringLength(50)]
         public string AvgDuration { get; set; } = "8h 0m";
         public int AvgDurationDays { get; set; } = 1;
@@ -390,11 +364,9 @@ namespace OpCentrix.Models
         [Range(0.1, 200.0)]
         public double? AdminEstimatedHoursOverride { get; set; }
         
-        // FIXED: AdminOverrideReason allows NULL in database, so no [Required] needed
         [StringLength(500)]
-        public string? AdminOverrideReason { get; set; } = string.Empty;
+        public string AdminOverrideReason { get; set; } = string.Empty;
         
-        [Required] // Database has NOT NULL constraint
         [StringLength(100)]
         public string AdminOverrideBy { get; set; } = string.Empty;
         
