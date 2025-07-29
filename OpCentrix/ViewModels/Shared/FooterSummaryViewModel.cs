@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace OpCentrix.Models.ViewModels
+namespace OpCentrix.ViewModels.Shared
 {
     public class FooterSummaryViewModel
     {

@@ -1,5 +1,5 @@
 @using OpCentrix.Models
-@model OpCentrix.Models.ViewModels.AddEditJobViewModel
+@model OpCentrix.ViewModels.Scheduler.AddEditJobViewModel
 
 <!-- Enhanced Modal Container with OpCentrix Design System -->
 <div class="modal-backdrop" 
@@ -112,6 +112,7 @@
                                        class="opcentrix-input" required onchange="updateEndTimeFromQuantity()" style="width: 100%; padding: var(--opcentrix-spacing-3) var(--opcentrix-spacing-4); border: 2px solid var(--opcentrix-border); border-radius: var(--opcentrix-radius); font-size: var(--opcentrix-font-size-sm); font-family: var(--opcentrix-font-family); transition: all var(--opcentrix-transition-base); background: var(--opcentrix-bg-secondary); color: var(--opcentrix-text-primary);" />
                             </div>
                             
+
                             <div style="display: flex; flex-direction: column;">
                                 <label class="opcentrix-label" for="priority-select" style="display: block; font-size: var(--opcentrix-font-size-sm); font-weight: 600; color: var(--opcentrix-text-secondary); margin-bottom: var(--opcentrix-spacing-2); line-height: var(--opcentrix-line-height-tight);">Priority</label>
                                 <select name="Job.Priority" id="priority-select" class="opcentrix-input" style="width: 100%; padding: var(--opcentrix-spacing-3) var(--opcentrix-spacing-4); border: 2px solid var(--opcentrix-border); border-radius: var(--opcentrix-radius); font-size: var(--opcentrix-font-size-sm); font-family: var(--opcentrix-font-family); transition: all var(--opcentrix-transition-base); background: var(--opcentrix-bg-secondary); color: var(--opcentrix-text-primary);">

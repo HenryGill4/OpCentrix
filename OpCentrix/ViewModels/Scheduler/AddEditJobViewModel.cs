@@ -1,6 +1,7 @@
 using System.Collections.Generic;
+using OpCentrix.Models;
 
-namespace OpCentrix.Models.ViewModels
+namespace OpCentrix.ViewModels.Scheduler
 {
     public class AddEditJobViewModel
     {

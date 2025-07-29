@@ -1,7 +1,7 @@
-@model List<OpCentrix.Models.ViewModels.ScheduleAlert>
+@model List<OpCentrix.ViewModels.Analytics.ScheduleAlert>
 
 @{
-    var alerts = Model ?? new List<OpCentrix.Models.ViewModels.ScheduleAlert>();
+    var alerts = Model ?? new List<OpCentrix.ViewModels.Analytics.ScheduleAlert>();
     var criticalAlerts = alerts.Where(a => a.Severity == "critical").ToList();
     var highAlerts = alerts.Where(a => a.Severity == "high").ToList();
     var otherAlerts = alerts.Where(a => a.Severity != "critical" && a.Severity != "high").ToList();

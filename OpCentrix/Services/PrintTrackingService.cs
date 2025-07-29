@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using OpCentrix.Data;
 using OpCentrix.Models;
-using OpCentrix.Models.ViewModels;
+using OpCentrix.ViewModels.PrintTracking;
 
 namespace OpCentrix.Services
 {

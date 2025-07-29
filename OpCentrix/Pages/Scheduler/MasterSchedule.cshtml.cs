@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using OpCentrix.Authorization;
-using OpCentrix.Models.ViewModels;
+using OpCentrix.ViewModels.Analytics;
 using OpCentrix.Services;
 using Microsoft.Extensions.Logging;
 using System.ComponentModel.DataAnnotations;

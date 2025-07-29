@@ -2,7 +2,8 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using OpCentrix.Models;
-using OpCentrix.Models.ViewModels;
+using OpCentrix.ViewModels.Scheduler;
+using OpCentrix.ViewModels.Shared;
 using OpCentrix.Data;
 using OpCentrix.Services;
 using OpCentrix.Authorization;

@@ -1,7 +1,7 @@
-@model List<OpCentrix.Models.ViewModels.MasterScheduleTimeSlot>
+@model List<OpCentrix.ViewModels.Analytics.MasterScheduleTimeSlot>
 
 @{
-    var timeSlots = Model ?? new List<OpCentrix.Models.ViewModels.MasterScheduleTimeSlot>();
+    var timeSlots = Model ?? new List<OpCentrix.ViewModels.Analytics.MasterScheduleTimeSlot>();
     var machines = timeSlots.GroupBy(t => t.MachineId).Select(g => g.Key).OrderBy(m => m).ToList();
     var startTime = timeSlots.Any() ? timeSlots.Min(t => t.StartTime).Date : DateTime.Today;
     var endTime = timeSlots.Any() ? timeSlots.Max(t => t.EndTime).Date.AddDays(1) : DateTime.Today.AddDays(7);

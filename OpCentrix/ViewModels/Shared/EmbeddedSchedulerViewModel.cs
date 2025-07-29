@@ -1,4 +1,6 @@
-namespace OpCentrix.Models.ViewModels
+using OpCentrix.Models;
+
+namespace OpCentrix.ViewModels.Shared
 {
     /// <summary>
     /// View model for embedded scheduler display in print tracking dashboard

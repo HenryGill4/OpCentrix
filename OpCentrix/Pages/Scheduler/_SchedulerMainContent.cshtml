@@ -1,8 +1,8 @@
 @model dynamic
 
 @{
-    var viewModel = Model.ViewModel as OpCentrix.Models.ViewModels.SchedulerPageViewModel;
-    var summary = Model.Summary as OpCentrix.Models.ViewModels.FooterSummaryViewModel;
+    var viewModel = Model.ViewModel as OpCentrix.ViewModels.Scheduler.SchedulerPageViewModel;
+    var summary = Model.Summary as OpCentrix.ViewModels.Shared.FooterSummaryViewModel;
     
     var slotsPerDay = viewModel?.SlotsPerDay ?? 1;
     var slotMinutes = viewModel?.SlotMinutes ?? 1440;

@@ -1,5 +1,5 @@
 using OpCentrix.Models;
-using OpCentrix.Models.ViewModels;
+using OpCentrix.ViewModels.Scheduler;
 using OpCentrix.Data;
 using Microsoft.EntityFrameworkCore;
 using OpCentrix.Services.Admin;

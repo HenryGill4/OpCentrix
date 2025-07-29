@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using OpCentrix.Models;
 
-namespace OpCentrix.Models.ViewModels
+namespace OpCentrix.ViewModels.PrintTracking
 {
     /// <summary>
     /// View model for the Print Start Form - required when operators begin a new print

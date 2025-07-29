@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace OpCentrix.Models.ViewModels
+namespace OpCentrix.ViewModels.Analytics
 {
     /// <summary>
     /// Comprehensive view model for the master schedule dashboard

@@ -112,7 +112,7 @@ namespace OpCentrix.Tests
             var formData = CreateValidPartFormData("CREATE-TEST-001");
 
             // Act
-            var response = await _client.PostAsync("/Admin/Parts?handler=Create", formData);
+            var response = await _client.PostAsync("/Admin/Parts?handler=Create", new FormUrlEncodedContent(formData));
 
             // Assert
             response.EnsureSuccessStatusCode();
@@ -167,7 +167,7 @@ namespace OpCentrix.Tests
             var formData = CreateValidPartFormData("TEST-PART-001"); // Duplicate part number
 
             // Act
-            var response = await _client.PostAsync("/Admin/Parts?handler=Create", formData);
+            var response = await _client.PostAsync("/Admin/Parts?handler=Create", new FormUrlEncodedContent(formData));
 
             // Assert
             response.EnsureSuccessStatusCode();

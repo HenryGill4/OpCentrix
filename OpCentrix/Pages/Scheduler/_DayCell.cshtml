@@ -1,4 +1,4 @@
-@model OpCentrix.Models.ViewModels.DayCellViewModel
+@model OpCentrix.ViewModels.Scheduler.DayCellViewModel
 <div id="cell-@Model.MachineId-@Model.Date.ToString("yyyyMMdd")" class="relative border h-20 col-span-@Model.ColSpan">
     @if (Model.Job != null)
     {
@@ -16,4 +16,4 @@
             + Add Job
         </button>
     }
-</div>
+}

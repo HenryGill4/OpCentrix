@@ -1,7 +1,7 @@
-@model OpCentrix.Models.ViewModels.FooterSummaryViewModel
+@model OpCentrix.ViewModels.Shared.FooterSummaryViewModel
 
 @{
-    var model = Model ?? new OpCentrix.Models.ViewModels.FooterSummaryViewModel();
+    var model = Model ?? new OpCentrix.ViewModels.Shared.FooterSummaryViewModel();
     var totalHours = model.TotalHours;
     var totalJobs = model.TotalJobs;
     var machineHours = model.MachineHours ?? new Dictionary<string, double>();
