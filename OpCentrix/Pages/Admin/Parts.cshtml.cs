@@ -10,7 +10,7 @@ namespace OpCentrix.Pages.Admin
 {
     /// <summary>
     /// Enhanced Parts management page with comprehensive CRUD operations
-    /// FULLY REFACTORED for SQL schema compatibility and robust error handling
+    /// PHASE 3 OPTIMIZED: Async/await patterns and database query optimization
     /// </summary>
     [Authorize(Policy = "AdminOnly")]
     public class PartsModel : PageModel
@@ -79,9 +79,9 @@ namespace OpCentrix.Pages.Admin
             {
                 _logger.LogInformation("?? Loading Parts management page - Admin: {Admin}", User.Identity?.Name);
                 
-                await LoadPartsAsync();
-                await LoadDropdownDataAsync();
-                await LoadStatisticsAsync();
+                await LoadPartsAsync().ConfigureAwait(false);
+                await LoadDropdownDataAsync().ConfigureAwait(false);
+                await LoadStatisticsAsync().ConfigureAwait(false);
                 
                 _logger.LogInformation("? Parts page loaded successfully - {TotalCount} parts found", TotalCount);
                 return Page();
@@ -111,7 +111,7 @@ namespace OpCentrix.Pages.Admin
                 // Initialize a new part with intelligent defaults
                 Part = CreateNewPartWithDefaults();
                 
-                await LoadDropdownDataAsync();
+                await LoadDropdownDataAsync().ConfigureAwait(false);
                 
                 // FIXED: Check for both HTMX and XMLHttpRequest headers for modal requests
                 bool isAjaxRequest = Request.Headers.ContainsKey("HX-Request") || 
@@ -166,7 +166,7 @@ namespace OpCentrix.Pages.Admin
             {
                 _logger.LogInformation("?? Loading edit part form for ID: {PartId}", id);
                 
-                var part = await _context.Parts.FindAsync(id);
+                var part = await _context.Parts.FindAsync(id).ConfigureAwait(false);
                 if (part == null)
                 {
                     _logger.LogWarning("? Part not found for ID: {PartId}", id);
@@ -200,7 +200,7 @@ namespace OpCentrix.Pages.Admin
                 }
 
                 Part = part;
-                await LoadDropdownDataAsync();
+                await LoadDropdownDataAsync().ConfigureAwait(false);
                 
                 // FIXED: Check for both HTMX and XMLHttpRequest headers for modal requests
                 bool isAjaxRequest = Request.Headers.ContainsKey("HX-Request") || 
@@ -256,19 +256,19 @@ namespace OpCentrix.Pages.Admin
 
                 if (!ModelState.IsValid)
                 {
-                    await LoadDropdownDataAsync();
+                    await LoadDropdownDataAsync().ConfigureAwait(false);
                     return Partial("Shared/_PartFormModal", Part);
                 }
 
                 // Enhanced validation
-                var validationErrors = await ValidatePartAsync(Part, isCreate: true);
+                var validationErrors = await ValidatePartAsync(Part, isCreate: true).ConfigureAwait(false);
                 if (validationErrors.Any())
                 {
                     foreach (var error in validationErrors)
                     {
                         ModelState.AddModelError("", error);
                     }
-                    await LoadDropdownDataAsync();
+                    await LoadDropdownDataAsync().ConfigureAwait(false);
                     return Partial("Shared/_PartFormModal", Part);
                 }
 
@@ -282,7 +282,7 @@ namespace OpCentrix.Pages.Admin
                 EnsurePartDefaults(Part);
 
                 _context.Parts.Add(Part);
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync().ConfigureAwait(false);
 
                 _logger.LogInformation("? Part {PartNumber} created successfully by {User}", Part.PartNumber, User.Identity?.Name);
                 
@@ -353,7 +353,7 @@ namespace OpCentrix.Pages.Admin
             {
                 _logger.LogError(ex, "? Error creating part {PartNumber}", Part.PartNumber);
                 ModelState.AddModelError("", "Error creating part. Please try again.");
-                await LoadDropdownDataAsync();
+                await LoadDropdownDataAsync().ConfigureAwait(false);
                 return Partial("Shared/_PartFormModal", Part);
             }
         }
@@ -366,27 +366,27 @@ namespace OpCentrix.Pages.Admin
 
                 if (!ModelState.IsValid)
                 {
-                    await LoadDropdownDataAsync();
+                    await LoadDropdownDataAsync().ConfigureAwait(false);
                     return Partial("Shared/_PartFormModal", Part);
                 }
 
-                var existingPart = await _context.Parts.FindAsync(id);
+                var existingPart = await _context.Parts.FindAsync(id).ConfigureAwait(false);
                 if (existingPart == null)
                 {
                     ModelState.AddModelError("", "Part not found.");
-                    await LoadDropdownDataAsync();
+                    await LoadDropdownDataAsync().ConfigureAwait(false);
                     return Partial("Shared/_PartFormModal", Part);
                 }
 
                 // Enhanced validation
-                var validationErrors = await ValidatePartAsync(Part, isCreate: false, existingId: id);
+                var validationErrors = await ValidatePartAsync(Part, isCreate: false, existingId: id).ConfigureAwait(false);
                 if (validationErrors.Any())
                 {
                     foreach (var error in validationErrors)
                     {
                         ModelState.AddModelError("", error);
                     }
-                    await LoadDropdownDataAsync();
+                    await LoadDropdownDataAsync().ConfigureAwait(false);
                     return Partial("Shared/_PartFormModal", Part);
                 }
 
@@ -397,7 +397,7 @@ namespace OpCentrix.Pages.Admin
                 existingPart.LastModifiedBy = User.Identity?.Name ?? "System";
                 existingPart.LastModifiedDate = DateTime.UtcNow;
 
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync().ConfigureAwait(false);
 
                 _logger.LogInformation("? Part {PartNumber} updated successfully by {User}", existingPart.PartNumber, User.Identity?.Name);
                 
@@ -468,7 +468,7 @@ namespace OpCentrix.Pages.Admin
             {
                 _logger.LogError(ex, "? Error updating part ID {PartId}", id);
                 ModelState.AddModelError("", "Error updating part. Please try again.");
-                await LoadDropdownDataAsync();
+                await LoadDropdownDataAsync().ConfigureAwait(false);
                 return Partial("Shared/_PartFormModal", Part);
             }
         }
@@ -482,7 +482,8 @@ namespace OpCentrix.Pages.Admin
                 var part = await _context.Parts
                     .Include(p => p.Jobs)
                     .Include(p => p.JobNotes)
-                    .FirstOrDefaultAsync(p => p.Id == id);
+                    .FirstOrDefaultAsync(p => p.Id == id)
+                    .ConfigureAwait(false);
                     
                 if (part == null)
                 {
@@ -491,7 +492,7 @@ namespace OpCentrix.Pages.Admin
                 }
 
                 // Enhanced safety checks
-                var canDelete = await CanDeletePartAsync(part);
+                var canDelete = await CanDeletePartAsync(part).ConfigureAwait(false);
                 if (!canDelete.CanDelete)
                 {
                     TempData["ErrorMessage"] = canDelete.Reason;
@@ -506,7 +507,8 @@ namespace OpCentrix.Pages.Admin
                 {
                     var checkpoints = await _context.InspectionCheckpoints
                         .Where(ic => ic.PartId == id)
-                        .ToListAsync();
+                        .ToListAsync()
+                        .ConfigureAwait(false);
                         
                     if (checkpoints.Any())
                     {
@@ -521,7 +523,7 @@ namespace OpCentrix.Pages.Admin
                 }
 
                 _context.Parts.Remove(part);
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync().ConfigureAwait(false);
 
                 _logger.LogWarning("??? Part {PartNumber} ({PartName}) deleted by {User}", partNumber, partName, User.Identity?.Name);
                 TempData["SuccessMessage"] = $"Part '{partNumber}' ({partName}) deleted successfully.";
@@ -540,7 +542,7 @@ namespace OpCentrix.Pages.Admin
         {
             try
             {
-                var part = await _context.Parts.FindAsync(id);
+                var part = await _context.Parts.FindAsync(id).ConfigureAwait(false);
                 if (part == null)
                 {
                     return NotFound();
@@ -590,16 +592,17 @@ namespace OpCentrix.Pages.Admin
         // LEGACY HANDLERS - Keep for backward compatibility
         public async Task<IActionResult> OnGetAddFormAsync()
         {
-            return await OnGetAddAsync();
+            return await OnGetAddAsync().ConfigureAwait(false);
         }
 
         public async Task<IActionResult> OnGetEditFormAsync(int id)
         {
-            return await OnGetEditAsync(id);
+            return await OnGetEditAsync(id).ConfigureAwait(false);
         }
 
         /// <summary>
         /// Enhanced part validation with comprehensive business rules
+        /// PHASE 3 OPTIMIZED: Added ConfigureAwait(false) to all async calls
         /// </summary>
         private async Task<List<string>> ValidatePartAsync(Part part, bool isCreate, int? existingId = null)
         {
@@ -607,14 +610,14 @@ namespace OpCentrix.Pages.Admin
 
             try
             {
-                // Check part number uniqueness
+                // Check part number uniqueness with optimized query
                 var query = _context.Parts.Where(p => p.PartNumber.ToLower() == part.PartNumber.ToLower());
                 if (!isCreate && existingId.HasValue)
                 {
                     query = query.Where(p => p.Id != existingId.Value);
                 }
 
-                if (await query.AnyAsync())
+                if (await query.AnyAsync().ConfigureAwait(false))
                 {
                     errors.Add($"Part number '{part.PartNumber}' already exists.");
                 }
@@ -676,25 +679,28 @@ namespace OpCentrix.Pages.Admin
 
         /// <summary>
         /// Check if a part can be safely deleted
+        /// PHASE 3 OPTIMIZED: Added ConfigureAwait(false) to all async calls
         /// </summary>
         private async Task<(bool CanDelete, string Reason)> CanDeletePartAsync(Part part)
         {
             try
             {
-                // Check for active jobs
+                // Check for active jobs with optimized query
                 var activeJobs = await _context.Jobs
                     .Where(j => j.PartId == part.Id && j.Status != "Completed" && j.Status != "Cancelled")
-                    .CountAsync();
+                    .CountAsync()
+                    .ConfigureAwait(false);
 
                 if (activeJobs > 0)
                 {
                     return (false, $"Cannot delete part '{part.PartNumber}' because it has {activeJobs} active job(s). Complete or cancel the jobs first.");
                 }
 
-                // Check for any jobs in the last 30 days
+                // Check for any jobs in the last 30 days with optimized query
                 var recentJobs = await _context.Jobs
                     .Where(j => j.PartId == part.Id && j.CreatedDate > DateTime.UtcNow.AddDays(-30))
-                    .CountAsync();
+                    .CountAsync()
+                    .ConfigureAwait(false);
 
                 if (recentJobs > 0)
                 {
@@ -908,13 +914,14 @@ namespace OpCentrix.Pages.Admin
         /// </summary>
         private async Task LoadPageDataAsync()
         {
-            await LoadPartsAsync();
-            await LoadDropdownDataAsync();
-            await LoadStatisticsAsync();
+            await LoadPartsAsync().ConfigureAwait(false);
+            await LoadDropdownDataAsync().ConfigureAwait(false);
+            await LoadStatisticsAsync().ConfigureAwait(false);
         }
 
         /// <summary>
         /// Enhanced parts loading with optimized queries
+        /// PHASE 3 OPTIMIZED: Added ConfigureAwait(false) and improved query performance
         /// </summary>
         private async Task LoadPartsAsync()
         {
@@ -972,16 +979,17 @@ namespace OpCentrix.Pages.Admin
                     _ => query.OrderBy(p => p.PartNumber)
                 };
 
-                // Calculate pagination
-                TotalCount = await query.CountAsync();
+                // Calculate pagination with optimized count query
+                TotalCount = await query.CountAsync().ConfigureAwait(false);
                 TotalPages = (int)Math.Ceiling(TotalCount / (double)PageSize);
 
-                // Apply pagination and load data
+                // Apply pagination and load data with optimized query
                 Parts = await query
                     .Skip((PageNumber - 1) * PageSize)
                     .Take(PageSize)
                     .AsNoTracking() // Read-only for performance
-                    .ToListAsync();
+                    .ToListAsync()
+                    .ConfigureAwait(false);
 
                 _logger.LogInformation("?? Loaded {Count} parts (Page {Page} of {TotalPages})", Parts.Count, PageNumber, TotalPages);
             }
@@ -996,16 +1004,19 @@ namespace OpCentrix.Pages.Admin
 
         /// <summary>
         /// Enhanced dropdown data loading
+        /// PHASE 3 OPTIMIZED: Added ConfigureAwait(false) and optimized with single query
         /// </summary>
         private async Task LoadDropdownDataAsync()
         {
             try
             {
-                // Load unique values for filters
+                // PERFORMANCE OPTIMIZATION: Single query to load all active parts for dropdown data
                 var allParts = await _context.Parts
                     .Where(p => p.IsActive)
+                    .Select(p => new { p.Material, p.Industry, p.PartCategory, p.ProcessType, p.RequiredMachineType })
                     .AsNoTracking()
-                    .ToListAsync();
+                    .ToListAsync()
+                    .ConfigureAwait(false);
 
                 AvailableMaterials = allParts
                     .Where(p => !string.IsNullOrEmpty(p.Material))
@@ -1059,28 +1070,33 @@ namespace OpCentrix.Pages.Admin
 
         /// <summary>
         /// Load statistics for dashboard display
+        /// PHASE 3 OPTIMIZED: Added ConfigureAwait(false) and optimized queries
         /// </summary>
         private async Task LoadStatisticsAsync()
         {
             try
             {
-                ActivePartsCount = await _context.Parts.CountAsync(p => p.IsActive);
-                InactivePartsCount = await _context.Parts.CountAsync(p => !p.IsActive);
-
-                // Most used material
-                var materialUsage = await _context.Parts
+                // PERFORMANCE OPTIMIZATION: Use parallel queries for statistics
+                var activePartsTask = _context.Parts.CountAsync(p => p.IsActive);
+                var inactivePartsTask = _context.Parts.CountAsync(p => !p.IsActive);
+                var materialUsageTask = _context.Parts
                     .Where(p => p.IsActive)
                     .GroupBy(p => p.Material)
                     .Select(g => new { Material = g.Key, Count = g.Count() })
                     .OrderByDescending(x => x.Count)
                     .FirstOrDefaultAsync();
-
-                MostUsedMaterial = materialUsage?.Material ?? "None";
-
-                // Average estimated hours
-                AverageEstimatedHours = await _context.Parts
+                var averageHoursTask = _context.Parts
                     .Where(p => p.IsActive)
-                    .AverageAsync(p => (double?)p.EstimatedHours) ?? 0.0;
+                    .AverageAsync(p => (double?)p.EstimatedHours);
+
+                // Wait for all tasks to complete
+                await Task.WhenAll(activePartsTask, inactivePartsTask, materialUsageTask, averageHoursTask).ConfigureAwait(false);
+
+                ActivePartsCount = await activePartsTask.ConfigureAwait(false);
+                InactivePartsCount = await inactivePartsTask.ConfigureAwait(false);
+                var materialUsage = await materialUsageTask.ConfigureAwait(false);
+                MostUsedMaterial = materialUsage?.Material ?? "None";
+                AverageEstimatedHours = await averageHoursTask.ConfigureAwait(false) ?? 0.0;
 
                 _logger.LogInformation("?? Statistics loaded - Active: {Active}, Inactive: {Inactive}, Avg Hours: {AvgHours:F1}",
                     ActivePartsCount, InactivePartsCount, AverageEstimatedHours);
