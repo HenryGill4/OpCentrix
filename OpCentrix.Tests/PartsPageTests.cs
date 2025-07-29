@@ -537,13 +537,14 @@ namespace OpCentrix.Tests
 
             var part = new Part
             {
+                // CORE REQUIRED FIELDS - All [Required] attributes in Part model
                 PartNumber = "TEST-PART-001",
-                Name = "Test Part Name",
+                Name = "Test Part Name",  // FIXED: Now required in model
                 Description = "Test part description",
                 Material = "Ti-6Al-4V Grade 5",
                 SlsMaterial = "Ti-6Al-4V Grade 5",
-                Industry = "Aerospace",
-                Application = "Test Component",
+                Industry = "Aerospace",  // FIXED: Now required in model
+                Application = "Test Component",  // FIXED: Now required in model
                 PartCategory = "Prototype",
                 PartClass = "B",
                 ProcessType = "SLS Metal",
@@ -559,10 +560,11 @@ namespace OpCentrix.Tests
                 LastModifiedDate = DateTime.UtcNow,
                 CreatedBy = "test",
                 LastModifiedBy = "test",
-                // Ensure all required fields have values
+                
+                // ALL REQUIRED STRING FIELDS from Part model [Required] attributes
                 CustomerPartNumber = "CUST-TEST-PART-001",
-                Dimensions = "200x100x50 mm",
                 PowderSpecification = "15-45 micron particle size",
+                Dimensions = "200x100x50 mm",
                 SurfaceFinishRequirement = "As-built",
                 QualityStandards = "ASTM F3001",
                 ToleranceRequirements = "±0.1mm",
@@ -577,8 +579,55 @@ namespace OpCentrix.Tests
                 CadFilePath = "",
                 CadFileVersion = "",
                 AvgDuration = "8h 0m",
-                AdminOverrideReason = "Standard production part",
-                AdminOverrideBy = "admin"
+                PreferredMachines = "TI1,TI2",
+                AdminOverrideBy = "",  // FIXED: Required field, can be empty
+                
+                // ALL NUMERIC FIELDS - Set to valid defaults
+                PowderRequirementKg = 0.5,
+                RecommendedLaserPower = 200,
+                RecommendedScanSpeed = 1200,
+                RecommendedLayerThickness = 30,
+                RecommendedHatchSpacing = 120,
+                RecommendedBuildTemperature = 180,
+                RequiredArgonPurity = 99.9,
+                MaxOxygenContent = 50,
+                WeightGrams = 100,
+                VolumeMm3 = 30000,
+                HeightMm = 20,
+                LengthMm = 50,
+                WidthMm = 30,
+                MaxSurfaceRoughnessRa = 15,
+                MachineOperatingCostPerHour = 125.00m,
+                ArgonCostPerHour = 15.00m,
+                SetupTimeMinutes = 45,
+                PowderChangeoverTimeMinutes = 30,
+                PreheatingTimeMinutes = 60,
+                CoolingTimeMinutes = 240,
+                PostProcessingTimeMinutes = 45,
+                SupportRemovalTimeMinutes = 0,
+                AverageActualHours = 0,
+                AverageEfficiencyPercent = 100,
+                AverageQualityScore = 100,
+                AverageDefectRate = 0,
+                AveragePowderUtilization = 85,
+                TotalJobsCompleted = 0,
+                TotalUnitsProduced = 0,
+                AverageCostPerUnit = 0,
+                StandardSellingPrice = 0,
+                AvgDurationDays = 1,
+                
+                // BOOLEAN FIELDS - Set to valid defaults
+                RequiresInspection = true,
+                RequiresCertification = false,
+                RequiresSupports = false,
+                RequiresFDA = false,
+                RequiresAS9100 = false,
+                RequiresNADCAP = false,
+                
+                // NULLABLE ADMIN OVERRIDE FIELDS - Leave as null for basic test
+                AdminEstimatedHoursOverride = null,
+                AdminOverrideReason = null,
+                AdminOverrideDate = null
             };
 
             context.Parts.Add(part);
@@ -591,14 +640,14 @@ namespace OpCentrix.Tests
         {
             return new List<KeyValuePair<string, string>>
             {
-                // CORE REQUIRED FIELDS ONLY - Based on database schema NOT NULL constraints
+                // CORE REQUIRED FIELDS - Based on [Required] attributes in Part model
                 new("PartNumber", partNumber),
-                new("Name", "Test Create Part"),
+                new("Name", "Test Create Part"),  // FIXED: Now required in model
                 new("Description", "Test part description for validation"),
                 new("Material", "Ti-6Al-4V Grade 5"),
                 new("SlsMaterial", "Ti-6Al-4V Grade 5"),
-                new("Industry", "Aerospace"),
-                new("Application", "Test Component"),
+                new("Industry", "Aerospace"),  // FIXED: Now required in model
+                new("Application", "Test Component"),  // FIXED: Now required in model
                 new("PartCategory", "Prototype"),
                 new("PartClass", "B"),
                 new("ProcessType", "SLS Metal"),
@@ -606,7 +655,7 @@ namespace OpCentrix.Tests
                 new("IsActive", "true"),
                 new("EstimatedHours", "8.0"),
                 
-                // REQUIRED STRING FIELDS (NOT NULL in schema)
+                // ALL REQUIRED STRING FIELDS from Part model [Required] attributes
                 new("CustomerPartNumber", "CUST-" + partNumber),
                 new("PowderSpecification", "15-45 micron particle size"),
                 new("Dimensions", "50x30x20mm"),
@@ -626,7 +675,12 @@ namespace OpCentrix.Tests
                 new("AvgDuration", "8h 0m"),
                 new("PreferredMachines", "TI1,TI2"),
                 
-                // REQUIRED NUMERIC FIELDS (NOT NULL in schema) - ALL SET TO MINIMUM VALID VALUES
+                // AUDIT TRAIL REQUIRED FIELDS from Part model [Required] attributes
+                new("CreatedBy", "test-user"),
+                new("LastModifiedBy", "test-user"),
+                new("AdminOverrideBy", ""),  // FIXED: Required field, but can be empty string
+                
+                // ALL NUMERIC FIELDS (NOT NULL in database) - Set to valid values
                 new("PowderRequirementKg", "0.5"),
                 new("RecommendedLaserPower", "200"),
                 new("RecommendedScanSpeed", "1200"),
@@ -653,7 +707,7 @@ namespace OpCentrix.Tests
                 new("PreheatingTimeMinutes", "60"),
                 new("CoolingTimeMinutes", "240"),
                 new("PostProcessingTimeMinutes", "45"),
-                new("SupportRemovalTimeMinutes", "30"),
+                new("SupportRemovalTimeMinutes", "0"),
                 new("AverageActualHours", "0"),
                 new("AverageEfficiencyPercent", "100"),
                 new("AverageQualityScore", "100"),
@@ -665,17 +719,21 @@ namespace OpCentrix.Tests
                 new("StandardSellingPrice", "0"),
                 new("AvgDurationDays", "1"),
                 
-                // BOOLEAN FIELDS (NOT NULL in schema)
+                // BOOLEAN FIELDS (NOT NULL in database)
                 new("RequiresInspection", "true"),
                 new("RequiresCertification", "false"),
                 new("RequiresSupports", "false"),
                 new("RequiresFDA", "false"),
                 new("RequiresAS9100", "false"),
-                new("RequiresNADCAP", "false")
+                new("RequiresNADCAP", "false"),
                 
-                // REMOVED: Admin override fields that trigger conditional validation
-                // Do NOT include AdminEstimatedHoursOverride or AdminOverrideReason
-                // These will be tested separately in the admin override test
+                // DATE FIELDS - Let controller handle these with defaults
+                // CreatedDate and LastModifiedDate will be set by controller
+                
+                // ADMIN OVERRIDE FIELDS - Do NOT include these in basic tests
+                // AdminEstimatedHoursOverride is nullable and should not be included
+                // AdminOverrideReason is nullable and should not be included
+                // AdminOverrideDate is nullable and should not be included
             };
         }
 
