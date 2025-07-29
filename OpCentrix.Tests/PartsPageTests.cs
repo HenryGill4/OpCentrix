@@ -793,31 +793,30 @@ namespace OpCentrix.Tests
                 new("IsActive", "true"),
                 new("EstimatedHours", "8.0"),
                 
-                // ALL REQUIRED STRING FIELDS from Part model [Required] attributes
+                // ALL REQUIRED STRING FIELDS from Part model [Required] attributes - FIXED
                 new("CustomerPartNumber", "CUST-" + partNumber),
-                new("PowderSpecification", "15-45 micron particle size"),
-                new("Dimensions", "50x30x20mm"),
-                new("SurfaceFinishRequirement", "As-built"),
-                new("QualityStandards", "ASTM F3001, ISO 17296"),
-                new("ToleranceRequirements", "±0.1mm typical"),
-                new("RequiredSkills", "SLS Operation,Powder Handling"),
-                new("RequiredCertifications", "SLS Operation Certification"),
-                new("RequiredTooling", "Build Platform,Powder Sieve"),
-                new("ConsumableMaterials", "Argon Gas,Build Platform Coating"),
-                new("SupportStrategy", "Minimal supports on overhangs > 45°"),
-                new("ProcessParameters", "{}"),
-                new("QualityCheckpoints", "{}"),
-                new("BuildFileTemplate", ""),
-                new("CadFilePath", ""),
-                new("CadFileVersion", ""),
-                new("AvgDuration", "8h 0m"),
-                new("PreferredMachines", "TI1,TI2"),
+                new("PowderSpecification", "15-45 micron particle size"),  // [Required]
+                new("Dimensions", "50x30x20mm"),  // [Required]
+                new("SurfaceFinishRequirement", "As-built"),  // [Required]
+                new("QualityStandards", "ASTM F3001, ISO 17296"),  // [Required]
+                new("ToleranceRequirements", "±0.1mm typical"),  // [Required]
+                new("RequiredSkills", "SLS Operation,Powder Handling"),  // [Required]
+                new("RequiredCertifications", "SLS Operation Certification"),  // [Required]
+                new("RequiredTooling", "Build Platform,Powder Sieve"),  // [Required]
+                new("ConsumableMaterials", "Argon Gas,Build Platform Coating"),  // [Required]
+                new("SupportStrategy", "Minimal supports on overhangs > 45°"),  // [Required]
+                new("ProcessParameters", "{}"),  // [Required]
+                new("QualityCheckpoints", "{}"),  // [Required]
+                new("BuildFileTemplate", ""),  // [Required]
+                new("CadFilePath", ""),  // [Required]
+                new("CadFileVersion", ""),  // [Required]
+                new("AvgDuration", "8h 0m"),  // [Required]
+                new("PreferredMachines", "TI1,TI2"),  // [Required]
                 
                 // AUDIT TRAIL REQUIRED FIELDS from Part model [Required] attributes
-                new("CreatedBy", "test-user"),
-                new("LastModifiedBy", "test-user"),
-                // FIXED: Set AdminOverrideBy to a valid value since it's [Required] in model
-                new("AdminOverrideBy", "test-user"),  // This is [Required] in the Part model!
+                new("CreatedBy", "test-user"),  // [Required]
+                new("LastModifiedBy", "test-user"),  // [Required]
+                new("AdminOverrideBy", "test-user"),  // [Required] - This was the likely culprit!
                 
                 // ALL NUMERIC FIELDS (NOT NULL in database) - Set to valid values
                 new("PowderRequirementKg", "0.5"),
