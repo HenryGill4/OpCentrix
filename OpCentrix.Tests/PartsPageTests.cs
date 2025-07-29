@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using OpCentrix.Data;
 using OpCentrix.Models;
+using System.ComponentModel.DataAnnotations;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -631,7 +632,16 @@ namespace OpCentrix.Tests
             // Assert
             response.EnsureSuccessStatusCode();
             
-            _output.WriteLine($"? Create part with {material} material saves correctly");
+            // Verify part was created with correct material
+            using var scope = _factory.Services.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<SchedulerContext>();
+            var createdPart = await context.Parts.FirstOrDefaultAsync(p => p.PartNumber == formData[0].Value);
+            
+            Assert.NotNull(createdPart);
+            Assert.Equal(material, createdPart.Material);
+            Assert.Equal(material, createdPart.SlsMaterial);
+            
+            _output.WriteLine($"? Create part with material '{material}' saves correctly");
         }
 
         #region Helper Methods
@@ -708,7 +718,7 @@ namespace OpCentrix.Tests
                 CadFileVersion = "",
                 AvgDuration = "8h 0m",
                 PreferredMachines = "TI1,TI2",
-                AdminOverrideBy = "test",  // FIXED: Set to a valid value
+                AdminOverrideBy = "",  // FIXED: Required field, can be empty
                 
                 // ALL NUMERIC FIELDS - Set to valid defaults
                 PowderRequirementKg = 0.5,
@@ -806,7 +816,7 @@ namespace OpCentrix.Tests
                 // AUDIT TRAIL REQUIRED FIELDS from Part model [Required] attributes
                 new("CreatedBy", "test-user"),
                 new("LastModifiedBy", "test-user"),
-                // FIXED: Set AdminOverrideBy to a valid value instead of empty string since it's [Required] in model
+                // FIXED: Set AdminOverrideBy to a valid value since it's [Required] in model
                 new("AdminOverrideBy", "test-user"),  // This is [Required] in the Part model!
                 
                 // ALL NUMERIC FIELDS (NOT NULL in database) - Set to valid values
@@ -855,11 +865,6 @@ namespace OpCentrix.Tests
                 new("RequiresFDA", "false"),
                 new("RequiresAS9100", "false"),
                 new("RequiresNADCAP", "false")
-                
-                // ADMIN OVERRIDE FIELDS - Do NOT include these in basic tests
-                // AdminEstimatedHoursOverride is nullable and should not be included
-                // AdminOverrideReason is nullable and should not be included
-                // AdminOverrideDate is nullable and should not be included
             };
         }
 
@@ -874,87 +879,6 @@ namespace OpCentrix.Tests
             return html.Substring(valueStart, valueEnd - valueStart);
         }
 
-        [Fact]
-        public async Task CreatePart_WithMinimalValidData_DebugsValidationIssues()
-        {
-            // Arrange
-            await AuthenticateAsAdminAsync();
-            
-            // Create a very minimal part that should definitely pass validation
-            using var scope = _factory.Services.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<SchedulerContext>();
-            
-            var minimalPart = new Part
-            {
-                // Only the absolute minimum required fields
-                PartNumber = "DEBUG-001",
-                Name = "Debug Part",
-                Description = "Debug test part",
-                Material = "Ti-6Al-4V Grade 5",
-                SlsMaterial = "Ti-6Al-4V Grade 5",
-                Industry = "General",
-                Application = "General Component",
-                PartCategory = "Prototype",
-                PartClass = "B",
-                ProcessType = "SLS Metal",
-                RequiredMachineType = "TruPrint 3000",
-                CustomerPartNumber = "CUST-DEBUG-001",
-                PowderSpecification = "15-45 micron particle size",
-                Dimensions = "50x30x20mm",
-                SurfaceFinishRequirement = "As-built",
-                QualityStandards = "ASTM F3001",
-                ToleranceRequirements = "±0.1mm",
-                RequiredSkills = "SLS Operation",
-                RequiredCertifications = "SLS Certification",
-                RequiredTooling = "Build Platform",
-                ConsumableMaterials = "Argon Gas",
-                SupportStrategy = "Minimal supports",
-                ProcessParameters = "{}",
-                QualityCheckpoints = "{}",
-                BuildFileTemplate = "",
-                CadFilePath = "",
-                CadFileVersion = "",
-                AvgDuration = "8h 0m",
-                PreferredMachines = "TI1,TI2",
-                CreatedBy = "test-user",
-                LastModifiedBy = "test-user",
-                AdminOverrideBy = "test-user",
-                IsActive = true,
-                EstimatedHours = 8.0,
-                CreatedDate = DateTime.UtcNow,
-                LastModifiedDate = DateTime.UtcNow,
-                AvgDurationDays = 1
-            };
-
-            try
-            {
-                // Try to save directly to database to see if there are any database constraint issues
-                context.Parts.Add(minimalPart);
-                await context.SaveChangesAsync();
-                
-                _output.WriteLine("? SUCCESS: Minimal part saved directly to database");
-                
-                // If this works, the issue is in the form binding/validation, not the database
-                var savedPart = await context.Parts.FirstOrDefaultAsync(p => p.PartNumber == "DEBUG-001");
-                Assert.NotNull(savedPart);
-                
-                // Clean up
-                context.Parts.Remove(savedPart);
-                await context.SaveChangesAsync();
-                
-            }
-            catch (Exception ex)
-            {
-                _output.WriteLine($"? FAILED: Direct database save failed: {ex.Message}");
-                if (ex.InnerException != null)
-                {
-                    _output.WriteLine($"   Inner Exception: {ex.InnerException.Message}");
-                }
-                
-                // This will help us identify database constraint issues
-                Assert.Fail($"Direct database save failed: {ex.Message}");
-            }
-        }
         #endregion
     }
 }
