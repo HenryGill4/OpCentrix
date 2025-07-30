@@ -6,194 +6,86 @@
     Layout = "~/Pages/Admin/Shared/_AdminLayout.cshtml";
 }
 
-<!-- Modern CSS for the Parts page -->
-<style>
-    .part-card { 
-        transition: transform 0.2s, box-shadow 0.2s; 
-        border: 1px solid #e2e8f0;
-        border-radius: 0.5rem;
-    }
-    .part-card:hover { 
-        transform: translateY(-2px); 
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
-    }
-    .badge { 
-        font-size: 0.75rem; 
-        font-weight: 500;
-    }
-    .table-responsive { 
-        border-radius: 0.5rem; 
-        overflow: hidden; 
-    }
-    .admin-override { 
-        background: linear-gradient(135deg, #fff5e6 0%, #ffe4b8 100%); 
-        border-left: 4px solid #f59e0b; 
-    }
-    .stats-card {
-        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-        border: 1px solid #cbd5e1;
-        border-radius: 0.5rem;
-        transition: all 0.2s ease;
-    }
-    .stats-card:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    .btn-group .btn {
-        border: 1px solid;
-        font-size: 0.875rem;
-    }
-    .search-box {
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 0.5rem;
-    }
-    .filter-section {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 0.5rem;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    
-    /* Enhanced button styling */
-    .btn-primary {
-        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-        border: none;
-        font-weight: 600;
-        transition: all 0.2s ease;
-        box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
-    }
-    
-    .btn-primary:hover {
-        background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(59, 130, 246, 0.4);
-    }
-    
-    .btn-success {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        border: none;
-        font-weight: 600;
-        transition: all 0.2s ease;
-        box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
-    }
-    
-    .btn-success:hover {
-        background: linear-gradient(135deg, #059669 0%, #047857 100%);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(16, 185, 129, 0.4);
-    }
-    
-    .btn-outline-danger:hover {
-        background: #dc3545;
-        transform: translateY(-1px);
-    }
-    
-    /* Toast notification styles */
-    .toast-container {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 1060;
-    }
-    
-    .toast {
-        min-width: 300px;
-        background: white;
-        border: none;
-        border-radius: 0.5rem;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-    
-    .toast-success {
-        border-left: 4px solid #10b981;
-    }
-    
-    .toast-error {
-        border-left: 4px solid #ef4444;
-    }
-</style>
-
 <div class="container-fluid">
-    <!-- Header Section -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <div>
-                    <h1 class="h3 mb-1 text-gray-900">
-                        <i class="fas fa-cogs text-primary me-2"></i>
-                        Parts Management
-                    </h1>
-                    <p class="text-muted mb-0">SLS Manufacturing Parts & Specifications</p>
-                </div>
-                <div class="d-flex gap-2">
-                    <button type="button" 
-                            class="btn btn-primary" 
-                            onclick="loadPartForm('add')"
-                            data-bs-toggle="tooltip" 
-                            title="Add New Part">
-                        <i class="fas fa-plus me-2"></i>Add New Part
-                    </button>
-                    <button type="button" 
-                            class="btn btn-outline-secondary" 
-                            onclick="window.location.reload()" 
-                            data-bs-toggle="tooltip" 
-                            title="Refresh">
-                        <i class="fas fa-sync-alt"></i>
-                    </button>
+    <!-- Enhanced Header Section -->
+    <div class="parts-page-header">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h1 class="parts-page-title">
+                    <i class="fas fa-cogs text-primary"></i>
+                    Parts Management
+                </h1>
+                <p class="parts-page-subtitle">SLS Manufacturing Parts & Specifications</p>
+            </div>
+            <div class="d-flex gap-3">
+                <button type="button" 
+                        class="btn btn-primary btn-lg" 
+                        onclick="loadPartForm('add')"
+                        data-bs-toggle="tooltip" 
+                        title="Add New Part">
+                    <i class="fas fa-plus me-2"></i>Add New Part
+                </button>
+                <button type="button" 
+                        class="btn btn-outline-secondary" 
+                        onclick="window.location.reload()" 
+                        data-bs-toggle="tooltip" 
+                        title="Refresh Parts List">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Enhanced Statistics Cards -->
+        <div class="row g-4">
+            <div class="col-md-3">
+                <div class="card parts-stats-card active-parts border-0">
+                    <div class="card-body text-center">
+                        <div class="parts-stats-number text-success">@Model.ActivePartsCount</div>
+                        <div class="parts-stats-label">Active Parts</div>
+                    </div>
                 </div>
             </div>
-
-            <!-- Statistics Cards -->
-            <div class="row mb-4">
-                <div class="col-md-3">
-                    <div class="card stats-card border-0">
-                        <div class="card-body text-center py-3">
-                            <div class="h4 text-success mb-1">@Model.ActivePartsCount</div>
-                            <div class="small text-muted">Active Parts</div>
-                        </div>
+            <div class="col-md-3">
+                <div class="card parts-stats-card inactive-parts border-0">
+                    <div class="card-body text-center">
+                        <div class="parts-stats-number">@Model.InactivePartsCount</div>
+                        <div class="parts-stats-label">Inactive Parts</div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="card stats-card border-0">
-                        <div class="card-body text-center py-3">
-                            <div class="h4 text-secondary mb-1">@Model.InactivePartsCount</div>
-                            <div class="small text-muted">Inactive Parts</div>
-                        </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card parts-stats-card top-material border-0">
+                    <div class="card-body text-center">
+                        <div class="parts-stats-number">@Model.MostUsedMaterial</div>
+                        <div class="parts-stats-label">Top Material</div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="card stats-card border-0">
-                        <div class="card-body text-center py-3">
-                            <div class="h4 text-primary mb-1">@Model.MostUsedMaterial</div>
-                            <div class="small text-muted">Top Material</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card stats-card border-0">
-                        <div class="card-body text-center py-3">
-                            <div class="h4 text-info mb-1">@Model.AverageEstimatedHours.ToString("F1")h</div>
-                            <div class="small text-muted">Avg Duration</div>
-                        </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card parts-stats-card avg-duration border-0">
+                    <div class="card-body text-center">
+                        <div class="parts-stats-number">@Model.AverageEstimatedHours.ToString("F1")h</div>
+                        <div class="parts-stats-label">Avg Duration</div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Filters Section -->
-    <div class="card filter-section mb-4">
-        <div class="card-header bg-light border-bottom">
-            <h6 class="card-title mb-0">
-                <i class="fas fa-filter text-primary me-2"></i>
+    <!-- Enhanced Filters Section -->
+    <div class="card parts-filter-section mb-4">
+        <div class="card-header parts-filter-header">
+            <h6 class="parts-filter-title">
+                <i class="fas fa-filter text-primary"></i>
                 Filters & Search
             </h6>
         </div>
         <div class="card-body">
             <form method="get" class="row g-3" id="filterForm">
                 <div class="col-md-4">
-                    <label for="SearchTerm" class="form-label">Search</label>
+                    <label for="SearchTerm" class="form-label">
+                        <i class="fas fa-search me-1"></i>Search
+                    </label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="fas fa-search"></i></span>
                         <input asp-for="SearchTerm" 
@@ -202,7 +94,9 @@
                     </div>
                 </div>
                 <div class="col-md-2">
-                    <label for="MaterialFilter" class="form-label">Material</label>
+                    <label for="MaterialFilter" class="form-label">
+                        <i class="fas fa-flask me-1"></i>Material
+                    </label>
                     <select asp-for="MaterialFilter" class="form-select">
                         <option value="">All Materials</option>
                         @foreach (var material in Model.AvailableMaterials)
@@ -212,7 +106,9 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label for="IndustryFilter" class="form-label">Industry</label>
+                    <label for="IndustryFilter" class="form-label">
+                        <i class="fas fa-industry me-1"></i>Industry
+                    </label>
                     <select asp-for="IndustryFilter" class="form-select">
                         <option value="">All Industries</option>
                         @foreach (var industry in Model.AvailableIndustries)
@@ -222,7 +118,9 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label for="CategoryFilter" class="form-label">Category</label>
+                    <label for="CategoryFilter" class="form-label">
+                        <i class="fas fa-tags me-1"></i>Category
+                    </label>
                     <select asp-for="CategoryFilter" class="form-select">
                         <option value="">All Categories</option>
                         @foreach (var category in Model.AvailableCategories)
@@ -232,7 +130,9 @@
                     </select>
                 </div>
                 <div class="col-md-1">
-                    <label class="form-label">Status</label>
+                    <label class="form-label">
+                        <i class="fas fa-toggle-on me-1"></i>Status
+                    </label>
                     <div class="form-check">
                         <input asp-for="ActiveOnly" class="form-check-input" type="checkbox" />
                         <label asp-for="ActiveOnly" class="form-check-label">Active Only</label>
@@ -242,28 +142,35 @@
                     <label class="form-label d-block">&nbsp;</label>
                     <button type="submit" class="btn btn-primary w-100">
                         <i class="fas fa-filter"></i>
+                        <span class="d-none d-lg-inline ms-1">Apply</span>
                     </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Parts Table -->
-    <div class="card border-0 shadow-sm">
+    <!-- Enhanced Parts Table -->
+    <div class="card parts-card border-0">
         <div class="card-header bg-white border-bottom">
             <div class="d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">
-                    <i class="fas fa-list text-primary me-2"></i>
-                    Parts (@Model.TotalCount total)
+                <h5 class="parts-card-title">
+                    <i class="fas fa-list text-primary"></i>
+                    Parts Library
+                    <span class="badge bg-secondary ms-2">@Model.TotalCount total</span>
                 </h5>
-                <div class="d-flex gap-2 align-items-center">
-                    <span class="text-muted small">Page @Model.PageNumber of @Model.TotalPages</span>
-                    <select class="form-select form-select-sm" style="width: auto;" onchange="changePageSize(this.value)">
-                        <option value="10" selected="@(Model.PageSize == 10)">10 per page</option>
-                        <option value="20" selected="@(Model.PageSize == 20)">20 per page</option>
-                        <option value="50" selected="@(Model.PageSize == 50)">50 per page</option>
-                        <option value="100" selected="@(Model.PageSize == 100)">100 per page</option>
-                    </select>
+                <div class="d-flex gap-3 align-items-center">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-muted small">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Page @Model.PageNumber of @Model.TotalPages
+                        </span>
+                        <select class="form-select form-select-sm" style="width: auto;" onchange="changePageSize(this.value)">
+                            <option value="10" selected="@(Model.PageSize == 10)">10 per page</option>
+                            <option value="20" selected="@(Model.PageSize == 20)">20 per page</option>
+                            <option value="50" selected="@(Model.PageSize == 50)">50 per page</option>
+                            <option value="100" selected="@(Model.PageSize == 100)">100 per page</option>
+                        </select>
+                    </div>
                 </div>
             </div>
         </div>
@@ -271,47 +178,63 @@
             @if (Model.Parts.Any())
             {
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0">
+                    <table class="table parts-table table-hover mb-0">
                         <thead class="table-light">
                             <tr>
                                 <th>
                                     <a href="?SortBy=PartNumber&SortDirection=@Model.GetSortDirection("PartNumber")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
-                                       class="text-decoration-none text-dark">
+                                       class="text-decoration-none">
+                                        <i class="fas fa-hashtag me-1"></i>
                                         Part Number @Model.GetSortIcon("PartNumber")
                                     </a>
                                 </th>
                                 <th>
                                     <a href="?SortBy=Name&SortDirection=@Model.GetSortDirection("Name")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
-                                       class="text-decoration-none text-dark">
+                                       class="text-decoration-none">
+                                        <i class="fas fa-tag me-1"></i>
                                         Name @Model.GetSortIcon("Name")
                                     </a>
                                 </th>
                                 <th>
                                     <a href="?SortBy=Material&SortDirection=@Model.GetSortDirection("Material")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
-                                       class="text-decoration-none text-dark">
+                                       class="text-decoration-none">
+                                        <i class="fas fa-flask me-1"></i>
                                         Material @Model.GetSortIcon("Material")
                                     </a>
                                 </th>
-                                <th>Industry</th>
+                                <th>
+                                    <i class="fas fa-industry me-1"></i>
+                                    Industry
+                                </th>
                                 <th>
                                     <a href="?SortBy=Hours&SortDirection=@Model.GetSortDirection("Hours")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
-                                       class="text-decoration-none text-dark">
+                                       class="text-decoration-none">
+                                        <i class="fas fa-clock me-1"></i>
                                         Duration @Model.GetSortIcon("Hours")
                                     </a>
                                 </th>
-                                <th>Status</th>
-                                <th width="180">Actions</th>
+                                <th>
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Status
+                                </th>
+                                <th width="200">
+                                    <i class="fas fa-cog me-1"></i>
+                                    Actions
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var part in Model.Parts)
                             {
-                                <tr class="@(part.HasAdminOverride ? "admin-override" : "")">
+                                <tr class="@(part.HasAdminOverride ? "parts-admin-override" : "")">
                                     <td>
-                                        <div class="fw-bold">@part.PartNumber</div>
+                                        <div class="fw-bold text-primary">@part.PartNumber</div>
                                         @if (!string.IsNullOrEmpty(part.CustomerPartNumber))
                                         {
-                                            <div class="small text-muted">Customer: @part.CustomerPartNumber</div>
+                                            <div class="small text-muted">
+                                                <i class="fas fa-external-link-alt me-1"></i>
+                                                Customer: @part.CustomerPartNumber
+                                            </div>
                                         }
                                     </td>
                                     <td>
@@ -326,54 +249,86 @@
                                         }
                                     </td>
                                     <td>
-                                        <span class="badge bg-primary">@part.Material</span>
+                                        <span class="badge parts-badge bg-primary">
+                                            <i class="fas fa-atom me-1"></i>
+                                            @part.Material
+                                        </span>
                                         @if (part.Material != part.SlsMaterial)
                                         {
-                                            <br><span class="badge bg-secondary mt-1">SLS: @part.SlsMaterial</span>
+                                            <br><span class="badge parts-badge bg-secondary mt-1">
+                                                <i class="fas fa-cogs me-1"></i>
+                                                SLS: @part.SlsMaterial
+                                            </span>
                                         }
                                     </td>
                                     <td>
-                                        <span class="badge bg-info">@part.Industry</span>
-                                        <div class="small text-muted mt-1">@part.Application</div>
+                                        <span class="badge parts-badge bg-info">
+                                            <i class="fas fa-building me-1"></i>
+                                            @part.Industry
+                                        </span>
+                                        <div class="small text-muted mt-1">
+                                            <i class="fas fa-wrench me-1"></i>
+                                            @part.Application
+                                        </div>
                                     </td>
                                     <td>
                                         @if (part.HasAdminOverride)
                                         {
                                             <div class="fw-bold text-warning">
-                                                <i class="fas fa-user-cog me-1"></i>
+                                                <i class="fas fa-user-shield me-1"></i>
                                                 @(part.AdminEstimatedHoursOverride?.ToString("F1") ?? "0.0")h
+                                                <span class="badge bg-warning text-dark ms-1">OVERRIDE</span>
                                             </div>
                                             <div class="small text-muted">
+                                                <i class="fas fa-clock me-1"></i>
                                                 Standard: @part.EstimatedHours.ToString("F1")h
                                             </div>
                                         }
                                         else
                                         {
-                                            <div>@part.EstimatedHours.ToString("F1")h</div>
+                                            <div class="fw-semibold">
+                                                <i class="fas fa-clock me-1"></i>
+                                                @part.EstimatedHours.ToString("F1")h
+                                            </div>
                                         }
                                     </td>
                                     <td>
-                                        <span class="badge @Model.GetStatusBadgeClass(part.IsActive)">
-                                            @(part.IsActive ? "Active" : "Inactive")
-                                        </span>
-                                        <span class="badge @Model.GetPriorityBadgeClass(part.PartClass) ms-1">
-                                            Class @part.PartClass
-                                        </span>
-                                        @if (part.RequiresFDA)
+                                        <div class="d-flex flex-wrap gap-1">
+                                            <span class="badge parts-badge @Model.GetStatusBadgeClass(part.IsActive)">
+                                                <i class="fas fa-@(part.IsActive ? "check-circle" : "pause-circle") me-1"></i>
+                                                @(part.IsActive ? "Active" : "Inactive")
+                                            </span>
+                                            <span class="badge parts-badge @Model.GetPriorityBadgeClass(part.PartClass)">
+                                                <i class="fas fa-star me-1"></i>
+                                                Class @part.PartClass
+                                            </span>
+                                        </div>
+                                        @if (part.RequiresFDA || part.RequiresAS9100 || part.RequiresNADCAP)
                                         {
-                                            <br><span class="badge bg-danger mt-1">FDA</span>
-                                        }
-                                        @if (part.RequiresAS9100)
-                                        {
-                                            <span class="badge bg-danger mt-1">AS9100</span>
-                                        }
-                                        @if (part.RequiresNADCAP)
-                                        {
-                                            <span class="badge bg-danger mt-1">NADCAP</span>
+                                            <div class="mt-1 d-flex flex-wrap gap-1">
+                                                @if (part.RequiresFDA)
+                                                {
+                                                    <span class="badge parts-badge bg-danger">
+                                                        <i class="fas fa-shield-alt me-1"></i>FDA
+                                                    </span>
+                                                }
+                                                @if (part.RequiresAS9100)
+                                                {
+                                                    <span class="badge parts-badge bg-danger">
+                                                        <i class="fas fa-certificate me-1"></i>AS9100
+                                                    </span>
+                                                }
+                                                @if (part.RequiresNADCAP)
+                                                {
+                                                    <span class="badge parts-badge bg-danger">
+                                                        <i class="fas fa-award me-1"></i>NADCAP
+                                                    </span>
+                                                }
+                                            </div>
                                         }
                                     </td>
                                     <td>
-                                        <div class="btn-group btn-group-sm d-flex flex-wrap gap-1" role="group">
+                                        <div class="btn-group parts-btn-group btn-group-sm d-flex flex-wrap gap-1" role="group">
                                             <!-- Schedule Job button -->
                                             <form method="post" asp-page-handler="ScheduleJob" class="d-inline">
                                                 <input type="hidden" name="partId" value="@part.Id" />
@@ -413,52 +368,61 @@
                     </table>
                 </div>
 
-                <!-- Pagination -->
+                <!-- Enhanced Pagination -->
                 @if (Model.TotalPages > 1)
                 {
-                    <div class="card-footer bg-white">
-                        <nav aria-label="Parts pagination">
-                            <ul class="pagination pagination-sm justify-content-center mb-0">
-                                @if (Model.PageNumber > 1)
-                                {
-                                    <li class="page-item">
-                                        <a class="page-link" href="?PageNumber=@(Model.PageNumber - 1)&SortBy=@Model.SortBy&SortDirection=@Model.SortDirection&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ActiveOnly=@Model.ActiveOnly">Previous</a>
-                                    </li>
-                                }
+                    <div class="card-footer bg-white border-top">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <nav aria-label="Parts pagination">
+                                    <ul class="pagination pagination-sm mb-0">
+                                        @if (Model.PageNumber > 1)
+                                        {
+                                            <li class="page-item">
+                                                <a class="page-link" href="?PageNumber=@(Model.PageNumber - 1)&SortBy=@Model.SortBy&SortDirection=@Model.SortDirection&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ActiveOnly=@Model.ActiveOnly">
+                                                    <i class="fas fa-chevron-left me-1"></i>Previous
+                                                </a>
+                                            </li>
+                                        }
 
-                                @for (int i = Math.Max(1, Model.PageNumber - 2); i <= Math.Min(Model.TotalPages, Model.PageNumber + 2); i++)
-                                {
-                                    <li class="page-item @(i == Model.PageNumber ? "active" : "")">
-                                        <a class="page-link" href="?PageNumber=@i&SortBy=@Model.SortBy&SortDirection=@Model.SortDirection&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ActiveOnly=@Model.ActiveOnly">@i</a>
-                                    </li>
-                                }
+                                        @for (int i = Math.Max(1, Model.PageNumber - 2); i <= Math.Min(Model.TotalPages, Model.PageNumber + 2); i++)
+                                        {
+                                            <li class="page-item @(i == Model.PageNumber ? "active" : "")">
+                                                <a class="page-link" href="?PageNumber=@i&SortBy=@Model.SortBy&SortDirection=@Model.SortDirection&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ActiveOnly=@Model.ActiveOnly">@i</a>
+                                            </li>
+                                        }
 
-                                @if (Model.PageNumber < Model.TotalPages)
-                                {
-                                    <li class="page-item">
-                                        <a class="page-link" href="?PageNumber=@(Model.PageNumber + 1)&SortBy=@Model.SortBy&SortDirection=@Model.SortDirection&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ActiveOnly=@Model.ActiveOnly">Next</a>
-                                    </li>
-                                }
-                            </ul>
-                        </nav>
-                        <div class="text-center mt-2">
-                            <small class="text-muted">
-                                Showing @((Model.PageNumber - 1) * Model.PageSize + 1) to @Math.Min(Model.PageNumber * Model.PageSize, Model.TotalCount) of @Model.TotalCount parts
-                            </small>
+                                        @if (Model.PageNumber < Model.TotalPages)
+                                        {
+                                            <li class="page-item">
+                                                <a class="page-link" href="?PageNumber=@(Model.PageNumber + 1)&SortBy=@Model.SortBy&SortDirection=@Model.SortDirection&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ActiveOnly=@Model.ActiveOnly">
+                                                    Next<i class="fas fa-chevron-right ms-1"></i>
+                                                </a>
+                                            </li>
+                                        }
+                                    </ul>
+                                </nav>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <small class="text-muted d-flex align-items-center justify-content-end">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Showing @((Model.PageNumber - 1) * Model.PageSize + 1) to @Math.Min(Model.PageNumber * Model.PageSize, Model.TotalCount) of @Model.TotalCount parts
+                                </small>
+                            </div>
                         </div>
                     </div>
                 }
             }
             else
             {
-                <div class="text-center py-5">
+                <div class="parts-empty-state">
                     <i class="fas fa-cogs text-muted fa-3x mb-3"></i>
                     <h5 class="text-muted">No parts found</h5>
-                    <p class="text-muted">Try adjusting your search criteria or add a new part.</p>
+                    <p class="text-muted">Try adjusting your search criteria or add a new part to get started.</p>
                     <button type="button" 
-                            class="btn btn-primary" 
+                            class="btn btn-primary btn-lg" 
                             onclick="loadPartForm('add')">
-                        <i class="fas fa-plus me-2"></i>Add First Part
+                        <i class="fas fa-plus me-2"></i>Add Your First Part
                     </button>
                 </div>
             }
@@ -477,15 +441,15 @@
     </div>
 </div>
 
-<!-- Toast Container -->
-<div id="toast-container" class="toast-container"></div>
+<!-- Enhanced Toast Container -->
+<div id="toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;"></div>
 
 <!-- Include antiforgery token for AJAX requests -->
 <form style="display: none;">
     @Html.AntiForgeryToken()
 </form>
 
-<!-- GLOBAL FUNCTIONS - Load IMMEDIATELY to prevent ReferenceError issues -->
+<!-- Keep existing JavaScript unchanged -->
 <script>
     console.log('?? [PARTS] Loading global functions to prevent ReferenceError issues');
     
@@ -1420,5 +1384,5 @@
     // Make showToast globally available
     window.showToast = showToast;
 
-    console.log('?? [PARTS] Parts page script loaded successfully with production-ready functionality');
+    console.log('?? [PARTS] Parts page script loaded successfully with enhanced visual design');
 </script>
