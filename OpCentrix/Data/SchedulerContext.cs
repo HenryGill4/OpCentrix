@@ -51,6 +51,13 @@ namespace OpCentrix.Data
         public DbSet<SerialNumber> SerialNumbers { get; set; }
         public DbSet<ComplianceDocument> ComplianceDocuments { get; set; }
 
+        // Phase 0.5: Prototype Tracking System
+        public DbSet<PrototypeJob> PrototypeJobs { get; set; }
+        public DbSet<ProductionStage> ProductionStages { get; set; }
+        public DbSet<ProductionStageExecution> ProductionStageExecutions { get; set; }
+        public DbSet<AssemblyComponent> AssemblyComponents { get; set; }
+        public DbSet<PrototypeTimeLog> PrototypeTimeLogs { get; set; }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             if (!optionsBuilder.IsConfigured)
@@ -78,6 +85,9 @@ namespace OpCentrix.Data
 
             // Configure B&T industry specialization entities
             ConfigureBTEntities(modelBuilder);
+
+            // Configure prototype tracking entities  
+            ConfigurePrototypeTrackingEntities(modelBuilder);
         }
 
         private void ConfigureCoreEntities(ModelBuilder modelBuilder)
@@ -808,6 +818,170 @@ namespace OpCentrix.Data
                 entity.HasIndex(e => e.ExpirationDate);
                 entity.HasIndex(e => e.IsActive);
                 entity.HasIndex(e => e.IsArchived);
+            });
+        }
+        
+        private void ConfigurePrototypeTrackingEntities(ModelBuilder modelBuilder)
+        {
+            // Configure PrototypeJob entity
+            modelBuilder.Entity<PrototypeJob>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.PrototypeNumber).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.RequestedBy).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Priority).IsRequired().HasMaxLength(20).HasDefaultValue("Standard");
+                entity.Property(e => e.Status).IsRequired().HasMaxLength(50).HasDefaultValue("InProgress");
+                entity.Property(e => e.AdminReviewStatus).HasMaxLength(50).HasDefaultValue("Pending");
+                entity.Property(e => e.CreatedBy).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.IsActive).HasDefaultValue(true);
+                
+                // Configure decimal properties
+                entity.Property(e => e.TotalActualCost).HasPrecision(12, 2);
+                entity.Property(e => e.TotalEstimatedCost).HasPrecision(12, 2);
+                entity.Property(e => e.CostVariancePercent).HasPrecision(5, 2);
+                entity.Property(e => e.TotalActualHours).HasPrecision(8, 2);
+                entity.Property(e => e.TotalEstimatedHours).HasPrecision(8, 2);
+                entity.Property(e => e.TimeVariancePercent).HasPrecision(5, 2);
+                
+                // Foreign key relationships
+                entity.HasOne(e => e.Part)
+                    .WithMany()
+                    .HasForeignKey(e => e.PartId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                // Indexes
+                entity.HasIndex(e => e.PrototypeNumber).IsUnique();
+                entity.HasIndex(e => e.PartId);
+                entity.HasIndex(e => e.Status);
+                entity.HasIndex(e => e.Priority);
+                entity.HasIndex(e => e.AdminReviewStatus);
+                entity.HasIndex(e => e.RequestedBy);
+                entity.HasIndex(e => e.RequestDate);
+                entity.HasIndex(e => e.IsActive);
+            });
+
+            // Configure ProductionStage entity
+            modelBuilder.Entity<ProductionStage>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.DisplayOrder).IsRequired();
+                entity.Property(e => e.Description).HasMaxLength(500);
+                entity.Property(e => e.DefaultSetupMinutes).HasDefaultValue(30);
+                entity.Property(e => e.DefaultHourlyRate).HasPrecision(8, 2).HasDefaultValue(85.00m);
+                entity.Property(e => e.RequiresQualityCheck).HasDefaultValue(true);
+                entity.Property(e => e.RequiresApproval).HasDefaultValue(false);
+                entity.Property(e => e.AllowSkip).HasDefaultValue(false);
+                entity.Property(e => e.IsOptional).HasDefaultValue(false);
+                entity.Property(e => e.RequiredRole).HasMaxLength(50);
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.IsActive).HasDefaultValue(true);
+                
+                // Indexes
+                entity.HasIndex(e => e.Name);
+                entity.HasIndex(e => e.DisplayOrder);
+                entity.HasIndex(e => e.RequiredRole);
+                entity.HasIndex(e => e.IsActive);
+            });
+
+            // Configure ProductionStageExecution entity  
+            modelBuilder.Entity<ProductionStageExecution>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Status).IsRequired().HasMaxLength(50).HasDefaultValue("NotStarted");
+                entity.Property(e => e.QualityCheckRequired).HasDefaultValue(true);
+                entity.Property(e => e.ProcessParameters).HasMaxLength(2000).HasDefaultValue("{}");
+                entity.Property(e => e.ExecutedBy).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                
+                // Configure decimal properties
+                entity.Property(e => e.EstimatedHours).HasPrecision(8, 2);
+                entity.Property(e => e.ActualHours).HasPrecision(8, 2);
+                entity.Property(e => e.SetupHours).HasPrecision(8, 2);
+                entity.Property(e => e.RunHours).HasPrecision(8, 2);
+                entity.Property(e => e.EstimatedCost).HasPrecision(10, 2);
+                entity.Property(e => e.ActualCost).HasPrecision(10, 2);
+                entity.Property(e => e.MaterialCost).HasPrecision(10, 2);
+                entity.Property(e => e.LaborCost).HasPrecision(10, 2);
+                entity.Property(e => e.OverheadCost).HasPrecision(10, 2);
+                
+                // Foreign key relationships
+                entity.HasOne(e => e.PrototypeJob)
+                    .WithMany(pj => pj.StageExecutions)
+                    .HasForeignKey(e => e.PrototypeJobId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                    
+                entity.HasOne(e => e.ProductionStage)
+                    .WithMany(ps => ps.StageExecutions)
+                    .HasForeignKey(e => e.ProductionStageId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                // Unique constraint - one execution per stage per prototype job
+                entity.HasIndex(e => new { e.PrototypeJobId, e.ProductionStageId }).IsUnique();
+                
+                // Performance indexes
+                entity.HasIndex(e => e.PrototypeJobId);
+                entity.HasIndex(e => e.ProductionStageId);
+                entity.HasIndex(e => e.Status);
+                entity.HasIndex(e => e.ExecutedBy);
+                entity.HasIndex(e => e.StartDate);
+                entity.HasIndex(e => e.CompletionDate);
+            });
+
+            // Configure AssemblyComponent entity
+            modelBuilder.Entity<AssemblyComponent>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.ComponentType).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.ComponentDescription).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.QuantityRequired).HasDefaultValue(1);
+                entity.Property(e => e.QuantityUsed).HasDefaultValue(0);
+                entity.Property(e => e.Status).IsRequired().HasMaxLength(20).HasDefaultValue("Needed");
+                entity.Property(e => e.InspectionRequired).HasDefaultValue(false);
+                entity.Property(e => e.CreatedBy).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.IsActive).HasDefaultValue(true);
+                
+                // Configure decimal properties
+                entity.Property(e => e.UnitCost).HasPrecision(8, 2);
+                entity.Property(e => e.TotalCost).HasPrecision(10, 2);
+                
+                // Foreign key relationships
+                entity.HasOne(e => e.PrototypeJob)
+                    .WithMany(pj => pj.AssemblyComponents)
+                    .HasForeignKey(e => e.PrototypeJobId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                
+                // Indexes
+                entity.HasIndex(e => e.PrototypeJobId);
+                entity.HasIndex(e => e.ComponentType);
+                entity.HasIndex(e => e.Status);
+                entity.HasIndex(e => e.Supplier);
+                entity.HasIndex(e => e.IsActive);
+            });
+
+            // Configure PrototypeTimeLog entity
+            modelBuilder.Entity<PrototypeTimeLog>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.ActivityType).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.ActivityDescription).IsRequired().HasMaxLength(500);
+                entity.Property(e => e.Employee).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                
+                // Foreign key relationships
+                entity.HasOne(e => e.ProductionStageExecution)
+                    .WithMany(pse => pse.TimeLogs)
+                    .HasForeignKey(e => e.ProductionStageExecutionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                
+                // Indexes
+                entity.HasIndex(e => e.ProductionStageExecutionId);
+                entity.HasIndex(e => e.ActivityType);
+                entity.HasIndex(e => e.Employee);
+                entity.HasIndex(e => e.LogDate);
+                entity.HasIndex(e => e.StartTime);
             });
         }
         

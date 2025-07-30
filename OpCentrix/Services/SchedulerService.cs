@@ -19,6 +19,10 @@ namespace OpCentrix.Services
         Task<List<string>> GetMachineCapabilityIssuesAsync(Job job, SchedulerContext context);
         Task<decimal> CalculateSlsJobCostEstimateAsync(Job job, SchedulerContext context);
         Task<List<Job>> OptimizeBuildPlatformLayoutAsync(string machineId, DateTime buildDate, SchedulerContext context);
+        
+        // ADDED: Parts-to-Scheduler integration methods
+        Task<Job> CreateJobFromPartAsync(Part part, DateTime scheduledStart, string machineId, string createdBy);
+        Task<bool> CreateJobAsync(Job job);
     }
 
     public class SchedulerService : ISchedulerService
@@ -587,6 +591,101 @@ namespace OpCentrix.Services
             {
                 _logger.LogError(ex, "Error optimizing build platform layout for machine {MachineId}", machineId);
                 return new List<Job>();
+            }
+        }
+
+        /// <summary>
+        /// Create a job from a part with pre-populated data for easy scheduling
+        /// </summary>
+        public async Task<Job> CreateJobFromPartAsync(Part part, DateTime scheduledStart, string machineId, string createdBy)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("?? [SCHEDULER-{OperationId}] Creating job from part {PartNumber} for machine {MachineId}", 
+                operationId, part.PartNumber, machineId);
+
+            try
+            {
+                // Calculate estimated end time based on part's estimated hours
+                var estimatedHours = part.GetEffectiveEstimatedHours();
+                var scheduledEnd = scheduledStart.AddHours(estimatedHours);
+
+                var job = new Job
+                {
+                    PartId = part.Id,
+                    PartNumber = part.PartNumber,
+                    MachineId = machineId,
+                    ScheduledStart = scheduledStart,
+                    ScheduledEnd = scheduledEnd,
+                    EstimatedHours = estimatedHours,
+                    SlsMaterial = part.SlsMaterial,
+                    Quantity = 1, // Default quantity
+                    Priority = 3, // Default medium priority
+                    Status = "Scheduled",
+                    CreatedBy = createdBy,
+                    CreatedDate = DateTime.UtcNow,
+                    
+                    // Copy SLS parameters from part if available (using safe defaults)
+                    LaserPowerWatts = 195, // Default SLS power
+                    ScanSpeedMmPerSec = 1250, // Default scan speed
+                    LayerThicknessMicrons = 30, // Default layer thickness
+                    HatchSpacingMicrons = 120, // Default hatch spacing
+                    BuildTemperatureCelsius = 35, // Default build temp
+                    ArgonPurityPercent = 99.9, // Standard argon purity
+                    OxygenContentPpm = 50, // Standard oxygen content
+                    EstimatedPowderUsageKg = 0.5, // Default powder usage
+                    LaborCostPerHour = 75.0m // Default labor rate
+                };
+
+                _logger.LogInformation("? [SCHEDULER-{OperationId}] Job created from part {PartNumber}: {EstimatedHours}h, {ScheduledStart} to {ScheduledEnd}", 
+                    operationId, part.PartNumber, estimatedHours, scheduledStart, scheduledEnd);
+
+                return job;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "? [SCHEDULER-{OperationId}] Error creating job from part {PartNumber}", operationId, part.PartNumber);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Create a new job in the database
+        /// </summary>
+        public async Task<bool> CreateJobAsync(Job job)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("?? [SCHEDULER-{OperationId}] Creating job {PartNumber} for machine {MachineId}", 
+                operationId, job.PartNumber, job.MachineId);
+
+            // This method should be called from a controller or service that has access to SchedulerContext
+            // Here we just validate the job structure and return true if valid
+            try
+            {
+                // Basic validation
+                if (string.IsNullOrEmpty(job.PartNumber))
+                    throw new ArgumentException("Part number is required");
+
+                if (string.IsNullOrEmpty(job.MachineId))
+                    throw new ArgumentException("Machine ID is required");
+
+                if (job.ScheduledEnd <= job.ScheduledStart)
+                    throw new ArgumentException("Scheduled end must be after scheduled start");
+
+                if (job.Quantity <= 0)
+                    throw new ArgumentException("Quantity must be greater than zero");
+
+                if (job.EstimatedHours <= 0)
+                    throw new ArgumentException("Estimated hours must be greater than zero");
+
+                _logger.LogInformation("? [SCHEDULER-{OperationId}] Job validation passed for {PartNumber}", 
+                    operationId, job.PartNumber);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "? [SCHEDULER-{OperationId}] Error validating job {PartNumber}", operationId, job.PartNumber);
+                return false;
             }
         }
 

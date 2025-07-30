@@ -37,6 +37,11 @@ namespace OpCentrix.Services.Admin
         Task<List<SerialNumber>> GetSerialNumbersForDestructionAsync();
         Task<SerialNumber> ScheduleDestructionAsync(int serialNumberId, DateTime destructionDate, string method, string scheduledBy);
         Task<SerialNumber> RecordDestructionAsync(int serialNumberId, DateTime destructionDate, string method, string destroyedBy);
+        Task<string> GenerateBTSerialNumberAsync(Part part);
+        Task<BTComplianceValidationResult> ValidateBTManufacturingComplianceAsync(int serialNumberId);
+        Task<BTComplianceDashboard> GetBTComplianceDashboardAsync();
+        Task<bool> CreateComplianceAuditTrailAsync(int serialNumberId, string action, string performedBy, string details);
+        Task<BTComplianceReport> GenerateBTComplianceReportAsync(DateTime startDate, DateTime endDate);
     }
 
     public class SerializationService : ISerializationService
@@ -507,5 +512,333 @@ namespace OpCentrix.Services.Admin
             await _context.SaveChangesAsync();
             return serialNumber;
         }
+
+        public async Task<string> GenerateBTSerialNumberAsync(Part part)
+        {
+            var baseFormat = part.SerialNumberFormat ?? "BT-{YYYY}-{####}";
+            
+            // B&T-specific formatting based on component type
+            if (part.IsSuppressorComponent())
+            {
+                baseFormat = "BT-SUP-{YYYY}-{####}";
+            }
+            else if (part.IsFirearmComponent())
+            {
+                baseFormat = "BT-FRM-{YYYY}-{####}";
+            }
+            else if (part.BTComponentType == "Receiver")
+            {
+                baseFormat = "BT-RCV-{YYYY}-{####}";
+            }
+            else if (part.BTComponentType == "Barrel")
+            {
+                baseFormat = "BT-BRL-{YYYY}-{####}";
+            }
+
+            return await GenerateNextSerialNumberAsync(baseFormat, "BT");
+        }
+
+        public async Task<BTComplianceValidationResult> ValidateBTManufacturingComplianceAsync(int serialNumberId)
+        {
+            var serialNumber = await GetSerialNumberByIdAsync(serialNumberId);
+            if (serialNumber == null)
+                throw new ArgumentException($"Serial number with ID {serialNumberId} not found");
+
+            var result = new BTComplianceValidationResult
+            {
+                SerialNumberId = serialNumberId,
+                SerialNumberValue = serialNumber.SerialNumberValue,
+                IsCompliant = true,
+                ValidationDate = DateTime.UtcNow,
+                Issues = new List<string>(),
+                Warnings = new List<string>()
+            };
+
+            // Validate ATF requirements
+            if (serialNumber.RequiresATFApproval())
+            {
+                if (serialNumber.ATFComplianceStatus != "Compliant")
+                {
+                    result.Issues.Add("ATF compliance status is not compliant");
+                    result.IsCompliant = false;
+                }
+
+                if (string.IsNullOrEmpty(serialNumber.ATFFormNumbers))
+                {
+                    result.Issues.Add("ATF form numbers not specified");
+                    result.IsCompliant = false;
+                }
+
+                if (!serialNumber.ATFApprovalDate.HasValue)
+                {
+                    result.Issues.Add("ATF approval date not recorded");
+                    result.IsCompliant = false;
+                }
+            }
+
+            // Validate ITAR requirements
+            if (serialNumber.IsITARControlled)
+            {
+                if (string.IsNullOrEmpty(serialNumber.ExportLicense))
+                {
+                    result.Issues.Add("ITAR controlled item missing export license");
+                    result.IsCompliant = false;
+                }
+
+                if (serialNumber.ExportLicenseExpiration.HasValue && 
+                    serialNumber.ExportLicenseExpiration.Value <= DateTime.UtcNow)
+                {
+                    result.Issues.Add("Export license has expired");
+                    result.IsCompliant = false;
+                }
+                else if (serialNumber.ExportLicenseExpiration.HasValue && 
+                         serialNumber.ExportLicenseExpiration.Value <= DateTime.UtcNow.AddDays(30))
+                {
+                    result.Warnings.Add("Export license expires within 30 days");
+                }
+            }
+
+            // Validate quality requirements
+            if (serialNumber.QualityStatus != "Pass")
+            {
+                result.Issues.Add($"Quality status is {serialNumber.QualityStatus}");
+                result.IsCompliant = false;
+            }
+
+            // Validate B&T-specific testing
+            if (serialNumber.Part?.RequiresBTProofTesting == true && 
+                !serialNumber.ProofTestPassed)
+            {
+                result.Issues.Add("B&T proof testing required but not completed");
+                result.IsCompliant = false;
+            }
+
+            // Validate material certification
+            if (string.IsNullOrEmpty(serialNumber.MaterialLotNumber))
+            {
+                result.Warnings.Add("Material lot number not recorded for traceability");
+            }
+
+            // Validate manufacturing documentation
+            if (string.IsNullOrEmpty(serialNumber.ManufacturingHistory))
+            {
+                result.Warnings.Add("Manufacturing history not documented");
+            }
+
+            return result;
+        }
+
+        public async Task<BTComplianceDashboard> GetBTComplianceDashboardAsync()
+        {
+            var dashboard = new BTComplianceDashboard
+            {
+                GeneratedDate = DateTime.UtcNow
+            };
+
+            // Total serial numbers by component type
+            dashboard.TotalSerialNumbers = await _context.SerialNumbers.CountAsync(sn => sn.IsActive);
+            dashboard.SuppressorComponents = await _context.SerialNumbers
+                .CountAsync(sn => sn.IsActive && sn.ComponentType == "Suppressor");
+            dashboard.FirearmComponents = await _context.SerialNumbers
+                .CountAsync(sn => sn.IsActive && sn.ComponentType == "Receiver");
+            dashboard.OtherComponents = dashboard.TotalSerialNumbers - dashboard.SuppressorComponents - dashboard.FirearmComponents;
+
+            // ATF compliance status
+            dashboard.ATFCompliant = await _context.SerialNumbers
+                .CountAsync(sn => sn.IsActive && sn.ATFComplianceStatus == "Compliant");
+            dashboard.ATFPending = await _context.SerialNumbers
+                .CountAsync(sn => sn.IsActive && sn.ATFComplianceStatus == "Pending");
+            dashboard.ATFNonCompliant = await _context.SerialNumbers
+                .CountAsync(sn => sn.IsActive && sn.ATFComplianceStatus == "Non-Compliant");
+
+            // ITAR/Export control
+            dashboard.ITARControlled = await _context.SerialNumbers
+                .CountAsync(sn => sn.IsActive && sn.IsITARControlled);
+            dashboard.EARControlled = await _context.SerialNumbers
+                .CountAsync(sn => sn.IsActive && sn.IsEARControlled);
+            dashboard.ExportLicenseRequired = await _context.SerialNumbers
+                .CountAsync(sn => sn.IsActive && sn.RequiresExportPermit);
+
+            // Quality status
+            dashboard.QualityPassed = await _context.SerialNumbers
+                .CountAsync(sn => sn.IsActive && sn.QualityStatus == "Pass");
+            dashboard.QualityPending = await _context.SerialNumbers
+                .CountAsync(sn => sn.IsActive && sn.QualityStatus == "Pending");
+            dashboard.QualityFailed = await _context.SerialNumbers
+                .CountAsync(sn => sn.IsActive && sn.QualityStatus == "Fail");
+
+            // Alerts and actions required
+            dashboard.ExpiringLicenses = await _context.SerialNumbers
+                .CountAsync(sn => sn.IsActive && sn.ExportLicenseExpiration.HasValue && 
+                          sn.ExportLicenseExpiration.Value <= DateTime.UtcNow.AddDays(30));
+            dashboard.PendingDestructions = await _context.SerialNumbers
+                .CountAsync(sn => sn.IsDestructionScheduled && !sn.ActualDestructionDate.HasValue);
+            dashboard.LockedSerialNumbers = await _context.SerialNumbers
+                .CountAsync(sn => sn.IsActive && sn.IsLocked);
+
+            // Calculate compliance percentage
+            var totalRequiringCompliance = await _context.SerialNumbers
+                .CountAsync(sn => sn.IsActive && (sn.RequiresATFApproval() || sn.IsITARControlled));
+            
+            if (totalRequiringCompliance > 0)
+            {
+                var compliantCount = await _context.SerialNumbers
+                    .CountAsync(sn => sn.IsActive && 
+                              ((sn.RequiresATFApproval() && sn.ATFComplianceStatus == "Compliant") ||
+                               (sn.IsITARControlled && !string.IsNullOrEmpty(sn.ExportLicense))));
+                
+                dashboard.OverallCompliancePercentage = (compliantCount * 100) / totalRequiringCompliance;
+            }
+            else
+            {
+                dashboard.OverallCompliancePercentage = 100;
+            }
+
+            return dashboard;
+        }
+
+        public async Task<bool> CreateComplianceAuditTrailAsync(int serialNumberId, string action, string performedBy, string details)
+        {
+            var serialNumber = await _context.SerialNumbers.FindAsync(serialNumberId);
+            if (serialNumber == null)
+                return false;
+
+            // Add to manufacturing history
+            var auditEntry = new
+            {
+                Timestamp = DateTime.UtcNow,
+                Action = action,
+                PerformedBy = performedBy,
+                Details = details,
+                SystemUser = performedBy
+            };
+
+            var history = serialNumber.ManufacturingHistory ?? "";
+            var newEntry = $"\n{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} - {action} by {performedBy}: {details}";
+            serialNumber.ManufacturingHistory = history + newEntry;
+
+            serialNumber.LastModifiedBy = performedBy;
+            serialNumber.LastModifiedDate = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<BTComplianceReport> GenerateBTComplianceReportAsync(DateTime startDate, DateTime endDate)
+        {
+            var report = new BTComplianceReport
+            {
+                ReportDate = DateTime.UtcNow,
+                PeriodStart = startDate,
+                PeriodEnd = endDate
+            };
+
+            // Serial numbers created in period
+            report.SerialNumbersCreated = await _context.SerialNumbers
+                .CountAsync(sn => sn.AssignedDate >= startDate && sn.AssignedDate <= endDate);
+
+            // Compliance actions completed in period
+            report.ATFApprovalsReceived = await _context.SerialNumbers
+                .CountAsync(sn => sn.ATFApprovalDate >= startDate && sn.ATFApprovalDate <= endDate);
+
+            report.QualityTestsCompleted = await _context.SerialNumbers
+                .CountAsync(sn => sn.QualityInspectionDate >= startDate && sn.QualityInspectionDate <= endDate);
+
+            // Transfers completed in period
+            report.TransfersCompleted = await _context.SerialNumbers
+                .CountAsync(sn => sn.TransferDate >= startDate && sn.TransferDate <= endDate);
+
+            // Outstanding compliance issues
+            report.OutstandingATFApprovals = await _context.SerialNumbers
+                .CountAsync(sn => sn.IsActive && sn.ATFComplianceStatus == "Pending");
+
+            report.ExpiringLicenses = await _context.SerialNumbers
+                .CountAsync(sn => sn.IsActive && sn.ExportLicenseExpiration.HasValue && 
+                          sn.ExportLicenseExpiration.Value <= DateTime.UtcNow.AddDays(90));
+
+            return report;
+        }
     }
+
+    #region B&T Compliance Support Classes
+
+    /// <summary>
+    /// B&T Compliance Validation Result
+    /// </summary>
+    public class BTComplianceValidationResult
+    {
+        public int SerialNumberId { get; set; }
+        public string SerialNumberValue { get; set; } = string.Empty;
+        public bool IsCompliant { get; set; }
+        public DateTime ValidationDate { get; set; }
+        public List<string> Issues { get; set; } = new();
+        public List<string> Warnings { get; set; } = new();
+        public string ValidatedBy { get; set; } = string.Empty;
+        public string Comments { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// B&T Compliance Dashboard Statistics
+    /// </summary>
+    public class BTComplianceDashboard
+    {
+        public DateTime GeneratedDate { get; set; }
+        
+        // Serial Number Counts
+        public int TotalSerialNumbers { get; set; }
+        public int SuppressorComponents { get; set; }
+        public int FirearmComponents { get; set; }
+        public int OtherComponents { get; set; }
+        
+        // ATF Compliance Status
+        public int ATFCompliant { get; set; }
+        public int ATFPending { get; set; }
+        public int ATFNonCompliant { get; set; }
+        
+        // Export Control Status
+        public int ITARControlled { get; set; }
+        public int EARControlled { get; set; }
+        public int ExportLicenseRequired { get; set; }
+        
+        // Quality Status
+        public int QualityPassed { get; set; }
+        public int QualityPending { get; set; }
+        public int QualityFailed { get; set; }
+        
+        // Alerts and Actions
+        public int ExpiringLicenses { get; set; }
+        public int PendingDestructions { get; set; }
+        public int LockedSerialNumbers { get; set; }
+        
+        // Overall Metrics
+        public int OverallCompliancePercentage { get; set; }
+        
+        public bool HasCriticalAlerts => ATFNonCompliant > 0 || QualityFailed > 0 || ExpiringLicenses > 0;
+        public bool RequiresAttention => ATFPending > 0 || QualityPending > 0 || PendingDestructions > 0;
+    }
+
+    /// <summary>
+    /// B&T Compliance Report
+    /// </summary>
+    public class BTComplianceReport
+    {
+        public DateTime ReportDate { get; set; }
+        public DateTime PeriodStart { get; set; }
+        public DateTime PeriodEnd { get; set; }
+        
+        // Activity Metrics
+        public int SerialNumbersCreated { get; set; }
+        public int ATFApprovalsReceived { get; set; }
+        public int QualityTestsCompleted { get; set; }
+        public int TransfersCompleted { get; set; }
+        
+        // Outstanding Issues
+        public int OutstandingATFApprovals { get; set; }
+        public int ExpiringLicenses { get; set; }
+        
+        public string GeneratedBy { get; set; } = string.Empty;
+        public string ReportPurpose { get; set; } = "B&T Manufacturing Compliance Review";
+    }
+
+    #endregion
 }

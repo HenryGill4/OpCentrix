@@ -1,0 +1,400 @@
+@page
+@model OpCentrix.Pages.PrintJobLog.IndexModel
+@{
+    ViewData["Title"] = "Print Job Log";
+    ViewData["Description"] = "Comprehensive tracking of Parts ? Jobs ? BuildJobs lifecycle";
+}
+
+<!-- Modern Print Job Log Interface -->
+<div class="container-fluid py-4">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h1 class="h3 mb-1 text-gray-900">
+                        <i class="fas fa-clipboard-list text-primary me-2"></i>
+                        Print Job Log
+                    </h1>
+                    <p class="text-muted mb-0">Complete Parts ? Scheduler ? Print Jobs tracking</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="?handler=ExportData&SearchTerm=@Model.SearchTerm&StatusFilter=@Model.StatusFilter&MachineFilter=@Model.MachineFilter&StartDate=@Model.StartDate&EndDate=@Model.EndDate" 
+                       class="btn btn-outline-primary">
+                        <i class="fas fa-download me-2"></i>Export CSV
+                    </a>
+                    <button type="button" class="btn btn-outline-secondary" onclick="window.location.reload()">
+                        <i class="fas fa-sync-alt me-2"></i>Refresh
+                    </button>
+                </div>
+            </div>
+
+            <!-- Statistics Dashboard -->
+            <div class="row mb-4">
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body text-center">
+                            <div class="h2 text-primary mb-1">@Model.ViewModel.Statistics.TotalJobs</div>
+                            <div class="small text-muted">Total Jobs</div>
+                            <div class="mt-2">
+                                <span class="badge bg-success">@Model.ViewModel.Statistics.CompletedJobs Completed</span>
+                                <span class="badge bg-warning">@Model.ViewModel.Statistics.InProgressJobs In Progress</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body text-center">
+                            <div class="h2 text-info mb-1">@Model.ViewModel.Statistics.TotalActualHours.ToString("F1")h</div>
+                            <div class="small text-muted">Total Production Time</div>
+                            <div class="mt-2">
+                                <span class="small text-muted">Est: @Model.ViewModel.Statistics.TotalEstimatedHours.ToString("F1")h</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body text-center">
+                            <div class="h2 text-success mb-1">@Model.ViewModel.Statistics.OverallEfficiency.ToString("F1")%</div>
+                            <div class="small text-muted">Overall Efficiency</div>
+                            <div class="mt-2">
+                                <span class="small">@Model.ViewModel.Statistics.PerformanceTrend</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body text-center">
+                            <div class="h2 text-warning mb-1">@Model.ViewModel.Statistics.PartsProduced</div>
+                            <div class="small text-muted">Parts Produced</div>
+                            <div class="mt-2">
+                                <span class="small">@Model.ViewModel.Statistics.CompletionRate.ToString("F1")% Completion Rate</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h6 class="card-title mb-0">
+                <i class="fas fa-filter text-primary me-2"></i>
+                Filters & Search
+            </h6>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label asp-for="SearchTerm" class="form-label">Search</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input asp-for="SearchTerm" class="form-control" 
+                               placeholder="Part number, name, operator..." />
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="StatusFilter" class="form-label">Status</label>
+                    <select asp-for="StatusFilter" class="form-select">
+                        <option value="">All Statuses</option>
+                        @foreach (var status in Model.ViewModel.AvailableStatuses)
+                        {
+                            <option value="@status" selected="@(Model.StatusFilter == status)">@status</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="MachineFilter" class="form-label">Machine</label>
+                    <select asp-for="MachineFilter" class="form-select">
+                        <option value="">All Machines</option>
+                        @foreach (var machine in Model.ViewModel.AvailableMachines)
+                        {
+                            <option value="@machine" selected="@(Model.MachineFilter == machine)">@machine</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="StartDate" class="form-label">Start Date</label>
+                    <input asp-for="StartDate" type="date" class="form-control" />
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="EndDate" class="form-label">End Date</label>
+                    <input asp-for="EndDate" type="date" class="form-control" />
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label d-block">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Print Job Log Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-list text-primary me-2"></i>
+                    Print Job History (@Model.ViewModel.TotalCount total)
+                </h5>
+                <div class="d-flex gap-2 align-items-center">
+                    <span class="text-muted small">Page @Model.PageNumber of @Model.ViewModel.TotalPages</span>
+                    <select class="form-select form-select-sm" style="width: auto;" onchange="changePageSize(this.value)">
+                        <option value="25" selected="@(Model.PageSize == 25)">25 per page</option>
+                        <option value="50" selected="@(Model.PageSize == 50)">50 per page</option>
+                        <option value="100" selected="@(Model.PageSize == 100)">100 per page</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            @if (Model.ViewModel.LogEntries.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Part</th>
+                                <th>Schedule</th>
+                                <th>Execution</th>
+                                <th>Performance</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var entry in Model.ViewModel.LogEntries)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="fw-bold">@entry.PartNumber</div>
+                                        <div class="small text-muted">@entry.PartName</div>
+                                        <div class="small">
+                                            <span class="badge bg-primary">@entry.SlsMaterial</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        @if (entry.ScheduledStart.HasValue)
+                                        {
+                                            <div class="small">
+                                                <strong>Start:</strong> @entry.ScheduledStart.Value.ToString("MMM dd, HH:mm")
+                                            </div>
+                                            <div class="small">
+                                                <strong>End:</strong> @entry.ScheduledEnd?.ToString("MMM dd, HH:mm")
+                                            </div>
+                                            <div class="small text-muted">
+                                                Est: @entry.EstimatedHours.ToString("F1")h
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">Not scheduled</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (entry.ActualStart.HasValue)
+                                        {
+                                            <div class="small">
+                                                <strong>Started:</strong> @entry.ActualStart.Value.ToString("MMM dd, HH:mm")
+                                            </div>
+                                            @if (entry.ActualEnd.HasValue)
+                                            {
+                                                <div class="small">
+                                                    <strong>Ended:</strong> @entry.ActualEnd.Value.ToString("MMM dd, HH:mm")
+                                                </div>
+                                                <div class="small text-muted">
+                                                    Duration: @entry.ActualHours.ToString("F1")h
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <div class="small text-warning">
+                                                    <i class="fas fa-clock"></i> In Progress
+                                                </div>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">Not started</span>
+                                        }
+                                        @if (!string.IsNullOrEmpty(entry.MachineId))
+                                        {
+                                            <div class="small">
+                                                <span class="badge bg-secondary">@entry.MachineId</span>
+                                            </div>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (entry.EfficiencyPercentage > 0)
+                                        {
+                                            <div class="fw-bold">@entry.EfficiencyPercentage.ToString("F1")%</div>
+                                            <div class="small">@entry.PerformanceIndicator</div>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">N/A</span>
+                                        }
+                                        @if (!string.IsNullOrEmpty(entry.Operator))
+                                        {
+                                            <div class="small text-muted">
+                                                Operator: @entry.Operator
+                                            </div>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="mb-1">@Html.Raw(entry.OverallStatus)</div>
+                                        <div class="small text-muted">@entry.LifecycleStage</div>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            @if (entry.ScheduledJobId.HasValue)
+                                            {
+                                                <button type="button" class="btn btn-outline-primary" 
+                                                        onclick="showJobDetails(@entry.ScheduledJobId.Value)"
+                                                        data-bs-toggle="tooltip" title="View Job Details">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            }
+                                            @if (entry.PartId.HasValue)
+                                            {
+                                                <button type="button" class="btn btn-outline-info" 
+                                                        onclick="showPartHistory(@entry.PartId.Value)"
+                                                        data-bs-toggle="tooltip" title="View Part History">
+                                                    <i class="fas fa-history"></i>
+                                                </button>
+                                            }
+                                            <a href="/Scheduler?partId=@entry.PartId" class="btn btn-outline-success"
+                                               data-bs-toggle="tooltip" title="Schedule New Job">
+                                                <i class="fas fa-calendar-plus"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                @if (Model.ViewModel.TotalPages > 1)
+                {
+                    <div class="card-footer bg-white">
+                        <nav aria-label="Print job log pagination">
+                            <ul class="pagination pagination-sm justify-content-center mb-0">
+                                @if (Model.PageNumber > 1)
+                                {
+                                    <li class="page-item">
+                                        <a class="page-link" href="?PageNumber=@(Model.PageNumber - 1)&PageSize=@Model.PageSize&SearchTerm=@Model.SearchTerm&StatusFilter=@Model.StatusFilter&MachineFilter=@Model.MachineFilter&StartDate=@Model.StartDate&EndDate=@Model.EndDate">Previous</a>
+                                    </li>
+                                }
+
+                                @for (int i = Math.Max(1, Model.PageNumber - 2); i <= Math.Min(Model.ViewModel.TotalPages, Model.PageNumber + 2); i++)
+                                {
+                                    <li class="page-item @(i == Model.PageNumber ? "active" : "")">
+                                        <a class="page-link" href="?PageNumber=@i&PageSize=@Model.PageSize&SearchTerm=@Model.SearchTerm&StatusFilter=@Model.StatusFilter&MachineFilter=@Model.MachineFilter&StartDate=@Model.StartDate&EndDate=@Model.EndDate">@i</a>
+                                    </li>
+                                }
+
+                                @if (Model.PageNumber < Model.ViewModel.TotalPages)
+                                {
+                                    <li class="page-item">
+                                        <a class="page-link" href="?PageNumber=@(Model.PageNumber + 1)&PageSize=@Model.PageSize&SearchTerm=@Model.SearchTerm&StatusFilter=@Model.StatusFilter&MachineFilter=@Model.MachineFilter&StartDate=@Model.StartDate&EndDate=@Model.EndDate">Next</a>
+                                    </li>
+                                }
+                            </ul>
+                        </nav>
+                        <div class="text-center mt-2">
+                            <small class="text-muted">
+                                Showing @((Model.PageNumber - 1) * Model.PageSize + 1) to @Math.Min(Model.PageNumber * Model.PageSize, Model.ViewModel.TotalCount) of @Model.ViewModel.TotalCount entries
+                            </small>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <i class="fas fa-clipboard-list text-muted fa-3x mb-3"></i>
+                    <h5 class="text-muted">No print job history found</h5>
+                    <p class="text-muted">Try adjusting your search criteria or create some print jobs.</p>
+                    <a href="/Scheduler" class="btn btn-primary">
+                        <i class="fas fa-calendar-plus me-2"></i>Schedule New Job
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Modals Container -->
+<div id="modal-container"></div>
+
+<!-- JavaScript for Print Job Log -->
+<script>
+    // Initialize tooltips
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof bootstrap !== 'undefined') {
+            const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+            tooltipTriggerList.forEach(tooltipTriggerEl => {
+                new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        }
+    });
+
+    // Change page size
+    function changePageSize(newSize) {
+        const url = new URL(window.location);
+        url.searchParams.set('PageSize', newSize);
+        url.searchParams.set('PageNumber', '1');
+        window.location.href = url.toString();
+    }
+
+    // Show job details modal
+    async function showJobDetails(jobId) {
+        try {
+            const response = await fetch(`/PrintJobLog?handler=JobDetails&jobId=${jobId}`);
+            if (response.ok) {
+                const html = await response.text();
+                document.getElementById('modal-container').innerHTML = html;
+                
+                if (typeof bootstrap !== 'undefined') {
+                    const modal = new bootstrap.Modal(document.querySelector('#modal-container .modal'));
+                    modal.show();
+                }
+            } else {
+                alert('Error loading job details');
+            }
+        } catch (error) {
+            console.error('Error loading job details:', error);
+            alert('Error loading job details');
+        }
+    }
+
+    // Show part history modal
+    async function showPartHistory(partId) {
+        try {
+            const response = await fetch(`/PrintJobLog?handler=PartHistory&partId=${partId}`);
+            if (response.ok) {
+                const html = await response.text();
+                document.getElementById('modal-container').innerHTML = html;
+                
+                if (typeof bootstrap !== 'undefined') {
+                    const modal = new bootstrap.Modal(document.querySelector('#modal-container .modal'));
+                    modal.show();
+                }
+            } else {
+                alert('Error loading part history');
+            }
+        } catch (error) {
+            console.error('Error loading part history:', error);
+            alert('Error loading part history');
+        }
+    }
+</script>

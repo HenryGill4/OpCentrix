@@ -78,147 +78,49 @@
                 <div class="flex items-center space-x-8">
                     <!-- Enhanced Logo -->
                     <div class="flex-shrink-0 flex items-center">
-                        <div class="w-10 h-10 opcentrix-gradient rounded-xl flex items-center justify-center mr-3 shadow-lg">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
-                        </div>
-                        <div>
-                            <span class="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">OpCentrix</span>
-                            <p class="text-xs text-gray-500 leading-none">Manufacturing Execution System v4.0</p>
-                        </div>
+                        <a href="/" class="flex items-center">
+                            <div class="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center mr-3 shadow-lg">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <span class="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">OpCentrix</span>
+                                <p class="text-xs text-gray-500 leading-none">Manufacturing Execution System v4.0</p>
+                            </div>
+                        </a>
                     </div>
 
                     @if (isAuthenticated)
                     {
-                        <!-- Enhanced Main Navigation Links -->
-                        <div class="hidden lg:flex space-x-1">
-                            <!-- Print Tracking Section -->
-                            @if (userRole == "Admin" || userRole == "Manager" || userRole == "Operator" || userRole == "PrintingSpecialist")
+                        <!-- Simplified Main Navigation Links -->
+                        <div class="hidden md:flex space-x-6">
+                            <a href="/Scheduler" class="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                                Scheduler
+                            </a>
+                            <a href="/PrintTracking" class="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                                Print Tracking
+                            </a>
+                            <a href="/PrintJobLog" class="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                                Print Job Log
+                            </a>
+                            @if (userRole == "Admin" || userRole == "Manager")
                             {
-                                <div class="space-y-1">
-                                    <h3 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                        Print Tracking
-                                    </h3>
-                                    <a href="/PrintTracking" 
-                                       class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("PrintTracking") == true ? "bg-blue-100 border-blue-500 text-blue-700" : "border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900") group flex items-center px-3 py-2 text-sm font-medium border-l-4">
-                                        <svg class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("PrintTracking") == true ? "text-blue-500" : "text-gray-400 group-hover:text-gray-500") flex-shrink-0 -ml-1 mr-3 h-6 w-6" 
-                                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                        </svg>
-                                        Print Dashboard
-                                    </a>
-                                </div>
+                                <a href="/Admin" class="text-gray-600 hover:text-red-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                                    Admin
+                                </a>
                             }
-
-                            <!-- Scheduling Section -->
-                            @if (userRole == "Admin" || userRole == "Manager" || userRole == "Scheduler" || userRole == "Operator")
-                            {
-                                <div class="space-y-1">
-                                    <h3 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                        Scheduling
-                                    </h3>
-                                    <a href="/Scheduler" 
-                                       class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("Scheduler") == true && !ViewContext.RouteData.Values["page"]?.ToString().Contains("MasterSchedule") == true ? "bg-blue-100 border-blue-500 text-blue-700" : "border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900") group flex items-center px-3 py-2 text-sm font-medium border-l-4">
-                                        <svg class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("Scheduler") == true && !ViewContext.RouteData.Values["page"]?.ToString().Contains("MasterSchedule") == true ? "text-blue-500" : "text-gray-400 group-hover:text-gray-500") flex-shrink-0 -ml-1 mr-3 h-6 w-6" 
-                                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                        </svg>
-                                        Scheduler Grid
-                                    </a>
-                                    <a href="/Scheduler/MasterSchedule" 
-                                       class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("MasterSchedule") == true ? "bg-blue-100 border-blue-500 text-blue-700" : "border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900") group flex items-center px-3 py-2 text-sm font-medium border-l-4">
-                                        <svg class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("MasterSchedule") == true ? "text-blue-500" : "text-gray-400 group-hover:text-gray-500") flex-shrink-0 -ml-1 mr-3 h-6 w-6" 
-                                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                                        </svg>
-                                        Master Schedule
-                                    </a>
-                                </div>
-                            }
-
-                            <!-- B&T Manufacturing Section (NEW - Amber Color) -->
-                            @if (userRole == "Admin" || userRole == "Manager" || userRole == "BTSpecialist")
-                            {
-                                <div class="space-y-1">
-                                    <h3 class="px-3 text-xs font-semibold text-amber-600 uppercase tracking-wider">
-                                        B&T Manufacturing
-                                    </h3>
-                                    <a href="/BT/Dashboard" 
-                                       class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("BT/Dashboard") == true ? "bg-amber-100 border-amber-500 text-amber-700" : "border-transparent text-amber-600 hover:bg-amber-50 hover:text-amber-700") group flex items-center px-3 py-2 text-sm font-medium border-l-4">
-                                        <svg class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("BT/Dashboard") == true ? "text-amber-500" : "text-amber-400 group-hover:text-amber-500") flex-shrink-0 -ml-1 mr-3 h-6 w-6" 
-                                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                                        </svg>
-                                        B&T Dashboard
-                                    </a>
-                                    <a href="/BT/SerialNumbers" 
-                                       class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("BT/SerialNumbers") == true ? "bg-amber-100 border-amber-500 text-amber-700" : "border-transparent text-amber-600 hover:bg-amber-50 hover:text-amber-700") group flex items-center px-3 py-2 text-sm font-medium border-l-4">
-                                        <svg class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("BT/SerialNumbers") == true ? "text-amber-500" : "text-amber-400 group-hover:text-amber-500") flex-shrink-0 -ml-1 mr-3 h-6 w-6" 
-                                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"></path>
-                                        </svg>
-                                        Serial Numbers
-                                    </a>
-                                    <a href="/BT/Compliance" 
-                                       class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("BT/Compliance") == true ? "bg-amber-100 border-amber-500 text-amber-700" : "border-transparent text-amber-600 hover:bg-amber-50 hover:text-amber-700") group flex items-center px-3 py-2 text-sm font-medium border-l-4">
-                                        <svg class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("BT/Compliance") == true ? "text-amber-500" : "text-amber-400 group-hover:text-amber-500") flex-shrink-0 -ml-1 mr-3 h-6 w-6" 
-                                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-                                        </svg>
-                                        Compliance
-                                    </a>
-                                </div>
-                            }
-
-                            <!-- Advanced Workflows Section (NEW - Purple Color) -->
-                            @if (userRole == "Admin" || userRole == "Manager" || userRole == "WorkflowSpecialist")
-                            {
-                                <div class="space-y-1">
-                                    <h3 class="px-3 text-xs font-semibold text-purple-600 uppercase tracking-wider">
-                                        Advanced Workflows
-                                    </h3>
-                                    <a href="/Workflows/MultiStage" 
-                                       class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("Workflows/MultiStage") == true ? "bg-purple-100 border-purple-500 text-purple-700" : "border-transparent text-purple-600 hover:bg-purple-50 hover:text-purple-700") group flex items-center px-3 py-2 text-sm font-medium border-l-4">
-                                        <svg class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("Workflows/MultiStage") == true ? "text-purple-500" : "text-purple-400 group-hover:text-purple-500") flex-shrink-0 -ml-1 mr-3 h-6 w-6" 
-                                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                                        </svg>
-                                        Multi-Stage Jobs
-                                    </a>
-                                    <a href="/Workflows/Resources" 
-                                       class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("Workflows/Resources") == true ? "bg-purple-100 border-purple-500 text-purple-700" : "border-transparent text-purple-600 hover:bg-purple-50 hover:text-purple-700") group flex items-center px-3 py-2 text-sm font-medium border-l-4">
-                                        <svg class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("Workflows/Resources") == true ? "text-purple-500" : "text-purple-400 group-hover:text-purple-500") flex-shrink-0 -ml-1 mr-3 h-6 w-6" 
-                                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
-                                        </svg>
-                                        Resource Scheduling
-                                    </a>
-                                </div>
-                            }
-
-                            <!-- Admin Section -->
-                            @if (userRole == "Admin")
-                            {
-                                <div class="space-y-1">
-                                    <h3 class="px-3 text-xs font-semibold text-red-500 uppercase tracking-wider">
-                                        Administration
-                                    </h3>
-                                    <a href="/Admin" 
-                                       class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("Admin") == true ? "bg-red-100 border-red-500 text-red-700" : "border-transparent text-red-600 hover:bg-red-50 hover:text-red-700") group flex items-center px-3 py-2 text-sm font-medium border-l-4">
-                                        <svg class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("Admin") == true ? "text-red-500" : "text-red-400 group-hover:text-red-500") flex-shrink-0 -ml-1 mr-3 h-6 w-6" 
-                                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                        </svg>
-                                        Admin Panel
-                                    </a>
-                                </div>
-                            }
+                            <a href="/EDM" class="text-gray-600 hover:text-purple-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                                EDM
+                            </a>
+                            <a href="/Coating" class="text-gray-600 hover:text-orange-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                                Coating
+                            </a>
                         </div>
                         
                         <!-- Mobile Menu Button -->
-                        <div class="lg:hidden">
-                            <button id="mobile-menu-button" class="text-gray-600 hover:text-gray-900 focus:outline-none focus:text-gray-900 p-2">
+                        <div class="md:hidden">
+                            <button id="mobile-menu-button" class="text-gray-600 hover:text-gray-900 focus:outline-none p-2 rounded-md">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                                 </svg>
@@ -229,115 +131,68 @@
 
                 @if (isAuthenticated)
                 {
-                    <!-- Enhanced User Menu -->
+                    <!-- Simplified User Menu -->
                     <div class="flex items-center space-x-4">
-                        <!-- Quick Actions -->
-                        <div class="hidden md:flex items-center space-x-2">
-                            <a href="/Account/Settings" class="p-2 text-gray-600 hover:text-indigo-600 rounded-lg transition-colors">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                </svg>
-                            </a>
-                            <!-- Quick link to Testing Page for easier access -->
-                            <a href="/TestNavigation" class="p-2 text-gray-600 hover:text-green-600 rounded-lg transition-colors" title="Click-Through Testing">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                            </a>
-                        </div>
-                        
                         <!-- User Info -->
-                        <div class="flex items-center space-x-3">
-                            <div class="text-right hidden sm:block">
+                        <div class="hidden sm:flex items-center space-x-3">
+                            <div class="text-right">
                                 <p class="text-sm font-medium text-gray-900">@userName</p>
                                 <p class="text-xs text-gray-500">@userRole</p>
                             </div>
-                            <div class="relative">
-                                <div class="w-10 h-10 opcentrix-gradient rounded-full flex items-center justify-center shadow-lg cursor-pointer">
-                                    <span class="text-white font-semibold text-sm">@(userName.FirstOrDefault())</span>
-                                </div>
+                            <div class="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full flex items-center justify-center">
+                                <span class="text-white font-semibold text-xs">@(userName.FirstOrDefault())</span>
                             </div>
                         </div>
                         
                         <!-- Logout Button -->
-                        <button onclick="performLogout()" class="opcentrix-button opcentrix-button-secondary">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                            </svg>
+                        <button onclick="performLogout()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
                             Logout
                         </button>
+                    </div>
+                }
+                else
+                {
+                    <!-- Login Button for unauthenticated users -->
+                    <div class="flex items-center">
+                        <a href="/Account/Login" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
+                            Login
+                        </a>
                     </div>
                 }
             </div>
         </div>
         
-        <!-- Mobile Menu -->
-        <div id="mobile-menu" class="lg:hidden hidden border-t border-gray-200 bg-gray-50">
-            <div class="px-4 py-3 space-y-2">
-                @if (isAuthenticated && (userRole == "Admin" || userRole == "Manager" || userRole == "Operator" || userRole == "PrintingSpecialist"))
-                {
-                    <a href="/PrintTracking" class="block px-3 py-2 text-gray-600 hover:text-indigo-600 font-medium">Print Tracking Dashboard</a>
-                }
-                @if (isAuthenticated && (userRole == "Admin" || userRole == "Manager" || userRole == "Scheduler" || userRole == "Operator"))
-                {
-                    <a href="/Scheduler" class="block px-3 py-2 text-gray-600 hover:text-indigo-600 font-medium">Production Scheduler</a>
-                    <a href="/Scheduler/MasterSchedule" class="block px-3 py-2 text-gray-600 hover:text-indigo-600 font-medium">Master Schedule</a>
-                }
-                @* B&T Manufacturing Mobile Links *@
-                @if (isAuthenticated && (userRole == "Admin" || userRole == "Manager" || userRole == "BTSpecialist"))
-                {
-                    <div class="border-t border-gray-200 pt-2 mt-2">
-                        <h4 class="px-3 py-1 text-xs font-semibold text-amber-600 uppercase tracking-wider">B&T Manufacturing</h4>
-                        <a href="/BT/Dashboard" class="block px-3 py-2 text-amber-600 hover:text-amber-700 font-medium">B&T Dashboard</a>
-                        <a href="/BT/SerialNumbers" class="block px-3 py-2 text-amber-600 hover:text-amber-700 font-medium">Serial Numbers</a>
-                        <a href="/BT/Compliance" class="block px-3 py-2 text-amber-600 hover:text-amber-700 font-medium">Compliance</a>
-                    </div>
-                }
-                @* Advanced Workflows Mobile Links *@
-                @if (isAuthenticated && (userRole == "Admin" || userRole == "Manager" || userRole == "WorkflowSpecialist"))
-                {
-                    <div class="border-t border-gray-200 pt-2 mt-2">
-                        <h4 class="px-3 py-1 text-xs font-semibold text-purple-600 uppercase tracking-wider">Advanced Workflows</h4>
-                        <a href="/Workflows/MultiStage" class="block px-3 py-2 text-purple-600 hover:text-purple-700 font-medium">Multi-Stage Jobs</a>
-                        <a href="/Workflows/Resources" class="block px-3 py-2 text-purple-600 hover:text-purple-700 font-medium">Resource Scheduling</a>
-                    </div>
-                }
-                @if (isAuthenticated && (userRole == "Admin" || userRole == "Manager" || userRole == "PrintingSpecialist"))
-                {
-                    <a href="/Printing" class="block px-3 py-2 text-gray-600 hover:text-indigo-600 font-medium">SLS Metal Printing</a>
-                }
-                @if (isAuthenticated && (userRole == "Admin" || userRole == "Manager" || userRole == "CoatingSpecialist"))
-                {
-                    <a href="/Coating" class="block px-3 py-2 text-gray-600 hover:text-indigo-600 font-medium">Post-Processing</a>
-                }
-                @if (isAuthenticated && (userRole == "Admin" || userRole == "Manager" || userRole == "QCSpecialist"))
-                {
-                    <a href="/QC" class="block px-3 py-2 text-gray-600 hover:text-indigo-600 font-medium">Quality Control</a>
-                }
-                @if (isAuthenticated && (userRole == "Admin" || userRole == "Manager" || userRole == "ShippingSpecialist"))
-                {
-                    <a href="/Shipping" class="block px-3 py-2 text-gray-600 hover:text-indigo-600 font-medium">Shipping</a>
-                }
-                @if (isAuthenticated && (userRole == "Admin" || userRole == "Manager" || userRole == "EDMSpecialist"))
-                {
-                    <a href="/EDM" class="block px-3 py-2 text-gray-600 hover:text-indigo-600 font-medium">EDM Operations</a>
-                }
-                @if (isAuthenticated && userRole == "Admin")
-                {
-                    <a href="/Admin" class="block px-3 py-2 text-red-600 hover:text-red-700 font-medium">Admin</a>
-                }
+        <!-- Simplified Mobile Menu -->
+        <div id="mobile-menu" class="md:hidden hidden border-t border-gray-200 bg-gray-50">
+            <div class="px-4 py-3 space-y-1">
                 @if (isAuthenticated)
                 {
+                    <a href="/Scheduler" class="block px-3 py-2 text-gray-600 hover:text-blue-600 font-medium rounded-md">Production Scheduler</a>
+                    <a href="/PrintTracking" class="block px-3 py-2 text-gray-600 hover:text-blue-600 font-medium rounded-md">Print Tracking</a>
+                    <a href="/PrintJobLog" class="block px-3 py-2 text-gray-600 hover:text-blue-600 font-medium rounded-md">Print Job Log</a>
+                    <a href="/EDM" class="block px-3 py-2 text-gray-600 hover:text-purple-600 font-medium rounded-md">EDM Operations</a>
+                    <a href="/Coating" class="block px-3 py-2 text-gray-600 hover:text-orange-600 font-medium rounded-md">Coating</a>
+                    <a href="/QC" class="block px-3 py-2 text-gray-600 hover:text-teal-600 font-medium rounded-md">Quality Control</a>
+                    <a href="/Shipping" class="block px-3 py-2 text-gray-600 hover:text-indigo-600 font-medium rounded-md">Shipping</a>
+                    
+                    @if (userRole == "Admin" || userRole == "Manager")
+                    {
+                        <div class="border-t border-gray-200 pt-2 mt-2">
+                            <a href="/Admin" class="block px-3 py-2 text-red-600 hover:text-red-700 font-medium rounded-md">Admin Panel</a>
+                            <a href="/Admin/Parts" class="block px-3 py-2 text-blue-600 hover:text-blue-700 font-medium rounded-md">Parts Management</a>
+                            <a href="/Admin/Prototypes" class="block px-3 py-2 text-amber-600 hover:text-amber-700 font-medium rounded-md">B&T Prototypes</a>
+                        </div>
+                    }
+                    
                     <div class="border-t border-gray-200 pt-2 mt-2">
-                        <a href="/Account/Settings" class="block px-3 py-2 text-gray-600 hover:text-indigo-600 font-medium">Settings</a>
-                        <button onclick="performLogout()" class="w-full text-left px-3 py-2 text-red-600 hover:text-red-700 font-medium">
-                            <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                            </svg>
+                        <button onclick="performLogout()" class="w-full text-left px-3 py-2 text-red-600 hover:text-red-700 font-medium rounded-md">
                             Logout
                         </button>
                     </div>
+                }
+                else
+                {
+                    <a href="/Account/Login" class="block px-3 py-2 text-blue-600 hover:text-blue-700 font-medium rounded-md">Login</a>
                 }
             </div>
         </div>
@@ -370,147 +225,133 @@
         </div>
     </footer>
 
-    <!-- JavaScript Libraries -->
+    <!-- JavaScript Libraries - SAFE MODE -->
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    
+    @* DISABLED: Complex JavaScript files that were causing memory issues
     <script src="~/js/page-monitor.js" asp-append-version="true"></script>
+    <script src="~/js/modal-manager.js" asp-append-version="true"></script>
+    *@
 
     @if (isAuthenticated)
     {
-        <!-- Enhanced Session Management Script -->
+        <!-- FIXED Session Management Script - No Infinite Loops -->
         <script>
-            // Session timeout management with improved UX
-            // CRITICAL FIX: Check if sessionTimeoutMinutes already exists
-            if (typeof sessionTimeoutMinutes === 'undefined') {
-                var sessionTimeoutMinutes = 120; // Default 2 hours
-                var warningTimeoutMinutes = 5; // Show warning 5 minutes before
-                var sessionTimeoutTimer;
-                var warningTimer;
-                var countdownTimer;
-                var lastActivity = Date.now();
+            // CRITICAL FIX: Simplified session timeout management
+            (function() {
+                let sessionTimeoutMinutes = 120; // 2 hours
+                let warningTimeoutMinutes = 5; // 5 minutes warning
+                let sessionTimeoutTimer;
+                let warningTimer;
+                let countdownTimer;
 
-                // Load user session timeout preference
-                const savedTimeout = localStorage.getItem('sessionTimeoutMinutes');
-                if (savedTimeout) {
-                    sessionTimeoutMinutes = parseInt(savedTimeout);
-                }
-            }
-
-            function resetSessionTimeout() {
-                lastActivity = Date.now();
-                clearTimeout(sessionTimeoutTimer);
-                clearTimeout(warningTimer);
-                clearInterval(countdownTimer);
-                hideTimeoutWarning();
-
-                // Set warning timer
-                const warningTime = (sessionTimeoutMinutes - warningTimeoutMinutes) * 60 * 1000;
-                warningTimer = setTimeout(showTimeoutWarning, warningTime);
-
-                // Set session timeout
-                sessionTimeoutTimer = setTimeout(() => {
-                    window.location.href = '/Account/Logout';
-                }, sessionTimeoutMinutes * 60 * 1000);
-            }
-
-            function showTimeoutWarning() {
-                const warning = document.getElementById('session-timeout-warning');
-                warning.style.display = 'block';
-                warning.classList.add('animate-slide-in');
-                
-                let countdown = warningTimeoutMinutes * 60;
-                const countdownSpan = document.getElementById('timeout-countdown');
-                
-                countdownTimer = setInterval(() => {
-                    const minutes = Math.floor(countdown / 60);
-                    const seconds = countdown % 60;
-                    countdownSpan.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-                    
-                    countdown--;
-                    
-                    if (countdown < 0) {
-                        window.location.href = '/Account/Logout';
-                    }
-                }, 1000);
-            }
-
-            function hideTimeoutWarning() {
-                const warning = document.getElementById('session-timeout-warning');
-                warning.style.display = 'none';
-                warning.classList.remove('animate-slide-in');
-                clearInterval(countdownTimer);
-            }
-
-            function extendSession() {
-                fetch('/Account/ExtendSession', { method: 'POST' })
-                    .then(() => {
-                        resetSessionTimeout();
-                        if (window.showSuccessNotification) {
-                            window.showSuccessNotification('Session extended successfully');
-                        }
-                    })
-                    .catch(() => {
-                        window.location.href = '/Account/Login';
-                    });
-            }
-
-            // Enhanced activity tracking
-            const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
-            
-            function trackActivity() {
-                const now = Date.now();
-                if (now - lastActivity > 30000) {
-                    resetSessionTimeout();
-                }
-            }
-
-            // Add activity listeners
-            activityEvents.forEach(event => {
-                document.addEventListener(event, trackActivity, true);
-            });
-
-            // Initialize session timeout
-            resetSessionTimeout();
-
-            // Make functions globally available
-            window.extendSession = extendSession;
-            
-            // Enhanced logout function with confirmation
-            window.performLogout = function() {
-                console.log('🔴 Logout requested by user');
-                
-                // Show confirmation dialog
-                if (confirm('Are you sure you want to logout?\n\nThis will end your current session and you will need to login again.')) {
-                    console.log('🔴 Logout confirmed - redirecting to logout page');
-                    
-                    // Clear any local storage data
-                    try {
-                        localStorage.removeItem('sessionTimeoutMinutes');
-                        localStorage.removeItem('edmLogs');
-                        localStorage.removeItem('edmLogNumber');
-                        console.log('🧹 Local storage cleared');
-                    } catch (error) {
-                        console.warn('⚠️ Could not clear local storage:', error);
-                    }
-                    
-                    // Clear session timers
+                function resetSessionTimeout() {
+                    // Clear existing timers
                     clearTimeout(sessionTimeoutTimer);
                     clearTimeout(warningTimer);
                     clearInterval(countdownTimer);
-                    console.log('⏰ Session timers cleared');
+                    hideTimeoutWarning();
+
+                    // Set new timers
+                    const warningTime = (sessionTimeoutMinutes - warningTimeoutMinutes) * 60 * 1000;
+                    warningTimer = setTimeout(showTimeoutWarning, warningTime);
                     
-                    // Redirect to logout page
-                    window.location.href = '/Account/Logout';
-                } else {
-                    console.log('🔴 Logout cancelled by user');
+                    sessionTimeoutTimer = setTimeout(() => {
+                        window.location.href = '/Account/Logout';
+                    }, sessionTimeoutMinutes * 60 * 1000);
                 }
-            };
+
+                function showTimeoutWarning() {
+                    const warning = document.getElementById('session-timeout-warning');
+                    if (warning) {
+                        warning.style.display = 'block';
+                        
+                        let countdown = warningTimeoutMinutes * 60;
+                        const countdownSpan = document.getElementById('timeout-countdown');
+                        
+                        // FIXED: Use single timer that clears itself
+                        countdownTimer = setInterval(() => {
+                            if (countdown <= 0) {
+                                clearInterval(countdownTimer);
+                                window.location.href = '/Account/Logout';
+                                return;
+                            }
+                            
+                            const minutes = Math.floor(countdown / 60);
+                            const seconds = countdown % 60;
+                            if (countdownSpan) {
+                                countdownSpan.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                            }
+                            countdown--;
+                        }, 1000);
+                    }
+                }
+
+                function hideTimeoutWarning() {
+                    const warning = document.getElementById('session-timeout-warning');
+                    if (warning) {
+                        warning.style.display = 'none';
+                    }
+                    clearInterval(countdownTimer);
+                }
+
+                // FIXED: Simple logout function
+                window.performLogout = function() {
+                    if (confirm('Are you sure you want to logout?')) {
+                        // Clear all timers
+                        clearTimeout(sessionTimeoutTimer);
+                        clearTimeout(warningTimer);
+                        clearInterval(countdownTimer);
+                        
+                        // Redirect
+                        window.location.href = '/Account/Logout';
+                    }
+                };
+
+                // FIXED: Simple extend session function
+                window.extendSession = function() {
+                    fetch('/Account/ExtendSession', { method: 'POST' })
+                        .then(() => {
+                            resetSessionTimeout();
+                            hideTimeoutWarning();
+                        })
+                        .catch(() => {
+                            window.location.href = '/Account/Login';
+                        });
+                };
+
+                // FIXED: Simple activity tracking (no infinite loops)
+                let lastActivity = Date.now();
+                function trackActivity() {
+                    const now = Date.now();
+                    // Only reset if more than 30 seconds since last activity
+                    if (now - lastActivity > 30000) {
+                        lastActivity = now;
+                        resetSessionTimeout();
+                    }
+                }
+
+                // Add activity listeners (throttled)
+                ['click', 'keypress', 'scroll'].forEach(event => {
+                    document.addEventListener(event, trackActivity, { passive: true });
+                });
+
+                // Initialize
+                resetSessionTimeout();
+            })();
             
-            // Mobile menu toggle
-            document.getElementById('mobile-menu-button')?.addEventListener('click', function() {
+            // FIXED: Simple mobile menu toggle
+            document.addEventListener('DOMContentLoaded', function() {
+                const mobileMenuButton = document.getElementById('mobile-menu-button');
                 const mobileMenu = document.getElementById('mobile-menu');
-                mobileMenu.classList.toggle('hidden');
+                
+                if (mobileMenuButton && mobileMenu) {
+                    mobileMenuButton.addEventListener('click', function() {
+                        mobileMenu.classList.toggle('hidden');
+                    });
+                }
             });
         </script>
     }

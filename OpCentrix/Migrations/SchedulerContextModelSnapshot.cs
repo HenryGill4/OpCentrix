@@ -325,6 +325,116 @@ namespace OpCentrix.Migrations
                     b.ToTable("ArchivedJobs");
                 });
 
+            modelBuilder.Entity("OpCentrix.Models.AssemblyComponent", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ComponentDescription")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ComponentPartNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ComponentType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<string>("InspectionNotes")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool?>("InspectionPassed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("InspectionRequired")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
+
+                    b.Property<int?>("LeadTimeDays")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("OrderDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PrototypeJobId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("QuantityRequired")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(1);
+
+                    b.Property<int>("QuantityUsed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0);
+
+                    b.Property<DateTime?>("ReceivedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Needed");
+
+                    b.Property<string>("Supplier")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SupplierPartNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("TotalCost")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal?>("UnitCost")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<DateTime?>("UsedDate")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ComponentType");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("PrototypeJobId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("Supplier");
+
+                    b.ToTable("AssemblyComponents");
+                });
+
             modelBuilder.Entity("OpCentrix.Models.BuildJob", b =>
                 {
                     b.Property<int>("BuildId")
@@ -2485,6 +2595,11 @@ namespace OpCentrix.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("ATFClassification")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
                     b.Property<double?>("AdminEstimatedHoursOverride")
                         .HasColumnType("REAL");
 
@@ -2507,6 +2622,11 @@ namespace OpCentrix.Migrations
                     b.Property<string>("Application")
                         .IsRequired()
                         .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ApprovalWorkflow")
+                        .IsRequired()
+                        .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
                     b.Property<decimal>("ArgonCostPerHour")
@@ -2542,6 +2662,37 @@ namespace OpCentrix.Migrations
                     b.Property<int>("AvgDurationDays")
                         .HasColumnType("INTEGER");
 
+                    b.Property<double?>("BTBackPressurePSI")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("BTBafflePosition")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BTCaliberCompatibility")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BTComponentType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BTFirearmCategory")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("BTLicensingCost")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("BTQualitySpecification")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("BTQualityStandards")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -2556,12 +2707,35 @@ namespace OpCentrix.Migrations
                         .HasColumnType("TEXT")
                         .HasDefaultValue("");
 
+                    b.Property<double?>("BTSoundReductionDB")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("BTSuppressorType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BTTestingProtocol")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("BTTestingRequirements")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(500)
                         .HasColumnType("TEXT")
                         .HasDefaultValue("");
+
+                    b.Property<string>("BTThreadPitch")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BatchControlMethod")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("BuildFileTemplate")
                         .IsRequired()
@@ -2583,6 +2757,14 @@ namespace OpCentrix.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("TEXT")
                         .HasDefaultValue("");
+
+                    b.Property<string>("ChildComponents")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("ComplianceCost")
+                        .HasColumnType("decimal(10,2)");
 
                     b.Property<string>("ComponentType")
                         .IsRequired()
@@ -2630,6 +2812,14 @@ namespace OpCentrix.Migrations
                         .HasColumnType("TEXT")
                         .HasDefaultValue("");
 
+                    b.Property<decimal>("DocumentationCost")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("EARClassification")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
                     b.Property<double>("EstimatedHours")
                         .HasColumnType("REAL");
 
@@ -2639,6 +2829,16 @@ namespace OpCentrix.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("TEXT")
                         .HasDefaultValue("");
+
+                    b.Property<string>("ExportControlNotes")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FFLRequirements")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("FirearmType")
                         .IsRequired()
@@ -2650,6 +2850,11 @@ namespace OpCentrix.Migrations
                     b.Property<double>("HeightMm")
                         .HasColumnType("REAL");
 
+                    b.Property<string>("ITARCategory")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Industry")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -2658,10 +2863,16 @@ namespace OpCentrix.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("IsAssemblyComponent")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("IsControlledItem")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsEARControlled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsSubAssembly")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("LastModifiedBy")
@@ -2684,6 +2895,11 @@ namespace OpCentrix.Migrations
                         .HasPrecision(10, 2)
                         .HasColumnType("decimal(10,2)");
 
+                    b.Property<string>("ManufacturingStage")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Material")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -2692,6 +2908,9 @@ namespace OpCentrix.Migrations
                     b.Property<decimal>("MaterialCostPerKg")
                         .HasPrecision(12, 2)
                         .HasColumnType("decimal(12,2)");
+
+                    b.Property<int>("MaxBatchSize")
+                        .HasColumnType("INTEGER");
 
                     b.Property<double>("MaxOxygenContent")
                         .HasColumnType("REAL");
@@ -2702,6 +2921,11 @@ namespace OpCentrix.Migrations
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ParentComponents")
+                        .IsRequired()
+                        .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PartCategory")
@@ -2769,6 +2993,9 @@ namespace OpCentrix.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("TEXT")
                         .HasDefaultValue("SLS Metal");
+
+                    b.Property<double?>("ProofTestPressure")
+                        .HasColumnType("REAL");
 
                     b.Property<string>("QualityCheckpoints")
                         .IsRequired()
@@ -2840,16 +3067,49 @@ namespace OpCentrix.Migrations
                     b.Property<bool>("RequiresATFCompliance")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("RequiresATFForm1")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresATFForm4")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresAssembly")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresBTProofTesting")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresBackPressureTesting")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresCNCMachining")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("RequiresCertification")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("RequiresComplianceApproval")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("RequiresDimensionalVerification")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresEDMOperations")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresEngineeringApproval")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresExportLicense")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("RequiresFDA")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("RequiresFFLTracking")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresFinishing")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("RequiresITARCompliance")
@@ -2870,7 +3130,16 @@ namespace OpCentrix.Migrations
                     b.Property<bool>("RequiresProofTesting")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("RequiresQualityApproval")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresSLSPrinting")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("RequiresSerialization")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresSoundTesting")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("RequiresSupports")
@@ -2878,6 +3147,23 @@ namespace OpCentrix.Migrations
 
                     b.Property<bool>("RequiresSurfaceFinishVerification")
                         .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresTaxStamp")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresThreadVerification")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresTraceabilityDocuments")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresUniqueSerialNumber")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SerialNumberFormat")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
 
                     b.Property<decimal>("SetupCost")
                         .HasPrecision(10, 2)
@@ -2890,6 +3176,14 @@ namespace OpCentrix.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
+
+                    b.Property<string>("StageDetails")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("StageOrder")
+                        .HasColumnType("INTEGER");
 
                     b.Property<decimal>("StandardLaborCostPerHour")
                         .HasPrecision(10, 2)
@@ -2916,6 +3210,12 @@ namespace OpCentrix.Migrations
                         .HasColumnType("TEXT")
                         .HasDefaultValue("As-built");
 
+                    b.Property<decimal?>("TaxStampAmount")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("TestingCost")
+                        .HasColumnType("decimal(10,2)");
+
                     b.Property<string>("ToleranceRequirements")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -2937,6 +3237,11 @@ namespace OpCentrix.Migrations
 
                     b.Property<double>("WidthMm")
                         .HasColumnType("REAL");
+
+                    b.Property<string>("WorkflowTemplate")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -3212,6 +3517,421 @@ namespace OpCentrix.Migrations
                     b.HasIndex("SuppressorType");
 
                     b.ToTable("PartClassifications");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.ProductionStage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("AllowSkip")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<decimal>("DefaultHourlyRate")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(8, 2)
+                        .HasColumnType("decimal(8,2)")
+                        .HasDefaultValue(85.00m);
+
+                    b.Property<int>("DefaultSetupMinutes")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(30);
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsOptional")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequiredRole")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("RequiresApproval")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("RequiresQualityCheck")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DisplayOrder");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("Name");
+
+                    b.HasIndex("RequiredRole");
+
+                    b.ToTable("ProductionStages");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.ProductionStageExecution", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal?>("ActualCost")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal?>("ActualHours")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<string>("ApprovedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("CompletionDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<decimal?>("EstimatedCost")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal?>("EstimatedHours")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<string>("ExecutedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Improvements")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Issues")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("LaborCost")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal?>("MaterialCost")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal?>("OverheadCost")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("ProcessParameters")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("{}");
+
+                    b.Property<int>("ProductionStageId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("PrototypeJobId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("QualityCheckBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("QualityCheckDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool?>("QualityCheckPassed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("QualityCheckRequired")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("QualityNotes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReviewedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("RunHours")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<decimal?>("SetupHours")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<DateTime?>("StartDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("NotStarted");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompletionDate");
+
+                    b.HasIndex("ExecutedBy");
+
+                    b.HasIndex("ProductionStageId");
+
+                    b.HasIndex("PrototypeJobId");
+
+                    b.HasIndex("StartDate");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("PrototypeJobId", "ProductionStageId")
+                        .IsUnique();
+
+                    b.ToTable("ProductionStageExecutions");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.PrototypeJob", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AdminReviewBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("AdminReviewDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AdminReviewNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AdminReviewStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Pending");
+
+                    b.Property<DateTime?>("CompletionDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("CostVariancePercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<string>("CustomerOrderNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
+
+                    b.Property<int?>("LeadTimeDays")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("PartId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Standard");
+
+                    b.Property<string>("PrototypeNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("RequestDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequestedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("StartDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("InProgress");
+
+                    b.Property<decimal>("TimeVariancePercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<decimal>("TotalActualCost")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<decimal>("TotalActualHours")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<decimal>("TotalEstimatedCost")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<decimal>("TotalEstimatedHours")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AdminReviewStatus");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("PartId");
+
+                    b.HasIndex("Priority");
+
+                    b.HasIndex("PrototypeNumber")
+                        .IsUnique();
+
+                    b.HasIndex("RequestDate");
+
+                    b.HasIndex("RequestedBy");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("PrototypeJobs");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.PrototypeTimeLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ActivityDescription")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ActivityType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<int?>("ElapsedMinutes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Employee")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("EndTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ImprovementSuggestions")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("IssuesEncountered")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LogDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ProductionStageExecutionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ResolutionNotes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("StartTime")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActivityType");
+
+                    b.HasIndex("Employee");
+
+                    b.HasIndex("LogDate");
+
+                    b.HasIndex("ProductionStageExecutionId");
+
+                    b.HasIndex("StartTime");
+
+                    b.ToTable("PrototypeTimeLogs");
                 });
 
             modelBuilder.Entity("OpCentrix.Models.RolePermission", b =>
@@ -3958,6 +4678,17 @@ namespace OpCentrix.Migrations
                     b.ToTable("UserSettings");
                 });
 
+            modelBuilder.Entity("OpCentrix.Models.AssemblyComponent", b =>
+                {
+                    b.HasOne("OpCentrix.Models.PrototypeJob", "PrototypeJob")
+                        .WithMany("AssemblyComponents")
+                        .HasForeignKey("PrototypeJobId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PrototypeJob");
+                });
+
             modelBuilder.Entity("OpCentrix.Models.BuildJob", b =>
                 {
                     b.HasOne("OpCentrix.Models.User", "User")
@@ -4126,6 +4857,47 @@ namespace OpCentrix.Migrations
                     b.Navigation("PartClassification");
                 });
 
+            modelBuilder.Entity("OpCentrix.Models.ProductionStageExecution", b =>
+                {
+                    b.HasOne("OpCentrix.Models.ProductionStage", "ProductionStage")
+                        .WithMany("StageExecutions")
+                        .HasForeignKey("ProductionStageId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("OpCentrix.Models.PrototypeJob", "PrototypeJob")
+                        .WithMany("StageExecutions")
+                        .HasForeignKey("PrototypeJobId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ProductionStage");
+
+                    b.Navigation("PrototypeJob");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.PrototypeJob", b =>
+                {
+                    b.HasOne("OpCentrix.Models.Part", "Part")
+                        .WithMany()
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Part");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.PrototypeTimeLog", b =>
+                {
+                    b.HasOne("OpCentrix.Models.ProductionStageExecution", "ProductionStageExecution")
+                        .WithMany("TimeLogs")
+                        .HasForeignKey("ProductionStageExecutionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ProductionStageExecution");
+                });
+
             modelBuilder.Entity("OpCentrix.Models.SerialNumber", b =>
                 {
                     b.HasOne("OpCentrix.Models.ComplianceRequirement", "ComplianceRequirement")
@@ -4242,6 +5014,23 @@ namespace OpCentrix.Migrations
                     b.Navigation("ComplianceRequirements");
 
                     b.Navigation("Parts");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.ProductionStage", b =>
+                {
+                    b.Navigation("StageExecutions");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.ProductionStageExecution", b =>
+                {
+                    b.Navigation("TimeLogs");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.PrototypeJob", b =>
+                {
+                    b.Navigation("AssemblyComponents");
+
+                    b.Navigation("StageExecutions");
                 });
 
             modelBuilder.Entity("OpCentrix.Models.SerialNumber", b =>

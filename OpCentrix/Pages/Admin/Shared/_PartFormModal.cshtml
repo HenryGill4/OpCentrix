@@ -1,594 +1,612 @@
-@model OpCentrix.Models.Part
+@model OpCentrix.Pages.Admin.PartsModel
 
-<!-- Enhanced Part Form Modal with comprehensive functionality -->
-<style>
-    .form-floating .form-control:focus ~ label {
-        color: #0d6efd;
-    }
-    .admin-override-section {
-        background: linear-gradient(135deg, #fff5e6 0%, #ffe4b8 100%);
-        border-left: 4px solid #f59e0b;
-        border-radius: 0.375rem;
-    }
-    .material-info {
-        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-        border-left: 4px solid #0ea5e9;
-        border-radius: 0.375rem;
-    }
-    .nav-pills .nav-link.active {
-        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-    }
-    .form-floating {
-        margin-bottom: 1rem;
-    }
-    .invalid-feedback {
-        display: block;
-    }
-
-    /* Ensure modal has proper z-index and interaction */
-    .modal {
-        z-index: 1055 !important;
-    }
-    
-    .modal-backdrop {
-        z-index: 1050 !important;
-    }
-    
-    /* Force button visibility and styling */
-    .modal-footer .btn {
-        opacity: 1 !important;
-        visibility: visible !important;
-        pointer-events: auto !important;
-        position: relative !important;
-        z-index: 10 !important;
-        min-height: 38px !important;
-        font-weight: 500 !important;
-        border-width: 2px !important;
-        transition: all 0.2s ease !important;
-    }
-    
-    /* Explicit button styling to override any conflicts */
-    .modal-footer .btn-secondary {
-        background-color: #6c757d !important;
-        border-color: #6c757d !important;
-        color: #ffffff !important;
-    }
-    
-    .modal-footer .btn-secondary:hover,
-    .modal-footer .btn-secondary:focus,
-    .modal-footer .btn-secondary:active {
-        background-color: #5c636a !important;
-        border-color: #565e64 !important;
-        color: #ffffff !important;
-        box-shadow: 0 0 0 0.2rem rgba(108, 117, 125, 0.25) !important;
-    }
-    
-    .modal-footer .btn-primary {
-        background-color: #0d6efd !important;
-        border-color: #0d6efd !important;
-        color: #ffffff !important;
-    }
-    
-    .modal-footer .btn-primary:hover,
-    .modal-footer .btn-primary:focus,
-    .modal-footer .btn-primary:active {
-        background-color: #0b5ed7 !important;
-        border-color: #0a58ca !important;
-        color: #ffffff !important;
-        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25) !important;
-    }
-    
-    /* Prevent any overlay interference */
-    .modal-content {
-        position: relative !important;
-        z-index: 1060 !important;
-    }
-    
-    /* Fix any loading states that might interfere */
-    #savePartBtn:disabled {
-        background-color: #6c757d !important;
-        border-color: #6c757d !important;
-        color: #ffffff !important;
-        opacity: 0.65 !important;
-    }
-</style>
-
-<!-- Modal Header -->
+<!-- Modern Part Form Modal with 4 organized tabs -->
 <div class="modal-header bg-primary text-white">
-    <h4 class="modal-title d-flex align-items-center">
+    <h5 class="modal-title">
         <i class="fas fa-cogs me-2"></i>
-        @(Model.Id == 0 ? "Add New Part" : $"Edit Part: {Model.PartNumber}")
-    </h4>
+        @(Model.Part.Id == 0 ? "Add New Part" : $"Edit Part: {Model.Part.PartNumber}")
+    </h5>
     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 
-<!-- Modal Body -->
 <div class="modal-body">
-    <!-- FIXED: Proper form with antiforgery token -->
-    <form method="post" id="partForm" 
-          asp-page="/Admin/Parts" 
-          asp-page-handler="@(Model.Id == 0 ? "Create" : "Edit")"
-          asp-antiforgery="true"
-          novalidate>
-        
-        <!-- FIXED: Explicit antiforgery token -->
+    <form method="post" id="partForm" asp-page-handler="@(Model.Part.Id == 0 ? "Create" : "Update")">
+        <input type="hidden" asp-for="Part.Id" />
         @Html.AntiForgeryToken()
         
-        <input type="hidden" asp-for="Id" />
-        <input type="hidden" asp-for="CreatedDate" />
-        <input type="hidden" asp-for="CreatedBy" />
-        
         <!-- Tab Navigation -->
-        <ul class="nav nav-pills nav-justified mb-4" id="partFormTabs" role="tablist">
+        <ul class="nav nav-tabs nav-justified mb-3" id="partFormTabs" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="basic-tab" data-bs-toggle="pill" data-bs-target="#basic" type="button" role="tab">
-                    <i class="fas fa-info-circle me-2"></i>Basic Info
+                <button class="nav-link active" id="basic-tab" type="button" 
+                        data-bs-toggle="tab" data-bs-target="#basic" role="tab">
+                    <i class="fas fa-info-circle me-1"></i>
+                    <span class="d-none d-md-inline">Basic Info</span>
+                    <span class="d-md-none">Basic</span>
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="material-tab" data-bs-toggle="pill" data-bs-target="#material" type="button" role="tab">
-                    <i class="fas fa-flask me-2"></i>Material & Process
+                <button class="nav-link" id="material-tab" type="button" 
+                        data-bs-toggle="tab" data-bs-target="#material" role="tab">
+                    <i class="fas fa-flask me-1"></i>
+                    <span class="d-none d-md-inline">Material & Process</span>
+                    <span class="d-md-none">Material</span>
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="physical-tab" data-bs-toggle="pill" data-bs-target="#physical" type="button" role="tab">
-                    <i class="fas fa-cube me-2"></i>Physical Properties
+                <button class="nav-link" id="dimensions-tab" type="button" 
+                        data-bs-toggle="tab" data-bs-target="#dimensions" role="tab">
+                    <i class="fas fa-cube me-1"></i>
+                    <span class="d-none d-md-inline">Dimensions & Quality</span>
+                    <span class="d-md-none">Dimensions</span>
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="cost-tab" data-bs-toggle="pill" data-bs-target="#cost" type="button" role="tab">
-                    <i class="fas fa-dollar-sign me-2"></i>Cost & Timing
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="requirements-tab" data-bs-toggle="pill" data-bs-target="#requirements" type="button" role="tab">
-                    <i class="fas fa-certificate me-2"></i>Quality & Requirements
+                <button class="nav-link" id="cost-tab" type="button" 
+                        data-bs-toggle="tab" data-bs-target="#cost" role="tab">
+                    <i class="fas fa-dollar-sign me-1"></i>
+                    <span class="d-none d-md-inline">Cost & Timing</span>
+                    <span class="d-md-none">Cost</span>
                 </button>
             </li>
         </ul>
 
         <!-- Tab Content -->
         <div class="tab-content" id="partFormTabsContent">
-            <!-- Basic Information Tab -->
+            
+            <!-- TAB 1: Basic Information -->
             <div class="tab-pane fade show active" id="basic" role="tabpanel">
                 <div class="row g-3">
-                    <div class="col-md-4">
-                        <div class="form-floating">
-                            <input asp-for="PartNumber" class="form-control" placeholder="Part Number" required />
-                            <label asp-for="PartNumber">Part Number *</label>
-                            <span asp-validation-for="PartNumber" class="invalid-feedback"></span>
-                        </div>
+                    <div class="col-12">
+                        <h6 class="text-primary border-bottom pb-2 mb-3">
+                            <i class="fas fa-info-circle me-2"></i>Basic Part Information
+                        </h6>
                     </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="Part.PartNumber" class="form-label required">Part Number</label>
+                        <input asp-for="Part.PartNumber" class="form-control" required 
+                               placeholder="e.g., SUP-001, BRK-002" />
+                        <span asp-validation-for="Part.PartNumber" class="text-danger"></span>
+                    </div>
+                    
                     <div class="col-md-8">
-                        <div class="form-floating">
-                            <input asp-for="Name" class="form-control" placeholder="Part Name" required />
-                            <label asp-for="Name">Part Name *</label>
-                            <span asp-validation-for="Name" class="invalid-feedback"></span>
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <div class="form-floating">
-                            <textarea asp-for="Description" class="form-control" style="height: 100px" placeholder="Description" required></textarea>
-                            <label asp-for="Description">Description *</label>
-                            <span asp-validation-for="Description" class="invalid-feedback"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            <input asp-for="CustomerPartNumber" class="form-control" placeholder="Customer Part Number" />
-                            <label asp-for="CustomerPartNumber">Customer Part Number</label>
-                            <span asp-validation-for="CustomerPartNumber" class="invalid-feedback"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            <select asp-for="Industry" class="form-select" required>
-                                <option value="">Select Industry</option>
-                                <option value="Aerospace">Aerospace</option>
-                                <option value="Automotive">Automotive</option>
-                                <option value="Medical">Medical</option>
-                                <option value="Oil & Gas">Oil & Gas</option>
-                                <option value="Defense">Defense</option>
-                                <option value="Marine">Marine</option>
-                                <option value="Energy">Energy</option>
-                                <option value="Electronics">Electronics</option>
-                                <option value="General">General Manufacturing</option>
-                                <option value="Research">Research & Development</option>
-                            </select>
-                            <label asp-for="Industry">Industry *</label>
-                            <span asp-validation-for="Industry" class="invalid-feedback"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            <select asp-for="Application" class="form-select" required>
-                                <option value="">Select Application</option>
-                                <option value="Prototype">Prototype</option>
-                                <option value="Production">Production</option>
-                                <option value="Tooling">Tooling</option>
-                                <option value="Repair">Repair</option>
-                                <option value="Structural Component">Structural Component</option>
-                                <option value="Heat Exchanger">Heat Exchanger</option>
-                                <option value="Valve Body">Valve Body</option>
-                                <option value="Impeller">Impeller</option>
-                                <option value="Turbine Blade">Turbine Blade</option>
-                                <option value="Surgical Instrument">Surgical Instrument</option>
-                                <option value="Implant">Medical Implant</option>
-                                <option value="UAV Frame">UAV Frame</option>
-                                <option value="Engine Component">Engine Component</option>
-                                <option value="General Component">General Component</option>
-                            </select>
-                            <label asp-for="Application">Application *</label>
-                            <span asp-validation-for="Application" class="invalid-feedback"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-floating">
-                            <select asp-for="PartCategory" class="form-select">
-                                <option value="Prototype">Prototype</option>
-                                <option value="Production">Production</option>
-                                <option value="Tooling">Tooling</option>
-                                <option value="Repair">Repair</option>
-                            </select>
-                            <label asp-for="PartCategory">Category</label>
-                            <span asp-validation-for="PartCategory" class="invalid-feedback"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-floating">
-                            <select asp-for="PartClass" class="form-select">
-                                <option value="A">A - Critical</option>
-                                <option value="B">B - Important</option>
-                                <option value="C">C - Standard</option>
-                            </select>
-                            <label asp-for="PartClass">Part Class</label>
-                            <span asp-validation-for="PartClass" class="invalid-feedback"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-check form-switch mt-3">
-                            <input asp-for="IsActive" class="form-check-input" type="checkbox" role="switch" />
-                            <label asp-for="IsActive" class="form-check-label">Active Part</label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Material & Process Tab -->
-            <div class="tab-pane fade" id="material" role="tabpanel">
-                <div class="row g-3">
-                    <div class="col-12">
-                        <div class="material-info p-3 mb-3">
-                            <h6 class="text-primary mb-2">
-                                <i class="fas fa-info-circle me-2"></i>Material Selection Guide
-                            </h6>
-                            <p class="small mb-0">
-                                Select the base material first. The SLS material and process parameters will auto-fill with recommended defaults.
-                                You can adjust these values as needed for your specific application.
-                            </p>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            <select asp-for="Material" class="form-select" id="materialSelect" onchange="updateMaterialDefaults(this.value)" required>
-                                <option value="">Select Material</option>
-                                <option value="Ti-6Al-4V Grade 5">Ti-6Al-4V Grade 5</option>
-                                <option value="Ti-6Al-4V ELI Grade 23">Ti-6Al-4V ELI Grade 23</option>
-                                <option value="Inconel 718">Inconel 718</option>
-                                <option value="Inconel 625">Inconel 625</option>
-                                <option value="316L Stainless Steel">316L Stainless Steel</option>
-                                <option value="17-4 PH Stainless Steel">17-4 PH Stainless Steel</option>
-                                <option value="AlSi10Mg">AlSi10Mg</option>
-                                <option value="CoCrMo">CoCrMo</option>
-                                <option value="Hastelloy X">Hastelloy X</option>
-                                <option value="Maraging Steel">Maraging Steel 300</option>
-                            </select>
-                            <label asp-for="Material">Base Material *</label>
-                            <span asp-validation-for="Material" class="invalid-feedback"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            <input asp-for="SlsMaterial" class="form-control" placeholder="SLS Material" required />
-                            <label asp-for="SlsMaterial">SLS Material *</label>
-                            <span asp-validation-for="SlsMaterial" class="invalid-feedback"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            <input asp-for="EstimatedHours" type="number" step="0.1" min="0.1" max="200" class="form-control" placeholder="Estimated Hours" required />
-                            <label asp-for="EstimatedHours">Estimated Hours *</label>
-                            <span asp-validation-for="EstimatedHours" class="invalid-feedback"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            <input asp-for="PowderRequirementKg" type="number" step="0.1" min="0" max="50" class="form-control" placeholder="Powder Requirement" />
-                            <label asp-for="PowderRequirementKg">Powder Requirement (kg)</label>
-                            <span asp-validation-for="PowderRequirementKg" class="invalid-feedback"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            <select asp-for="ProcessType" class="form-select">
-                                <option value="SLS Metal">SLS Metal</option>
-                                <option value="SLS Polymer">SLS Polymer</option>
-                                <option value="DMLS">DMLS</option>
-                                <option value="EBM">EBM</option>
-                                <option value="Binder Jetting">Binder Jetting</option>
-                            </select>
-                            <label asp-for="ProcessType">Process Type</label>
-                            <span asp-validation-for="ProcessType" class="invalid-feedback"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            <input asp-for="RequiredMachineType" class="form-control" placeholder="Required Machine Type" />
-                            <label asp-for="RequiredMachineType">Required Machine Type</label>
-                            <span asp-validation-for="RequiredMachineType" class="invalid-feedback"></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Physical Properties Tab -->
-            <div class="tab-pane fade" id="physical" role="tabpanel">
-                <div class="row g-3">
-                    <div class="col-12">
-                        <h6 class="text-primary mb-3">
-                            <i class="fas fa-ruler-combined me-2"></i>Dimensions & Physical Properties
-                        </h6>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-floating">
-                            <input asp-for="LengthMm" type="number" step="0.1" min="0" max="250" class="form-control" placeholder="Length" />
-                            <label asp-for="LengthMm">Length (mm)</label>
-                            <span asp-validation-for="LengthMm" class="invalid-feedback"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-floating">
-                            <input asp-for="WidthMm" type="number" step="0.1" min="0" max="250" class="form-control" placeholder="Width" />
-                            <label asp-for="WidthMm">Width (mm)</label>
-                            <span asp-validation-for="WidthMm" class="invalid-feedback"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-floating">
-                            <input asp-for="HeightMm" type="number" step="0.1" min="0" max="300" class="form-control" placeholder="Height" />
-                            <label asp-for="HeightMm">Height (mm)</label>
-                            <span asp-validation-for="HeightMm" class="invalid-feedback"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-floating">
-                            <input asp-for="WeightGrams" type="number" step="0.1" min="0" class="form-control" placeholder="Weight" />
-                            <label asp-for="WeightGrams">Weight (g)</label>
-                            <span asp-validation-for="WeightGrams" class="invalid-feedback"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            <input asp-for="VolumeMm3" type="number" step="0.1" min="0" class="form-control" placeholder="Volume" />
-                            <label asp-for="VolumeMm3">Volume (mm³)</label>
-                            <span asp-validation-for="VolumeMm3" class="invalid-feedback"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            <input asp-for="Dimensions" class="form-control" placeholder="Dimensions (e.g., 50x30x20mm)" />
-                            <label asp-for="Dimensions">Dimensions Description</label>
-                            <span asp-validation-for="Dimensions" class="invalid-feedback"></span>
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <h6 class="text-primary mb-3 mt-4">
-                            <i class="fas fa-cog me-2"></i>Process Parameters
-                        </h6>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-floating">
-                            <input asp-for="RecommendedLaserPower" type="number" step="1" min="0" max="2000" class="form-control" placeholder="Laser Power" />
-                            <label asp-for="RecommendedLaserPower">Laser Power (W)</label>
-                            <span asp-validation-for="RecommendedLaserPower" class="invalid-feedback"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-floating">
-                            <input asp-for="RecommendedScanSpeed" type="number" step="1" min="0" max="5000" class="form-control" placeholder="Scan Speed" />
-                            <label asp-for="RecommendedScanSpeed">Scan Speed (mm/s)</label>
-                            <span asp-validation-for="RecommendedScanSpeed" class="invalid-feedback"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-floating">
-                            <input asp-for="RecommendedLayerThickness" type="number" step="1" min="10" max="100" class="form-control" placeholder="Layer Thickness" />
-                            <label asp-for="RecommendedLayerThickness">Layer Thickness (µm)</label>
-                            <span asp-validation-for="RecommendedLayerThickness" class="invalid-feedback"></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Cost & Timing Tab -->
-            <div class="tab-pane fade" id="cost" role="tabpanel">
-                <div class="row g-3">
-                    <!-- Admin Override Section -->
-                    <div class="col-12">
-                        <div class="admin-override-section p-3 mb-3">
-                            <h6 class="text-warning mb-3">
-                                <i class="fas fa-user-cog me-2"></i>Admin Duration Override
-                            </h6>
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <div class="form-floating">
-                                        <input asp-for="AdminEstimatedHoursOverride" type="number" step="0.1" min="0.1" max="200" class="form-control" placeholder="Override Hours" />
-                                        <label asp-for="AdminEstimatedHoursOverride">Admin Override Hours</label>
-                                        <span asp-validation-for="AdminEstimatedHoursOverride" class="invalid-feedback"></span>
-                                    </div>
-                                    <div class="form-text">Leave blank to use standard estimated hours</div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-floating">
-                                        <textarea asp-for="AdminOverrideReason" class="form-control" style="height: 80px" placeholder="Override Reason"></textarea>
-                                        <label asp-for="AdminOverrideReason">Override Reason</label>
-                                        <span asp-validation-for="AdminOverrideReason" class="invalid-feedback"></span>
-                                    </div>
-                                    <div class="form-text">Required when override hours are specified</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Cost Information -->
-                    <div class="col-12">
-                        <h6 class="text-primary mb-3">
-                            <i class="fas fa-dollar-sign me-2"></i>Cost Information
-                        </h6>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            <input asp-for="MaterialCostPerKg" type="number" step="0.01" min="0" class="form-control" placeholder="Material Cost" />
-                            <label asp-for="MaterialCostPerKg">Material Cost ($/kg)</label>
-                            <span asp-validation-for="MaterialCostPerKg" class="invalid-feedback"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            <input asp-for="StandardLaborCostPerHour" type="number" step="0.01" min="0" class="form-control" placeholder="Labor Cost" />
-                            <label asp-for="StandardLaborCostPerHour">Labor Cost ($/hour)</label>
-                            <span asp-validation-for="StandardLaborCostPerHour" class="invalid-feedback"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-floating">
-                            <input asp-for="SetupCost" type="number" step="0.01" min="0" class="form-control" placeholder="Setup Cost" />
-                            <label asp-for="SetupCost">Setup Cost ($)</label>
-                            <span asp-validation-for="SetupCost" class="invalid-feedback"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-floating">
-                            <input asp-for="PostProcessingCost" type="number" step="0.01" min="0" class="form-control" placeholder="Post-Processing Cost" />
-                            <label asp-for="PostProcessingCost">Post-Processing ($)</label>
-                            <span asp-validation-for="PostProcessingCost" class="invalid-feedback"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-floating">
-                            <input asp-for="QualityInspectionCost" type="number" step="0.01" min="0" class="form-control" placeholder="Inspection Cost" />
-                            <label asp-for="QualityInspectionCost">Inspection ($)</label>
-                            <span asp-validation-for="QualityInspectionCost" class="invalid-feedback"></span>
-                        </div>
-                    </div>
-
-                    <!-- Timing Information -->
-                    <div class="col-12">
-                        <h6 class="text-primary mb-3 mt-4">
-                            <i class="fas fa-clock me-2"></i>Timing Information
-                        </h6>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-floating">
-                            <input asp-for="SetupTimeMinutes" type="number" min="0" max="300" class="form-control" placeholder="Setup Time" />
-                            <label asp-for="SetupTimeMinutes">Setup Time (minutes)</label>
-                            <span asp-validation-for="SetupTimeMinutes" class="invalid-feedback"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-floating">
-                            <input asp-for="PreheatingTimeMinutes" type="number" min="0" max="300" class="form-control" placeholder="Preheating Time" />
-                            <label asp-for="PreheatingTimeMinutes">Preheating (minutes)</label>
-                            <span asp-validation-for="PreheatingTimeMinutes" class="invalid-feedback"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-floating">
-                            <input asp-for="CoolingTimeMinutes" type="number" min="0" max="600" class="form-control" placeholder="Cooling Time" />
-                            <label asp-for="CoolingTimeMinutes">Cooling (minutes)</label>
-                            <span asp-validation-for="CoolingTimeMinutes" class="invalid-feedback"></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Quality & Requirements Tab -->
-            <div class="tab-pane fade" id="requirements" role="tabpanel">
-                <div class="row g-3">
-                    <div class="col-12">
-                        <h6 class="text-primary mb-3">
-                            <i class="fas fa-certificate me-2"></i>Quality Requirements
-                        </h6>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-check form-switch mb-3">
-                            <input asp-for="RequiresInspection" class="form-check-input" type="checkbox" role="switch" />
-                            <label asp-for="RequiresInspection" class="form-check-label">Requires Quality Inspection</label>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-check form-switch mb-3">
-                            <input asp-for="RequiresCertification" class="form-check-input" type="checkbox" role="switch" />
-                            <label asp-for="RequiresCertification" class="form-check-label">Requires Certification</label>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-check form-switch mb-3">
-                            <input asp-for="RequiresFDA" class="form-check-input" type="checkbox" role="switch" />
-                            <label asp-for="RequiresFDA" class="form-check-label">FDA Approval Required</label>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-check form-switch mb-3">
-                            <input asp-for="RequiresAS9100" class="form-check-input" type="checkbox" role="switch" />
-                            <label asp-for="RequiresAS9100" class="form-check-label">AS9100 Required</label>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-check form-switch mb-3">
-                            <input asp-for="RequiresNADCAP" class="form-check-input" type="checkbox" role="switch" />
-                            <label asp-for="RequiresNADCAP" class="form-check-label">NADCAP Required</label>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            <textarea asp-for="QualityStandards" class="form-control" style="height: 80px" placeholder="Quality Standards"></textarea>
-                            <label asp-for="QualityStandards">Quality Standards</label>
-                            <span asp-validation-for="QualityStandards" class="invalid-feedback"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            <textarea asp-for="ToleranceRequirements" class="form-control" style="height: 80px" placeholder="Tolerance Requirements"></textarea>
-                            <label asp-for="ToleranceRequirements">Tolerance Requirements</label>
-                            <span asp-validation-for="ToleranceRequirements" class="invalid-feedback"></span>
-                        </div>
+                        <label asp-for="Part.Name" class="form-label required">Part Name</label>
+                        <input asp-for="Part.Name" class="form-control" required 
+                               placeholder="e.g., Suppressor Baffle - Type 1" />
+                        <span asp-validation-for="Part.Name" class="text-danger"></span>
                     </div>
                     
                     <div class="col-12">
-                        <h6 class="text-primary mb-3 mt-4">
-                            <i class="fas fa-tools me-2"></i>Support & Requirements
+                        <label asp-for="Part.Description" class="form-label required">Description</label>
+                        <textarea asp-for="Part.Description" class="form-control" rows="3" required 
+                                  placeholder="Detailed description of the part including specifications and applications..."></textarea>
+                        <span asp-validation-for="Part.Description" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="Part.CustomerPartNumber" class="form-label">Customer Part Number</label>
+                        <input asp-for="Part.CustomerPartNumber" class="form-control" 
+                               placeholder="Customer's internal part number" />
+                        <span asp-validation-for="Part.CustomerPartNumber" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="Part.Industry" class="form-label required">Industry</label>
+                        <select asp-for="Part.Industry" class="form-select" required>
+                            <option value="">Select Industry</option>
+                            <option value="Aerospace">Aerospace</option>
+                            <option value="Automotive">Automotive</option>
+                            <option value="Defense">Defense</option>
+                            <option value="Energy">Energy</option>
+                            <option value="Manufacturing">Manufacturing</option>
+                            <option value="Medical">Medical</option>
+                            <option value="Research">Research</option>
+                        </select>
+                        <span asp-validation-for="Part.Industry" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="Part.Application" class="form-label required">Application</label>
+                        <select asp-for="Part.Application" class="form-select" required>
+                            <option value="">Select Application</option>
+                            <option value="General">General</option>
+                            <option value="Prototype">Prototype</option>
+                            <option value="Production">Production</option>
+                            <option value="Tooling">Tooling</option>
+                            <option value="Replacement">Replacement</option>
+                            <option value="Custom">Custom</option>
+                        </select>
+                        <span asp-validation-for="Part.Application" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label asp-for="Part.PartCategory" class="form-label">Category</label>
+                        <select asp-for="Part.PartCategory" class="form-select">
+                            <option value="Production">Production</option>
+                            <option value="Prototype">Prototype</option>
+                            <option value="Tooling">Tooling</option>
+                            <option value="Repair">Repair</option>
+                        </select>
+                        <span asp-validation-for="Part.PartCategory" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label asp-for="Part.PartClass" class="form-label">Part Class</label>
+                        <select asp-for="Part.PartClass" class="form-select">
+                            <option value="A">A - Critical (High Priority)</option>
+                            <option value="B">B - Important (Medium Priority)</option>
+                            <option value="C">C - Standard (Normal Priority)</option>
+                        </select>
+                        <span asp-validation-for="Part.PartClass" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="form-check mt-4">
+                            <input asp-for="Part.IsActive" class="form-check-input" type="checkbox" />
+                            <label asp-for="Part.IsActive" class="form-check-label">Active</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: Material & Process Parameters -->
+            <div class="tab-pane fade" id="material" role="tabpanel">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <h6 class="text-primary border-bottom pb-2 mb-3">
+                            <i class="fas fa-flask me-2"></i>Material & SLS Process Parameters
                         </h6>
                     </div>
+                    
+                    <!-- Material Selection -->
                     <div class="col-md-6">
-                        <div class="form-check form-switch mb-3">
-                            <input asp-for="RequiresSupports" class="form-check-input" type="checkbox" role="switch" />
-                            <label asp-for="RequiresSupports" class="form-check-label">Requires Support Structures</label>
-                        </div>
+                        <label asp-for="Part.Material" class="form-label required">Primary Material</label>
+                        <select asp-for="Part.Material" class="form-select" id="materialSelect" 
+                                onchange="updateMaterialDefaults(this.value)" required>
+                            <option value="">Select Material</option>
+                            <optgroup label="Titanium Alloys">
+                                <option value="Ti-6Al-4V Grade 5">Ti-6Al-4V Grade 5 (Standard)</option>
+                                <option value="Ti-6Al-4V ELI Grade 23">Ti-6Al-4V ELI Grade 23 (Medical)</option>
+                                <option value="CP Titanium Grade 2">CP Titanium Grade 2</option>
+                            </optgroup>
+                            <optgroup label="Nickel Superalloys">
+                                <option value="Inconel 718">Inconel 718 (High Temperature)</option>
+                                <option value="Inconel 625">Inconel 625 (Corrosion Resistant)</option>
+                            </optgroup>
+                            <optgroup label="Stainless Steels">
+                                <option value="316L Stainless Steel">316L Stainless Steel</option>
+                                <option value="17-4 PH Stainless Steel">17-4 PH Stainless Steel</option>
+                            </optgroup>
+                            <optgroup label="Aluminum Alloys">
+                                <option value="AlSi10Mg">AlSi10Mg (Lightweight)</option>
+                            </optgroup>
+                        </select>
+                        <span asp-validation-for="Part.Material" class="text-danger"></span>
+                        <div class="form-text">Auto-fills SLS parameters based on material selection</div>
                     </div>
+                    
                     <div class="col-md-6">
-                        <div class="form-floating">
-                            <input asp-for="SupportRemovalTimeMinutes" type="number" min="0" max="120" class="form-control" placeholder="Support Removal Time" />
-                            <label asp-for="SupportRemovalTimeMinutes">Support Removal (min)</label>
-                            <span asp-validation-for="SupportRemovalTimeMinutes" class="invalid-feedback"></span>
-                        </div>
+                        <label asp-for="Part.SlsMaterial" class="form-label required">SLS Processing Material</label>
+                        <input asp-for="Part.SlsMaterial" class="form-control" id="slsMaterialInput" required />
+                        <span asp-validation-for="Part.SlsMaterial" class="text-danger"></span>
+                        <div class="form-text">Material specification for SLS processing</div>
                     </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="Part.ProcessType" class="form-label required">Process Type</label>
+                        <select asp-for="Part.ProcessType" class="form-select" required>
+                            <option value="SLS Metal">SLS Metal</option>
+                            <option value="SLS Polymer">SLS Polymer</option>
+                            <option value="DMLS">DMLS</option>
+                            <option value="EBM">EBM</option>
+                        </select>
+                        <span asp-validation-for="Part.ProcessType" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="Part.RequiredMachineType" class="form-label">Required Machine Type</label>
+                        <input asp-for="Part.RequiredMachineType" class="form-control" 
+                               placeholder="e.g., TruPrint 3000" />
+                        <span asp-validation-for="Part.RequiredMachineType" class="text-danger"></span>
+                    </div>
+                    
+                    <!-- SLS Process Parameters -->
                     <div class="col-12">
-                        <div class="form-floating">
-                            <textarea asp-for="SupportStrategy" class="form-control" style="height: 60px" placeholder="Support Strategy"></textarea>
-                            <label asp-for="SupportStrategy">Support Strategy</label>
-                            <span asp-validation-for="SupportStrategy" class="invalid-feedback"></span>
+                        <h6 class="text-info mb-2 mt-3">
+                            <i class="fas fa-cogs me-2"></i>SLS Process Parameters
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label asp-for="Part.RecommendedLaserPower" class="form-label">Laser Power (W)</label>
+                        <input asp-for="Part.RecommendedLaserPower" type="number" step="1" class="form-control" 
+                               id="laserPowerInput" />
+                        <span asp-validation-for="Part.RecommendedLaserPower" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label asp-for="Part.RecommendedScanSpeed" class="form-label">Scan Speed (mm/s)</label>
+                        <input asp-for="Part.RecommendedScanSpeed" type="number" step="10" class="form-control" 
+                               id="scanSpeedInput" />
+                        <span asp-validation-for="Part.RecommendedScanSpeed" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label asp-for="Part.RecommendedLayerThickness" class="form-label">Layer Thickness (?m)</label>
+                        <input asp-for="Part.RecommendedLayerThickness" type="number" step="1" class="form-control" 
+                               id="layerThicknessInput" />
+                        <span asp-validation-for="Part.RecommendedLayerThickness" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label asp-for="Part.RecommendedHatchSpacing" class="form-label">Hatch Spacing (?m)</label>
+                        <input asp-for="Part.RecommendedHatchSpacing" type="number" step="1" class="form-control" 
+                               id="hatchSpacingInput" />
+                        <span asp-validation-for="Part.RecommendedHatchSpacing" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="Part.RecommendedBuildTemperature" class="form-label">Build Temperature (°C)</label>
+                        <input asp-for="Part.RecommendedBuildTemperature" type="number" step="1" class="form-control" 
+                               id="buildTempInput" />
+                        <span asp-validation-for="Part.RecommendedBuildTemperature" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="Part.RequiredArgonPurity" class="form-label">Argon Purity (%)</label>
+                        <input asp-for="Part.RequiredArgonPurity" type="number" step="0.1" min="99" max="100" 
+                               class="form-control" id="argonPurityInput" />
+                        <span asp-validation-for="Part.RequiredArgonPurity" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="Part.MaxOxygenContent" class="form-label">Max Oxygen (ppm)</label>
+                        <input asp-for="Part.MaxOxygenContent" type="number" step="1" class="form-control" 
+                               id="oxygenContentInput" />
+                        <span asp-validation-for="Part.MaxOxygenContent" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="Part.PowderSpecification" class="form-label">Powder Specification</label>
+                        <input asp-for="Part.PowderSpecification" class="form-control" 
+                               placeholder="e.g., 15-45 micron spherical powder" />
+                        <span asp-validation-for="Part.PowderSpecification" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="Part.PowderRequirementKg" class="form-label">Powder Requirement (kg)</label>
+                        <input asp-for="Part.PowderRequirementKg" type="number" step="0.1" class="form-control" />
+                        <span asp-validation-for="Part.PowderRequirementKg" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- TAB 3: Dimensions & Quality Requirements -->
+            <div class="tab-pane fade" id="dimensions" role="tabpanel">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <h6 class="text-primary border-bottom pb-2 mb-3">
+                            <i class="fas fa-cube me-2"></i>Physical Properties & Quality Requirements
+                        </h6>
+                    </div>
+                    
+                    <!-- Physical Dimensions -->
+                    <div class="col-12">
+                        <h6 class="text-info mb-2">
+                            <i class="fas fa-ruler me-2"></i>Physical Dimensions
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label asp-for="Part.LengthMm" class="form-label">Length (mm)</label>
+                        <input asp-for="Part.LengthMm" type="number" step="0.1" class="form-control" 
+                               placeholder="0.0" onchange="calculateVolume()" />
+                        <span asp-validation-for="Part.LengthMm" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label asp-for="Part.WidthMm" class="form-label">Width (mm)</label>
+                        <input asp-for="Part.WidthMm" type="number" step="0.1" class="form-control" 
+                               placeholder="0.0" onchange="calculateVolume()" />
+                        <span asp-validation-for="Part.WidthMm" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label asp-for="Part.HeightMm" class="form-label">Height (mm)</label>
+                        <input asp-for="Part.HeightMm" type="number" step="0.1" class="form-control" 
+                               placeholder="0.0" onchange="calculateVolume()" />
+                        <span asp-validation-for="Part.HeightMm" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label asp-for="Part.WeightGrams" class="form-label">Weight (g)</label>
+                        <input asp-for="Part.WeightGrams" type="number" step="0.1" class="form-control" 
+                               placeholder="0.0" />
+                        <span asp-validation-for="Part.WeightGrams" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="Part.VolumeMm3" class="form-label">Volume (mm³)</label>
+                        <input asp-for="Part.VolumeMm3" type="number" step="1" class="form-control" 
+                               id="volumeInput" readonly />
+                        <span asp-validation-for="Part.VolumeMm3" class="text-danger"></span>
+                        <div class="form-text">Auto-calculated from L × W × H</div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="Part.Dimensions" class="form-label">Dimensions String</label>
+                        <input asp-for="Part.Dimensions" class="form-control" 
+                               placeholder="e.g., 100 × 50 × 25 mm" id="dimensionsInput" readonly />
+                        <span asp-validation-for="Part.Dimensions" class="text-danger"></span>
+                        <div class="form-text">Auto-generated from dimensions</div>
+                    </div>
+                    
+                    <!-- Surface Finish -->
+                    <div class="col-12">
+                        <h6 class="text-info mb-2 mt-3">
+                            <i class="fas fa-layer-group me-2"></i>Surface Finish Requirements
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="Part.SurfaceFinishRequirement" class="form-label">Surface Finish Type</label>
+                        <select asp-for="Part.SurfaceFinishRequirement" class="form-select">
+                            <option value="As-built">As-built</option>
+                            <option value="Machined">Machined</option>
+                            <option value="Polished">Polished</option>
+                            <option value="Sandblasted">Sandblasted</option>
+                            <option value="Coated">Coated</option>
+                            <option value="Anodized">Anodized</option>
+                        </select>
+                        <span asp-validation-for="Part.SurfaceFinishRequirement" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="Part.MaxSurfaceRoughnessRa" class="form-label">Max Surface Roughness Ra (?m)</label>
+                        <input asp-for="Part.MaxSurfaceRoughnessRa" type="number" step="0.1" class="form-control" 
+                               placeholder="25.0" />
+                        <span asp-validation-for="Part.MaxSurfaceRoughnessRa" class="text-danger"></span>
+                    </div>
+                    
+                    <!-- Quality Requirements -->
+                    <div class="col-12">
+                        <h6 class="text-info mb-2 mt-3">
+                            <i class="fas fa-award me-2"></i>Quality Requirements
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input asp-for="Part.RequiresInspection" class="form-check-input" type="checkbox" />
+                            <label asp-for="Part.RequiresInspection" class="form-check-label">Requires Inspection</label>
                         </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input asp-for="Part.RequiresCertification" class="form-check-input" type="checkbox" />
+                            <label asp-for="Part.RequiresCertification" class="form-check-label">Requires Certification</label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input asp-for="Part.RequiresFDA" class="form-check-input" type="checkbox" />
+                            <label asp-for="Part.RequiresFDA" class="form-check-label">FDA Required</label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input asp-for="Part.RequiresAS9100" class="form-check-input" type="checkbox" />
+                            <label asp-for="Part.RequiresAS9100" class="form-check-label">AS9100 Required</label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input asp-for="Part.RequiresNADCAP" class="form-check-input" type="checkbox" />
+                            <label asp-for="Part.RequiresNADCAP" class="form-check-label">NADCAP Required</label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input asp-for="Part.RequiresSupports" class="form-check-input" type="checkbox" />
+                            <label asp-for="Part.RequiresSupports" class="form-check-label">Requires Support Structures</label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="Part.QualityStandards" class="form-label">Quality Standards</label>
+                        <textarea asp-for="Part.QualityStandards" class="form-control" rows="2" 
+                                  placeholder="e.g., ASTM F3001, ISO 17296-3, ASME Y14.46"></textarea>
+                        <span asp-validation-for="Part.QualityStandards" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="Part.ToleranceRequirements" class="form-label">Tolerance Requirements</label>
+                        <textarea asp-for="Part.ToleranceRequirements" class="form-control" rows="2" 
+                                  placeholder="e.g., ±0.1mm typical, ±0.05mm critical dimensions"></textarea>
+                        <span asp-validation-for="Part.ToleranceRequirements" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: Cost & Timing -->
+            <div class="tab-pane fade" id="cost" role="tabpanel">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <h6 class="text-primary border-bottom pb-2 mb-3">
+                            <i class="fas fa-dollar-sign me-2"></i>Cost & Time Management
+                        </h6>
+                    </div>
+                    
+                    <!-- Duration Management -->
+                    <div class="col-12">
+                        <h6 class="text-info mb-2">
+                            <i class="fas fa-clock me-2"></i>Duration Management
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="Part.EstimatedHours" class="form-label required">Standard Estimated Hours</label>
+                        <input asp-for="Part.EstimatedHours" type="number" step="0.1" min="0.1" class="form-control" 
+                               required onchange="updateDurationDisplay()" id="estimatedHoursInput" />
+                        <span asp-validation-for="Part.EstimatedHours" class="text-danger"></span>
+                        <div class="form-text">Standard manufacturing time estimate</div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="Part.AdminEstimatedHoursOverride" class="form-label">Admin Override Hours</label>
+                        <input asp-for="Part.AdminEstimatedHoursOverride" type="number" step="0.1" min="0.1" 
+                               class="form-control" onchange="updateDurationDisplay()" id="adminOverrideInput" />
+                        <span asp-validation-for="Part.AdminEstimatedHoursOverride" class="text-danger"></span>
+                        <div class="form-text">Leave blank to use standard hours</div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label">Effective Duration</label>
+                        <div class="form-control-plaintext bg-light border rounded p-2" id="effectiveDurationDisplay">
+                            8.0h (Standard)
+                        </div>
+                        <div class="form-text">Currently effective duration</div>
+                    </div>
+                    
+                    <div class="col-12">
+                        <label asp-for="Part.AdminOverrideReason" class="form-label">Admin Override Reason</label>
+                        <textarea asp-for="Part.AdminOverrideReason" class="form-control" rows="2" 
+                                  placeholder="Explain why the standard duration was overridden (required for overrides)..."></textarea>
+                        <span asp-validation-for="Part.AdminOverrideReason" class="text-danger"></span>
+                    </div>
+                    
+                    <!-- Process Times -->
+                    <div class="col-12">
+                        <h6 class="text-info mb-2 mt-3">
+                            <i class="fas fa-stopwatch me-2"></i>Process Times (Minutes)
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label asp-for="Part.SetupTimeMinutes" class="form-label">Setup Time</label>
+                        <input asp-for="Part.SetupTimeMinutes" type="number" step="1" class="form-control" 
+                               placeholder="45" />
+                        <span asp-validation-for="Part.SetupTimeMinutes" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label asp-for="Part.PowderChangeoverTimeMinutes" class="form-label">Powder Changeover</label>
+                        <input asp-for="Part.PowderChangeoverTimeMinutes" type="number" step="1" class="form-control" 
+                               placeholder="30" />
+                        <span asp-validation-for="Part.PowderChangeoverTimeMinutes" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label asp-for="Part.PreheatingTimeMinutes" class="form-label">Preheating</label>
+                        <input asp-for="Part.PreheatingTimeMinutes" type="number" step="1" class="form-control" 
+                               placeholder="60" />
+                        <span asp-validation-for="Part.PreheatingTimeMinutes" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label asp-for="Part.CoolingTimeMinutes" class="form-label">Cooling</label>
+                        <input asp-for="Part.CoolingTimeMinutes" type="number" step="1" class="form-control" 
+                               placeholder="240" />
+                        <span asp-validation-for="Part.CoolingTimeMinutes" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="Part.PostProcessingTimeMinutes" class="form-label">Post-Processing Time</label>
+                        <input asp-for="Part.PostProcessingTimeMinutes" type="number" step="1" class="form-control" 
+                               placeholder="45" />
+                        <span asp-validation-for="Part.PostProcessingTimeMinutes" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Total Process Time</label>
+                        <div class="form-control-plaintext bg-light border rounded p-2" id="totalProcessTimeDisplay">
+                            0.0 hours
+                        </div>
+                        <div class="form-text">Sum of all process times</div>
+                    </div>
+                    
+                    <!-- Cost Data -->
+                    <div class="col-12">
+                        <h6 class="text-info mb-2 mt-3">
+                            <i class="fas fa-calculator me-2"></i>Cost Data (USD)
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="Part.MaterialCostPerKg" class="form-label">Material Cost ($/kg)</label>
+                        <input asp-for="Part.MaterialCostPerKg" type="number" step="0.01" class="form-control" 
+                               placeholder="450.00" id="materialCostInput" onchange="calculateTotalCost()" />
+                        <span asp-validation-for="Part.MaterialCostPerKg" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="Part.StandardLaborCostPerHour" class="form-label">Labor Cost ($/hr)</label>
+                        <input asp-for="Part.StandardLaborCostPerHour" type="number" step="0.01" class="form-control" 
+                               placeholder="85.00" id="laborCostInput" onchange="calculateTotalCost()" />
+                        <span asp-validation-for="Part.StandardLaborCostPerHour" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="Part.MachineOperatingCostPerHour" class="form-label">Machine Cost ($/hr)</label>
+                        <input asp-for="Part.MachineOperatingCostPerHour" type="number" step="0.01" class="form-control" 
+                               placeholder="125.00" id="machineCostInput" onchange="calculateTotalCost()" />
+                        <span asp-validation-for="Part.MachineOperatingCostPerHour" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label asp-for="Part.SetupCost" class="form-label">Setup Cost ($)</label>
+                        <input asp-for="Part.SetupCost" type="number" step="0.01" class="form-control" 
+                               placeholder="150.00" onchange="calculateTotalCost()" />
+                        <span asp-validation-for="Part.SetupCost" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label asp-for="Part.PostProcessingCost" class="form-label">Post-Processing ($)</label>
+                        <input asp-for="Part.PostProcessingCost" type="number" step="0.01" class="form-control" 
+                               placeholder="75.00" onchange="calculateTotalCost()" />
+                        <span asp-validation-for="Part.PostProcessingCost" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label asp-for="Part.QualityInspectionCost" class="form-label">Quality Inspection ($)</label>
+                        <input asp-for="Part.QualityInspectionCost" type="number" step="0.01" class="form-control" 
+                               placeholder="50.00" onchange="calculateTotalCost()" />
+                        <span asp-validation-for="Part.QualityInspectionCost" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label asp-for="Part.ArgonCostPerHour" class="form-label">Argon Cost ($/hr)</label>
+                        <input asp-for="Part.ArgonCostPerHour" type="number" step="0.01" class="form-control" 
+                               placeholder="15.00" onchange="calculateTotalCost()" />
+                        <span asp-validation-for="Part.ArgonCostPerHour" class="text-danger"></span>
+                    </div>
+                    
+                    <!-- Pricing -->
+                    <div class="col-12">
+                        <h6 class="text-info mb-2 mt-3">
+                            <i class="fas fa-tag me-2"></i>Pricing Information
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Estimated Total Cost</label>
+                        <div class="form-control-plaintext bg-warning bg-opacity-25 border rounded p-2 fw-bold" 
+                             id="estimatedTotalCostDisplay">
+                            $0.00
+                        </div>
+                        <div class="form-text">Auto-calculated total manufacturing cost</div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="Part.StandardSellingPrice" class="form-label">Standard Selling Price ($)</label>
+                        <input asp-for="Part.StandardSellingPrice" type="number" step="0.01" class="form-control" 
+                               placeholder="0.00" onchange="calculateMargin()" />
+                        <span asp-validation-for="Part.StandardSellingPrice" class="text-danger"></span>
                     </div>
                 </div>
             </div>
@@ -596,396 +614,386 @@
     </form>
 </div>
 
-<!-- Modal Footer with Enhanced Button Styling -->
-<div class="modal-footer bg-light d-flex justify-content-end gap-2">
-    <button type="button" class="btn btn-secondary px-4 py-2" data-bs-dismiss="modal" style="background-color: #6c757d !important; border-color: #6c757d !important; color: #fff !important;">
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
         <i class="fas fa-times me-2"></i>Cancel
     </button>
-    <button type="submit" form="partForm" class="btn btn-primary px-4 py-2" id="savePartBtn" style="background-color: #0d6efd !important; border-color: #0d6efd !important; color: #fff !important;">
-        <i class="fas fa-save me-2"></i>Save Part
+    <button type="submit" form="partForm" class="btn btn-primary" id="submitBtn">
+        <span id="submitSpinner" class="spinner-border spinner-border-sm me-2 d-none" role="status"></span>
+        <i class="fas fa-save me-2" id="submitIcon"></i>
+        <span id="submitText">@(Model.Part.Id == 0 ? "Create Part" : "Update Part")</span>
     </button>
 </div>
 
+<!-- JavaScript for Part Form -->
 <script>
-(function() {
-    'use strict';
-
-    // Enhanced material defaults with comprehensive data
+    // Material defaults for auto-fill functionality
     const MATERIAL_DEFAULTS = {
         'Ti-6Al-4V Grade 5': {
             slsMaterial: 'Ti-6Al-4V Grade 5',
-            materialCost: 450.00,
-            estimatedHours: 8.0,
-            laborCost: 85.00,
             laserPower: 200,
             scanSpeed: 1200,
             layerThickness: 30,
-            setupTime: 45,
-            preheatingTime: 60,
-            coolingTime: 240
+            hatchSpacing: 120,
+            buildTemperature: 180,
+            argonPurity: 99.9,
+            oxygenContent: 50,
+            materialCost: 450.00,
+            laborCost: 85.00,
+            machineOperatingCost: 125.00,
+            estimatedHours: 8.0,
+            argonCost: 15.00
         },
         'Ti-6Al-4V ELI Grade 23': {
             slsMaterial: 'Ti-6Al-4V ELI Grade 23',
-            materialCost: 550.00,
-            estimatedHours: 8.5,
-            laborCost: 85.00,
-            laserPower: 185,
-            scanSpeed: 1100,
+            laserPower: 180,
+            scanSpeed: 1450,
             layerThickness: 30,
-            setupTime: 45,
-            preheatingTime: 60,
-            coolingTime: 240
+            hatchSpacing: 120,
+            buildTemperature: 165,
+            argonPurity: 99.95,
+            oxygenContent: 30,
+            materialCost: 550.00,
+            laborCost: 85.00,
+            machineOperatingCost: 125.00,
+            estimatedHours: 8.5,
+            argonCost: 15.00
         },
         'Inconel 718': {
             slsMaterial: 'Inconel 718',
-            materialCost: 750.00,
-            estimatedHours: 12.0,
-            laborCost: 95.00,
             laserPower: 285,
             scanSpeed: 960,
-            layerThickness: 30,
-            setupTime: 60,
-            preheatingTime: 80,
-            coolingTime: 300
+            layerThickness: 40,
+            hatchSpacing: 110,
+            buildTemperature: 200,
+            argonPurity: 99.9,
+            oxygenContent: 50,
+            materialCost: 750.00,
+            laborCost: 95.00,
+            machineOperatingCost: 135.00,
+            estimatedHours: 12.0,
+            argonCost: 18.00
         },
         'Inconel 625': {
             slsMaterial: 'Inconel 625',
+            laserPower: 275,
+            scanSpeed: 980,
+            layerThickness: 40,
+            hatchSpacing: 110,
+            buildTemperature: 195,
+            argonPurity: 99.9,
+            oxygenContent: 30,
             materialCost: 800.00,
-            estimatedHours: 12.5,
             laborCost: 95.00,
-            laserPower: 270,
-            scanSpeed: 1000,
-            layerThickness: 30,
-            setupTime: 60,
-            preheatingTime: 80,
-            coolingTime: 300
+            machineOperatingCost: 135.00,
+            estimatedHours: 12.5,
+            argonCost: 18.00
         },
         '316L Stainless Steel': {
             slsMaterial: '316L Stainless Steel',
-            materialCost: 150.00,
-            estimatedHours: 6.0,
-            laborCost: 75.00,
             laserPower: 200,
-            scanSpeed: 1300,
+            scanSpeed: 1150,
             layerThickness: 30,
-            setupTime: 30,
-            preheatingTime: 45,
-            coolingTime: 180
+            hatchSpacing: 120,
+            buildTemperature: 170,
+            argonPurity: 99.5,
+            oxygenContent: 100,
+            materialCost: 150.00,
+            laborCost: 75.00,
+            machineOperatingCost: 115.00,
+            estimatedHours: 6.0,
+            argonCost: 12.00
         },
         '17-4 PH Stainless Steel': {
             slsMaterial: '17-4 PH Stainless Steel',
-            materialCost: 180.00,
-            estimatedHours: 7.0,
-            laborCost: 75.00,
-            laserPower: 220,
+            laserPower: 195,
             scanSpeed: 1250,
             layerThickness: 30,
-            setupTime: 35,
-            preheatingTime: 50,
-            coolingTime: 200
+            hatchSpacing: 120,
+            buildTemperature: 165,
+            argonPurity: 99.5,
+            oxygenContent: 100,
+            materialCost: 180.00,
+            laborCost: 80.00,
+            machineOperatingCost: 120.00,
+            estimatedHours: 7.0,
+            argonCost: 12.00
         },
         'AlSi10Mg': {
             slsMaterial: 'AlSi10Mg',
+            laserPower: 175,
+            scanSpeed: 1350,
+            layerThickness: 30,
+            hatchSpacing: 130,
+            buildTemperature: 160,
+            argonPurity: 99.5,
+            oxygenContent: 100,
             materialCost: 80.00,
-            estimatedHours: 5.0,
             laborCost: 70.00,
-            laserPower: 370,
-            scanSpeed: 1300,
-            layerThickness: 30,
-            setupTime: 25,
-            preheatingTime: 35,
-            coolingTime: 120
-        },
-        'CoCrMo': {
-            slsMaterial: 'CoCrMo',
-            materialCost: 650.00,
-            estimatedHours: 10.0,
-            laborCost: 90.00,
-            laserPower: 250,
-            scanSpeed: 1100,
-            layerThickness: 30,
-            setupTime: 50,
-            preheatingTime: 70,
-            coolingTime: 280
-        },
-        'Hastelloy X': {
-            slsMaterial: 'Hastelloy X',
-            materialCost: 900.00,
-            estimatedHours: 14.0,
-            laborCost: 100.00,
-            laserPower: 280,
-            scanSpeed: 900,
-            layerThickness: 30,
-            setupTime: 65,
-            preheatingTime: 90,
-            coolingTime: 320
-        },
-        'Maraging Steel': {
-            slsMaterial: 'Maraging Steel 300',
-            materialCost: 350.00,
-            estimatedHours: 9.0,
-            laborCost: 80.00,
-            laserPower: 240,
-            scanSpeed: 1150,
-            layerThickness: 30,
-            setupTime: 40,
-            preheatingTime: 55,
-            coolingTime: 220
+            machineOperatingCost: 100.00,
+            estimatedHours: 5.0,
+            argonCost: 10.00
         }
     };
 
-    // Global function for material defaults update
+    // Update material defaults when material is selected
     window.updateMaterialDefaults = function(selectedMaterial) {
         console.log('?? Updating material defaults for:', selectedMaterial);
         
-        const defaults = MATERIAL_DEFAULTS[selectedMaterial];
-        if (!defaults) {
-            console.log('?? No defaults found for material:', selectedMaterial);
-            return;
-        }
-
         try {
+            const defaults = MATERIAL_DEFAULTS[selectedMaterial];
+            if (!defaults) {
+                console.log('?? No defaults found for material:', selectedMaterial);
+                return;
+            }
+            
             // Update form fields with material defaults
-            const fieldMappings = {
-                'SlsMaterial': defaults.slsMaterial,
-                'MaterialCostPerKg': defaults.materialCost,
-                'EstimatedHours': defaults.estimatedHours,
-                'StandardLaborCostPerHour': defaults.laborCost,
-                'RecommendedLaserPower': defaults.laserPower,
-                'RecommendedScanSpeed': defaults.scanSpeed,
-                'RecommendedLayerThickness': defaults.layerThickness,
-                'SetupTimeMinutes': defaults.setupTime,
-                'PreheatingTimeMinutes': defaults.preheatingTime,
-                'CoolingTimeMinutes': defaults.coolingTime
-            };
-
-            let fieldsUpdated = 0;
-            Object.keys(fieldMappings).forEach(fieldName => {
-                const field = document.querySelector(`[name="${fieldName}"]`);
-                if (field) {
-                    // Only update if field is empty or has default value
-                    const currentValue = field.value;
-                    if (!currentValue || currentValue === '' || shouldUpdateField(fieldName, currentValue)) {
-                        field.value = fieldMappings[fieldName];
-                        fieldsUpdated++;
-                        
-                        // Trigger change event for validation
-                        field.dispatchEvent(new Event('change', { bubbles: true }));
-                    }
+            const updates = [
+                { id: 'slsMaterialInput', value: defaults.slsMaterial },
+                { id: 'laserPowerInput', value: defaults.laserPower },
+                { id: 'scanSpeedInput', value: defaults.scanSpeed },
+                { id: 'layerThicknessInput', value: defaults.layerThickness },
+                { id: 'hatchSpacingInput', value: defaults.hatchSpacing },
+                { id: 'buildTempInput', value: defaults.buildTemperature },
+                { id: 'argonPurityInput', value: defaults.argonPurity },
+                { id: 'oxygenContentInput', value: defaults.oxygenContent },
+                { id: 'materialCostInput', value: defaults.materialCost },
+                { id: 'laborCostInput', value: defaults.laborCost },
+                { id: 'machineCostInput', value: defaults.machineOperatingCost },
+                { id: 'estimatedHoursInput', value: defaults.estimatedHours },
+                { name: 'Part.ArgonCostPerHour', value: defaults.argonCost }
+            ];
+            
+            updates.forEach(update => {
+                let element = null;
+                if (update.id) {
+                    element = document.getElementById(update.id);
+                } else if (update.name) {
+                    element = document.querySelector(`[name="${update.name}"]`);
+                }
+                
+                if (element && (!element.value || element.value == '0')) {
+                    element.value = update.value;
+                    console.log(`? Updated ${update.id || update.name}: ${update.value}`);
                 }
             });
-
-            console.log('? Updated', fieldsUpdated, 'fields with material defaults');
             
-            // Show visual feedback
-            showFieldUpdateNotification(selectedMaterial, fieldsUpdated);
+            // Trigger dependent calculations
+            updateDurationDisplay();
+            calculateTotalCost();
+            
+            console.log('? Material defaults applied successfully');
             
         } catch (error) {
             console.error('? Error updating material defaults:', error);
         }
     };
 
-    // Helper function to determine if field should be updated
-    function shouldUpdateField(fieldName, currentValue) {
-        const defaultValues = {
-            'MaterialCostPerKg': ['0', '0.00'],
-            'EstimatedHours': ['0', '8', '8.0'],
-            'StandardLaborCostPerHour': ['0', '0.00', '85', '85.00'],
-            'RecommendedLaserPower': ['0', '200'],
-            'RecommendedScanSpeed': ['0', '1000', '1200'],
-            'RecommendedLayerThickness': ['0', '30'],
-            'SetupTimeMinutes': ['0', '45'],
-            'PreheatingTimeMinutes': ['0', '60'],
-            'CoolingTimeMinutes': ['0', '240']
-        };
-
-        return defaultValues[fieldName] && defaultValues[fieldName].includes(currentValue.toString());
-    }
-
-    // Show visual feedback for field updates
-    function showFieldUpdateNotification(material, count) {
-        // Create a temporary notification
-        const notification = document.createElement('div');
-        notification.className = 'alert alert-info alert-dismissible fade show position-fixed';
-        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
-        notification.innerHTML = `
-            <i class="fas fa-magic me-2"></i>
-            <strong>Material defaults applied!</strong><br>
-            Updated ${count} fields for ${material}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        
-        document.body.appendChild(notification);
-        
-        // Auto-remove after 4 seconds
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
+    // Calculate volume from dimensions
+    window.calculateVolume = function() {
+        try {
+            const length = parseFloat(document.querySelector('[name="Part.LengthMm"]')?.value || 0);
+            const width = parseFloat(document.querySelector('[name="Part.WidthMm"]')?.value || 0);
+            const height = parseFloat(document.querySelector('[name="Part.HeightMm"]')?.value || 0);
+            
+            const volume = length * width * height;
+            const volumeInput = document.getElementById('volumeInput');
+            const dimensionsInput = document.getElementById('dimensionsInput');
+            
+            if (volumeInput) {
+                volumeInput.value = Math.round(volume);
             }
-        }, 4000);
+            
+            if (dimensionsInput && length > 0 && width > 0 && height > 0) {
+                dimensionsInput.value = `${length} × ${width} × ${height} mm`;
+            }
+            
+        } catch (error) {
+            console.error('? Error calculating volume:', error);
+        }
+    };
+
+    // Update duration display
+    window.updateDurationDisplay = function() {
+        console.log('?? Updating duration display');
+        
+        try {
+            const estimatedHours = parseFloat(document.getElementById('estimatedHoursInput')?.value || 0);
+            const adminOverride = parseFloat(document.getElementById('adminOverrideInput')?.value || 0);
+            const displayElement = document.getElementById('effectiveDurationDisplay');
+            
+            if (displayElement) {
+                const effectiveHours = adminOverride > 0 ? adminOverride : estimatedHours;
+                const displayText = adminOverride > 0 
+                    ? `${effectiveHours.toFixed(1)}h (Admin Override)` 
+                    : `${effectiveHours.toFixed(1)}h (Standard)`;
+                
+                displayElement.textContent = displayText;
+                displayElement.className = adminOverride > 0 
+                    ? 'form-control-plaintext bg-warning bg-opacity-25 border rounded p-2 fw-bold'
+                    : 'form-control-plaintext bg-light border rounded p-2';
+            }
+            
+            // Update total process time
+            updateTotalProcessTime();
+            
+        } catch (error) {
+            console.error('? Error updating duration display:', error);
+        }
+    };
+
+    // Calculate total process time
+    function updateTotalProcessTime() {
+        try {
+            const times = [
+                'Part.SetupTimeMinutes',
+                'Part.PowderChangeoverTimeMinutes', 
+                'Part.PreheatingTimeMinutes',
+                'Part.CoolingTimeMinutes',
+                'Part.PostProcessingTimeMinutes'
+            ];
+            
+            let totalMinutes = 0;
+            times.forEach(fieldName => {
+                const element = document.querySelector(`[name="${fieldName}"]`);
+                if (element && element.value) {
+                    totalMinutes += parseFloat(element.value);
+                }
+            });
+            
+            const totalHours = (totalMinutes / 60).toFixed(1);
+            const displayElement = document.getElementById('totalProcessTimeDisplay');
+            if (displayElement) {
+                displayElement.textContent = `${totalHours} hours (${totalMinutes} minutes)`;
+            }
+            
+        } catch (error) {
+            console.error('? Error calculating total process time:', error);
+        }
     }
 
-    // FIXED: Enhanced form submission handling with proper token validation
-    document.addEventListener('DOMContentLoaded', function() {
-        const form = document.getElementById('partForm');
-        const saveBtn = document.getElementById('savePartBtn');
+    // Calculate total cost
+    window.calculateTotalCost = function() {
+        console.log('?? Calculating total cost');
         
-        if (form) {
-            // Enhanced form validation and submission
-            form.addEventListener('submit', function(e) {
-                console.log('?? Form submission started');
+        try {
+            const estimatedHours = parseFloat(document.getElementById('estimatedHoursInput')?.value || 0);
+            const adminOverride = parseFloat(document.getElementById('adminOverrideInput')?.value || 0);
+            const effectiveHours = adminOverride > 0 ? adminOverride : estimatedHours;
+            
+            const materialCost = parseFloat(document.getElementById('materialCostInput')?.value || 0);
+            const laborCost = parseFloat(document.getElementById('laborCostInput')?.value || 0);
+            const machineCost = parseFloat(document.getElementById('machineCostInput')?.value || 0);
+            const powderKg = parseFloat(document.querySelector('[name="Part.PowderRequirementKg"]')?.value || 0);
+            
+            // Basic costs
+            const materialTotal = materialCost * powderKg;
+            const laborTotal = laborCost * effectiveHours;
+            const machineTotal = machineCost * effectiveHours;
+            
+            // Additional costs
+            const setupCost = parseFloat(document.querySelector('[name="Part.SetupCost"]')?.value || 0);
+            const postProcessingCost = parseFloat(document.querySelector('[name="Part.PostProcessingCost"]')?.value || 0);
+            const qualityCost = parseFloat(document.querySelector('[name="Part.QualityInspectionCost"]')?.value || 0);
+            const argonCost = parseFloat(document.querySelector('[name="Part.ArgonCostPerHour"]')?.value || 0) * effectiveHours;
+            
+            const totalCost = materialTotal + laborTotal + machineTotal + setupCost + 
+                             postProcessingCost + qualityCost + argonCost;
+            
+            const displayElement = document.getElementById('estimatedTotalCostDisplay');
+            if (displayElement) {
+                displayElement.textContent = `$${totalCost.toFixed(2)}`;
+            }
+            
+            // Calculate margin if selling price is set
+            calculateMargin();
+            
+        } catch (error) {
+            console.error('? Error calculating total cost:', error);
+        }
+    };
+
+    // Calculate profit margin
+    window.calculateMargin = function() {
+        try {
+            const totalCostText = document.getElementById('estimatedTotalCostDisplay')?.textContent || '$0.00';
+            const totalCost = parseFloat(totalCostText.replace('$', ''));
+            const sellingPrice = parseFloat(document.querySelector('[name="Part.StandardSellingPrice"]')?.value || 0);
+            
+            if (sellingPrice > 0) {
+                const margin = ((sellingPrice - totalCost) / sellingPrice * 100);
+                const marginText = `${margin.toFixed(1)}% ($${(sellingPrice - totalCost).toFixed(2)})`;
                 
-                // Disable submit button to prevent double submission
-                if (saveBtn) {
-                    saveBtn.disabled = true;
-                    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
-                }
-
-                // Client-side validation
-                const isValid = validatePartForm();
-                
-                if (!isValid) {
-                    e.preventDefault();
-                    
-                    // Re-enable button
-                    if (saveBtn) {
-                        saveBtn.disabled = false;
-                        saveBtn.innerHTML = '<i class="fas fa-save me-2"></i>Save Part';
+                // Create or update margin display
+                let marginElement = document.getElementById('profitMarginDisplay');
+                if (!marginElement) {
+                    // Create margin display if it doesn't exist
+                    const sellingPriceInput = document.querySelector('[name="Part.StandardSellingPrice"]');
+                    if (sellingPriceInput && sellingPriceInput.parentNode) {
+                        const marginDiv = document.createElement('div');
+                        marginDiv.className = 'mt-2';
+                        marginDiv.innerHTML = `
+                            <label class="form-label">Profit Margin</label>
+                            <div class="form-control-plaintext bg-success bg-opacity-25 border rounded p-2 fw-bold" 
+                                 id="profitMarginDisplay">
+                                ${marginText}
+                            </div>
+                        `;
+                        sellingPriceInput.parentNode.appendChild(marginDiv);
                     }
+                } else {
+                    marginElement.textContent = marginText;
                     
-                    console.log('? Form validation failed');
-                    return false;
-                }
-
-                // FIXED: Ensure antiforgery token is present
-                const token = form.querySelector('input[name="__RequestVerificationToken"]');
-                if (!token || !token.value) {
-                    console.error('? Missing antiforgery token');
-                    e.preventDefault();
-                    
-                    // Re-enable button
-                    if (saveBtn) {
-                        saveBtn.disabled = false;
-                        saveBtn.innerHTML = '<i class="fas fa-save me-2"></i>Save Part';
+                    // Color coding based on margin
+                    if (margin < 10) {
+                        marginElement.className = 'form-control-plaintext bg-danger bg-opacity-25 border rounded p-2 fw-bold';
+                    } else if (margin < 25) {
+                        marginElement.className = 'form-control-plaintext bg-warning bg-opacity-25 border rounded p-2 fw-bold';
+                    } else {
+                        marginElement.className = 'form-control-plaintext bg-success bg-opacity-25 border rounded p-2 fw-bold';
                     }
-                    
-                    showErrorNotification('Security token missing. Please refresh the form and try again.');
-                    return false;
                 }
+            }
+            
+        } catch (error) {
+            console.error('? Error calculating margin:', error);
+        }
+    };
 
-                console.log('? Form validation passed, submitting with antiforgery token...');
-                return true;
-            });
-
-            // Real-time validation
-            const inputs = form.querySelectorAll('input, select, textarea');
-            inputs.forEach(input => {
-                input.addEventListener('blur', function() {
-                    validateField(this);
+    // Initialize form on load
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('?? Initializing Part Form');
+        
+        try {
+            // Initialize calculations
+            updateDurationDisplay();
+            calculateTotalCost();
+            calculateVolume();
+            
+            // Set up form submission handler
+            const form = document.getElementById('partForm');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    const submitBtn = document.getElementById('submitBtn');
+                    const submitSpinner = document.getElementById('submitSpinner');
+                    const submitIcon = document.getElementById('submitIcon');
+                    const submitText = document.getElementById('submitText');
+                    
+                    if (submitBtn && submitSpinner && submitIcon && submitText) {
+                        submitBtn.disabled = true;
+                        submitSpinner.classList.remove('d-none');
+                        submitIcon.classList.add('d-none');
+                        submitText.textContent = 'Saving...';
+                    }
                 });
-            });
+            }
+            
+            console.log('? Part Form initialized successfully');
+            
+        } catch (error) {
+            console.error('? Error initializing Part Form:', error);
         }
-
-        // Initialize Bootstrap tabs
-        if (typeof bootstrap !== 'undefined') {
-            const triggerTabList = [].slice.call(document.querySelectorAll('#partFormTabs button'));
-            triggerTabList.forEach(function(triggerEl) {
-                const tabTrigger = new bootstrap.Tab(triggerEl);
-            });
-        }
-
-        console.log('? Part form modal initialized with antiforgery token support');
     });
 
-    // Show error notification
-    function showErrorNotification(message) {
-        const notification = document.createElement('div');
-        notification.className = 'alert alert-danger alert-dismissible fade show position-fixed';
-        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
-        notification.innerHTML = `
-            <i class="fas fa-exclamation-triangle me-2"></i>
-            <strong>Error:</strong> ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        
-        document.body.appendChild(notification);
-        
-        // Auto-remove after 5 seconds
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-        }, 5000);
-    }
-
-    // Show success notification
-    function showSuccessNotification(message) {
-        const notification = document.createElement('div');
-        notification.className = 'alert alert-success alert-dismissible fade show position-fixed';
-        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
-        notification.innerHTML = `
-            <i class="fas fa-check-circle me-2"></i>
-            <strong>${message}</strong>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        
-        document.body.appendChild(notification);
-        
-        // Auto-remove after 3 seconds
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-        }, 3000);
-    }
-
-    // Comprehensive form validation
-    function validatePartForm() {
-        let isValid = true;
-        const errors = [];
-
-        // Required fields validation
-        const requiredFields = [
-            'PartNumber', 'Name', 'Description', 'Material', 
-            'SlsMaterial', 'EstimatedHours', 'Industry', 'Application'
-        ];
-
-        requiredFields.forEach(field => {
-            const input = document.querySelector(`[name="${field}"]`);
-            if (input && !input.value.trim()) {
-                isValid = false;
-                errors.push(`${field} is required`);
-                
-                // Highlight the invalid field
-                input.classList.add('is-invalid');
-            } else if (input) {
-                // Remove invalid class if present
-                input.classList.remove('is-invalid');
-            }
-        });
-
-        if (!isValid) {
-            console.error('? Validation errors:', errors);
-        }
-
-        return isValid;
-    }
-
-    // Field-specific validation
-    function validateField(field) {
-        const fieldName = field.name;
-        const value = field.value.trim();
-
-        // Remove existing error feedback
-        field.classList.remove('is-invalid');
-
-        // Basic required field validation
-        if (!value && field.hasAttribute('required')) {
-            field.classList.add('is-invalid');
-            return false;
-        }
-
-        return true;
-    }
-})();
+    console.log('?? Part Form script loaded successfully');
 </script>

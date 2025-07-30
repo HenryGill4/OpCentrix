@@ -194,6 +194,15 @@ builder.Services.AddScoped<IPartClassificationService, PartClassificationService
 builder.Services.AddScoped<ISerializationService, SerializationService>();
 builder.Services.AddScoped<IComplianceService, ComplianceService>();
 
+// SECTION 7C: B&T Parts Service Layer Enhancement (NEW)
+builder.Services.AddScoped<PartClassificationService>();
+builder.Services.AddScoped<BTManufacturingWorkflowService>();
+
+// Phase 0.5: Prototype Tracking System Services
+builder.Services.AddScoped<PrototypeTrackingService>();
+builder.Services.AddScoped<ProductionStageService>();
+builder.Services.AddScoped<AssemblyComponentService>();
+
 // Logging configuration
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
@@ -319,6 +328,10 @@ using (var scope = app.Services.CreateScope())
 
             // Seed B&T part classifications (Segment 7)
             await partClassificationService.SeedDefaultClassificationsAsync();
+            
+            // Initialize production stages for prototype tracking (Phase 0.5)
+            var productionStageService = initScope.ServiceProvider.GetRequiredService<ProductionStageService>();
+            await productionStageService.CreateDefaultStagesAsync();
             
             // Load system settings into configuration (Task 3)
             var configurationService = initScope.ServiceProvider.GetRequiredService<OpCentrix.Services.Admin.ISystemConfigurationService>();

@@ -1,0 +1,516 @@
+@page "/Admin/Prototypes/Details/{id:int}"
+@model OpCentrix.Pages.Admin.Prototypes.DetailsModel
+@{
+    ViewData["Title"] = $"Prototype Details - {Model.ViewModel.PrototypeJob.PrototypeNumber}";
+    Layout = "_AdminLayout";
+}
+
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/Admin">Admin</a></li>
+                    <li class="breadcrumb-item"><a href="/Admin/Prototypes">Prototypes</a></li>
+                    <li class="breadcrumb-item active">@Model.ViewModel.PrototypeJob.PrototypeNumber</li>
+                </ol>
+            </nav>
+            
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h2 class="text-primary mb-1">
+                        <i class="fas fa-cogs me-2"></i>
+                        @Model.ViewModel.PrototypeJob.PrototypeNumber: @Model.ViewModel.PrototypeJob.Part?.Name
+                    </h2>
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="badge bg-@GetStatusBadgeClass(Model.ViewModel.PrototypeJob.Status) fs-6">
+                            @Model.ViewModel.PrototypeJob.Status
+                        </span>
+                        <span class="badge bg-@GetPriorityBadgeClass(Model.ViewModel.PrototypeJob.Priority) fs-6">
+                            @Model.ViewModel.PrototypeJob.Priority Priority
+                        </span>
+                        <span class="text-muted">
+                            Requested by @Model.ViewModel.PrototypeJob.RequestedBy on @Model.ViewModel.PrototypeJob.RequestDate.ToString("MMM dd, yyyy")
+                        </span>
+                    </div>
+                </div>
+                <div>
+                    @if (Model.ViewModel.IsReadyForAdminReview)
+                    {
+                        <a href="/Admin/Prototypes/Review/@Model.ViewModel.PrototypeJob.Id" class="btn btn-success me-2">
+                            <i class="fas fa-check me-1"></i>
+                            Admin Review
+                        </a>
+                    }
+                    <a href="/Admin/Prototypes" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>
+                        Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success/Error Messages -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="fas fa-check-circle me-2"></i>
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Overview Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-clock fa-2x mb-2"></i>
+                    <h4 class="card-title">@Model.ViewModel.TimeAnalysis.TotalActualHours.ToString("F1")h</h4>
+                    <p class="card-text small">
+                        Actual Hours
+                        <br>
+                        <small>Est: @Model.ViewModel.TimeAnalysis.TotalEstimatedHours.ToString("F1")h</small>
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-dollar-sign fa-2x mb-2"></i>
+                    <h4 class="card-title">$@Model.ViewModel.CostAnalysis.TotalActualCost.ToString("N0")</h4>
+                    <p class="card-text small">
+                        Actual Cost
+                        <br>
+                        <small>Est: $@Model.ViewModel.CostAnalysis.TotalEstimatedCost.ToString("N0")</small>
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-percentage fa-2x mb-2"></i>
+                    <h4 class="card-title">@GetProgressPercentage()%</h4>
+                    <p class="card-text small">
+                        Progress
+                        <br>
+                        <small>@GetCompletedStages() of @Model.ViewModel.StageExecutions.Count stages</small>
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-calendar-alt fa-2x mb-2"></i>
+                    <h4 class="card-title">@GetDaysInProcess()</h4>
+                    <p class="card-text small">
+                        Days in Process
+                        <br>
+                        <small>Started @GetStartDate()</small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Production Stage Timeline -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-tasks me-2 text-primary"></i>
+                        Production Stage Progress
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th width="50">Order</th>
+                                    <th>Stage</th>
+                                    <th width="100">Status</th>
+                                    <th width="120">Estimated Hours</th>
+                                    <th width="120">Actual Hours</th>
+                                    <th width="120">Estimated Cost</th>
+                                    <th width="120">Actual Cost</th>
+                                    <th width="150">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var stage in Model.ViewModel.StageExecutions)
+                                {
+                                    <tr class="@GetStageRowClass(stage.Execution.Status)">
+                                        <td>
+                                            <span class="badge bg-secondary">@stage.StageOrder</span>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <span class="me-2" style="font-size: 1.2em;">@stage.StatusIcon</span>
+                                                <div>
+                                                    <strong>@stage.StageName</strong>
+                                                    @if (!string.IsNullOrEmpty(stage.Execution.ExecutedBy))
+                                                    {
+                                                        <div class="small text-muted">Operator: @stage.Execution.ExecutedBy</div>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-@stage.StatusColor">@stage.Execution.Status</span>
+                                        </td>
+                                        <td class="text-center">
+                                            @if (stage.Execution.EstimatedHours.HasValue)
+                                            {
+                                                <span>@stage.Execution.EstimatedHours.Value.ToString("F1")h</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">TBD</span>
+                                            }
+                                        </td>
+                                        <td class="text-center">
+                                            @if (stage.Execution.ActualHours.HasValue)
+                                            {
+                                                <span class="@GetVarianceClass(stage.TimeVarianceHours)">
+                                                    @stage.Execution.ActualHours.Value.ToString("F1")h
+                                                </span>
+                                                @if (Math.Abs(stage.TimeVarianceHours) > 0.1m)
+                                                {
+                                                    <div class="small @GetVarianceClass(stage.TimeVarianceHours)">
+                                                        (@(stage.TimeVarianceHours > 0 ? "+" : "")@stage.TimeVarianceHours.ToString("F1")h)
+                                                    </div>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </td>
+                                        <td class="text-center">
+                                            @if (stage.Execution.EstimatedCost.HasValue)
+                                            {
+                                                <span>$@stage.Execution.EstimatedCost.Value.ToString("N0")</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">TBD</span>
+                                            }
+                                        </td>
+                                        <td class="text-center">
+                                            @if (stage.Execution.ActualCost.HasValue)
+                                            {
+                                                <span>$@stage.Execution.ActualCost.Value.ToString("N0")</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                @if (stage.CanStart)
+                                                {
+                                                    <form method="post" class="d-inline" asp-page-handler="StartStage">
+                                                        <input type="hidden" name="prototypeJobId" value="@Model.ViewModel.PrototypeJob.Id" />
+                                                        <input type="hidden" name="stageId" value="@stage.Execution.ProductionStageId" />
+                                                        <button type="submit" class="btn btn-outline-success" title="Start Stage">
+                                                            <i class="fas fa-play"></i>
+                                                        </button>
+                                                    </form>
+                                                }
+                                                
+                                                @if (stage.CanComplete)
+                                                {
+                                                    <button class="btn btn-outline-primary" 
+                                                            onclick="showCompleteStageModal(@stage.Execution.Id, '@stage.StageName')" 
+                                                            title="Complete Stage">
+                                                        <i class="fas fa-check"></i>
+                                                    </button>
+                                                }
+
+                                                @if (stage.Execution.Status == "InProgress")
+                                                {
+                                                    <button class="btn btn-outline-info" 
+                                                            onclick="showTimeLogModal(@stage.Execution.Id, '@stage.StageName')" 
+                                                            title="Log Time">
+                                                        <i class="fas fa-clock"></i>
+                                                    </button>
+                                                }
+
+                                                @if (stage.CanSkip)
+                                                {
+                                                    <button class="btn btn-outline-warning" 
+                                                            onclick="skipStage(@stage.Execution.Id, '@stage.StageName')" 
+                                                            title="Skip Stage">
+                                                        <i class="fas fa-forward"></i>
+                                                    </button>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assembly Components Section -->
+    @if (Model.ViewModel.AssemblyComponents.Any())
+    {
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-puzzle-piece me-2 text-primary"></i>
+                            Assembly Components
+                        </h5>
+                        <button class="btn btn-sm btn-primary" onclick="showAddComponentModal()">
+                            <i class="fas fa-plus me-1"></i>
+                            Add Component
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Component</th>
+                                        <th width="80">Qty Req</th>
+                                        <th width="80">Qty Used</th>
+                                        <th width="100">Unit Cost</th>
+                                        <th width="100">Total Cost</th>
+                                        <th width="100">Status</th>
+                                        <th width="120">Supplier</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var component in Model.ViewModel.AssemblyComponents)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <strong>@component.ComponentDescription</strong>
+                                                @if (!string.IsNullOrEmpty(component.ComponentPartNumber))
+                                                {
+                                                    <div class="small text-muted">P/N: @component.ComponentPartNumber</div>
+                                                }
+                                            </td>
+                                            <td class="text-center">@component.QuantityRequired</td>
+                                            <td class="text-center">@component.QuantityUsed</td>
+                                            <td class="text-end">
+                                                @if (component.UnitCost.HasValue)
+                                                {
+                                                    <span>$@component.UnitCost.Value.ToString("F2")</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">TBD</span>
+                                                }
+                                            </td>
+                                            <td class="text-end">
+                                                @if (component.TotalCost.HasValue)
+                                                {
+                                                    <span>$@component.TotalCost.Value.ToString("F2")</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">TBD</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-@GetComponentStatusBadgeClass(component.Status)">
+                                                    @component.Status
+                                                </span>
+                                            </td>
+                                            <td>
+                                                @if (!string.IsNullOrEmpty(component.Supplier))
+                                                {
+                                                    <span>@component.Supplier</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">TBD</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Complete Stage Modal -->
+<div class="modal fade" id="completeStageModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="CompleteStage">
+                <div class="modal-header">
+                    <h5 class="modal-title">Complete Stage: <span id="completeStageName"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="completeStageExecutionId" name="stageExecutionId" />
+                    <input type="hidden" name="PrototypeJobId" value="@Model.ViewModel.PrototypeJob.Id" />
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Actual Hours *</label>
+                                <input type="number" step="0.1" class="form-control" name="actualHours" required min="0" max="200">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Actual Cost *</label>
+                                <input type="number" step="0.01" class="form-control" name="actualCost" required min="0" max="50000">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check me-1"></i>
+                        Complete Stage
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@functions {
+    private string GetStatusBadgeClass(string status)
+    {
+        return status?.ToLower() switch
+        {
+            "inprogress" => "primary",
+            "underreview" => "warning", 
+            "approved" => "success",
+            "production" => "info",
+            _ => "secondary"
+        };
+    }
+
+    private string GetPriorityBadgeClass(string priority)
+    {
+        return priority?.ToLower() switch
+        {
+            "rush" => "danger",
+            "high" => "warning",
+            "standard" => "primary",
+            "low" => "secondary",
+            _ => "secondary"
+        };
+    }
+
+    private string GetStageRowClass(string status)
+    {
+        return status?.ToLower() switch
+        {
+            "completed" => "table-success",
+            "inprogress" => "table-primary", 
+            "failed" => "table-danger",
+            _ => ""
+        };
+    }
+
+    private string GetVarianceClass(decimal variance)
+    {
+        if (variance > 2) return "text-danger";
+        if (variance > 1) return "text-warning";
+        if (variance < -1) return "text-success";
+        return "text-muted";
+    }
+
+    private string GetComponentStatusBadgeClass(string status)
+    {
+        return status?.ToLower() switch
+        {
+            "needed" => "secondary",
+            "ordered" => "warning",
+            "received" => "success",
+            "used" => "info",
+            _ => "secondary"
+        };
+    }
+
+    private decimal GetProgressPercentage()
+    {
+        if (!Model.ViewModel.StageExecutions.Any()) return 0;
+        
+        var completed = Model.ViewModel.StageExecutions.Count(s => s.Execution.Status == "Completed");
+        var inProgress = Model.ViewModel.StageExecutions.Count(s => s.Execution.Status == "InProgress");
+        
+        return Math.Round((completed + inProgress * 0.5m) / Model.ViewModel.StageExecutions.Count * 100, 1);
+    }
+
+    private int GetCompletedStages()
+    {
+        return Model.ViewModel.StageExecutions.Count(s => s.Execution.Status == "Completed");
+    }
+
+    private string GetDaysInProcess()
+    {
+        var startDate = Model.ViewModel.PrototypeJob.StartDate ?? Model.ViewModel.PrototypeJob.RequestDate;
+        var days = (int)(DateTime.UtcNow - startDate).TotalDays;
+        return $"{days} days";
+    }
+
+    private string GetStartDate()
+    {
+        var startDate = Model.ViewModel.PrototypeJob.StartDate ?? Model.ViewModel.PrototypeJob.RequestDate;
+        return startDate.ToString("MMM dd");
+    }
+}
+
+@section Scripts {
+    <script>
+        function showCompleteStageModal(stageExecutionId, stageName) {
+            document.getElementById('completeStageExecutionId').value = stageExecutionId;
+            document.getElementById('completeStageName').textContent = stageName;
+            new bootstrap.Modal(document.getElementById('completeStageModal')).show();
+        }
+
+        function showTimeLogModal(stageExecutionId, stageName) {
+            // TODO: Implement time logging modal
+            alert('Time logging functionality will be implemented in the next phase');
+        }
+
+        function showAddComponentModal() {
+            // TODO: Implement add component modal
+            alert('Add component functionality will be implemented in the next phase');
+        }
+
+        function skipStage(stageExecutionId, stageName) {
+            if (confirm(`Are you sure you want to skip the "${stageName}" stage? This action cannot be undone.`)) {
+                // TODO: Implement skip stage functionality
+                alert('Skip stage functionality will be implemented in the next phase');
+            }
+        }
+    </script>
+}

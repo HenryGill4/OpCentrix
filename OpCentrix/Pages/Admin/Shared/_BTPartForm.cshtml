@@ -1,0 +1,1466 @@
+@model OpCentrix.Models.Part
+@{
+    var isEdit = Model.Id > 0;
+    var modalTitle = isEdit ? $"Edit Part: {Model.PartNumber}" : "Add New Part";
+}
+
+<!-- B&T Manufacturing Parts Form - 8-Tab Enhanced Interface -->
+<div class="modal-header bg-gradient-primary text-white">
+    <h5 class="modal-title d-flex align-items-center">
+        <i class="fas fa-industry me-2"></i>
+        @modalTitle
+        @if (isEdit && Model.IsBTRegulatedComponent())
+        {
+            <span class="badge bg-warning text-dark ms-2">
+                <i class="fas fa-shield-alt me-1"></i>Regulated
+            </span>
+        }
+    </h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+
+<form method="post" class="needs-validation" novalidate id="btPartForm" 
+      hx-post="/Admin/Parts?handler=@(isEdit ? "Edit" : "Add")" 
+      hx-target="#btPartForm" 
+      hx-swap="outerHTML"
+      onsubmit="return validateBTPartForm()">
+    
+    @Html.AntiForgeryToken()
+    @if (isEdit)
+    {
+        <input type="hidden" asp-for="Id" />
+    }
+
+    <div class="modal-body p-0">
+        <!-- Enhanced Tab Navigation for B&T Manufacturing -->
+        <div class="bg-light border-bottom">
+            <ul class="nav nav-tabs border-0" id="btPartTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="basic-tab" data-bs-toggle="tab" data-bs-target="#basic-content" 
+                            type="button" role="tab" onclick="showBTTab('basic')">
+                        <i class="fas fa-info-circle me-1"></i>
+                        <span class="d-none d-md-inline">Basic Information</span>
+                        <span class="d-md-none">Basic</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="classification-tab" data-bs-toggle="tab" data-bs-target="#classification-content" 
+                            type="button" role="tab" onclick="showBTTab('classification')">
+                        <i class="fas fa-tags me-1"></i>
+                        <span class="d-none d-md-inline">B&T Classification</span>
+                        <span class="d-md-none">B&T</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="manufacturing-tab" data-bs-toggle="tab" data-bs-target="#manufacturing-content" 
+                            type="button" role="tab" onclick="showBTTab('manufacturing')">
+                        <i class="fas fa-industry me-1"></i>
+                        <span class="d-none d-md-inline">Manufacturing Stages</span>
+                        <span class="d-md-none">Mfg</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="compliance-tab" data-bs-toggle="tab" data-bs-target="#compliance-content" 
+                            type="button" role="tab" onclick="showBTTab('compliance')">
+                        <i class="fas fa-shield-alt me-1"></i>
+                        <span class="d-none d-md-inline">Regulatory Compliance</span>
+                        <span class="d-md-none">Compliance</span>
+                        @if (Model.IsBTRegulatedComponent())
+                        {
+                            <i class="fas fa-exclamation-triangle text-warning ms-1" title="Regulated Component"></i>
+                        }
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="material-tab" data-bs-toggle="tab" data-bs-target="#material-content" 
+                            type="button" role="tab" onclick="showBTTab('material')">
+                        <i class="fas fa-flask me-1"></i>
+                        <span class="d-none d-md-inline">Material & Process</span>
+                        <span class="d-md-none">Material</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="quality-tab" data-bs-toggle="tab" data-bs-target="#quality-content" 
+                            type="button" role="tab" onclick="showBTTab('quality')">
+                        <i class="fas fa-check-circle me-1"></i>
+                        <span class="d-none d-md-inline">Quality & Testing</span>
+                        <span class="d-md-none">Quality</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="costing-tab" data-bs-toggle="tab" data-bs-target="#costing-content" 
+                            type="button" role="tab" onclick="showBTTab('costing')">
+                        <i class="fas fa-dollar-sign me-1"></i>
+                        <span class="d-none d-md-inline">Costing & Timing</span>
+                        <span class="d-md-none">Cost</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="workflow-tab" data-bs-toggle="tab" data-bs-target="#workflow-content" 
+                            type="button" role="tab" onclick="showBTTab('workflow')">
+                        <i class="fas fa-project-diagram me-1"></i>
+                        <span class="d-none d-md-inline">Workflow & Approval</span>
+                        <span class="d-md-none">Workflow</span>
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Tab Content Area -->
+        <div class="tab-content p-4" style="max-height: 70vh; overflow-y: auto;">
+            
+            <!-- Tab 1: Basic Information -->
+            <div class="tab-pane fade show active" id="basic-content" role="tabpanel">
+                <h6 class="text-primary mb-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Basic Part Information
+                </h6>
+                
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="PartNumber" class="form-label">
+                            Part Number <span class="text-danger">*</span>
+                        </label>
+                        <input asp-for="PartNumber" class="form-control" required 
+                               placeholder="e.g., BT-2024-0001" 
+                               onchange="validateBTPartNumber(this.value)">
+                        <div class="invalid-feedback">Please enter a valid part number.</div>
+                        <div class="form-text">B&T part numbering format: BT-YYYY-####</div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="CustomerPartNumber" class="form-label">
+                            Customer Part Number
+                        </label>
+                        <input asp-for="CustomerPartNumber" class="form-control" 
+                               placeholder="Customer's part number">
+                    </div>
+                    
+                    <div class="col-12">
+                        <label asp-for="Name" class="form-label">
+                            Part Name <span class="text-danger">*</span>
+                        </label>
+                        <input asp-for="Name" class="form-control" required 
+                               placeholder="e.g., Suppressor Baffle - Front">
+                    </div>
+                    
+                    <div class="col-12">
+                        <label asp-for="Description" class="form-label">
+                            Description <span class="text-danger">*</span>
+                        </label>
+                        <textarea asp-for="Description" class="form-control" rows="3" required 
+                                  placeholder="Detailed description of the part and its function"></textarea>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="Industry" class="form-label">Industry</label>
+                        <select asp-for="Industry" class="form-select">
+                            <option value="Firearms">Firearms</option>
+                            <option value="Defense">Defense</option>
+                            <option value="Law Enforcement">Law Enforcement</option>
+                            <option value="Commercial">Commercial</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="Application" class="form-label">Application</label>
+                        <input asp-for="Application" class="form-control" value="B&T Manufacturing">
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="PartCategory" class="form-label">Part Category</label>
+                        <select asp-for="PartCategory" class="form-select">
+                            <option value="Production">Production</option>
+                            <option value="Prototype">Prototype</option>
+                            <option value="Development">Development</option>
+                            <option value="Testing">Testing</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab 2: B&T Classification -->
+            <div class="tab-pane fade" id="classification-content" role="tabpanel">
+                <h6 class="text-primary mb-3">
+                    <i class="fas fa-tags me-2"></i>
+                    B&T Component Classification
+                </h6>
+                
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="BTComponentType" class="form-label">
+                            B&T Component Type <span class="text-danger">*</span>
+                        </label>
+                        <select asp-for="BTComponentType" class="form-select" onchange="updateBTComponentFields()">
+                            <option value="General">General Component</option>
+                            <option value="Suppressor">Suppressor Component</option>
+                            <option value="Receiver">Receiver Component</option>
+                            <option value="Barrel">Barrel Component</option>
+                            <option value="Trigger">Trigger Component</option>
+                            <option value="Safety">Safety Component</option>
+                            <option value="Stock">Stock Component</option>
+                            <option value="Grip">Grip Component</option>
+                            <option value="Magazine">Magazine Component</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="BTFirearmCategory" class="form-label">
+                            Firearm Category <span class="text-danger">*</span>
+                        </label>
+                        <select asp-for="BTFirearmCategory" class="form-select" onchange="updateComplianceRequirements()">
+                            <option value="Component">Component</option>
+                            <option value="Firearm">Firearm</option>
+                            <option value="NFA_Item">NFA Item</option>
+                            <option value="Accessory">Accessory</option>
+                            <option value="Controlled_Part">Controlled Part</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Suppressor-Specific Fields -->
+                    <div class="col-md-6" id="suppressorFields" style="display: none;">
+                        <label asp-for="BTSuppressorType" class="form-label">
+                            Suppressor Type
+                        </label>
+                        <select asp-for="BTSuppressorType" class="form-select">
+                            <option value="">Select Type</option>
+                            <option value="Baffle">Baffle</option>
+                            <option value="EndCap">End Cap</option>
+                            <option value="Tube">Tube</option>
+                            <option value="Mount">Mount</option>
+                            <option value="Internal">Internal Component</option>
+                            <option value="Spacer">Spacer</option>
+                            <option value="Spring">Spring</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6" id="baffleFields" style="display: none;">
+                        <label asp-for="BTBafflePosition" class="form-label">
+                            Baffle Position
+                        </label>
+                        <select asp-for="BTBafflePosition" class="form-select">
+                            <option value="">Select Position</option>
+                            <option value="Front">Front</option>
+                            <option value="Middle">Middle</option>
+                            <option value="Rear">Rear</option>
+                            <option value="End">End</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="BTCaliberCompatibility" class="form-label">
+                            Caliber Compatibility
+                        </label>
+                        <input asp-for="BTCaliberCompatibility" class="form-control" 
+                               placeholder="e.g., .223, .308, 9mm">
+                        <div class="form-text">Comma-separated list of compatible calibers</div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="BTThreadPitch" class="form-label">
+                            Thread Pitch
+                        </label>
+                        <select asp-for="BTThreadPitch" class="form-select">
+                            <option value="">Select Thread Pitch</option>
+                            <option value="1/2-28">1/2-28</option>
+                            <option value="5/8-24">5/8-24</option>
+                            <option value="M14x1">M14x1</option>
+                            <option value="M15x1">M15x1</option>
+                            <option value="3/4-24">3/4-24</option>
+                            <option value="Custom">Custom</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="BTSoundReductionDB" class="form-label">
+                            Sound Reduction (dB)
+                        </label>
+                        <input asp-for="BTSoundReductionDB" type="number" class="form-control" 
+                               min="0" max="50" step="0.1">
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="BTBackPressurePSI" class="form-label">
+                            Back Pressure (PSI)
+                        </label>
+                        <input asp-for="BTBackPressurePSI" type="number" class="form-control" 
+                               min="0" max="10000" step="0.1">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab 3: Manufacturing Stages -->
+            <div class="tab-pane fade" id="manufacturing-content" role="tabpanel">
+                <h6 class="text-primary mb-3">
+                    <i class="fas fa-industry me-2"></i>
+                    B&T Manufacturing Stages
+                </h6>
+                
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="ManufacturingStage" class="form-label">
+                            Current Manufacturing Stage
+                        </label>
+                        <select asp-for="ManufacturingStage" class="form-select" onchange="updateStageDetails()">
+                            <option value="Design">Design</option>
+                            <option value="SLS-Primary">SLS Primary</option>
+                            <option value="Secondary-Ops">Secondary Operations</option>
+                            <option value="Multi-Stage">Multi-Stage</option>
+                            <option value="Assembly">Assembly</option>
+                            <option value="Finishing">Finishing</option>
+                            <option value="Complete">Complete</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="StageOrder" class="form-label">
+                            Stage Order
+                        </label>
+                        <input asp-for="StageOrder" type="number" class="form-control" 
+                               min="1" max="10" value="1">
+                    </div>
+                    
+                    <!-- Manufacturing Requirements -->
+                    <div class="col-12">
+                        <label class="form-label">Required Manufacturing Operations</label>
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input asp-for="RequiresSLSPrinting" class="form-check-input" type="checkbox" checked>
+                                    <label asp-for="RequiresSLSPrinting" class="form-check-label">
+                                        <i class="fas fa-cube me-1"></i>
+                                        SLS Metal Printing
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input asp-for="RequiresCNCMachining" class="form-check-input" type="checkbox">
+                                    <label asp-for="RequiresCNCMachining" class="form-check-label">
+                                        <i class="fas fa-cog me-1"></i>
+                                        CNC Machining
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input asp-for="RequiresEDMOperations" class="form-check-input" type="checkbox">
+                                    <label asp-for="RequiresEDMOperations" class="form-check-label">
+                                        <i class="fas fa-bolt me-1"></i>
+                                        EDM Operations
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input asp-for="RequiresAssembly" class="form-check-input" type="checkbox">
+                                    <label asp-for="RequiresAssembly" class="form-check-label">
+                                        <i class="fas fa-puzzle-piece me-1"></i>
+                                        Assembly Operations
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input asp-for="RequiresFinishing" class="form-check-input" type="checkbox">
+                                    <label asp-for="RequiresFinishing" class="form-check-label">
+                                        <i class="fas fa-paint-brush me-1"></i>
+                                        Finishing Operations
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-12">
+                        <label asp-for="StageDetails" class="form-label">
+                            Stage-Specific Details
+                        </label>
+                        <textarea asp-for="StageDetails" class="form-control" rows="3" 
+                                  placeholder="JSON object with stage-specific parameters and requirements"></textarea>
+                        <div class="form-text">Enter stage-specific details in JSON format</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab 4: Regulatory Compliance -->
+            <div class="tab-pane fade" id="compliance-content" role="tabpanel">
+                <h6 class="text-primary mb-3">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    Regulatory Compliance & Documentation
+                </h6>
+                
+                <!-- ATF/FFL Requirements -->
+                <div class="row g-3 mb-4">
+                    <div class="col-12">
+                        <h6 class="text-secondary">
+                            <i class="fas fa-flag-usa me-2"></i>
+                            ATF/FFL Requirements
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input asp-for="RequiresATFForm1" class="form-check-input" type="checkbox" onchange="updateTaxStampRequirement()">
+                            <label asp-for="RequiresATFForm1" class="form-check-label">
+                                Requires ATF Form 1 (Make/Manufacture)
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input asp-for="RequiresATFForm4" class="form-check-input" type="checkbox" onchange="updateTaxStampRequirement()">
+                            <label asp-for="RequiresATFForm4" class="form-check-label">
+                                Requires ATF Form 4 (Transfer)
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input asp-for="RequiresTaxStamp" class="form-check-input" type="checkbox">
+                            <label asp-for="RequiresTaxStamp" class="form-check-label">
+                                Requires Federal Tax Stamp
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="TaxStampAmount" class="form-label">
+                            Tax Stamp Amount ($)
+                        </label>
+                        <input asp-for="TaxStampAmount" type="number" class="form-control" 
+                               min="0" max="10000" step="0.01" placeholder="200.00">
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="ATFClassification" class="form-label">
+                            ATF Classification
+                        </label>
+                        <select asp-for="ATFClassification" class="form-select">
+                            <option value="">Select Classification</option>
+                            <option value="Firearm">Firearm</option>
+                            <option value="Silencer">Silencer</option>
+                            <option value="SBR">Short Barreled Rifle</option>
+                            <option value="SBS">Short Barreled Shotgun</option>
+                            <option value="AOW">Any Other Weapon</option>
+                            <option value="Component">Component</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="FFLRequirements" class="form-label">
+                            FFL Requirements
+                        </label>
+                        <input asp-for="FFLRequirements" class="form-control" 
+                               placeholder="Specific FFL requirements and restrictions">
+                    </div>
+                </div>
+                
+                <!-- ITAR/Export Control -->
+                <div class="row g-3 mb-4">
+                    <div class="col-12">
+                        <h6 class="text-secondary">
+                            <i class="fas fa-globe me-2"></i>
+                            ITAR/Export Control
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input asp-for="RequiresITARCompliance" class="form-check-input" type="checkbox">
+                            <label asp-for="RequiresITARCompliance" class="form-check-label">
+                                Requires ITAR Compliance
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input asp-for="RequiresExportLicense" class="form-check-input" type="checkbox">
+                            <label asp-for="RequiresExportLicense" class="form-check-label">
+                                Requires Export License
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="ITARCategory" class="form-label">
+                            ITAR Category
+                        </label>
+                        <select asp-for="ITARCategory" class="form-select">
+                            <option value="">Select Category</option>
+                            <option value="Category I">Category I - Firearms</option>
+                            <option value="Category II">Category II - Gun Mounts</option>
+                            <option value="Category III">Category III - Ammunition</option>
+                            <option value="Category IV">Category IV - Launch Vehicles</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="EARClassification" class="form-label">
+                            EAR Classification
+                        </label>
+                        <input asp-for="EARClassification" class="form-control" 
+                               placeholder="Export Administration Regulations classification">
+                    </div>
+                    
+                    <div class="col-12">
+                        <label asp-for="ExportControlNotes" class="form-label">
+                            Export Control Notes
+                        </label>
+                        <textarea asp-for="ExportControlNotes" class="form-control" rows="2" 
+                                  placeholder="Additional export control requirements and restrictions"></textarea>
+                    </div>
+                </div>
+                
+                <!-- Additional Compliance -->
+                <div class="row g-3">
+                    <div class="col-12">
+                        <h6 class="text-secondary">
+                            <i class="fas fa-clipboard-check me-2"></i>
+                            Additional Compliance
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input asp-for="RequiresUniqueSerialNumber" class="form-check-input" type="checkbox">
+                            <label asp-for="RequiresUniqueSerialNumber" class="form-check-label">
+                                Requires Unique Serial Number
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input asp-for="IsControlledItem" class="form-check-input" type="checkbox">
+                            <label asp-for="IsControlledItem" class="form-check-label">
+                                Controlled Item
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input asp-for="RequiresTraceabilityDocuments" class="form-check-input" type="checkbox">
+                            <label asp-for="RequiresTraceabilityDocuments" class="form-check-label">
+                                Requires Traceability Documents
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="SerialNumberFormat" class="form-label">
+                            Serial Number Format
+                        </label>
+                        <input asp-for="SerialNumberFormat" class="form-control" 
+                               placeholder="BT-{YYYY}-{####}">
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="BatchControlMethod" class="form-label">
+                            Batch Control Method
+                        </label>
+                        <select asp-for="BatchControlMethod" class="form-select">
+                            <option value="Standard">Standard</option>
+                            <option value="Lot">Lot Control</option>
+                            <option value="Heat">Heat Control</option>
+                            <option value="Individual">Individual</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab 5: Material & Process -->
+            <div class="tab-pane fade" id="material-content" role="tabpanel">
+                <h6 class="text-primary mb-3">
+                    <i class="fas fa-flask me-2"></i>
+                    Material & SLS Process Parameters
+                </h6>
+                
+                <div class="row g-3">
+                    <!-- Material Selection -->
+                    <div class="col-md-6">
+                        <label asp-for="Material" class="form-label">
+                            Base Material <span class="text-danger">*</span>
+                        </label>
+                        <select asp-for="Material" class="form-select" onchange="updateBTMaterialDefaults()">
+                            <option value="Ti-6Al-4V Grade 5">Ti-6Al-4V Grade 5 (Standard)</option>
+                            <option value="Ti-6Al-4V Grade 23">Ti-6Al-4V Grade 23 (ELI)</option>
+                            <option value="Inconel 718">Inconel 718 (High Temp)</option>
+                            <option value="Inconel 625">Inconel 625 (Corrosion Resistant)</option>
+                            <option value="17-4 PH Stainless">17-4 PH Stainless Steel</option>
+                            <option value="316L Stainless">316L Stainless Steel</option>
+                            <option value="AlSi10Mg">AlSi10Mg (Aluminum)</option>
+                            <option value="Maraging Steel">Maraging Steel 300</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="SlsMaterial" class="form-label">
+                            SLS Powder Material
+                        </label>
+                        <input asp-for="SlsMaterial" class="form-control" readonly>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="PowderSpecification" class="form-label">
+                            Powder Specification
+                        </label>
+                        <input asp-for="PowderSpecification" class="form-control" 
+                               placeholder="15-45 micron particle size">
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="PowderRequirementKg" class="form-label">
+                            Powder Requirement (kg)
+                        </label>
+                        <input asp-for="PowderRequirementKg" type="number" class="form-control" 
+                               min="0" max="50" step="0.1">
+                    </div>
+                    
+                    <!-- SLS Process Parameters -->
+                    <div class="col-12">
+                        <h6 class="text-secondary mt-3">
+                            <i class="fas fa-cogs me-2"></i>
+                            SLS Process Parameters
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label asp-for="RecommendedLaserPower" class="form-label">
+                            Laser Power (W)
+                        </label>
+                        <input asp-for="RecommendedLaserPower" type="number" class="form-control" 
+                               min="100" max="500" step="5">
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label asp-for="RecommendedScanSpeed" class="form-label">
+                            Scan Speed (mm/s)
+                        </label>
+                        <input asp-for="RecommendedScanSpeed" type="number" class="form-control" 
+                               min="500" max="3000" step="50">
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label asp-for="RecommendedLayerThickness" class="form-label">
+                            Layer Thickness (µm)
+                        </label>
+                        <input asp-for="RecommendedLayerThickness" type="number" class="form-control" 
+                               min="20" max="60" step="5">
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label asp-for="RecommendedHatchSpacing" class="form-label">
+                            Hatch Spacing (µm)
+                        </label>
+                        <input asp-for="RecommendedHatchSpacing" type="number" class="form-control" 
+                               min="80" max="200" step="10">
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="RecommendedBuildTemperature" class="form-label">
+                            Build Temperature (°C)
+                        </label>
+                        <input asp-for="RecommendedBuildTemperature" type="number" class="form-control" 
+                               min="150" max="300" step="5">
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="RequiredArgonPurity" class="form-label">
+                            Argon Purity (%)
+                        </label>
+                        <input asp-for="RequiredArgonPurity" type="number" class="form-control" 
+                               min="99.0" max="100.0" step="0.1" value="99.9">
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="MaxOxygenContent" class="form-label">
+                            Max Oxygen (ppm)
+                        </label>
+                        <input asp-for="MaxOxygenContent" type="number" class="form-control" 
+                               min="0" max="100" step="1" value="50">
+                    </div>
+                    
+                    <!-- Physical Properties -->
+                    <div class="col-12">
+                        <h6 class="text-secondary mt-3">
+                            <i class="fas fa-ruler me-2"></i>
+                            Physical Properties
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label asp-for="LengthMm" class="form-label">
+                            Length (mm)
+                        </label>
+                        <input asp-for="LengthMm" type="number" class="form-control" 
+                               min="0" max="250" step="0.1">
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label asp-for="WidthMm" class="form-label">
+                            Width (mm)
+                        </label>
+                        <input asp-for="WidthMm" type="number" class="form-control" 
+                               min="0" max="250" step="0.1">
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label asp-for="HeightMm" class="form-label">
+                            Height (mm)
+                        </label>
+                        <input asp-for="HeightMm" type="number" class="form-control" 
+                               min="0" max="300" step="0.1">
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label asp-for="WeightGrams" class="form-label">
+                            Weight (g)
+                        </label>
+                        <input asp-for="WeightGrams" type="number" class="form-control" 
+                               min="0" max="1000" step="0.1">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab 6: Quality & Testing -->
+            <div class="tab-pane fade" id="quality-content" role="tabpanel">
+                <h6 class="text-primary mb-3">
+                    <i class="fas fa-check-circle me-2"></i>
+                    B&T Quality Standards & Testing Protocols
+                </h6>
+                
+                <div class="row g-3">
+                    <!-- B&T Specific Testing -->
+                    <div class="col-12">
+                        <h6 class="text-secondary">
+                            <i class="fas fa-vial me-2"></i>
+                            B&T Testing Requirements
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input asp-for="RequiresBTProofTesting" class="form-check-input" type="checkbox">
+                            <label asp-for="RequiresBTProofTesting" class="form-check-label">
+                                Requires B&T Proof Testing
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="ProofTestPressure" class="form-label">
+                            Proof Test Pressure (PSI)
+                        </label>
+                        <input asp-for="ProofTestPressure" type="number" class="form-control" 
+                               min="0" max="100000" step="100">
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input asp-for="RequiresSoundTesting" class="form-check-input" type="checkbox">
+                            <label asp-for="RequiresSoundTesting" class="form-check-label">
+                                Requires Sound Reduction Testing
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input asp-for="RequiresBackPressureTesting" class="form-check-input" type="checkbox">
+                            <label asp-for="RequiresBackPressureTesting" class="form-check-label">
+                                Requires Back Pressure Testing
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input asp-for="RequiresThreadVerification" class="form-check-input" type="checkbox">
+                            <label asp-for="RequiresThreadVerification" class="form-check-label">
+                                Requires Thread Pitch Verification
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-12">
+                        <label asp-for="BTTestingProtocol" class="form-label">
+                            B&T Testing Protocol
+                        </label>
+                        <textarea asp-for="BTTestingProtocol" class="form-control" rows="3" 
+                                  placeholder="Specific B&T testing protocols and procedures"></textarea>
+                    </div>
+                    
+                    <div class="col-12">
+                        <label asp-for="BTQualitySpecification" class="form-label">
+                            B&T Quality Specification Reference
+                        </label>
+                        <input asp-for="BTQualitySpecification" class="form-control" 
+                               placeholder="Reference to B&T quality specification document">
+                    </div>
+                    
+                    <!-- Standard Quality Requirements -->
+                    <div class="col-12">
+                        <h6 class="text-secondary mt-3">
+                            <i class="fas fa-clipboard-check me-2"></i>
+                            Standard Quality Requirements
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input asp-for="RequiresDimensionalVerification" class="form-check-input" type="checkbox" checked>
+                            <label asp-for="RequiresDimensionalVerification" class="form-check-label">
+                                Dimensional Verification
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input asp-for="RequiresSurfaceFinishVerification" class="form-check-input" type="checkbox" checked>
+                            <label asp-for="RequiresSurfaceFinishVerification" class="form-check-label">
+                                Surface Finish Verification
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input asp-for="RequiresMaterialCertification" class="form-check-input" type="checkbox" checked>
+                            <label asp-for="RequiresMaterialCertification" class="form-check-label">
+                                Material Certification
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="SurfaceFinishRequirement" class="form-label">
+                            Surface Finish Requirement
+                        </label>
+                        <select asp-for="SurfaceFinishRequirement" class="form-select">
+                            <option value="As-built">As-built</option>
+                            <option value="Machined">Machined</option>
+                            <option value="Polished">Polished</option>
+                            <option value="Bead Blasted">Bead Blasted</option>
+                            <option value="Anodized">Anodized</option>
+                            <option value="Cerakoted">Cerakoted</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="MaxSurfaceRoughnessRa" class="form-label">
+                            Max Surface Roughness Ra (µm)
+                        </label>
+                        <input asp-for="MaxSurfaceRoughnessRa" type="number" class="form-control" 
+                               min="0" max="100" step="0.1" value="25">
+                    </div>
+                    
+                    <div class="col-12">
+                        <label asp-for="ToleranceRequirements" class="form-label">
+                            Tolerance Requirements
+                        </label>
+                        <input asp-for="ToleranceRequirements" class="form-control" 
+                               value="±0.1mm typical, ±0.05mm critical dimensions">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab 7: Costing & Timing -->
+            <div class="tab-pane fade" id="costing-content" role="tabpanel">
+                <h6 class="text-primary mb-3">
+                    <i class="fas fa-dollar-sign me-2"></i>
+                    B&T Manufacturing Costs & Timing
+                </h6>
+                
+                <div class="row g-3">
+                    <!-- B&T Specific Costs -->
+                    <div class="col-12">
+                        <h6 class="text-secondary">
+                            <i class="fas fa-receipt me-2"></i>
+                            B&T Compliance Costs
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="BTLicensingCost" class="form-label">
+                            B&T Licensing Cost ($)
+                        </label>
+                        <input asp-for="BTLicensingCost" type="number" class="form-control" 
+                               min="0" max="10000" step="0.01">
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="ComplianceCost" class="form-label">
+                            Regulatory Compliance Cost ($)
+                        </label>
+                        <input asp-for="ComplianceCost" type="number" class="form-control" 
+                               min="0" max="10000" step="0.01">
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="TestingCost" class="form-label">
+                            B&T Testing Cost ($)
+                        </label>
+                        <input asp-for="TestingCost" type="number" class="form-control" 
+                               min="0" max="5000" step="0.01">
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="DocumentationCost" class="form-label">
+                            Documentation Cost ($)
+                        </label>
+                        <input asp-for="DocumentationCost" type="number" class="form-control" 
+                               min="0" max="2000" step="0.01">
+                    </div>
+                    
+                    <!-- Manufacturing Costs -->
+                    <div class="col-12">
+                        <h6 class="text-secondary mt-3">
+                            <i class="fas fa-calculator me-2"></i>
+                            Manufacturing Costs
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="MaterialCostPerKg" class="form-label">
+                            Material Cost ($/kg)
+                        </label>
+                        <input asp-for="MaterialCostPerKg" type="number" class="form-control" 
+                               min="0" max="2000" step="0.01" value="450.00">
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="StandardLaborCostPerHour" class="form-label">
+                            Labor Cost ($/hour)
+                        </label>
+                        <input asp-for="StandardLaborCostPerHour" type="number" class="form-control" 
+                               min="0" max="200" step="0.01" value="85.00">
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="MachineOperatingCostPerHour" class="form-label">
+                            Machine Cost ($/hour)
+                        </label>
+                        <input asp-for="MachineOperatingCostPerHour" type="number" class="form-control" 
+                               min="0" max="300" step="0.01" value="125.00">
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="SetupCost" class="form-label">
+                            Setup Cost ($)
+                        </label>
+                        <input asp-for="SetupCost" type="number" class="form-control" 
+                               min="0" max="1000" step="0.01" value="150.00">
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="PostProcessingCost" class="form-label">
+                            Post-Processing Cost ($)
+                        </label>
+                        <input asp-for="PostProcessingCost" type="number" class="form-control" 
+                               min="0" max="500" step="0.01" value="75.00">
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="QualityInspectionCost" class="form-label">
+                            Quality Inspection Cost ($)
+                        </label>
+                        <input asp-for="QualityInspectionCost" type="number" class="form-control" 
+                               min="0" max="500" step="0.01" value="50.00">
+                    </div>
+                    
+                    <!-- Timing Information -->
+                    <div class="col-12">
+                        <h6 class="text-secondary mt-3">
+                            <i class="fas fa-clock me-2"></i>
+                            Manufacturing Timing
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="EstimatedHours" class="form-label">
+                            Estimated Manufacturing Hours <span class="text-danger">*</span>
+                        </label>
+                        <input asp-for="EstimatedHours" type="number" class="form-control" 
+                               min="0.1" max="200" step="0.1" onchange="updateBTDurationDisplay()">
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Total Manufacturing Time</label>
+                        <input type="text" class="form-control" id="totalManufacturingTime" readonly>
+                        <div class="form-text">Includes all manufacturing stages</div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="SetupTimeMinutes" class="form-label">
+                            Setup Time (minutes)
+                        </label>
+                        <input asp-for="SetupTimeMinutes" type="number" class="form-control" 
+                               min="0" max="300" step="5" value="45">
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="CoolingTimeMinutes" class="form-label">
+                            Cooling Time (minutes)
+                        </label>
+                        <input asp-for="CoolingTimeMinutes" type="number" class="form-control" 
+                               min="0" max="600" step="15" value="240">
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="PostProcessingTimeMinutes" class="form-label">
+                            Post-Processing Time (minutes)
+                        </label>
+                        <input asp-for="PostProcessingTimeMinutes" type="number" class="form-control" 
+                               min="0" max="180" step="5" value="45">
+                    </div>
+                    
+                    <!-- Cost Summary -->
+                    <div class="col-12 mt-3">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title text-primary">
+                                    <i class="fas fa-chart-line me-2"></i>
+                                    Cost Summary
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div id="manufacturingCostDisplay">
+                                            <strong>Manufacturing Cost:</strong> $<span id="manufacturingCost">0.00</span>
+                                        </div>
+                                        <div id="complianceCostDisplay">
+                                            <strong>Compliance Cost:</strong> $<span id="complianceCost">0.00</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div id="totalCostDisplay">
+                                            <strong>Total Estimated Cost:</strong> $<span id="totalCost">0.00</span>
+                                        </div>
+                                        <div id="complexityDisplay">
+                                            <strong>Complexity Level:</strong> <span id="complexityLevel">Simple</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab 8: Workflow & Approval -->
+            <div class="tab-pane fade" id="workflow-content" role="tabpanel">
+                <h6 class="text-primary mb-3">
+                    <i class="fas fa-project-diagram me-2"></i>
+                    B&T Workflow & Approval Process
+                </h6>
+                
+                <div class="row g-3">
+                    <!-- Workflow Configuration -->
+                    <div class="col-12">
+                        <h6 class="text-secondary">
+                            <i class="fas fa-sitemap me-2"></i>
+                            Workflow Configuration
+                        </h6>
+                    </div
+                    
+                    <div class="col-md-6">
+                        <label asp-for="WorkflowTemplate" class="form-label">
+                            Workflow Template
+                        </label>
+                        <select asp-for="WorkflowTemplate" class="form-select" onchange="updateWorkflowRequirements()">
+                            <option value="Standard">Standard Workflow</option>
+                            <option value="BT_Suppressor_Workflow">B&T Suppressor Workflow</option>
+                            <option value="BT_Firearm_Workflow">B&T Firearm Workflow</option>
+                            <option value="BT_Regulated_Workflow">B&T Regulated Workflow</option>
+                            <option value="BT_Prototype_Workflow">B&T Prototype Workflow</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Approval Requirements -->
+                    <div class="col-12">
+                        <h6 class="text-secondary mt-3">
+                            <i class="fas fa-user-check me-2"></i>
+                            Approval Requirements
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input asp-for="RequiresEngineeringApproval" class="form-check-input" type="checkbox">
+                            <label asp-for="RequiresEngineeringApproval" class="form-check-label">
+                                Engineering Approval
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input asp-for="RequiresQualityApproval" class="form-check-input" type="checkbox">
+                            <label asp-for="RequiresQualityApproval" class="form-check-label">
+                                Quality Approval
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input asp-for="RequiresComplianceApproval" class="form-check-input" type="checkbox">
+                            <label asp-for="RequiresComplianceApproval" class="form-check-label">
+                                Compliance Approval
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Workflow Summary -->
+                    <div class="col-12 mt-3">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title text-primary">
+                                    <i class="fas fa-tasks me-2"></i>
+                                    B&T Manufacturing Summary
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div id="manufacturingStagesDisplay">
+                                            <strong>Manufacturing Stages:</strong> <span id="manufacturingStages">SLS</span>
+                                        </div>
+                                        <div id="complianceRequirementsDisplay">
+                                            <strong>Compliance Requirements:</strong> <span id="complianceRequirements">None</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div id="approvalRequirementsDisplay">
+                                            <strong>Approval Requirements:</strong> <span id="approvalRequirements">Standard</span>
+                                        </div>
+                                        <div id="recommendedWorkflowDisplay">
+                                            <strong>Recommended Workflow:</strong> <span id="recommendedWorkflow">Standard</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <div class="modal-footer bg-light">
+        <div class="d-flex justify-content-between w-100">
+            <div>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </button>
+            </div>
+            <div>
+                <button type="button" class="btn btn-outline-primary me-2" onclick="validateBTPartForm(true)">
+                    <i class="fas fa-check me-2"></i>Validate
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>
+                    @(isEdit ? "Update Part" : "Create Part")
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+
+<!-- Enhanced JavaScript for B&T Parts Form -->
+<script>
+    // B&T Parts Form Management
+    console.log('?? Loading B&T Parts Form scripts...');
+    
+    // Tab management
+    window.showBTTab = function(tabName) {
+        console.log('?? Switching to B&T tab:', tabName);
+        
+        // Update tab visibility
+        const tabs = ['basic', 'classification', 'manufacturing', 'compliance', 'material', 'quality', 'costing', 'workflow'];
+        tabs.forEach(tab => {
+            const content = document.getElementById(tab + '-content');
+            const tabButton = document.getElementById(tab + '-tab');
+            if (content && tabButton) {
+                if (tab === tabName) {
+                    content.classList.add('show', 'active');
+                    tabButton.classList.add('active');
+                } else {
+                    content.classList.remove('show', 'active');
+                    tabButton.classList.remove('active');
+                }
+            }
+        });
+    };
+    
+    // B&T Component type change handler
+    window.updateBTComponentFields = function() {
+        const componentType = document.querySelector('select[name="BTComponentType"]').value;
+        const suppressorFields = document.getElementById('suppressorFields');
+        const baffleFields = document.getElementById('baffleFields');
+        
+        if (componentType === 'Suppressor') {
+            suppressorFields.style.display = 'block';
+        } else {
+            suppressorFields.style.display = 'none';
+            baffleFields.style.display = 'none';
+        }
+        
+        // Update suppressor type field
+        const suppressorType = document.querySelector('select[name="BTSuppressorType"]');
+        if (suppressorType) {
+            suppressorType.addEventListener('change', function() {
+                if (this.value === 'Baffle') {
+                    baffleFields.style.display = 'block';
+                } else {
+                    baffleFields.style.display = 'none';
+                }
+            });
+        }
+    };
+    
+    // Update compliance requirements based on firearm category
+    window.updateComplianceRequirements = function() {
+        const category = document.querySelector('select[name="BTFirearmCategory"]').value;
+        const form1Checkbox = document.querySelector('input[name="RequiresATFForm1"]');
+        const form4Checkbox = document.querySelector('input[name="RequiresATFForm4"]');
+        const taxStampCheckbox = document.querySelector('input[name="RequiresTaxStamp"]');
+        const taxStampAmount = document.querySelector('input[name="TaxStampAmount"]');
+        
+        // Auto-populate based on category
+        if (category === 'NFA_Item') {
+            if (form1Checkbox) form1Checkbox.checked = true;
+            if (taxStampCheckbox) taxStampCheckbox.checked = true;
+            if (taxStampAmount) taxStampAmount.value = '200.00';
+        }
+    };
+    
+    // Tax stamp requirement update
+    window.updateTaxStampRequirement = function() {
+        const form1 = document.querySelector('input[name="RequiresATFForm1"]').checked;
+        const form4 = document.querySelector('input[name="RequiresATFForm4"]').checked;
+        const taxStampCheckbox = document.querySelector('input[name="RequiresTaxStamp"]');
+        const taxStampAmount = document.querySelector('input[name="TaxStampAmount"]');
+        
+        if (form1 || form4) {
+            if (taxStampCheckbox) taxStampCheckbox.checked = true;
+            if (taxStampAmount && !taxStampAmount.value) taxStampAmount.value = '200.00';
+        }
+    };
+    
+    // B&T Part number validation
+    window.validateBTPartNumber = function(partNumber) {
+        const pattern = /^BT-\d{4}-\d{4}$/;
+        const isValid = pattern.test(partNumber);
+        
+        const input = document.querySelector('input[name="PartNumber"]');
+        if (input) {
+            if (isValid) {
+                input.classList.remove('is-invalid');
+                input.classList.add('is-valid');
+            } else {
+                input.classList.remove('is-valid');
+                input.classList.add('is-invalid');
+            }
+        }
+        
+        return isValid;
+    };
+    
+    // Enhanced form validation for B&T requirements
+    window.validateBTPartForm = function(validateOnly = false) {
+        console.log('?? Validating B&T Parts Form...');
+        
+        let isValid = true;
+        const errors = [];
+        const warnings = [];
+        
+        // Validate part number
+        const partNumber = document.querySelector('input[name="PartNumber"]').value;
+        if (!validateBTPartNumber(partNumber)) {
+            errors.push('Part number must follow B&T format: BT-YYYY-####');
+            isValid = false;
+        }
+        
+        // Validate required fields
+        const requiredFields = [
+            { name: 'Name', label: 'Part Name' },
+            { name: 'Description', label: 'Description' },
+            { name: 'BTComponentType', label: 'B&T Component Type' },
+            { name: 'BTFirearmCategory', label: 'Firearm Category' },
+            { name: 'EstimatedHours', label: 'Estimated Hours' }
+        ];
+        
+        requiredFields.forEach(field => {
+            const element = document.querySelector(`[name="${field.name}"]`);
+            if (element && !element.value.trim()) {
+                errors.push(`${field.label} is required`);
+                isValid = false;
+            }
+        });
+        
+        // Validate B&T-specific business rules
+        const componentType = document.querySelector('select[name="BTComponentType"]').value;
+        const firearmsCategory = document.querySelector('select[name="BTFirearmCategory"]').value;
+        
+        // Suppressor component validation
+        if (componentType === 'Suppressor') {
+            if (!document.querySelector('input[name="RequiresATFForm1"]').checked && 
+                !document.querySelector('input[name="RequiresATFForm4"]').checked) {
+                warnings.push('Suppressor components typically require ATF Form 1 or Form 4');
+            }
+            
+            if (!document.querySelector('input[name="RequiresTaxStamp"]').checked) {
+                warnings.push('Suppressor components typically require tax stamp');
+            }
+            
+            if (!document.querySelector('input[name="RequiresSoundTesting"]').checked) {
+                warnings.push('Suppressor components should include sound testing');
+            }
+        }
+        
+        // Firearm component validation
+        if (firearmsCategory === 'Firearm') {
+            if (!document.querySelector('input[name="RequiresUniqueSerialNumber"]').checked) {
+                errors.push('Firearm components require unique serial numbers');
+                isValid = false;
+            }
+            
+            if (!document.querySelector('input[name="RequiresATFCompliance"]').checked) {
+                warnings.push('Firearm components typically require ATF compliance');
+            }
+        }
+        
+        // Tax stamp validation
+        const requiresTaxStamp = document.querySelector('input[name="RequiresTaxStamp"]').checked;
+        const taxStampAmount = document.querySelector('input[name="TaxStampAmount"]').value;
+        
+        if (requiresTaxStamp && !taxStampAmount) {
+            errors.push('Tax stamp amount must be specified when tax stamp is required');
+            isValid = false;
+        }
+        
+        // Export control validation
+        const requiresExportLicense = document.querySelector('input[name="RequiresExportLicense"]').checked;
+        const itarCategory = document.querySelector('input[name="ITARCategory"]').value;
+        
+        if (requiresExportLicense && !itarCategory) {
+            errors.push('ITAR category must be specified for export controlled items');
+            isValid = false;
+        }
+        
+        // Manufacturing validation
+        const estimatedHours = parseFloat(document.querySelector('input[name="EstimatedHours"]').value) || 0;
+        if (estimatedHours <= 0) {
+            errors.push('Estimated hours must be greater than 0');
+            isValid = false;
+        }
+        
+        if (estimatedHours > 100) {
+            warnings.push('Estimated hours seems unusually high (>100 hours)');
+        }
+        
+        // Material validation
+        const material = document.querySelector('select[name="Material"]').value;
+        if (material.includes('Inconel') && !document.querySelector('input[name="RequiresBTProofTesting"]').checked) {
+            warnings.push('Inconel parts should typically include proof testing');
+        }
+        
+        // Show results
+        if (validateOnly) {
+            let message = '';
+            if (isValid) {
+                message = '? B&T Parts Form validation passed!';
+                if (warnings.length > 0) {
+                    message += '\n\n?? Warnings:\n' + warnings.join('\n');
+                }
+            } else {
+                message = '? Validation errors:\n\n' + errors.join('\n');
+                if (warnings.length > 0) {
+                    message += '\n\n?? Warnings:\n' + warnings.join('\n');
+                }
+            }
+            alert(message);
+            return false; // Prevent form submission
+        }
+        
+        if (!isValid) {
+            let message = '? Please fix the following errors:\n\n' + errors.join('\n');
+            if (warnings.length > 0) {
+                message += '\n\n?? Warnings:\n' + warnings.join('\n');
+            }
+            alert(message);
+        } else if (warnings.length > 0) {
+            const continueWithWarnings = confirm('?? The following warnings were found:\n\n' + warnings.join('\n') + '\n\nDo you want to continue?');
+            if (!continueWithWarnings) {
+                return false;
+            }
+        }
+        
+        return isValid;
+    };
+    
+    // Initialize all tab functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize component-specific fields
+        updateBTComponentFields();
+        updateComplianceRequirements();
+        
+        console.log('? B&T Parts Form initialized with all enhanced functionality');
+    });
+    
+    console.log('? B&T Parts Form scripts loaded');
+</script>
+
+<style>
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    }
+    
+    .nav-tabs .nav-link {
+        border: none;
+        border-bottom: 3px solid transparent;
+        color: #6c757d;
+        font-weight: 500;
+    }
+    
+    .nav-tabs .nav-link.active {
+        border-bottom-color: #007bff;
+        color: #007bff;
+        background: none;
+    }
+    
+    .nav-tabs .nav-link:hover {
+        border-bottom-color: #dee2e6;
+        color: #495057;
+    }
+    
+    .form-check-input:checked {
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+    
+    .tab-content {
+        border: none;
+    }
+    
+    .modal-xl {
+        max-width: 95%;
+    }
+    
+    @@media (max-width: 768px) {
+        .modal-xl {
+            max-width: 98%;
+            margin: 1rem;
+        }
+        
+        .nav-tabs .nav-link {
+            font-size: 0.875rem;
+            padding: 0.5rem 0.75rem;
+        }
+    }
+</style>

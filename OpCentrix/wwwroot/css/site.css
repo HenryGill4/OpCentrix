@@ -133,6 +133,189 @@
     --job-min-height: 60px;
 }
 
+/* OpCentrix Scheduler Grid System Variables */
+:root {
+    --machine-label-width: 200px;
+    --slot-width: 120px;
+    --time-column-width: 150px;
+    --scheduler-grid-gap: 1px;
+    --scheduler-cell-height: 80px;
+}
+
+/* Zoom-specific slot width adjustments */
+[data-zoom="2month"] {
+    --slot-width: 30px;
+}
+
+[data-zoom="month"] {
+    --slot-width: 40px;
+}
+
+[data-zoom="week"] {
+    --slot-width: 120px;
+}
+
+[data-zoom="12h"] {
+    --slot-width: 60px;
+}
+
+[data-zoom="6h"] {
+    --slot-width: 50px;
+}
+
+[data-zoom="4h"] {
+    --slot-width: 40px;
+}
+
+[data-zoom="2h"] {
+    --slot-width: 30px;
+}
+
+[data-zoom="1h"] {
+    --slot-width: 25px;
+}
+
+[data-zoom="30min"] {
+    --slot-width: 20px;
+}
+
+[data-zoom="15min"] {
+    --slot-width: 15px;
+}
+
+/* Original Scheduler Grid Styles */
+.scheduler-main-grid {
+    display: grid;
+    gap: var(--scheduler-grid-gap);
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: auto;
+    max-width: 100%;
+    position: relative;
+}
+
+.scheduler-vertical-grid {
+    display: block;
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: auto;
+    max-width: 100%;
+    position: relative;
+}
+
+.scheduler-grid-header {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    border-right: 1px solid #e2e8f0;
+    padding: 8px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--scheduler-cell-height);
+}
+
+.scheduler-grid-cell {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    border-right: 1px solid #e2e8f0;
+    min-height: var(--scheduler-cell-height);
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.scheduler-grid-cell:hover {
+    background-color: #f1f5f9;
+}
+
+.scheduler-grid-cell.current-time {
+    background-color: #dbeafe;
+    border-color: #3b82f6;
+}
+
+.scheduler-grid-cell.weekend {
+    background-color: #f9fafb;
+}
+
+.scheduler-grid-cell.off-hours {
+    background-color: #f3f4f6;
+}
+
+.scheduler-machine-label {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    border-right: 1px solid #e2e8f0;
+    padding: 8px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+/* Machine-specific colors */
+.scheduler-machine-label.ti1 {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    color: white;
+}
+
+.scheduler-machine-label.ti2 {
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    color: white;
+}
+
+.scheduler-machine-label.inc {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+}
+
+/* Job block styles */
+.job-block {
+    border-radius: 6px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.job-block:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Machine-specific job block colors */
+.job-block.ti1 {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    border-color: #d97706;
+}
+
+.job-block.ti2 {
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    border-color: #1e40af;
+}
+
+.job-block.inc {
+    background: linear-gradient(135deg, #10b981, #059669);
+    border-color: #047857;
+}
+
+/* Status-specific job block modifications */
+.job-block.status-completed {
+    opacity: 0.8;
+}
+
+.job-block.status-delayed {
+    background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+    border-color: #b91c1c !important;
+}
+
+.job-block.status-cancelled {
+    background: linear-gradient(135deg, #6b7280, #4b5563) !important;
+    border-color: #374151 !important;
+}
+
 /* Enhanced Modal Validation Styles */
 .validation-summary {
     background: linear-gradient(135deg, var(--opcentrix-danger) 0%, var(--opcentrix-danger-dark) 100%);
@@ -686,80 +869,91 @@ body {
     transform: translateX(2px);
 }
 
-/* Badge System */
-.opcentrix-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: var(--opcentrix-spacing-1) var(--opcentrix-spacing-2);
-    border-radius: var(--opcentrix-radius-full);
-    font-size: var(--opcentrix-font-size-xs);
+/* Enhanced Navigation Dropdown Styles */
+.dropdown-menu {
+    border: none;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    min-width: 280px;
+}
+
+.dropdown-menu .dropdown-header {
+    font-size: 0.75rem;
     font-weight: 600;
-    line-height: 1;
-    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.75rem 1rem 0.5rem;
+    margin-bottom: 0.25rem;
 }
 
-.opcentrix-badge-primary {
-    background: var(--opcentrix-primary);
-    color: var(--opcentrix-text-on-primary);
+.dropdown-item {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    border-radius: 4px;
+    margin: 0.125rem 0.5rem;
 }
 
-.opcentrix-badge-success {
-    background: var(--opcentrix-success);
-    color: var(--opcentrix-text-on-primary);
+.dropdown-item:hover {
+    background-color: #f8fafc;
+    transform: translateX(2px);
 }
 
-.opcentrix-badge-warning {
-    background: var(--opcentrix-warning);
-    color: var(--opcentrix-text-on-primary);
+.dropdown-item i {
+    width: 18px;
+    text-align: center;
 }
 
-.opcentrix-badge-danger {
-    background: var(--opcentrix-danger);
-    color: var(--opcentrix-text-on-primary);
+/* Scrollable Dropdown Styles */
+.dropdown-menu[style*="overflow-y: auto"] {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e0 #f7fafc;
 }
 
-.opcentrix-badge-neutral {
-    background: var(--opcentrix-gray-100);
-    color: var(--opcentrix-gray-800);
+.dropdown-menu[style*="overflow-y: auto"]::-webkit-scrollbar {
+    width: 6px;
 }
 
-/* Dark mode badge adjustments */
-[data-theme="dark"] .opcentrix-badge-neutral {
-    background: var(--opcentrix-gray-700);
-    color: var(--opcentrix-gray-200);
+.dropdown-menu[style*="overflow-y: auto"]::-webkit-scrollbar-track {
+    background: #f7fafc;
+    border-radius: 3px;
 }
 
-/* Enhanced Notification System */
-.opcentrix-notification {
-    position: fixed;
-    top: var(--opcentrix-spacing-20);
-    right: var(--opcentrix-spacing-4);
-    max-width: 400px;
-    z-index: var(--opcentrix-z-toast);
-    box-shadow: var(--opcentrix-shadow-xl);
-    border-radius: var(--opcentrix-radius-lg);
-    overflow: hidden;
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+.dropdown-menu[style*="overflow-y: auto"]::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 3px;
 }
 
-.opcentrix-notification-success {
-    background: linear-gradient(135deg, var(--opcentrix-success) 0%, var(--opcentrix-success-dark) 100%);
+.dropdown-menu[style*="overflow-y: auto"]::-webkit-scrollbar-thumb:hover {
+    background: #a0aec0;
 }
 
-.opcentrix-notification-error {
-    background: linear-gradient(135deg, var(--opcentrix-danger) 0%, var(--opcentrix-danger-dark) 100%);
+/* Color-coded dropdown borders */
+.dropdown-menu.border-warning {
+    border-left: 3px solid #f59e0b;
 }
 
-.opcentrix-notification-warning {
-    background: linear-gradient(135deg, var(--opcentrix-warning) 0%, var(--opcentrix-warning-dark) 100%);
+.dropdown-menu.border-primary {
+    border-left: 3px solid #8b5cf6;
 }
 
-.opcentrix-notification-info {
-    background: linear-gradient(135deg, var(--opcentrix-primary) 0%, var(--opcentrix-primary-dark) 100%);
+/* Responsive Navigation */
+@media (max-width: 768px) {
+    .dropdown-menu {
+        min-width: 250px;
+        max-height: 350px !important;
+    }
+    
+    .dropdown-item {
+        padding: 0.65rem 0.875rem;
+        font-size: 0.8rem;
+    }
+    
+    .dropdown-header {
+        font-size: 0.7rem;
+        padding: 0.6rem 0.875rem 0.4rem;
+    }
 }
-
 /* Modal Enhancements */
 .modal-container {
     position: fixed;
@@ -912,14 +1106,14 @@ body {
 
 @media (max-width: 768px) {
     :root {
-        --machine-label-width: 100px;
+        --machine-label-width: 120px;
         --slot-width: 80px;
     }
 }
 
 @media (max-width: 1024px) {
     :root {
-        --machine-label-width: 120px;
+        --machine-label-width: 140px;
         --slot-width: 100px;
     }
 }
@@ -1207,23 +1401,117 @@ body {
     padding: 1rem;
 }
 
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.5rem 1.5rem 1rem 1.5rem;
-    border-bottom: 1px solid #e5e7eb;
-    background: #f9fafb;
+/* CRITICAL FIX: Bootstrap Modal Backdrop - Prevent Input Blocking */
+.modal-backdrop {
+    /* Force correct z-index */
+    z-index: var(--opcentrix-z-modal-backdrop) !important;
+    
+    /* CRITICAL: Allow pointer events to pass through when needed */
+    pointer-events: auto !important;
+    
+    /* Ensure proper positioning */
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    
+    /* Smooth backdrop */
+    background-color: rgba(0, 0, 0, 0.5) !important;
+    backdrop-filter: blur(2px) !important;
 }
 
-.modal-body {
-    padding: 1.5rem;
-    max-height: 70vh;
-    overflow-y: auto;
+/* Fix Bootstrap modal content z-index */
+.modal {
+    z-index: var(--opcentrix-z-modal) !important;
 }
 
-.modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.75rem;
-    padding: 1rem
+.modal-dialog {
+    z-index: calc(var(--opcentrix-z-modal) + 1) !important;
+    position: relative !important;
+}
+
+/* CRITICAL: Ensure modal content receives events */
+.modal-content {
+    position: relative !important;
+    z-index: calc(var(--opcentrix-z-modal) + 2) !important;
+    pointer-events: auto !important;
+    background: white !important;
+}
+
+/* Fix for multiple modals */
+.modal.show ~ .modal-backdrop {
+    z-index: calc(var(--opcentrix-z-modal-backdrop) - 1) !important;
+}
+
+/* OPCENTRIX STANDARD MODAL SYSTEM - NO CONFLICTS */
+.opcentrix-modal {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: var(--opcentrix-z-modal) !important;
+    
+    /* CRITICAL: Proper pointer event handling */
+    pointer-events: auto !important;
+    
+    /* Backdrop styling */
+    background: rgba(0, 0, 0, 0.5) !important;
+    backdrop-filter: blur(2px) !important;
+    
+    /* Layout */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 1rem !important;
+}
+
+.opcentrix-modal.hidden {
+    display: none !important;
+    pointer-events: none !important;
+}
+
+.opcentrix-modal-content {
+    position: relative !important;
+    z-index: calc(var(--opcentrix-z-modal) + 1) !important;
+    
+    /* CRITICAL: Ensure content receives events */
+    pointer-events: auto !important;
+    
+    /* Styling */
+    background: white !important;
+    border-radius: 0.5rem !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+    max-width: 90vw !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+}
+
+/* Fix for Tailwind classes */
+.fixed.inset-0.bg-black.bg-opacity-40 {
+    z-index: var(--opcentrix-z-modal) !important;
+    pointer-events: auto !important;
+}
+
+/* Fix specific modal content containers */
+#modal-content,
+#modal-container,
+.modal-overlay {
+    z-index: var(--opcentrix-z-modal) !important;
+    pointer-events: auto !important;
+}
+
+/* Ensure form elements in modals receive events */
+.modal input,
+.modal select,
+.modal textarea,
+.modal button,
+.opcentrix-modal input,
+.opcentrix-modal select,
+.opcentrix-modal textarea,
+.opcentrix-modal button {
+    pointer-events: auto !important;
+    position: relative !important;
+    z-index: 1 !important;
+}

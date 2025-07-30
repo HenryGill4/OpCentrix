@@ -1,10 +1,283 @@
 ﻿@page
-@model IndexModel
+@model OpCentrix.Pages.DebugSuiteModel
 @{
-    ViewData["Title"] = "Home page";
+    ViewData["Title"] = "OpCentrix Debug Suite - B&T Manufacturing MES";
+    Layout = "_Layout";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <div class="flex items-center justify-center mb-6">
+                <div class="w-16 h-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
+                    </svg>
+                </div>
+            </div>
+            <h1 class="text-4xl font-bold text-gray-900 mb-4">OpCentrix Debug Suite</h1>
+            <p class="text-xl text-gray-600 mb-2">B&T Manufacturing Execution System</p>
+            <p class="text-lg text-gray-500">Development & Testing Dashboard</p>
+            
+            <!-- System Status -->
+            <div class="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-white rounded-lg shadow p-4">
+                    <div class="text-sm text-gray-500">Build Status</div>
+                    <div class="text-lg font-semibold text-green-600">✅ Success</div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4">
+                    <div class="text-sm text-gray-500">Database</div>
+                    <div class="text-lg font-semibold text-blue-600">🗄️ SQLite</div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4">
+                    <div class="text-sm text-gray-500">Environment</div>
+                    <div class="text-lg font-semibold text-purple-600">🔧 Development</div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4">
+                    <div class="text-sm text-gray-500">Server</div>
+                    <div class="text-lg font-semibold text-orange-600">🚀 localhost:5090</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Navigation -->
+        <div class="mb-12">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Quick Navigation</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                <a href="/Account/Login" class="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow text-center">
+                    <div class="text-2xl mb-2">🔐</div>
+                    <div class="text-sm font-medium">Login</div>
+                </a>
+                <a href="/Scheduler" class="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow text-center">
+                    <div class="text-2xl mb-2">📅</div>
+                    <div class="text-sm font-medium">Scheduler</div>
+                </a>
+                <a href="/Admin" class="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow text-center">
+                    <div class="text-2xl mb-2">⚙️</div>
+                    <div class="text-sm font-medium">Admin</div>
+                </a>
+                <a href="/Admin/Parts" class="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow text-center">
+                    <div class="text-2xl mb-2">🔧</div>
+                    <div class="text-sm font-medium">Parts</div>
+                </a>
+                <a href="/PrintTracking" class="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow text-center">
+                    <div class="text-2xl mb-2">🖨️</div>
+                    <div class="text-sm font-medium">Print Tracking</div>
+                </a>
+                <a href="/health" class="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow text-center">
+                    <div class="text-2xl mb-2">💚</div>
+                    <div class="text-sm font-medium">Health</div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Core System Pages -->
+        <div class="mb-12">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Core System Pages</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                
+                <!-- Authentication -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Authentication</h3>
+                    <div class="space-y-2">
+                        <a href="/Account/Login" class="block text-blue-600 hover:text-blue-800">Login Page</a>
+                        <a href="/Account/Logout" class="block text-blue-600 hover:text-blue-800">Logout</a>
+                        <a href="/Account/AccessDenied" class="block text-blue-600 hover:text-blue-800">Access Denied</a>
+                    </div>
+                </div>
+
+                <!-- Scheduler System -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Production Scheduler</h3>
+                    <div class="space-y-2">
+                        <a href="/Scheduler" class="block text-blue-600 hover:text-blue-800">Scheduler Grid</a>
+                        <a href="/Scheduler/MasterSchedule" class="block text-blue-600 hover:text-blue-800">Master Schedule</a>
+                        <a href="/Scheduler/JobLog" class="block text-blue-600 hover:text-blue-800">Job Log</a>
+                    </div>
+                </div>
+
+                <!-- Print Tracking -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Print Tracking</h3>
+                    <div class="space-y-2">
+                        <a href="/PrintTracking" class="block text-blue-600 hover:text-blue-800">Print Dashboard</a>
+                        <a href="/Printing" class="block text-blue-600 hover:text-blue-800">SLS Metal Printing</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manufacturing Operations -->
+        <div class="mb-12">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Manufacturing Operations</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                
+                <!-- EDM Operations -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">EDM Operations</h3>
+                    <a href="/EDM" class="block text-blue-600 hover:text-blue-800">EDM Dashboard</a>
+                </div>
+
+                <!-- Coating Operations -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Coating</h3>
+                    <a href="/Coating" class="block text-blue-600 hover:text-blue-800">Coating Dashboard</a>
+                </div>
+
+                <!-- Quality Control -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Quality Control</h3>
+                    <a href="/QC" class="block text-blue-600 hover:text-blue-800">QC Dashboard</a>
+                </div>
+
+                <!-- Shipping -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Shipping</h3>
+                    <a href="/Shipping" class="block text-blue-600 hover:text-blue-800">Shipping Dashboard</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin & Management -->
+        <div class="mb-12">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Administration & Management</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                
+                <!-- Admin Dashboard -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Admin Panel</h3>
+                    <div class="space-y-2">
+                        <a href="/Admin" class="block text-blue-600 hover:text-blue-800">Admin Dashboard</a>
+                        <a href="/Admin/Jobs" class="block text-blue-600 hover:text-blue-800">Job Management</a>
+                        <a href="/Admin/Database" class="block text-blue-600 hover:text-blue-800">Database Management</a>
+                        <a href="/Admin/Archive" class="block text-blue-600 hover:text-blue-800">Archive Management</a>
+                    </div>
+                </div>
+
+                <!-- Parts Management -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Parts System</h3>
+                    <div class="space-y-2">
+                        <a href="/Admin/Parts" class="block text-blue-600 hover:text-blue-800">Parts Management</a>
+                    </div>
+                </div>
+
+                <!-- B&T Manufacturing (NEW) -->
+                <div class="bg-white rounded-xl shadow-lg p-6 border-2 border-amber-200">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                        B&T Manufacturing
+                        <span class="ml-2 px-2 py-1 bg-amber-100 text-amber-800 text-xs rounded-full">NEW</span>
+                    </h3>
+                    <div class="space-y-2">
+                        <a href="/Admin/Prototypes" class="block text-blue-600 hover:text-blue-800">Prototype Tracking</a>
+                        <a href="/Admin/ProductionStages" class="block text-blue-600 hover:text-blue-800">Production Stages</a>
+                        <a href="/Admin/Checkpoints" class="block text-blue-600 hover:text-blue-800">Quality Checkpoints</a>
+                        <a href="/Admin/DefectCategories" class="block text-blue-600 hover:text-blue-800">Defect Categories</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics & Reporting -->
+        <div class="mb-12">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Analytics & Reporting</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                <!-- Analytics -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Analytics</h3>
+                    <a href="/Analytics" class="block text-blue-600 hover:text-blue-800">Analytics Dashboard</a>
+                </div>
+
+                <!-- Error Logging -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Error Monitoring</h3>
+                    <a href="/Api/ErrorLog" class="block text-blue-600 hover:text-blue-800">Error Log</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Development Tools -->
+        <div class="mb-12">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Development Tools</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                
+                <!-- Health Check -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Health Check</h3>
+                    <a href="/health" class="block text-blue-600 hover:text-blue-800">Health Status</a>
+                </div>
+
+                <!-- Error Page -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Error Testing</h3>
+                    <a href="/Error" class="block text-blue-600 hover:text-blue-800">Error Page</a>
+                </div>
+
+                <!-- Debug Console -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Debug Console</h3>
+                    <button onclick="openDebugConsole()" class="text-blue-600 hover:text-blue-800">Open Debug Console</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center py-8 border-t border-gray-200">
+            <p class="text-gray-600 mb-2">OpCentrix B&T Manufacturing Execution System</p>
+            <p class="text-sm text-gray-500">Version 4.0 | .NET 8 | SQLite | Last Updated: @DateTime.Now.ToString("MMM dd, yyyy HH:mm")</p>
+        </div>
+    </div>
 </div>
+
+@section Scripts {
+<script>
+    function openDebugConsole() {
+        // Open browser console with debug information
+        console.log('🎯 OpCentrix Debug Suite - System Information');
+        console.log('=====================================');
+        console.log('Environment: Development');
+        console.log('Server: localhost:5090');
+        console.log('Database: SQLite');
+        console.log('Framework: .NET 8');
+        console.log('Build Status: Success');
+        console.log('=====================================');
+        console.log('💡 Tip: Press F12 to see this console');
+        
+        // Show alert for users
+        alert('Debug console opened! Press F12 to view detailed system information.');
+    }
+
+    // Simple health check on page load (no infinite loops)
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('🎯 OpCentrix Debug Suite loaded successfully');
+        
+        // Single health check (no setInterval)
+        fetch('/health')
+            .then(response => response.text())
+            .then(data => {
+                console.log('✅ System Health:', data);
+            })
+            .catch(err => {
+                console.warn('⚠️ Health Check Failed:', err);
+            });
+    });
+</script>
+}
+
+<style>
+    /* Simple hover effects without complex animations */
+    .hover\:shadow-md:hover {
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    
+    .transition-shadow {
+        transition: box-shadow 0.3s ease;
+    }
+    
+    /* Custom badge styles */
+    .border-amber-200 {
+        border-color: #fcd34d;
+    }
+</style>

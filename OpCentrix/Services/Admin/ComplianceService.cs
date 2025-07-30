@@ -58,6 +58,12 @@ namespace OpCentrix.Services.Admin
         // Document Access Tracking
         Task<ComplianceDocument> RecordDocumentAccessAsync(int documentId, string accessedBy);
         Task<List<ComplianceDocument>> GetRecentlyAccessedDocumentsAsync(string userId, int count = 10);
+        
+        // B&T Specific Compliance Methods
+        Task<BTWorkflowComplianceResult> ValidateBTWorkflowComplianceAsync(int partId);
+        Task<BTComplianceChecklist> GenerateBTComplianceChecklistAsync(int partId);
+        Task<List<BTComplianceAlert>> GetBTComplianceAlertsAsync();
+        Task<BTComplianceAuditReport> GenerateBTComplianceAuditReportAsync(DateTime startDate, DateTime endDate);
     }
 
     public class ComplianceService : IComplianceService
@@ -698,5 +704,505 @@ namespace OpCentrix.Services.Admin
         }
 
         #endregion
+
+        #region B&T Specific Compliance Methods
+
+        /// <summary>
+        /// Validate B&T manufacturing workflow compliance
+        /// </summary>
+        public async Task<BTWorkflowComplianceResult> ValidateBTWorkflowComplianceAsync(int partId)
+        {
+            var part = await _context.Parts
+                .Include(p => p.SerialNumbers)
+                .Include(p => p.Jobs)
+                .FirstOrDefaultAsync(p => p.Id == partId);
+
+            if (part == null)
+                throw new ArgumentException($"Part with ID {partId} not found");
+
+            var result = new BTWorkflowComplianceResult
+            {
+                PartId = partId,
+                PartNumber = part.PartNumber,
+                ValidationDate = DateTime.UtcNow,
+                IsCompliant = true,
+                Issues = new List<string>(),
+                Warnings = new List<string>(),
+                RequiredDocuments = new List<string>(),
+                CompletedSteps = new List<string>()
+            };
+
+            // Validate suppressor-specific compliance
+            if (part.IsSuppressorComponent())
+            {
+                result.RequiredDocuments.Add("ATF Form 1 or Form 4");
+                result.RequiredDocuments.Add("Tax Stamp Documentation");
+                result.RequiredDocuments.Add("Sound Reduction Test Results");
+
+                if (!part.RequiresATFForm1 && !part.RequiresATFForm4)
+                {
+                    result.Issues.Add("Suppressor components require ATF Form 1 or Form 4");
+                    result.IsCompliant = false;
+                }
+
+                if (!part.RequiresTaxStamp)
+                {
+                    result.Issues.Add("Suppressor components require tax stamp");
+                    result.IsCompliant = false;
+                }
+
+                if (!part.RequiresSoundTesting)
+                {
+                    result.Warnings.Add("Suppressor components should include sound testing");
+                }
+            }
+
+            // Validate firearm-specific compliance
+            if (part.IsFirearmComponent())
+            {
+                result.RequiredDocuments.Add("FFL Manufacturing Records");
+                result.RequiredDocuments.Add("Serial Number Assignment");
+                result.RequiredDocuments.Add("Proof Testing Certification");
+
+                if (!part.RequiresUniqueSerialNumber)
+                {
+                    result.Issues.Add("Firearm components require unique serial numbers");
+                    result.IsCompliant = false;
+                }
+
+                if (!part.RequiresATFCompliance)
+                {
+                    result.Issues.Add("Firearm components require ATF compliance");
+                    result.IsCompliant = false;
+                }
+            }
+
+            // Validate ITAR/Export control
+            if (part.RequiresITARCompliance)
+            {
+                result.RequiredDocuments.Add("ITAR Compliance Documentation");
+                result.RequiredDocuments.Add("Export License");
+
+                if (string.IsNullOrEmpty(part.ITARCategory))
+                {
+                    result.Issues.Add("ITAR category must be specified");
+                    result.IsCompliant = false;
+                }
+            }
+
+            // Check manufacturing stage compliance
+            if (part.ManufacturingStage == "Complete")
+            {
+                result.CompletedSteps.Add("Manufacturing Complete");
+            }
+            else
+            {
+                result.Warnings.Add($"Manufacturing stage is {part.ManufacturingStage}, not Complete");
+            }
+
+            // Validate quality requirements
+            if (part.RequiresBTProofTesting)
+            {
+                result.RequiredDocuments.Add("B&T Proof Testing Results");
+                // Check if proof testing is documented
+                if (part.SerialNumbers.Any(sn => !sn.ProofTestPassed))
+                {
+                    result.Issues.Add("B&T proof testing not completed for all serial numbers");
+                    result.IsCompliant = false;
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Generate B&T compliance checklist for a part
+        /// </summary>
+        public async Task<BTComplianceChecklist> GenerateBTComplianceChecklistAsync(int partId)
+        {
+            var part = await _context.Parts
+                .Include(p => p.SerialNumbers)
+                .FirstOrDefaultAsync(p => p.Id == partId);
+
+            if (part == null)
+                throw new ArgumentException($"Part with ID {partId} not found");
+
+            var checklist = new BTComplianceChecklist
+            {
+                PartId = partId,
+                PartNumber = part.PartNumber,
+                ComponentType = part.BTComponentType,
+                GeneratedDate = DateTime.UtcNow,
+                Items = new List<BTComplianceChecklistItem>()
+            };
+
+            // Add regulatory compliance items
+            if (part.RequiresATFForm1)
+            {
+                checklist.Items.Add(new BTComplianceChecklistItem
+                {
+                    Category = "ATF Compliance",
+                    Description = "Submit ATF Form 1 (Make/Manufacture)",
+                    IsRequired = true,
+                    Status = "Pending", // Would check actual status
+                    DueDate = DateTime.UtcNow.AddDays(30)
+                });
+            }
+
+            if (part.RequiresTaxStamp)
+            {
+                checklist.Items.Add(new BTComplianceChecklistItem
+                {
+                    Category = "ATF Compliance",
+                    Description = "Obtain Federal Tax Stamp",
+                    IsRequired = true,
+                    Status = "Pending",
+                    DueDate = DateTime.UtcNow.AddDays(60)
+                });
+            }
+
+            if (part.RequiresITARCompliance)
+            {
+                checklist.Items.Add(new BTComplianceChecklistItem
+                {
+                    Category = "Export Control",
+                    Description = "ITAR Compliance Review",
+                    IsRequired = true,
+                    Status = "Pending",
+                    DueDate = DateTime.UtcNow.AddDays(14)
+                });
+            }
+
+            // Add quality testing items
+            if (part.RequiresBTProofTesting)
+            {
+                checklist.Items.Add(new BTComplianceChecklistItem
+                {
+                    Category = "Quality Testing",
+                    Description = "B&T Proof Testing",
+                    IsRequired = true,
+                    Status = "Pending",
+                    DueDate = DateTime.UtcNow.AddDays(7)
+                });
+            }
+
+            if (part.RequiresSoundTesting)
+            {
+                checklist.Items.Add(new BTComplianceChecklistItem
+                {
+                    Category = "Quality Testing",
+                    Description = "Sound Reduction Testing",
+                    IsRequired = part.IsSuppressorComponent(),
+                    Status = "Pending",
+                    DueDate = DateTime.UtcNow.AddDays(10)
+                });
+            }
+
+            // Add serialization items
+            if (part.RequiresUniqueSerialNumber)
+            {
+                checklist.Items.Add(new BTComplianceChecklistItem
+                {
+                    Category = "Serialization",
+                    Description = "Assign Unique Serial Number",
+                    IsRequired = true,
+                    Status = part.SerialNumbers.Any() ? "Complete" : "Pending",
+                    DueDate = DateTime.UtcNow.AddDays(3)
+                });
+            }
+
+            // Add documentation items
+            if (part.RequiresTraceabilityDocuments)
+            {
+                checklist.Items.Add(new BTComplianceChecklistItem
+                {
+                    Category = "Documentation",
+                    Description = "Complete Traceability Documentation",
+                    IsRequired = true,
+                    Status = "Pending",
+                    DueDate = DateTime.UtcNow.AddDays(14)
+                });
+            }
+
+            return checklist;
+        }
+
+        /// <summary>
+        /// Get B&T compliance alerts and notifications
+        /// </summary>
+        public async Task<List<BTComplianceAlert>> GetBTComplianceAlertsAsync()
+        {
+            var alerts = new List<BTComplianceAlert>();
+
+            // Check for expiring export licenses
+            var expiringLicenses = await _context.SerialNumbers
+                .Where(sn => sn.IsActive && sn.ExportLicenseExpiration.HasValue && 
+                           sn.ExportLicenseExpiration.Value <= DateTime.UtcNow.AddDays(30))
+                .Include(sn => sn.Part)
+                .ToListAsync();
+
+            foreach (var sn in expiringLicenses)
+            {
+                alerts.Add(new BTComplianceAlert
+                {
+                    AlertType = "Export License Expiration",
+                    Severity = sn.ExportLicenseExpiration.Value <= DateTime.UtcNow.AddDays(7) ? "Critical" : "Warning",
+                    Message = $"Export license for {sn.SerialNumberValue} expires on {sn.ExportLicenseExpiration.Value:yyyy-MM-dd}",
+                    PartNumber = sn.PartNumber ?? "",
+                    SerialNumber = sn.SerialNumberValue,
+                    DueDate = sn.ExportLicenseExpiration.Value,
+                    ActionRequired = "Renew export license"
+                });
+            }
+
+            // Check for pending ATF approvals
+            var pendingATF = await _context.SerialNumbers
+                .Where(sn => sn.IsActive && sn.ATFComplianceStatus == "Pending" && 
+                           sn.ATFFormSubmissionDate < DateTime.UtcNow.AddDays(-30))
+                .Include(sn => sn.Part)
+                .ToListAsync();
+
+            foreach (var sn in pendingATF)
+            {
+                alerts.Add(new BTComplianceAlert
+                {
+                    AlertType = "ATF Approval Overdue",
+                    Severity = "Warning",
+                    Message = $"ATF approval for {sn.SerialNumberValue} pending for over 30 days",
+                    PartNumber = sn.PartNumber ?? "",
+                    SerialNumber = sn.SerialNumberValue,
+                    DueDate = DateTime.UtcNow,
+                    ActionRequired = "Follow up on ATF form status"
+                });
+            }
+
+            // Check for quality failures
+            var qualityFailures = await _context.SerialNumbers
+                .Where(sn => sn.IsActive && sn.QualityStatus == "Fail")
+                .Include(sn => sn.Part)
+                .ToListAsync();
+
+            foreach (var sn in qualityFailures)
+            {
+                alerts.Add(new BTComplianceAlert
+                {
+                    AlertType = "Quality Failure",
+                    Severity = "Critical",
+                    Message = $"Quality test failed for {sn.SerialNumberValue}",
+                    PartNumber = sn.PartNumber ?? "",
+                    SerialNumber = sn.SerialNumberValue,
+                    DueDate = DateTime.UtcNow,
+                    ActionRequired = "Review and address quality issues"
+                });
+            }
+
+            return alerts.OrderByDescending(a => a.Severity == "Critical" ? 3 : a.Severity == "Warning" ? 2 : 1)
+                        .ThenBy(a => a.DueDate)
+                        .ToList();
+        }
+
+        /// <summary>
+        /// Generate comprehensive B&T compliance audit report
+        /// </summary>
+        public async Task<BTComplianceAuditReport> GenerateBTComplianceAuditReportAsync(DateTime startDate, DateTime endDate)
+        {
+            var report = new BTComplianceAuditReport
+            {
+                ReportDate = DateTime.UtcNow,
+                AuditPeriodStart = startDate,
+                AuditPeriodEnd = endDate,
+                GeneratedBy = "System",
+                Summary = new BTComplianceAuditSummary()
+            };
+
+            // Count total parts and serial numbers in scope
+            report.Summary.TotalPartsAudited = await _context.Parts
+                .CountAsync(p => p.CreatedDate >= startDate && p.CreatedDate <= endDate);
+
+            report.Summary.TotalSerialNumbersAudited = await _context.SerialNumbers
+                .CountAsync(sn => sn.AssignedDate >= startDate && sn.AssignedDate <= endDate);
+
+            // ATF compliance metrics
+            report.Summary.ATFCompliantItems = await _context.SerialNumbers
+                .CountAsync(sn => sn.AssignedDate >= startDate && sn.AssignedDate <= endDate && 
+                          sn.ATFComplianceStatus == "Compliant");
+
+            report.Summary.ATFNonCompliantItems = await _context.SerialNumbers
+                .CountAsync(sn => sn.AssignedDate >= startDate && sn.AssignedDate <= endDate && 
+                          sn.ATFComplianceStatus == "Non-Compliant");
+
+            // ITAR compliance metrics
+            report.Summary.ITARControlledItems = await _context.SerialNumbers
+                .CountAsync(sn => sn.AssignedDate >= startDate && sn.AssignedDate <= endDate && 
+                          sn.IsITARControlled);
+
+            report.Summary.ExportLicenseItems = await _context.SerialNumbers
+                .CountAsync(sn => sn.AssignedDate >= startDate && sn.AssignedDate <= endDate && 
+                          !string.IsNullOrEmpty(sn.ExportLicense));
+
+            // Quality metrics
+            report.Summary.QualityPassedItems = await _context.SerialNumbers
+                .CountAsync(sn => sn.AssignedDate >= startDate && sn.AssignedDate <= endDate && 
+                          sn.QualityStatus == "Pass");
+
+            report.Summary.QualityFailedItems = await _context.SerialNumbers
+                .CountAsync(sn => sn.AssignedDate >= startDate && sn.AssignedDate <= endDate && 
+                          sn.QualityStatus == "Fail");
+
+            // Calculate compliance percentages
+            var totalRequiringATF = await _context.SerialNumbers
+                .CountAsync(sn => sn.AssignedDate >= startDate && sn.AssignedDate <= endDate && 
+                          sn.RequiresATFApproval());
+
+            if (totalRequiringATF > 0)
+            {
+                report.Summary.ATFCompliancePercentage = (report.Summary.ATFCompliantItems * 100) / totalRequiringATF;
+            }
+
+            var totalRequiringQuality = await _context.SerialNumbers
+                .CountAsync(sn => sn.AssignedDate >= startDate && sn.AssignedDate <= endDate);
+
+            if (totalRequiringQuality > 0)
+            {
+                report.Summary.QualityCompliancePercentage = (report.Summary.QualityPassedItems * 100) / totalRequiringQuality;
+            }
+
+            // Overall compliance score
+            report.Summary.OverallComplianceScore = (report.Summary.ATFCompliancePercentage + report.Summary.QualityCompliancePercentage) / 2;
+
+            return report;
+        }
+
+        #endregion
     }
+
+    #region B&T Compliance Support Classes
+
+    /// <summary>
+    /// B&T Workflow Compliance Validation Result
+    /// </summary>
+    public class BTWorkflowComplianceResult
+    {
+        public int PartId { get; set; }
+        public string PartNumber { get; set; } = string.Empty;
+        public DateTime ValidationDate { get; set; }
+        public bool IsCompliant { get; set; }
+        public List<string> Issues { get; set; } = new();
+        public List<string> Warnings { get; set; } = new();
+        public List<string> RequiredDocuments { get; set; } = new();
+        public List<string> CompletedSteps { get; set; } = new();
+        public string ValidatedBy { get; set; } = string.Empty;
+        public string WorkflowTemplate { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// B&T Compliance Checklist
+    /// </summary>
+    public class BTComplianceChecklist
+    {
+        public int PartId { get; set; }
+        public string PartNumber { get; set; } = string.Empty;
+        public string ComponentType { get; set; } = string.Empty;
+        public DateTime GeneratedDate { get; set; }
+        public List<BTComplianceChecklistItem> Items { get; set; } = new();
+        
+        public int TotalItems => Items.Count;
+        public int CompletedItems => Items.Count(i => i.Status == "Complete");
+        public int PendingItems => Items.Count(i => i.Status == "Pending");
+        public int OverdueItems => Items.Count(i => i.Status == "Pending" && i.DueDate < DateTime.UtcNow);
+        public double CompletionPercentage => TotalItems > 0 ? (CompletedItems * 100.0) / TotalItems : 0;
+    }
+
+    /// <summary>
+    /// B&T Compliance Checklist Item
+    /// </summary>
+    public class BTComplianceChecklistItem
+    {
+        public string Category { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public bool IsRequired { get; set; }
+        public string Status { get; set; } = "Pending"; // Pending, Complete, Not Applicable
+        public DateTime? DueDate { get; set; }
+        public DateTime? CompletedDate { get; set; }
+        public string CompletedBy { get; set; } = string.Empty;
+        public string Notes { get; set; } = string.Empty;
+        public string DocumentReference { get; set; } = string.Empty;
+        
+        public bool IsOverdue => Status == "Pending" && DueDate.HasValue && DueDate.Value < DateTime.UtcNow;
+        public int DaysUntilDue => DueDate.HasValue ? (int)(DueDate.Value - DateTime.UtcNow).TotalDays : 0;
+    }
+
+    /// <summary>
+    /// B&T Compliance Alert
+    /// </summary>
+    public class BTComplianceAlert
+    {
+        public string AlertType { get; set; } = string.Empty;
+        public string Severity { get; set; } = string.Empty; // Critical, Warning, Info
+        public string Message { get; set; } = string.Empty;
+        public string PartNumber { get; set; } = string.Empty;
+        public string SerialNumber { get; set; } = string.Empty;
+        public DateTime DueDate { get; set; }
+        public string ActionRequired { get; set; } = string.Empty;
+        public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
+        
+        public bool IsCritical => Severity == "Critical";
+        public bool IsOverdue => DueDate < DateTime.UtcNow;
+        public int DaysUntilDue => (int)(DueDate - DateTime.UtcNow).TotalDays;
+    }
+
+    /// <summary>
+    /// B&T Compliance Audit Report
+    /// </summary>
+    public class BTComplianceAuditReport
+    {
+        public DateTime ReportDate { get; set; }
+        public DateTime AuditPeriodStart { get; set; }
+        public DateTime AuditPeriodEnd { get; set; }
+        public string GeneratedBy { get; set; } = string.Empty;
+        public BTComplianceAuditSummary Summary { get; set; } = new();
+        public List<string> Findings { get; set; } = new();
+        public List<string> Recommendations { get; set; } = new();
+        public string AuditScope { get; set; } = "B&T Manufacturing Compliance Review";
+        public string ReportPurpose { get; set; } = "Quarterly Compliance Audit";
+    }
+
+    /// <summary>
+    /// B&T Compliance Audit Summary
+    /// </summary>
+    public class BTComplianceAuditSummary
+    {
+        // Scope
+        public int TotalPartsAudited { get; set; }
+        public int TotalSerialNumbersAudited { get; set; }
+        
+        // ATF Compliance
+        public int ATFCompliantItems { get; set; }
+        public int ATFNonCompliantItems { get; set; }
+        public int ATFCompliancePercentage { get; set; }
+        
+        // ITAR/Export Control
+        public int ITARControlledItems { get; set; }
+        public int ExportLicenseItems { get; set; }
+        public int ExportCompliancePercentage { get; set; }
+        
+        // Quality
+        public int QualityPassedItems { get; set; }
+        public int QualityFailedItems { get; set; }
+        public int QualityCompliancePercentage { get; set; }
+        
+        // Overall Score
+        public int OverallComplianceScore { get; set; }
+        
+        public string ComplianceGrade => OverallComplianceScore switch
+        {
+            >= 95 => "Excellent",
+            >= 85 => "Good",
+            >= 75 => "Satisfactory", 
+            >= 65 => "Needs Improvement",
+            _ => "Poor"
+        };
+    }
+
+    #endregion
 }

@@ -63,6 +63,10 @@ namespace OpCentrix.Models
         // Link to existing scheduled job if applicable
         public int? AssociatedScheduledJobId { get; set; }
 
+        // ADDED: Part relationship for Parts-to-Scheduler integration
+        public int? PartId { get; set; }
+        public virtual Part? Part { get; set; }
+
         #endregion
 
         #region Audit Trail
@@ -98,6 +102,20 @@ namespace OpCentrix.Models
             "aborted" => "#EF4444", // red
             "error" => "#DC2626", // dark red
             _ => "#6B7280" // gray (scheduled)
+        };
+
+        // ADDED: Part display properties for Parts-to-Scheduler integration
+        [NotMapped]
+        public string PartDisplayName => Part?.Name ?? "Unknown Part";
+
+        [NotMapped]
+        public string JobLifecycleStatus => Status switch
+        {
+            "In Progress" => "?? Printing",
+            "Completed" => "?? Complete", 
+            "Aborted" => "?? Aborted",
+            "Error" => "?? Error",
+            _ => "? Unknown"
         };
 
         #endregion

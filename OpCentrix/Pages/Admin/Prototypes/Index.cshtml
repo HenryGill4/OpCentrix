@@ -1,0 +1,247 @@
+@page
+@model OpCentrix.Pages.Admin.Prototypes.IndexModel
+@{
+    ViewData["Title"] = "Prototype Tracking Dashboard";
+    Layout = "_AdminLayout";
+}
+
+<div class="container-fluid">
+    <!-- Dashboard Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="text-primary mb-1">
+                        <i class="fas fa-cogs me-2"></i>
+                        Prototype Tracking Dashboard
+                    </h2>
+                    <p class="text-muted mb-0">Monitor active prototypes and manufacturing pipeline performance</p>
+                </div>
+                <div>
+                    <a href="/Admin/ProductionStages" class="btn btn-outline-secondary me-2">
+                        <i class="fas fa-list me-1"></i>
+                        Manage Stages
+                    </a>
+                    <a href="/Admin/Parts?createPrototype=true" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>
+                        New Prototype
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success/Error Messages -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="fas fa-check-circle me-2"></i>
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Pipeline Metrics Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-play-circle fa-2x mb-2"></i>
+                    <h4 class="card-title">@Model.ViewModel.Metrics.PrototypesStarted</h4>
+                    <p class="card-text small">Started (30 days)</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-check-circle fa-2x mb-2"></i>
+                    <h4 class="card-title">@Model.ViewModel.Metrics.PrototypesCompleted</h4>
+                    <p class="card-text small">Completed</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-clock fa-2x mb-2"></i>
+                    <h4 class="card-title">@Model.ViewModel.Metrics.AverageLeadTimeDays.ToString("F1")</h4>
+                    <p class="card-text small">Avg Lead Time (days)</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-dollar-sign fa-2x mb-2"></i>
+                    <h4 class="card-title">@(Model.ViewModel.Metrics.AverageCostVariancePercent >= 0 ? "+" : "")@Model.ViewModel.Metrics.AverageCostVariancePercent.ToString("F1")%</h4>
+                    <p class="card-text small">Cost Variance</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="card bg-secondary text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-stopwatch fa-2x mb-2"></i>
+                    <h4 class="card-title">@(Model.ViewModel.Metrics.AverageTimeVariancePercent >= 0 ? "+" : "")@Model.ViewModel.Metrics.AverageTimeVariancePercent.ToString("F1")%</h4>
+                    <p class="card-text small">Time Variance</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                    <h4 class="card-title">@Model.ViewModel.Metrics.QualityIssuesCount</h4>
+                    <p class="card-text small">Quality Issues</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Prototypes Pipeline -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-stream me-2 text-primary"></i>
+                        Active Prototypes Pipeline
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.ViewModel.ActivePrototypes.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Prototype</th>
+                                        <th>Part Name</th>
+                                        <th>Current Stage</th>
+                                        <th>Progress</th>
+                                        <th>Priority</th>
+                                        <th>Days in Process</th>
+                                        <th>Requested By</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var prototype in Model.ViewModel.ActivePrototypes)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <a href="/Admin/Prototypes/Details/@prototype.Id" class="text-decoration-none fw-bold">
+                                                    @prototype.PrototypeNumber
+                                                </a>
+                                            </td>
+                                            <td>@prototype.PartName</td>
+                                            <td>
+                                                <span class="badge bg-info">
+                                                    Stage @prototype.CurrentStageOrder/@prototype.TotalStages
+                                                </span>
+                                                <div class="small text-muted">@prototype.CurrentStage</div>
+                                            </td>
+                                            <td>
+                                                <div class="progress" style="height: 20px;">
+                                                    <div class="progress-bar bg-success" 
+                                                         role="progressbar" 
+                                                         style="width: @prototype.ProgressPercentage%"
+                                                         aria-valuenow="@prototype.ProgressPercentage" 
+                                                         aria-valuemin="0" 
+                                                         aria-valuemax="100">
+                                                        @prototype.ProgressPercentage%
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-primary">
+                                                    @prototype.Priority
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="text-info">
+                                                    @prototype.DaysInProcess days
+                                                </span>
+                                            </td>
+                                            <td>@prototype.RequestedBy</td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <a href="/Admin/Prototypes/Details/@prototype.Id" 
+                                                       class="btn btn-outline-primary" 
+                                                       title="View Details">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    @if (prototype.ProgressPercentage >= 100)
+                                                    {
+                                                        <a href="/Admin/Prototypes/Review/@prototype.Id" 
+                                                           class="btn btn-outline-success" 
+                                                           title="Admin Review">
+                                                            <i class="fas fa-check"></i>
+                                                        </a>
+                                                    }
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5 text-muted">
+                            <i class="fas fa-cogs fa-3x mb-3"></i>
+                            <h5>No Active Prototypes</h5>
+                            <p>No prototypes are currently in progress. Create a new prototype to get started.</p>
+                            <a href="/Admin/Parts?createPrototype=true" class="btn btn-primary">
+                                <i class="fas fa-plus me-1"></i>
+                                Create First Prototype
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottlenecks & Alerts -->
+    @if (Model.ViewModel.Bottlenecks.Any())
+    {
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-warning">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Bottlenecks & Alerts
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @foreach (var bottleneck in Model.ViewModel.Bottlenecks)
+                        {
+                            <div class="alert alert-warning d-flex align-items-center mb-2">
+                                <i class="fas fa-exclamation-triangle me-3"></i>
+                                <div class="flex-grow-1">
+                                    <strong>@bottleneck.StageName:</strong> @bottleneck.Description
+                                </div>
+                                <span class="badge bg-warning text-dark">
+                                    @bottleneck.Severity
+                                </span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

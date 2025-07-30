@@ -1,0 +1,74 @@
+@page
+@model OpCentrix.Pages.Admin.BT.PartClassificationsModel
+@{
+    ViewData["Title"] = "Part Classifications";
+    ViewData["Description"] = "B&T Part Classification Management";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1 text-gray-900">
+                <i class="fas fa-tags text-warning me-2"></i>
+                B&T Part Classifications
+            </h1>
+            <p class="text-muted mb-0">Manage part classifications for B&T manufacturing compliance</p>
+        </div>
+        <div>
+            <button type="button" class="btn btn-warning" onclick="createClassification()">
+                <i class="fas fa-plus me-2"></i>New Classification
+            </button>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-warning bg-opacity-10">
+            <h5 class="card-title mb-0 text-warning">
+                <i class="fas fa-list me-2"></i>
+                Part Classifications
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Coming Soon:</strong> This page will provide comprehensive part classification management for B&T manufacturing operations.
+            </div>
+            
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card h-100 border-warning">
+                        <div class="card-body text-center">
+                            <i class="fas fa-shield-alt fa-3x text-warning mb-3"></i>
+                            <h5 class="card-title">Firearm Components</h5>
+                            <p class="card-text">Classification and tracking of firearm-related components</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100 border-warning">
+                        <div class="card-body text-center">
+                            <i class="fas fa-certificate fa-3x text-warning mb-3"></i>
+                            <h5 class="card-title">Compliance Tracking</h5>
+                            <p class="card-text">ATF and ITAR compliance management</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100 border-warning">
+                        <div class="card-body text-center">
+                            <i class="fas fa-barcode fa-3x text-warning mb-3"></i>
+                            <h5 class="card-title">Serial Number Management</h5>
+                            <p class="card-text">Automated serialization and tracking</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function createClassification() {
+    alert('Part Classification creation will be available soon!');
+}
+</script>
