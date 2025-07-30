@@ -27,6 +27,18 @@ namespace OpCentrix.Pages.Account
                 await _authService.LogoutAsync(HttpContext);
                 _logger.LogInformation("? User {UserName} logged out successfully", userName);
                 
+                // SEGMENT 5 FIX 5.2: Enhanced session clearing for test environments
+                // Clear any test-specific session state
+                if (HttpContext.Session.IsAvailable)
+                {
+                    HttpContext.Session.Clear();
+                }
+                
+                // Force cache headers to prevent caching of authenticated content
+                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate, private";
+                Response.Headers["Pragma"] = "no-cache";
+                Response.Headers["Expires"] = "0";
+                
                 // Add success message for next request
                 TempData["LogoutMessage"] = "You have been successfully logged out.";
             }
@@ -51,11 +63,17 @@ namespace OpCentrix.Pages.Account
                 await _authService.LogoutAsync(HttpContext);
                 _logger.LogInformation("? User {UserName} logged out successfully", userName);
                 
-                // For AJAX/HTMX requests, return success status
+                // SEGMENT 5 FIX 5.2: Enhanced session invalidation response
+                // For AJAX/HTMX requests, return JSON with redirect instruction
                 if (Request.Headers.ContainsKey("HX-Request") || Request.Headers.ContainsKey("X-Requested-With"))
                 {
-                    return new JsonResult(new { success = true, message = "Logged out successfully" });
+                    Response.Headers.Add("HX-Redirect", "/Account/Login");
+                    return new JsonResult(new { success = true, message = "Logged out successfully", redirect = "/Account/Login" });
                 }
+                
+                // For regular POST requests, ensure no caching and clear any remaining session state
+                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                Response.Headers["Pragma"] = "no-cache";
                 
                 // Add success message for regular requests
                 TempData["LogoutMessage"] = "You have been successfully logged out.";

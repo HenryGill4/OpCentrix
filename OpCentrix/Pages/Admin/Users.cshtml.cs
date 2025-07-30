@@ -87,6 +87,15 @@ public class UsersModel : PageModel
     {
         try
         {
+            // SEGMENT 5 FIX 5.1: Enhanced input validation enforcement
+            if (!ValidateInputLimits())
+            {
+                await LoadUsersAsync();
+                await LoadStatisticsAsync();
+                TempData["Error"] = "Input validation failed. Please check field lengths and try again.";
+                return Page();
+            }
+            
             if (!ModelState.IsValid)
             {
                 await LoadUsersAsync();
@@ -169,6 +178,15 @@ public class UsersModel : PageModel
             {
                 TempData["Error"] = "Invalid user ID.";
                 return RedirectToPage();
+            }
+
+            // SEGMENT 5 FIX 5.1: Enhanced input validation enforcement for edit
+            if (!ValidateInputLimits())
+            {
+                await LoadUsersAsync();
+                await LoadStatisticsAsync();
+                TempData["Error"] = "Input validation failed. Please check field lengths and try again.";
+                return Page();
             }
 
             if (!ModelState.IsValid)
@@ -464,6 +482,58 @@ public class UsersModel : PageModel
             .ToDictionaryAsync(g => g.Key, g => g.Count());
     }
 
+    private bool ValidateInputLimits()
+    {
+        var isValid = true;
+        
+        // SEGMENT 5 FIX 5.1: Comprehensive input length validation
+        // Check for overly long inputs that exceed reasonable limits
+        if (!string.IsNullOrEmpty(UserInput.Username) && UserInput.Username.Length > 50)
+        {
+            ModelState.AddModelError("UserInput.Username", "Username exceeds maximum length of 50 characters.");
+            isValid = false;
+        }
+        
+        if (!string.IsNullOrEmpty(UserInput.FullName) && UserInput.FullName.Length > 100)
+        {
+            ModelState.AddModelError("UserInput.FullName", "Full name exceeds maximum length of 100 characters.");
+            isValid = false;
+        }
+        
+        if (!string.IsNullOrEmpty(UserInput.Email) && UserInput.Email.Length > 100)
+        {
+            ModelState.AddModelError("UserInput.Email", "Email exceeds maximum length of 100 characters.");
+            isValid = false;
+        }
+        
+        if (!string.IsNullOrEmpty(UserInput.Password) && UserInput.Password.Length > 50)
+        {
+            ModelState.AddModelError("UserInput.Password", "Password exceeds maximum length of 50 characters.");
+            isValid = false;
+        }
+        
+        if (!string.IsNullOrEmpty(UserInput.Department) && UserInput.Department.Length > 100)
+        {
+            ModelState.AddModelError("UserInput.Department", "Department exceeds maximum length of 100 characters.");
+            isValid = false;
+        }
+        
+        // SEGMENT 5 FIX 5.1: Check for extremely long inputs (security measure against malicious data)
+        var allInputs = new[] { UserInput.Username, UserInput.FullName, UserInput.Email, UserInput.Password, UserInput.Department };
+        foreach (var input in allInputs)
+        {
+            if (!string.IsNullOrEmpty(input) && input.Length > 1000)
+            {
+                ModelState.AddModelError("", "Input exceeds reasonable length limits. This may be a security concern.");
+                isValid = false;
+                _logger.LogWarning("Extremely long input detected in user creation: {Length} characters", input.Length);
+                break;
+            }
+        }
+        
+        return isValid;
+    }
+
     public void LoadUserForEditing(User user)
     {
         EditingUserId = user.Id;
@@ -542,23 +612,23 @@ public class UsersModel : PageModel
 public class UserCreateEditModel
 {
     [Required]
-    [StringLength(50, MinimumLength = 3)]
+    [StringLength(50, MinimumLength = 3, ErrorMessage = "Username must be between 3 and 50 characters")]
     [Display(Name = "Username")]
     public string Username { get; set; } = string.Empty;
 
     [Required]
-    [StringLength(100, MinimumLength = 2)]
+    [StringLength(100, MinimumLength = 2, ErrorMessage = "Full name must be between 2 and 100 characters")]
     [Display(Name = "Full Name")]
     public string FullName { get; set; } = string.Empty;
 
     [Required]
-    [EmailAddress]
-    [StringLength(100)]
+    [EmailAddress(ErrorMessage = "Please enter a valid email address")]
+    [StringLength(100, ErrorMessage = "Email cannot exceed 100 characters")]
     [Display(Name = "Email Address")]
     public string Email { get; set; } = string.Empty;
 
     [Required]
-    [StringLength(50, MinimumLength = 6)]
+    [StringLength(50, MinimumLength = 6, ErrorMessage = "Password must be between 6 and 50 characters")]
     [DataType(DataType.Password)]
     [Display(Name = "Password")]
     public string Password { get; set; } = string.Empty;
@@ -567,7 +637,7 @@ public class UserCreateEditModel
     [Display(Name = "Role")]
     public string Role { get; set; } = UserRoles.Operator;
 
-    [StringLength(100)]
+    [StringLength(100, ErrorMessage = "Department cannot exceed 100 characters")]
     [Display(Name = "Department")]
     public string Department { get; set; } = string.Empty;
 

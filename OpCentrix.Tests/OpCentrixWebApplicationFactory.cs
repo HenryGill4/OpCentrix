@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using OpCentrix.Data;
 using OpCentrix.Services;
 using OpCentrix.Models;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace OpCentrix.Tests;
 
@@ -31,6 +32,18 @@ public class OpCentrixWebApplicationFactory : WebApplicationFactory<Program>
             {
                 options.UseInMemoryDatabase("TestDatabase");
                 options.EnableSensitiveDataLogging();
+            });
+
+            // SEGMENT 5 FIX 5.2: Configure authentication for proper test logout behavior
+            services.Configure<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme, options =>
+            {
+                // Make cookies less persistent in test environment
+                options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
+                options.SlidingExpiration = false;
+                options.Cookie.Name = "OpCentrix.Test.Auth";
+                options.Cookie.HttpOnly = true;
+                options.Cookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.None; // For test environment
+                options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax;
             });
 
             // Build the service provider to initialize test data
@@ -59,7 +72,7 @@ public class OpCentrixWebApplicationFactory : WebApplicationFactory<Program>
             }
         });
 
-        // FIXED: Use Testing environment to ensure proper test behavior
+        // SEGMENT 5 FIX 5.2: Use Testing environment to ensure proper test behavior
         builder.UseEnvironment("Testing");
     }
 

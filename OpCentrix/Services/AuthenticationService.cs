@@ -139,7 +139,37 @@ namespace OpCentrix.Services
 
             try
             {
+                // Step 1: Clear authentication cookies
                 await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                
+                // Step 2: Clear all authentication-related cookies
+                foreach (var cookie in context.Request.Cookies.Keys)
+                {
+                    if (cookie.StartsWith(".AspNetCore.") || 
+                        cookie.Contains("Auth") || 
+                        cookie.Contains("Session"))
+                    {
+                        context.Response.Cookies.Delete(cookie, new CookieOptions
+                        {
+                            Path = "/",
+                            HttpOnly = true,
+                            Secure = context.Request.IsHttps,
+                            SameSite = SameSiteMode.Lax
+                        });
+                        _logger.LogDebug("?? [AUTH-{OperationId}] Deleted cookie: {CookieName}", operationId, cookie);
+                    }
+                }
+                
+                // Step 3: Ensure session is abandoned
+                if (context.Session.IsAvailable)
+                {
+                    context.Session.Clear();
+                }
+                
+                // Step 4: Add cache control headers to prevent caching of authenticated content
+                context.Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                context.Response.Headers["Pragma"] = "no-cache";
+                context.Response.Headers["Expires"] = "0";
 
                 _logger.LogInformation("? [AUTH-{OperationId}] Logout successful for user: {Username} ({Role})", 
                     operationId, username, userRole);
