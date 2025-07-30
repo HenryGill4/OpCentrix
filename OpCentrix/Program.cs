@@ -63,6 +63,11 @@ builder.Services.AddRazorPages(options =>
     options.Conventions.AuthorizeFolder("/Admin", "AdminOnly");
     options.Conventions.AuthorizeFolder("/Scheduler", "SchedulerPolicy");
     
+    // B&T MES Route Authorization (NEW)
+    options.Conventions.AuthorizeFolder("/BT", "BTAccess");
+    options.Conventions.AuthorizeFolder("/Workflows", "WorkflowAccess");
+    options.Conventions.AuthorizeFolder("/Compliance", "ComplianceAccess");
+    
     // FIXED: Configure antiforgery for all pages
     options.Conventions.ConfigureFilter(new Microsoft.AspNetCore.Mvc.AutoValidateAntiforgeryTokenAttribute());
 });
@@ -120,6 +125,26 @@ builder.Services.AddAuthorization(options =>
     
     options.AddPolicy("OperatorAccess", policy =>
         policy.RequireRole("Admin", "Supervisor", "Operator"));
+    
+    // B&T Manufacturing Policies (NEW)
+    options.AddPolicy("BTAccess", policy =>
+        policy.RequireRole("Admin", "Manager", "BTSpecialist"));
+    
+    options.AddPolicy("WorkflowAccess", policy =>
+        policy.RequireRole("Admin", "Manager", "WorkflowSpecialist"));
+    
+    options.AddPolicy("ComplianceAccess", policy =>
+        policy.RequireRole("Admin", "Manager", "ComplianceSpecialist", "BTSpecialist"));
+    
+    // Individual B&T Feature Policies
+    options.AddPolicy("BTSpecialistAccess", policy =>
+        policy.RequireRole("Admin", "Manager", "BTSpecialist"));
+    
+    options.AddPolicy("WorkflowSpecialistAccess", policy =>
+        policy.RequireRole("Admin", "Manager", "WorkflowSpecialist"));
+    
+    options.AddPolicy("ComplianceSpecialistAccess", policy =>
+        policy.RequireRole("Admin", "Manager", "ComplianceSpecialist"));
 });
 
 // Register application services
@@ -218,6 +243,50 @@ app.UseAuthorization();
 // Map Razor Pages
 app.MapRazorPages();
 
+// B&T MES Route Configuration (NEW)
+app.MapGet("/BT", context =>
+{
+    context.Response.Redirect("/BT/Dashboard");
+    return Task.CompletedTask;
+});
+
+app.MapGet("/BT/Dashboard", () => "B&T Dashboard - Coming Soon")
+    .RequireAuthorization("BTAccess");
+
+app.MapGet("/BT/SerialNumbers", () => "B&T Serial Numbers - Coming Soon")
+    .RequireAuthorization("BTAccess");
+
+app.MapGet("/BT/Compliance", () => "B&T Compliance - Coming Soon")
+    .RequireAuthorization("ComplianceAccess");
+
+app.MapGet("/Workflows", context =>
+{
+    context.Response.Redirect("/Workflows/MultiStage");
+    return Task.CompletedTask;
+});
+
+app.MapGet("/Workflows/MultiStage", () => "Multi-Stage Workflows - Coming Soon")
+    .RequireAuthorization("WorkflowAccess");
+
+app.MapGet("/Workflows/Resources", () => "Resource Scheduling - Coming Soon")
+    .RequireAuthorization("WorkflowAccess");
+
+// Admin B&T Routes
+app.MapGet("/Admin/BT", context =>
+{
+    context.Response.Redirect("/Admin/BT/PartClassifications");
+    return Task.CompletedTask;
+});
+
+app.MapGet("/Admin/BT/PartClassifications", () => "B&T Part Classifications Admin - Coming Soon")
+    .RequireAuthorization("AdminOnly");
+
+app.MapGet("/Admin/BT/SerialNumbers", () => "B&T Serial Numbers Admin - Coming Soon")
+    .RequireAuthorization("AdminOnly");
+
+app.MapGet("/Admin/BT/ComplianceDocuments", () => "B&T Compliance Documents Admin - Coming Soon")
+    .RequireAuthorization("AdminOnly");
+
 // Add health check endpoint
 app.MapGet("/health", () => "Healthy")
     .RequireAuthorization("SchedulerAccess");
@@ -267,11 +336,19 @@ using (var scope = app.Services.CreateScope())
         logger.LogInformation("   operator/operator123 (Operator)");
         logger.LogInformation("   printer/printer123 (PrintingSpecialist)");
         logger.LogInformation("   coating/coating123 (CoatingSpecialist)");
+        logger.LogInformation("B&T Specialist Users:");
+        logger.LogInformation("   btspecialist/btspecialist123 (BTSpecialist)");
+        logger.LogInformation("   workflowspecialist/workflowspecialist123 (WorkflowSpecialist)");
+        logger.LogInformation("   compliancespecialist/compliancespecialist123 (ComplianceSpecialist)");
         logger.LogInformation("Segment 7 Features:");
         logger.LogInformation("   - B&T Part Classification System");
         logger.LogInformation("   - ATF/ITAR Compliance Tracking");
         logger.LogInformation("   - Serial Number Management");
         logger.LogInformation("   - Regulatory Documentation");
+        logger.LogInformation("B&T MES Navigation Features:");
+        logger.LogInformation("   - B&T Manufacturing Section (Amber)");
+        logger.LogInformation("   - Advanced Workflows Section (Purple)");
+        logger.LogInformation("   - Enhanced Admin B&T Management");
     }
     catch (Exception ex)
     {

@@ -92,7 +92,7 @@
                     {
                         <!-- Enhanced Main Navigation Links -->
                         <div class="hidden lg:flex space-x-1">
-                            <!-- Print Tracking Section (NEW) -->
+                            <!-- Print Tracking Section -->
                             @if (userRole == "Admin" || userRole == "Manager" || userRole == "Operator" || userRole == "PrintingSpecialist")
                             {
                                 <div class="space-y-1">
@@ -132,6 +132,66 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                                         </svg>
                                         Master Schedule
+                                    </a>
+                                </div>
+                            }
+
+                            <!-- B&T Manufacturing Section (NEW - Amber Color) -->
+                            @if (userRole == "Admin" || userRole == "Manager" || userRole == "BTSpecialist")
+                            {
+                                <div class="space-y-1">
+                                    <h3 class="px-3 text-xs font-semibold text-amber-600 uppercase tracking-wider">
+                                        B&T Manufacturing
+                                    </h3>
+                                    <a href="/BT/Dashboard" 
+                                       class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("BT/Dashboard") == true ? "bg-amber-100 border-amber-500 text-amber-700" : "border-transparent text-amber-600 hover:bg-amber-50 hover:text-amber-700") group flex items-center px-3 py-2 text-sm font-medium border-l-4">
+                                        <svg class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("BT/Dashboard") == true ? "text-amber-500" : "text-amber-400 group-hover:text-amber-500") flex-shrink-0 -ml-1 mr-3 h-6 w-6" 
+                                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                        </svg>
+                                        B&T Dashboard
+                                    </a>
+                                    <a href="/BT/SerialNumbers" 
+                                       class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("BT/SerialNumbers") == true ? "bg-amber-100 border-amber-500 text-amber-700" : "border-transparent text-amber-600 hover:bg-amber-50 hover:text-amber-700") group flex items-center px-3 py-2 text-sm font-medium border-l-4">
+                                        <svg class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("BT/SerialNumbers") == true ? "text-amber-500" : "text-amber-400 group-hover:text-amber-500") flex-shrink-0 -ml-1 mr-3 h-6 w-6" 
+                                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"></path>
+                                        </svg>
+                                        Serial Numbers
+                                    </a>
+                                    <a href="/BT/Compliance" 
+                                       class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("BT/Compliance") == true ? "bg-amber-100 border-amber-500 text-amber-700" : "border-transparent text-amber-600 hover:bg-amber-50 hover:text-amber-700") group flex items-center px-3 py-2 text-sm font-medium border-l-4">
+                                        <svg class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("BT/Compliance") == true ? "text-amber-500" : "text-amber-400 group-hover:text-amber-500") flex-shrink-0 -ml-1 mr-3 h-6 w-6" 
+                                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                                        </svg>
+                                        Compliance
+                                    </a>
+                                </div>
+                            }
+
+                            <!-- Advanced Workflows Section (NEW - Purple Color) -->
+                            @if (userRole == "Admin" || userRole == "Manager" || userRole == "WorkflowSpecialist")
+                            {
+                                <div class="space-y-1">
+                                    <h3 class="px-3 text-xs font-semibold text-purple-600 uppercase tracking-wider">
+                                        Advanced Workflows
+                                    </h3>
+                                    <a href="/Workflows/MultiStage" 
+                                       class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("Workflows/MultiStage") == true ? "bg-purple-100 border-purple-500 text-purple-700" : "border-transparent text-purple-600 hover:bg-purple-50 hover:text-purple-700") group flex items-center px-3 py-2 text-sm font-medium border-l-4">
+                                        <svg class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("Workflows/MultiStage") == true ? "text-purple-500" : "text-purple-400 group-hover:text-purple-500") flex-shrink-0 -ml-1 mr-3 h-6 w-6" 
+                                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                                        </svg>
+                                        Multi-Stage Jobs
+                                    </a>
+                                    <a href="/Workflows/Resources" 
+                                       class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("Workflows/Resources") == true ? "bg-purple-100 border-purple-500 text-purple-700" : "border-transparent text-purple-600 hover:bg-purple-50 hover:text-purple-700") group flex items-center px-3 py-2 text-sm font-medium border-l-4">
+                                        <svg class="@(ViewContext.RouteData.Values["page"]?.ToString().Contains("Workflows/Resources") == true ? "text-purple-500" : "text-purple-400 group-hover:text-purple-500") flex-shrink-0 -ml-1 mr-3 h-6 w-6" 
+                                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
+                                        </svg>
+                                        Resource Scheduling
                                     </a>
                                 </div>
                             }
@@ -223,6 +283,25 @@
                 {
                     <a href="/Scheduler" class="block px-3 py-2 text-gray-600 hover:text-indigo-600 font-medium">Production Scheduler</a>
                     <a href="/Scheduler/MasterSchedule" class="block px-3 py-2 text-gray-600 hover:text-indigo-600 font-medium">Master Schedule</a>
+                }
+                @* B&T Manufacturing Mobile Links *@
+                @if (isAuthenticated && (userRole == "Admin" || userRole == "Manager" || userRole == "BTSpecialist"))
+                {
+                    <div class="border-t border-gray-200 pt-2 mt-2">
+                        <h4 class="px-3 py-1 text-xs font-semibold text-amber-600 uppercase tracking-wider">B&T Manufacturing</h4>
+                        <a href="/BT/Dashboard" class="block px-3 py-2 text-amber-600 hover:text-amber-700 font-medium">B&T Dashboard</a>
+                        <a href="/BT/SerialNumbers" class="block px-3 py-2 text-amber-600 hover:text-amber-700 font-medium">Serial Numbers</a>
+                        <a href="/BT/Compliance" class="block px-3 py-2 text-amber-600 hover:text-amber-700 font-medium">Compliance</a>
+                    </div>
+                }
+                @* Advanced Workflows Mobile Links *@
+                @if (isAuthenticated && (userRole == "Admin" || userRole == "Manager" || userRole == "WorkflowSpecialist"))
+                {
+                    <div class="border-t border-gray-200 pt-2 mt-2">
+                        <h4 class="px-3 py-1 text-xs font-semibold text-purple-600 uppercase tracking-wider">Advanced Workflows</h4>
+                        <a href="/Workflows/MultiStage" class="block px-3 py-2 text-purple-600 hover:text-purple-700 font-medium">Multi-Stage Jobs</a>
+                        <a href="/Workflows/Resources" class="block px-3 py-2 text-purple-600 hover:text-purple-700 font-medium">Resource Scheduling</a>
+                    </div>
                 }
                 @if (isAuthenticated && (userRole == "Admin" || userRole == "Manager" || userRole == "PrintingSpecialist"))
                 {
