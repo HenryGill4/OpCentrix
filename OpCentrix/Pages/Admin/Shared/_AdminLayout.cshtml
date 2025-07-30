@@ -7,6 +7,10 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/OpCentrix.styles.css" asp-append-version="true" />
+    
+    @* Font Awesome for icons (including fas fa-calendar-plus) *@
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    
     <script src="https://unpkg.com/htmx.org@1.9.2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -222,172 +226,67 @@
                     </a>
                     <a href="/Admin/Logs" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Logs" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
                         <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2z"></path>
                         </svg>
                         System Logs
                     </a>
                 </div>
-
-                <!-- System Administration -->
-                <div class="mb-6">
-                    <h3 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Administration</h3>
-                    <a href="/Admin/Users" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Users" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
-                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-.5a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
-                        </svg>
-                        User Management
-                    </a>
-                    <a href="/Admin/Roles" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Roles" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
-                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-                        </svg>
-                        Roles & Permissions
-                    </a>
-                    <a href="/Admin/Settings" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Settings" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
-                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                        </svg>
-                        System Settings
-                    </a>
-                </div>
             </nav>
-
-            <!-- Sidebar Footer -->
-            <div class="p-4 border-t border-gray-200 bg-gray-50">
-                <div class="space-y-2">
-                    <a href="/" class="flex items-center w-full px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
-                        <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                        </svg>
-                        Return to Scheduler
-                    </a>
-                    <a href="/Account/Logout" class="flex items-center w-full px-3 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors">
-                        <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                        </svg>
-                        Logout
-                    </a>
-                </div>
+            
+            <!-- Footer -->
+            <div class="p-4 border-t border-gray-200">
+                <button onclick="window.location.href='/'" class="w-full bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg py-2 px-4 text-sm font-medium transition-colors">
+                    Return to Main App
+                </button>
             </div>
         </div>
 
         <!-- Main Content Area -->
-        <div class="flex-1 md:ml-64">
-            <!-- Top Header Bar -->
-            <header class="bg-white shadow-sm border-b border-gray-200 h-16 flex items-center justify-between px-6">
-                <!-- Mobile menu button -->
-                <button id="mobile-menu-button" class="md:hidden p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100">
-                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
-                </button>
-
-                <!-- Page Title and Breadcrumb -->
-                <div class="flex-1">
-                    <h1 class="text-xl font-semibold text-gray-900">@ViewData["Title"]</h1>
-                    @if (ViewData["Description"] != null)
-                    {
-                        <p class="text-sm text-gray-600 mt-1">@ViewData["Description"]</p>
-                    }
-                </div>
-
-                <!-- Quick Actions -->
-                <div class="flex items-center space-x-4">
-                    <!-- System Status Indicator -->
-                    <div class="flex items-center space-x-2">
-                        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        <span class="text-sm text-gray-600">System Online</span>
+        <div class="md:ml-64 flex-1 flex flex-col overflow-hidden">
+            <!-- Top Header -->
+            <header class="bg-white shadow-sm border-b border-gray-200 flex-shrink-0">
+                <div class="flex justify-between items-center px-4 py-3">
+                    <!-- Mobile menu button -->
+                    <button type="button" class="md:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 focus:outline-none" onclick="toggleSidebar()">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                    
+                    <!-- Page title -->
+                    <div class="flex-1 min-w-0">
+                        <h1 class="text-xl font-semibold text-gray-900 truncate">
+                            @ViewData["Title"]
+                        </h1>
                     </div>
-
-                    <!-- Quick Settings -->
-                    <div class="relative">
-                        <button class="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100" title="Quick Settings">
-                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                            </svg>
-                        </button>
-                    </div>
-
-                    <!-- Notifications -->
-                    <div class="relative">
-                        <button class="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100" title="Notifications">
-                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
-                            </svg>
-                            <span class="absolute top-0 right-0 block h-2 w-2 bg-red-500 rounded-full"></span>
+                    
+                    <!-- User menu -->
+                    <div class="flex items-center space-x-4">
+                        <span class="text-sm text-gray-500">@(User.Identity?.Name ?? "Administrator")</span>
+                        <button onclick="window.location.href='/Account/Logout'" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm">
+                            Logout
                         </button>
                     </div>
                 </div>
             </header>
 
-            <!-- Main Content -->
-            <main class="flex-1 p-6 overflow-y-auto" style="height: calc(100vh - 4rem);">
+            <!-- Main content -->
+            <main class="flex-1 overflow-auto bg-gray-50">
                 @RenderBody()
             </main>
         </div>
     </div>
 
-    <!-- Mobile Sidebar Overlay -->
-    <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden hidden"></div>
-
-    <!-- Modal Container for Admin Pages -->
-    <div id="modal-container" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden items-center justify-center p-4">
-        <div class="modal-content bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            <!-- Modal content will be loaded here -->
-        </div>
-    </div>
-
+    <!-- Scripts -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     
-    <!-- Load the standardized admin.js module -->
-    <script src="~/js/admin.js" asp-append-version="true"></script>
-    
-    <!-- Sidebar Navigation Script -->
     <script>
-        // Mobile sidebar functionality
-        const sidebar = document.getElementById('sidebar');
-        const sidebarOverlay = document.getElementById('sidebar-overlay');
-        const mobileMenuButton = document.getElementById('mobile-menu-button');
-
         function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
             sidebar.classList.toggle('-translate-x-full');
-            sidebarOverlay.classList.toggle('hidden');
         }
-
-        function closeSidebar() {
-            sidebar.classList.add('-translate-x-full');
-            sidebarOverlay.classList.add('hidden');
-        }
-
-        // Event listeners
-        mobileMenuButton.addEventListener('click', toggleSidebar);
-        sidebarOverlay.addEventListener('click', closeSidebar);
-
-        // Close sidebar on window resize to desktop
-        window.addEventListener('resize', function() {
-            if (window.innerWidth >= 768) {
-                closeSidebar();
-            }
-        });
-
-        // Auto-close mobile sidebar when clicking nav links
-        document.querySelectorAll('#sidebar a').forEach(link => {
-            link.addEventListener('click', function() {
-                if (window.innerWidth < 768) {
-                    setTimeout(closeSidebar, 100);
-                }
-            });
-        });
-
-        // Keyboard navigation
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                closeSidebar();
-            }
-        });
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)
