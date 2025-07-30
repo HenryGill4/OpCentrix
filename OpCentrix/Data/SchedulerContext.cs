@@ -45,6 +45,12 @@ namespace OpCentrix.Data
         // Task 6: Enhanced machine management
         public DbSet<Material> Materials { get; set; }
 
+        // Segment 7: B&T Industry Specialization
+        public DbSet<PartClassification> PartClassifications { get; set; }
+        public DbSet<ComplianceRequirement> ComplianceRequirements { get; set; }
+        public DbSet<SerialNumber> SerialNumbers { get; set; }
+        public DbSet<ComplianceDocument> ComplianceDocuments { get; set; }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             if (!optionsBuilder.IsConfigured)
@@ -69,6 +75,9 @@ namespace OpCentrix.Data
             
             // Configure admin entities
             ConfigureAdminEntities(modelBuilder);
+
+            // Configure B&T industry specialization entities
+            ConfigureBTEntities(modelBuilder);
         }
 
         private void ConfigureCoreEntities(ModelBuilder modelBuilder)
@@ -99,7 +108,7 @@ namespace OpCentrix.Data
                 entity.HasIndex(e => e.Priority);
             });
 
-            // Configure Part entity - ENHANCED for Parts page
+            // Configure Part entity - ENHANCED for Parts page and B&T specialization
             modelBuilder.Entity<Part>(entity =>
             {
                 entity.HasKey(e => e.Id);
@@ -152,6 +161,20 @@ namespace OpCentrix.Data
                 entity.Property(e => e.AdminOverrideReason).HasMaxLength(500).HasDefaultValue("");
                 entity.Property(e => e.AdminOverrideBy).HasMaxLength(100).HasDefaultValue("");
                 
+                // B&T Specialization properties
+                entity.Property(e => e.ExportClassification).HasMaxLength(50).HasDefaultValue("");
+                entity.Property(e => e.ComponentType).HasMaxLength(50).HasDefaultValue("");
+                entity.Property(e => e.FirearmType).HasMaxLength(50).HasDefaultValue("");
+                entity.Property(e => e.BTTestingRequirements).HasMaxLength(500).HasDefaultValue("");
+                entity.Property(e => e.BTQualityStandards).HasMaxLength(500).HasDefaultValue("");
+                entity.Property(e => e.BTRegulatoryNotes).HasMaxLength(200).HasDefaultValue("");
+                
+                // Foreign key relationships for B&T
+                entity.HasOne(e => e.PartClassification)
+                    .WithMany(pc => pc.Parts)
+                    .HasForeignKey(e => e.PartClassificationId)
+                    .OnDelete(DeleteBehavior.SetNull);
+                
                 // Unique constraint on part number
                 entity.HasIndex(e => e.PartNumber).IsUnique();
                 
@@ -166,6 +189,14 @@ namespace OpCentrix.Data
                 entity.HasIndex(e => e.RequiredMachineType);
                 entity.HasIndex(e => e.CreatedDate);
                 entity.HasIndex(e => e.CustomerPartNumber);
+                
+                // B&T specific indexes
+                entity.HasIndex(e => e.PartClassificationId);
+                entity.HasIndex(e => e.ComponentType);
+                entity.HasIndex(e => e.FirearmType);
+                entity.HasIndex(e => e.RequiresATFCompliance);
+                entity.HasIndex(e => e.RequiresITARCompliance);
+                entity.HasIndex(e => e.RequiresSerialization);
             });
 
             // Configure Machine entity
@@ -520,6 +551,264 @@ namespace OpCentrix.Data
             modelBuilder.Entity<User>().HasKey(e => e.Id);
             modelBuilder.Entity<UserSettings>().HasKey(e => e.Id);
             modelBuilder.Entity<JobLogEntry>().HasKey(e => e.Id);
+        }
+
+        private void ConfigureBTEntities(ModelBuilder modelBuilder)
+        {
+            // Configure PartClassification entity - Segment 7.1
+            modelBuilder.Entity<PartClassification>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.ClassificationCode).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.ClassificationName).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Description).IsRequired().HasMaxLength(500);
+                entity.Property(e => e.IndustryType).IsRequired().HasMaxLength(50).HasDefaultValue("Firearms");
+                entity.Property(e => e.ComponentCategory).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.SuppressorType).HasMaxLength(50);
+                entity.Property(e => e.BafflePosition).HasMaxLength(50);
+                entity.Property(e => e.FirearmType).HasMaxLength(50);
+                entity.Property(e => e.RecommendedMaterial).IsRequired().HasMaxLength(100).HasDefaultValue("Ti-6Al-4V Grade 5");
+                entity.Property(e => e.AlternativeMaterials).HasMaxLength(200).HasDefaultValue("");
+                entity.Property(e => e.MaterialGrade).HasMaxLength(50).HasDefaultValue("Aerospace");
+                entity.Property(e => e.RequiredProcess).HasMaxLength(100).HasDefaultValue("SLS Metal Printing");
+                entity.Property(e => e.PostProcessingRequired).HasMaxLength(200).HasDefaultValue("");
+                entity.Property(e => e.SpecialInstructions).HasMaxLength(500).HasDefaultValue("");
+                entity.Property(e => e.TestingRequirements).HasMaxLength(500).HasDefaultValue("");
+                entity.Property(e => e.QualityStandards).HasMaxLength(500).HasDefaultValue("");
+                entity.Property(e => e.ExportClassification).HasMaxLength(50).HasDefaultValue("");
+                entity.Property(e => e.RegulatoryNotes).HasMaxLength(200).HasDefaultValue("");
+                entity.Property(e => e.CreatedBy).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.LastModifiedBy).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
+                
+                // Indexes
+                entity.HasIndex(e => e.ClassificationCode).IsUnique();
+                entity.HasIndex(e => e.ClassificationName);
+                entity.HasIndex(e => e.IndustryType);
+                entity.HasIndex(e => e.ComponentCategory);
+                entity.HasIndex(e => e.SuppressorType);
+                entity.HasIndex(e => e.FirearmType);
+                entity.HasIndex(e => e.IsActive);
+                entity.HasIndex(e => e.RequiresATFCompliance);
+                entity.HasIndex(e => e.RequiresITARCompliance);
+                entity.HasIndex(e => e.RequiresSerialization);
+            });
+
+            // Configure ComplianceRequirement entity - Segment 7.1
+            modelBuilder.Entity<ComplianceRequirement>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.RequirementCode).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.RequirementName).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Description).IsRequired().HasMaxLength(500);
+                entity.Property(e => e.ComplianceType).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.RegulatoryAuthority).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.RequirementDetails).IsRequired().HasMaxLength(1000);
+                entity.Property(e => e.DocumentationRequired).HasMaxLength(500).HasDefaultValue("");
+                entity.Property(e => e.FormsRequired).HasMaxLength(200).HasDefaultValue("");
+                entity.Property(e => e.RecordKeepingRequirements).HasMaxLength(500).HasDefaultValue("");
+                entity.Property(e => e.ApplicableIndustries).HasMaxLength(100).HasDefaultValue("");
+                entity.Property(e => e.ApplicablePartTypes).HasMaxLength(200).HasDefaultValue("");
+                entity.Property(e => e.ApplicableProcesses).HasMaxLength(200).HasDefaultValue("");
+                entity.Property(e => e.EnforcementLevel).HasMaxLength(20).HasDefaultValue("Mandatory");
+                entity.Property(e => e.PenaltyType).HasMaxLength(50).HasDefaultValue("");
+                entity.Property(e => e.PenaltyDescription).HasMaxLength(500).HasDefaultValue("");
+                entity.Property(e => e.RenewalProcess).HasMaxLength(200).HasDefaultValue("");
+                entity.Property(e => e.ImplementationSteps).HasMaxLength(500).HasDefaultValue("");
+                entity.Property(e => e.RequiredTraining).HasMaxLength(200).HasDefaultValue("");
+                entity.Property(e => e.RequiredCertifications).HasMaxLength(200).HasDefaultValue("");
+                entity.Property(e => e.SystemRequirements).HasMaxLength(500).HasDefaultValue("");
+                entity.Property(e => e.ReferenceDocuments).HasMaxLength(500).HasDefaultValue("");
+                entity.Property(e => e.WebResources).HasMaxLength(500).HasDefaultValue("");
+                entity.Property(e => e.ContactInformation).HasMaxLength(200).HasDefaultValue("");
+                entity.Property(e => e.AdditionalNotes).HasMaxLength(1000).HasDefaultValue("");
+                entity.Property(e => e.CreatedBy).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.LastModifiedBy).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
+                
+                // Configure decimal properties
+                entity.Property(e => e.MaxPenaltyAmount).HasPrecision(12, 2);
+                entity.Property(e => e.EstimatedImplementationCost).HasPrecision(10, 2);
+                
+                // Foreign key relationships
+                entity.HasOne(e => e.PartClassification)
+                    .WithMany(pc => pc.ComplianceRequirements)
+                    .HasForeignKey(e => e.PartClassificationId)
+                    .OnDelete(DeleteBehavior.SetNull);
+                
+                // Indexes
+                entity.HasIndex(e => e.RequirementCode).IsUnique();
+                entity.HasIndex(e => e.ComplianceType);
+                entity.HasIndex(e => e.RegulatoryAuthority);
+                entity.HasIndex(e => e.EnforcementLevel);
+                entity.HasIndex(e => e.IsActive);
+                entity.HasIndex(e => e.IsCurrentVersion);
+                entity.HasIndex(e => e.PartClassificationId);
+                entity.HasIndex(e => e.EffectiveDate);
+                entity.HasIndex(e => e.ExpirationDate);
+            });
+
+            // Configure SerialNumber entity - Segment 7.2
+            modelBuilder.Entity<SerialNumber>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.SerialNumberValue).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.SerialNumberFormat).IsRequired().HasMaxLength(20);
+                entity.Property(e => e.ManufacturerCode).IsRequired().HasMaxLength(50).HasDefaultValue("BT");
+                entity.Property(e => e.AssignedJobId).HasMaxLength(100);
+                entity.Property(e => e.PartNumber).HasMaxLength(50);
+                entity.Property(e => e.ComponentName).HasMaxLength(100).HasDefaultValue("");
+                entity.Property(e => e.ComponentType).HasMaxLength(50).HasDefaultValue("");
+                entity.Property(e => e.ManufacturingMethod).HasMaxLength(50).HasDefaultValue("SLS Metal Printing");
+                entity.Property(e => e.MaterialUsed).HasMaxLength(100).HasDefaultValue("");
+                entity.Property(e => e.MaterialLotNumber).HasMaxLength(50).HasDefaultValue("");
+                entity.Property(e => e.MachineUsed).HasMaxLength(50).HasDefaultValue("");
+                entity.Property(e => e.Operator).HasMaxLength(100).HasDefaultValue("");
+                entity.Property(e => e.QualityInspector).HasMaxLength(100).HasDefaultValue("");
+                entity.Property(e => e.ATFComplianceStatus).IsRequired().HasMaxLength(20).HasDefaultValue("Pending");
+                entity.Property(e => e.ATFClassification).HasMaxLength(50).HasDefaultValue("");
+                entity.Property(e => e.FFLDealer).HasMaxLength(100);
+                entity.Property(e => e.FFLNumber).HasMaxLength(50);
+                entity.Property(e => e.ATFFormNumbers).HasMaxLength(100).HasDefaultValue("");
+                entity.Property(e => e.TaxStampNumber).HasMaxLength(50);
+                entity.Property(e => e.TransferStatus).HasMaxLength(20).HasDefaultValue("In Manufacturing");
+                entity.Property(e => e.TransferTo).HasMaxLength(200);
+                entity.Property(e => e.TransferDocument).HasMaxLength(100);
+                entity.Property(e => e.TransferNotes).HasMaxLength(500);
+                entity.Property(e => e.DestructionMethod).HasMaxLength(500);
+                entity.Property(e => e.ExportClassification).HasMaxLength(50).HasDefaultValue("");
+                entity.Property(e => e.ExportLicense).HasMaxLength(100);
+                entity.Property(e => e.DestinationCountry).HasMaxLength(100);
+                entity.Property(e => e.EndUser).HasMaxLength(200);
+                entity.Property(e => e.QualityStatus).HasMaxLength(20).HasDefaultValue("Pending");
+                entity.Property(e => e.QualityCertificateNumber).HasMaxLength(100);
+                entity.Property(e => e.TestResultsSummary).HasMaxLength(500).HasDefaultValue("");
+                entity.Property(e => e.QualityNotes).HasMaxLength(1000).HasDefaultValue("");
+                entity.Property(e => e.ManufacturingHistory).HasMaxLength(2000).HasDefaultValue("{}");
+                entity.Property(e => e.ComponentGenealogy).HasMaxLength(1000).HasDefaultValue("");
+                entity.Property(e => e.AssemblyComponents).HasMaxLength(500).HasDefaultValue("");
+                entity.Property(e => e.BatchNumber).HasMaxLength(200);
+                entity.Property(e => e.BuildPlatformId).HasMaxLength(50);
+                entity.Property(e => e.CreatedBy).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.LastModifiedBy).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
+                
+                // Foreign key relationships
+                entity.HasOne(e => e.Part)
+                    .WithMany(p => p.SerialNumbers)
+                    .HasForeignKey(e => e.PartId)
+                    .OnDelete(DeleteBehavior.SetNull);
+                    
+                entity.HasOne(e => e.Job)
+                    .WithMany()
+                    .HasForeignKey(e => e.JobId)
+                    .OnDelete(DeleteBehavior.SetNull);
+                    
+                entity.HasOne(e => e.ComplianceRequirement)
+                    .WithMany(cr => cr.SerialNumbers)
+                    .HasForeignKey(e => e.ComplianceRequirementId)
+                    .OnDelete(DeleteBehavior.SetNull);
+                
+                // Indexes
+                entity.HasIndex(e => e.SerialNumberValue).IsUnique();
+                entity.HasIndex(e => e.ManufacturerCode);
+                entity.HasIndex(e => e.ComponentType);
+                entity.HasIndex(e => e.ATFComplianceStatus);
+                entity.HasIndex(e => e.TransferStatus);
+                entity.HasIndex(e => e.QualityStatus);
+                entity.HasIndex(e => e.PartId);
+                entity.HasIndex(e => e.JobId);
+                entity.HasIndex(e => e.ComplianceRequirementId);
+                entity.HasIndex(e => e.AssignedDate);
+                entity.HasIndex(e => e.ManufacturedDate);
+                entity.HasIndex(e => e.IsActive);
+                entity.HasIndex(e => e.IsLocked);
+            });
+
+            // Configure ComplianceDocument entity - Segment 7.2
+            modelBuilder.Entity<ComplianceDocument>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.DocumentNumber).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.DocumentTitle).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.DocumentType).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Description).IsRequired().HasMaxLength(500);
+                entity.Property(e => e.ComplianceCategory).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.DocumentClassification).HasMaxLength(50).HasDefaultValue("Unclassified");
+                entity.Property(e => e.RegulatoryAuthority).HasMaxLength(100).HasDefaultValue("");
+                entity.Property(e => e.FormNumber).HasMaxLength(50);
+                entity.Property(e => e.Status).HasMaxLength(20).HasDefaultValue("Draft");
+                entity.Property(e => e.ApprovalNumber).HasMaxLength(100);
+                entity.Property(e => e.ReferenceNumber).HasMaxLength(100);
+                entity.Property(e => e.FilePath).HasMaxLength(500);
+                entity.Property(e => e.FileName).HasMaxLength(100);
+                entity.Property(e => e.FileType).HasMaxLength(20);
+                entity.Property(e => e.FileHash).HasMaxLength(100);
+                entity.Property(e => e.DocumentContent).HasMaxLength(2000).HasDefaultValue("");
+                entity.Property(e => e.AssociatedSerialNumbers).HasMaxLength(200).HasDefaultValue("");
+                entity.Property(e => e.AssociatedPartNumbers).HasMaxLength(200).HasDefaultValue("");
+                entity.Property(e => e.AssociatedJobNumbers).HasMaxLength(200).HasDefaultValue("");
+                entity.Property(e => e.Customer).HasMaxLength(100);
+                entity.Property(e => e.Vendor).HasMaxLength(100);
+                entity.Property(e => e.PreparedBy).HasMaxLength(100).HasDefaultValue("");
+                entity.Property(e => e.ReviewedBy).HasMaxLength(100);
+                entity.Property(e => e.ApprovedBy).HasMaxLength(100);
+                entity.Property(e => e.ReviewComments).HasMaxLength(500).HasDefaultValue("");
+                entity.Property(e => e.ApprovalComments).HasMaxLength(500).HasDefaultValue("");
+                entity.Property(e => e.RetentionPeriod).IsRequired().HasMaxLength(20).HasDefaultValue("Permanent");
+                entity.Property(e => e.ArchiveLocation).HasMaxLength(50);
+                entity.Property(e => e.DisposalMethod).HasMaxLength(500);
+                entity.Property(e => e.NotificationRecipients).HasMaxLength(200).HasDefaultValue("");
+                entity.Property(e => e.CreatedBy).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.LastModifiedBy).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.LastAccessedBy).HasMaxLength(100).HasDefaultValue("");
+                entity.Property(e => e.AuditNotes).HasMaxLength(1000).HasDefaultValue("");
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.LastAccessedDate).HasDefaultValueSql("datetime('now')");
+                
+                // Configure decimal properties
+                entity.Property(e => e.FileSizeMB).HasPrecision(8, 2);
+                
+                // Foreign key relationships
+                entity.HasOne(e => e.SerialNumber)
+                    .WithMany(sn => sn.ComplianceDocuments)
+                    .HasForeignKey(e => e.SerialNumberId)
+                    .OnDelete(DeleteBehavior.SetNull);
+                    
+                entity.HasOne(e => e.ComplianceRequirement)
+                    .WithMany(cr => cr.ComplianceDocuments)
+                    .HasForeignKey(e => e.ComplianceRequirementId)
+                    .OnDelete(DeleteBehavior.SetNull);
+                    
+                entity.HasOne(e => e.Part)
+                    .WithMany(p => p.ComplianceDocuments)
+                    .HasForeignKey(e => e.PartId)
+                    .OnDelete(DeleteBehavior.SetNull);
+                    
+                entity.HasOne(e => e.Job)
+                    .WithMany()
+                    .HasForeignKey(e => e.JobId)
+                    .OnDelete(DeleteBehavior.SetNull);
+                
+                // Indexes
+                entity.HasIndex(e => e.DocumentNumber).IsUnique();
+                entity.HasIndex(e => e.DocumentType);
+                entity.HasIndex(e => e.ComplianceCategory);
+                entity.HasIndex(e => e.Status);
+                entity.HasIndex(e => e.SerialNumberId);
+                entity.HasIndex(e => e.ComplianceRequirementId);
+                entity.HasIndex(e => e.PartId);
+                entity.HasIndex(e => e.JobId);
+                entity.HasIndex(e => e.DocumentDate);
+                entity.HasIndex(e => e.EffectiveDate);
+                entity.HasIndex(e => e.ExpirationDate);
+                entity.HasIndex(e => e.IsActive);
+                entity.HasIndex(e => e.IsArchived);
+            });
         }
         
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

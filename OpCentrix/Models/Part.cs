@@ -413,6 +413,54 @@ namespace OpCentrix.Models
         
         #endregion
         
+        #region B&T Industry Specialization - Segment 7
+        
+        /// <summary>
+        /// B&T Classification ID for specialized categorization
+        /// </summary>
+        public int? PartClassificationId { get; set; }
+        
+        // B&T Compliance and Regulatory Properties
+        public bool RequiresATFCompliance { get; set; } = false;
+        public bool RequiresITARCompliance { get; set; } = false;
+        public bool RequiresFFLTracking { get; set; } = false;
+        public bool RequiresSerialization { get; set; } = false;
+        public bool IsControlledItem { get; set; } = false;
+        public bool IsEARControlled { get; set; } = false;
+        
+        [StringLength(50)]
+        [Display(Name = "Export Classification")]
+        public string ExportClassification { get; set; } = string.Empty;
+        
+        [StringLength(50)]
+        [Display(Name = "Component Type")]
+        public string ComponentType { get; set; } = string.Empty; // Suppressor, Receiver, Barrel, etc.
+        
+        [StringLength(50)]
+        [Display(Name = "Firearm Type")]
+        public string FirearmType { get; set; } = string.Empty; // Rifle, Pistol, SBR, etc.
+        
+        // B&T Testing Requirements
+        public bool RequiresPressureTesting { get; set; } = false;
+        public bool RequiresProofTesting { get; set; } = false;
+        public bool RequiresDimensionalVerification { get; set; } = true;
+        public bool RequiresSurfaceFinishVerification { get; set; } = true;
+        public bool RequiresMaterialCertification { get; set; } = true;
+        
+        [StringLength(500)]
+        [Display(Name = "B&T Testing Requirements")]
+        public string BTTestingRequirements { get; set; } = string.Empty;
+        
+        [StringLength(500)]
+        [Display(Name = "B&T Quality Standards")]
+        public string BTQualityStandards { get; set; } = string.Empty;
+        
+        [StringLength(200)]
+        [Display(Name = "B&T Regulatory Notes")]
+        public string BTRegulatoryNotes { get; set; } = string.Empty;
+        
+        #endregion
+        
         #region Navigation Properties
         
         public virtual ICollection<Job> Jobs { get; set; } = new List<Job>();
@@ -426,6 +474,21 @@ namespace OpCentrix.Models
         /// Inspection checkpoints for this part - Task 13: Quality control
         /// </summary>
         public virtual ICollection<InspectionCheckpoint> InspectionCheckpoints { get; set; } = new List<InspectionCheckpoint>();
+
+        /// <summary>
+        /// B&T Part Classification - Segment 7.1
+        /// </summary>
+        public virtual PartClassification? PartClassification { get; set; }
+
+        /// <summary>
+        /// Serial numbers assigned to this part - Segment 7.2
+        /// </summary>
+        public virtual ICollection<SerialNumber> SerialNumbers { get; set; } = new List<SerialNumber>();
+
+        /// <summary>
+        /// Compliance documents for this part - Segment 7.2
+        /// </summary>
+        public virtual ICollection<ComplianceDocument> ComplianceDocuments { get; set; } = new List<ComplianceDocument>();
 
         #endregion
         
@@ -494,6 +557,86 @@ namespace OpCentrix.Models
                 issues.Add("Support removal time not specified for part requiring supports");
             
             return issues;
+        }
+
+        #endregion
+
+        #region B&T Helper Methods - Segment 7
+        
+        /// <summary>
+        /// Check if this part requires B&T compliance
+        /// </summary>
+        public bool RequiresBTCompliance()
+        {
+            return RequiresATFCompliance || RequiresITARCompliance || RequiresFFLTracking || 
+                   RequiresSerialization || IsControlledItem || IsEARControlled;
+        }
+        
+        /// <summary>
+        /// Get all required B&T compliance types
+        /// </summary>
+        public List<string> GetRequiredBTCompliance()
+        {
+            var compliance = new List<string>();
+            
+            if (RequiresATFCompliance) compliance.Add("ATF");
+            if (RequiresITARCompliance) compliance.Add("ITAR");
+            if (RequiresFFLTracking) compliance.Add("FFL");
+            if (RequiresSerialization) compliance.Add("Serialization");
+            if (IsControlledItem) compliance.Add("Controlled Item");
+            if (IsEARControlled) compliance.Add("EAR");
+            
+            return compliance;
+        }
+        
+        /// <summary>
+        /// Get all required B&T testing types
+        /// </summary>
+        public List<string> GetRequiredBTTesting()
+        {
+            var testing = new List<string>();
+            
+            if (RequiresPressureTesting) testing.Add("Pressure Testing");
+            if (RequiresProofTesting) testing.Add("Proof Testing");
+            if (RequiresDimensionalVerification) testing.Add("Dimensional Verification");
+            if (RequiresSurfaceFinishVerification) testing.Add("Surface Finish");
+            if (RequiresMaterialCertification) testing.Add("Material Certification");
+            
+            return testing;
+        }
+        
+        /// <summary>
+        /// Check if this is a suppressor component
+        /// </summary>
+        public bool IsSuppressorComponent()
+        {
+            return ComponentType.Equals("Suppressor", StringComparison.OrdinalIgnoreCase) ||
+                   Name.Contains("Suppressor", StringComparison.OrdinalIgnoreCase) ||
+                   Name.Contains("Silencer", StringComparison.OrdinalIgnoreCase) ||
+                   ComponentType.Contains("Baffle", StringComparison.OrdinalIgnoreCase) ||
+                   ComponentType.Contains("End Cap", StringComparison.OrdinalIgnoreCase);
+        }
+        
+        /// <summary>
+        /// Check if this is a firearm component
+        /// </summary>
+        public bool IsFirearmComponent()
+        {
+            return ComponentType.Equals("Receiver", StringComparison.OrdinalIgnoreCase) ||
+                   ComponentType.Equals("Barrel", StringComparison.OrdinalIgnoreCase) ||
+                   ComponentType.Contains("Frame", StringComparison.OrdinalIgnoreCase) ||
+                   !string.IsNullOrEmpty(FirearmType);
+        }
+        
+        /// <summary>
+        /// Get B&T compliance summary
+        /// </summary>
+        public string GetBTComplianceSummary()
+        {
+            if (!RequiresBTCompliance()) return "No special compliance required";
+            
+            var compliance = GetRequiredBTCompliance();
+            return $"Requires: {string.Join(", ", compliance)}";
         }
         
         #endregion

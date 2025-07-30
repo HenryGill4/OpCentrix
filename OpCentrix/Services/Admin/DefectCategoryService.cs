@@ -5,31 +5,10 @@ using OpCentrix.Models;
 namespace OpCentrix.Services.Admin;
 
 /// <summary>
-/// Service for managing defect categories in the quality control system
-/// Task 14: Defect Category Manager - Complete CRUD and business logic
+/// Service for managing defect categories in the quality management system
+/// Provides comprehensive CRUD operations and business logic for defect classification
 /// </summary>
-public interface IDefectCategoryService
-{
-    Task<List<DefectCategory>> GetAllDefectCategoriesAsync();
-    Task<List<DefectCategory>> GetActiveDefectCategoriesAsync();
-    Task<DefectCategory?> GetDefectCategoryByIdAsync(int id);
-    Task<DefectCategory?> GetDefectCategoryByCodeAsync(string code);
-    Task<List<DefectCategory>> GetDefectCategoriesByGroupAsync(string categoryGroup);
-    Task<List<DefectCategory>> GetDefectCategoriesBySeverityAsync(int severityLevel);
-    Task<List<string>> GetCategoryGroupsAsync();
-    Task<List<string>> GetApplicableProcessesAsync();
-    Task<Dictionary<string, int>> GetDefectStatisticsAsync();
-    Task<bool> CreateDefectCategoryAsync(DefectCategory defectCategory);
-    Task<bool> UpdateDefectCategoryAsync(DefectCategory defectCategory);
-    Task<bool> DeleteDefectCategoryAsync(int id);
-    Task<bool> ToggleDefectCategoryStatusAsync(int id);
-    Task<bool> DefectCategoryExistsAsync(string code, int? excludeId = null);
-    Task<int> GetUsageCountAsync(int defectCategoryId);
-    Task<List<DefectCategory>> SearchDefectCategoriesAsync(string searchTerm);
-    Task<bool> BulkUpdateSortOrderAsync(Dictionary<int, int> sortOrders);
-}
-
-public class DefectCategoryService : IDefectCategoryService
+public class DefectCategoryService
 {
     private readonly SchedulerContext _context;
     private readonly ILogger<DefectCategoryService> _logger;
@@ -40,452 +19,441 @@ public class DefectCategoryService : IDefectCategoryService
         _logger = logger;
     }
 
-    public async Task<List<DefectCategory>> GetAllDefectCategoriesAsync()
+    /// <summary>
+    /// Get all defect categories with optional filtering
+    /// </summary>
+    public async Task<List<DefectCategory>> GetAllDefectCategoriesAsync(
+        string searchTerm = "",
+        string categoryGroup = "",
+        int? severityLevel = null,
+        bool? isActive = null)
     {
-        try
-        {
-            return await _context.DefectCategories
-                .Include(dc => dc.InspectionCheckpoints)
-                .OrderBy(dc => dc.CategoryGroup)
-                .ThenBy(dc => dc.SortOrder)
-                .ThenBy(dc => dc.Name)
-                .ToListAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving all defect categories");
-            return new List<DefectCategory>();
-        }
-    }
+        var operationId = Guid.NewGuid().ToString("N")[..8];
+        _logger.LogInformation("Getting all defect categories - Operation: {OperationId}", operationId);
 
-    public async Task<List<DefectCategory>> GetActiveDefectCategoriesAsync()
-    {
         try
         {
-            return await _context.DefectCategories
-                .Where(dc => dc.IsActive)
+            var query = _context.DefectCategories
                 .Include(dc => dc.InspectionCheckpoints)
-                .OrderBy(dc => dc.CategoryGroup)
-                .ThenBy(dc => dc.SortOrder)
-                .ThenBy(dc => dc.Name)
-                .ToListAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving active defect categories");
-            return new List<DefectCategory>();
-        }
-    }
+                .AsNoTracking();
 
-    public async Task<DefectCategory?> GetDefectCategoryByIdAsync(int id)
-    {
-        try
-        {
-            return await _context.DefectCategories
-                .Include(dc => dc.InspectionCheckpoints)
-                .FirstOrDefaultAsync(dc => dc.Id == id);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving defect category with ID {DefectCategoryId}", id);
-            return null;
-        }
-    }
+            // Apply search filter
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                query = query.Where(dc => 
+                    dc.Name.Contains(searchTerm) ||
+                    dc.Description.Contains(searchTerm) ||
+                    dc.Code.Contains(searchTerm));
+            }
 
-    public async Task<DefectCategory?> GetDefectCategoryByCodeAsync(string code)
-    {
-        try
-        {
-            return await _context.DefectCategories
-                .Include(dc => dc.InspectionCheckpoints)
-                .FirstOrDefaultAsync(dc => dc.Code.ToLower() == code.ToLower());
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving defect category with code {Code}", code);
-            return null;
-        }
-    }
+            // Apply category group filter
+            if (!string.IsNullOrEmpty(categoryGroup))
+            {
+                query = query.Where(dc => dc.CategoryGroup == categoryGroup);
+            }
 
-    public async Task<List<DefectCategory>> GetDefectCategoriesByGroupAsync(string categoryGroup)
-    {
-        try
-        {
-            return await _context.DefectCategories
-                .Where(dc => dc.CategoryGroup == categoryGroup && dc.IsActive)
-                .Include(dc => dc.InspectionCheckpoints)
+            // Apply severity level filter
+            if (severityLevel.HasValue)
+            {
+                query = query.Where(dc => dc.SeverityLevel == severityLevel.Value);
+            }
+
+            // Apply active status filter
+            if (isActive.HasValue)
+            {
+                query = query.Where(dc => dc.IsActive == isActive.Value);
+            }
+
+            var categories = await query
                 .OrderBy(dc => dc.SortOrder)
                 .ThenBy(dc => dc.Name)
                 .ToListAsync();
+
+            _logger.LogInformation("Retrieved {Count} defect categories - Operation: {OperationId}", 
+                categories.Count, operationId);
+
+            return categories;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving defect categories for group {CategoryGroup}", categoryGroup);
-            return new List<DefectCategory>();
+            _logger.LogError(ex, "Error retrieving defect categories - Operation: {OperationId}", operationId);
+            throw;
         }
     }
 
-    public async Task<List<DefectCategory>> GetDefectCategoriesBySeverityAsync(int severityLevel)
+    /// <summary>
+    /// Get defect category by ID
+    /// </summary>
+    public async Task<DefectCategory?> GetDefectCategoryByIdAsync(int id)
     {
+        var operationId = Guid.NewGuid().ToString("N")[..8];
+        _logger.LogInformation("Getting defect category by ID: {Id} - Operation: {OperationId}", id, operationId);
+
         try
         {
-            return await _context.DefectCategories
-                .Where(dc => dc.SeverityLevel == severityLevel && dc.IsActive)
+            var category = await _context.DefectCategories
                 .Include(dc => dc.InspectionCheckpoints)
-                .OrderBy(dc => dc.CategoryGroup)
-                .ThenBy(dc => dc.Name)
-                .ToListAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving defect categories for severity level {SeverityLevel}", severityLevel);
-            return new List<DefectCategory>();
-        }
-    }
+                .AsNoTracking()
+                .FirstOrDefaultAsync(dc => dc.Id == id);
 
-    public async Task<List<string>> GetCategoryGroupsAsync()
-    {
-        try
-        {
-            return await _context.DefectCategories
-                .Where(dc => dc.IsActive)
-                .Select(dc => dc.CategoryGroup)
-                .Distinct()
-                .OrderBy(cg => cg)
-                .ToListAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving category groups");
-            return new List<string>();
-        }
-    }
-
-    public async Task<List<string>> GetApplicableProcessesAsync()
-    {
-        try
-        {
-            var processes = await _context.DefectCategories
-                .Where(dc => dc.IsActive && !string.IsNullOrEmpty(dc.ApplicableProcesses))
-                .Select(dc => dc.ApplicableProcesses)
-                .ToListAsync();
-
-            return processes
-                .SelectMany(p => p.Split(',', StringSplitOptions.RemoveEmptyEntries))
-                .Select(p => p.Trim())
-                .Where(p => !string.IsNullOrEmpty(p))
-                .Distinct()
-                .OrderBy(p => p)
-                .ToList();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving applicable processes");
-            return new List<string>();
-        }
-    }
-
-    public async Task<Dictionary<string, int>> GetDefectStatisticsAsync()
-    {
-        try
-        {
-            var stats = new Dictionary<string, int>();
-
-            // Total categories
-            stats["TotalCategories"] = await _context.DefectCategories.CountAsync();
-            stats["ActiveCategories"] = await _context.DefectCategories.CountAsync(dc => dc.IsActive);
-            stats["InactiveCategories"] = await _context.DefectCategories.CountAsync(dc => !dc.IsActive);
-
-            // By severity
-            stats["CriticalDefects"] = await _context.DefectCategories.CountAsync(dc => dc.SeverityLevel == 1 && dc.IsActive);
-            stats["HighSeverityDefects"] = await _context.DefectCategories.CountAsync(dc => dc.SeverityLevel == 2 && dc.IsActive);
-            stats["MediumSeverityDefects"] = await _context.DefectCategories.CountAsync(dc => dc.SeverityLevel == 3 && dc.IsActive);
-
-            // By group (top 5)
-            var groupStats = await _context.DefectCategories
-                .Where(dc => dc.IsActive)
-                .GroupBy(dc => dc.CategoryGroup)
-                .Select(g => new { Group = g.Key, Count = g.Count() })
-                .OrderByDescending(g => g.Count)
-                .Take(5)
-                .ToListAsync();
-
-            foreach (var group in groupStats)
+            if (category != null)
             {
-                stats[$"Group_{group.Group}"] = group.Count;
+                _logger.LogInformation("Found defect category: {Name} - Operation: {OperationId}", 
+                    category.Name, operationId);
+            }
+            else
+            {
+                _logger.LogWarning("Defect category not found for ID: {Id} - Operation: {OperationId}", 
+                    id, operationId);
             }
 
-            return stats;
+            return category;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving defect statistics");
-            return new Dictionary<string, int>();
+            _logger.LogError(ex, "Error retrieving defect category by ID: {Id} - Operation: {OperationId}", 
+                id, operationId);
+            throw;
         }
     }
 
-    public async Task<bool> CreateDefectCategoryAsync(DefectCategory defectCategory)
+    /// <summary>
+    /// Create new defect category
+    /// </summary>
+    public async Task<DefectCategory> CreateDefectCategoryAsync(DefectCategory category)
     {
+        var operationId = Guid.NewGuid().ToString("N")[..8];
+        _logger.LogInformation("Creating defect category: {Name} - Operation: {OperationId}", 
+            category.Name, operationId);
+
         try
         {
-            // Validate unique code
-            if (!string.IsNullOrEmpty(defectCategory.Code))
+            // Validate unique code if provided
+            if (!string.IsNullOrEmpty(category.Code))
             {
-                var existingCode = await DefectCategoryExistsAsync(defectCategory.Code);
-                if (existingCode)
+                var existingWithCode = await _context.DefectCategories
+                    .AnyAsync(dc => dc.Code == category.Code);
+
+                if (existingWithCode)
                 {
-                    _logger.LogWarning("Cannot create defect category: Code {Code} already exists", defectCategory.Code);
-                    return false;
+                    throw new InvalidOperationException($"Defect category code '{category.Code}' already exists");
                 }
             }
 
             // Set audit fields
-            defectCategory.CreatedDate = DateTime.UtcNow;
-            defectCategory.LastModifiedDate = DateTime.UtcNow;
+            category.CreatedDate = DateTime.UtcNow;
+            category.LastModifiedDate = DateTime.UtcNow;
 
-            _context.DefectCategories.Add(defectCategory);
-            var result = await _context.SaveChangesAsync();
-
-            if (result > 0)
+            // Ensure sort order
+            if (category.SortOrder == 0)
             {
-                _logger.LogInformation("Created defect category: {Name} ({Code}) by {CreatedBy}", 
-                    defectCategory.Name, defectCategory.Code, defectCategory.CreatedBy);
-                return true;
+                var maxSortOrder = await _context.DefectCategories
+                    .MaxAsync(dc => (int?)dc.SortOrder) ?? 0;
+                category.SortOrder = maxSortOrder + 10;
             }
 
-            return false;
+            _context.DefectCategories.Add(category);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Created defect category: {Name} (ID: {Id}) - Operation: {OperationId}", 
+                category.Name, category.Id, operationId);
+
+            return category;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating defect category: {Name}", defectCategory.Name);
-            return false;
+            _logger.LogError(ex, "Error creating defect category: {Name} - Operation: {OperationId}", 
+                category.Name, operationId);
+            throw;
         }
     }
 
-    public async Task<bool> UpdateDefectCategoryAsync(DefectCategory defectCategory)
+    /// <summary>
+    /// Update existing defect category
+    /// </summary>
+    public async Task<bool> UpdateDefectCategoryAsync(DefectCategory category)
     {
+        var operationId = Guid.NewGuid().ToString("N")[..8];
+        _logger.LogInformation("Updating defect category: {Id} - Operation: {OperationId}", 
+            category.Id, operationId);
+
         try
         {
-            // Validate unique code (excluding current category)
-            if (!string.IsNullOrEmpty(defectCategory.Code))
-            {
-                var existingCode = await DefectCategoryExistsAsync(defectCategory.Code, defectCategory.Id);
-                if (existingCode)
-                {
-                    _logger.LogWarning("Cannot update defect category: Code {Code} already exists", defectCategory.Code);
-                    return false;
-                }
-            }
+            var existingCategory = await _context.DefectCategories
+                .FirstOrDefaultAsync(dc => dc.Id == category.Id);
 
-            var existingCategory = await _context.DefectCategories.FindAsync(defectCategory.Id);
             if (existingCategory == null)
             {
-                _logger.LogWarning("Cannot update defect category: Category with ID {Id} not found", defectCategory.Id);
+                _logger.LogWarning("Defect category not found for update: {Id} - Operation: {OperationId}", 
+                    category.Id, operationId);
                 return false;
+            }
+
+            // Validate unique code if changed
+            if (!string.IsNullOrEmpty(category.Code) && 
+                category.Code != existingCategory.Code)
+            {
+                var existingWithCode = await _context.DefectCategories
+                    .AnyAsync(dc => dc.Code == category.Code && dc.Id != category.Id);
+
+                if (existingWithCode)
+                {
+                    throw new InvalidOperationException($"Defect category code '{category.Code}' already exists");
+                }
             }
 
             // Update properties
-            existingCategory.Name = defectCategory.Name;
-            existingCategory.Description = defectCategory.Description;
-            existingCategory.Code = defectCategory.Code;
-            existingCategory.SeverityLevel = defectCategory.SeverityLevel;
-            existingCategory.IsActive = defectCategory.IsActive;
-            existingCategory.CategoryGroup = defectCategory.CategoryGroup;
-            existingCategory.ApplicableProcesses = defectCategory.ApplicableProcesses;
-            existingCategory.StandardCorrectiveActions = defectCategory.StandardCorrectiveActions;
-            existingCategory.PreventionMethods = defectCategory.PreventionMethods;
-            existingCategory.RequiresImmediateNotification = defectCategory.RequiresImmediateNotification;
-            existingCategory.CostImpact = defectCategory.CostImpact;
-            existingCategory.AverageResolutionTimeMinutes = defectCategory.AverageResolutionTimeMinutes;
-            existingCategory.SortOrder = defectCategory.SortOrder;
-            existingCategory.ColorCode = defectCategory.ColorCode;
-            existingCategory.Icon = defectCategory.Icon;
+            existingCategory.Name = category.Name;
+            existingCategory.Description = category.Description;
+            existingCategory.Code = category.Code;
+            existingCategory.SeverityLevel = category.SeverityLevel;
+            existingCategory.IsActive = category.IsActive;
+            existingCategory.CategoryGroup = category.CategoryGroup;
+            existingCategory.ApplicableProcesses = category.ApplicableProcesses;
+            existingCategory.StandardCorrectiveActions = category.StandardCorrectiveActions;
+            existingCategory.PreventionMethods = category.PreventionMethods;
+            existingCategory.RequiresImmediateNotification = category.RequiresImmediateNotification;
+            existingCategory.CostImpact = category.CostImpact;
+            existingCategory.AverageResolutionTimeMinutes = category.AverageResolutionTimeMinutes;
+            existingCategory.SortOrder = category.SortOrder;
+            existingCategory.ColorCode = category.ColorCode;
+            existingCategory.Icon = category.Icon;
             existingCategory.LastModifiedDate = DateTime.UtcNow;
-            existingCategory.LastModifiedBy = defectCategory.LastModifiedBy;
+            existingCategory.LastModifiedBy = category.LastModifiedBy;
 
-            var result = await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync();
 
-            if (result > 0)
-            {
-                _logger.LogInformation("Updated defect category: {Name} ({Code}) by {LastModifiedBy}", 
-                    existingCategory.Name, existingCategory.Code, existingCategory.LastModifiedBy);
-                return true;
-            }
+            _logger.LogInformation("Updated defect category: {Name} (ID: {Id}) - Operation: {OperationId}", 
+                existingCategory.Name, existingCategory.Id, operationId);
 
-            return false;
+            return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating defect category with ID {Id}", defectCategory.Id);
-            return false;
+            _logger.LogError(ex, "Error updating defect category: {Id} - Operation: {OperationId}", 
+                category.Id, operationId);
+            throw;
         }
     }
 
+    /// <summary>
+    /// Delete defect category
+    /// </summary>
     public async Task<bool> DeleteDefectCategoryAsync(int id)
     {
+        var operationId = Guid.NewGuid().ToString("N")[..8];
+        _logger.LogInformation("Deleting defect category: {Id} - Operation: {OperationId}", id, operationId);
+
         try
         {
-            var defectCategory = await GetDefectCategoryByIdAsync(id);
-            if (defectCategory == null)
-            {
-                _logger.LogWarning("Cannot delete defect category: Category with ID {Id} not found", id);
-                return false;
-            }
-
-            // Check if it can be deleted (no references)
-            if (!defectCategory.CanBeDeleted())
-            {
-                _logger.LogWarning("Cannot delete defect category {Name}: Still referenced by inspection checkpoints", defectCategory.Name);
-                return false;
-            }
-
-            _context.DefectCategories.Remove(defectCategory);
-            var result = await _context.SaveChangesAsync();
-
-            if (result > 0)
-            {
-                _logger.LogInformation("Deleted defect category: {Name} ({Code})", defectCategory.Name, defectCategory.Code);
-                return true;
-            }
-
-            return false;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error deleting defect category with ID {Id}", id);
-            return false;
-        }
-    }
-
-    public async Task<bool> ToggleDefectCategoryStatusAsync(int id)
-    {
-        try
-        {
-            var defectCategory = await _context.DefectCategories.FindAsync(id);
-            if (defectCategory == null)
-            {
-                _logger.LogWarning("Cannot toggle status: Defect category with ID {Id} not found", id);
-                return false;
-            }
-
-            defectCategory.IsActive = !defectCategory.IsActive;
-            defectCategory.LastModifiedDate = DateTime.UtcNow;
-
-            var result = await _context.SaveChangesAsync();
-
-            if (result > 0)
-            {
-                var status = defectCategory.IsActive ? "activated" : "deactivated";
-                _logger.LogInformation("Defect category {Name} {Status}", defectCategory.Name, status);
-                return true;
-            }
-
-            return false;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error toggling status for defect category with ID {Id}", id);
-            return false;
-        }
-    }
-
-    public async Task<bool> DefectCategoryExistsAsync(string code, int? excludeId = null)
-    {
-        try
-        {
-            var query = _context.DefectCategories.Where(dc => dc.Code.ToLower() == code.ToLower());
-            
-            if (excludeId.HasValue)
-            {
-                query = query.Where(dc => dc.Id != excludeId.Value);
-            }
-
-            return await query.AnyAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error checking if defect category code exists: {Code}", code);
-            return false;
-        }
-    }
-
-    public async Task<int> GetUsageCountAsync(int defectCategoryId)
-    {
-        try
-        {
-            // Count inspection checkpoints using this defect category
-            var checkpointCount = await _context.InspectionCheckpoints
-                .CountAsync(ic => ic.Id == defectCategoryId); // This would need a DefectCategoryId foreign key
-
-            // Add other usage counts as needed (job defects, quality reports, etc.)
-            return checkpointCount;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting usage count for defect category {Id}", defectCategoryId);
-            return 0;
-        }
-    }
-
-    public async Task<List<DefectCategory>> SearchDefectCategoriesAsync(string searchTerm)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(searchTerm))
-            {
-                return await GetActiveDefectCategoriesAsync();
-            }
-
-            var lowerSearchTerm = searchTerm.ToLower();
-
-            return await _context.DefectCategories
-                .Where(dc => dc.IsActive && (
-                    dc.Name.ToLower().Contains(lowerSearchTerm) ||
-                    dc.Code.ToLower().Contains(lowerSearchTerm) ||
-                    dc.Description.ToLower().Contains(lowerSearchTerm) ||
-                    dc.CategoryGroup.ToLower().Contains(lowerSearchTerm)
-                ))
+            var category = await _context.DefectCategories
                 .Include(dc => dc.InspectionCheckpoints)
-                .OrderBy(dc => dc.CategoryGroup)
-                .ThenBy(dc => dc.SortOrder)
-                .ThenBy(dc => dc.Name)
-                .ToListAsync();
+                .FirstOrDefaultAsync(dc => dc.Id == id);
+
+            if (category == null)
+            {
+                _logger.LogWarning("Defect category not found for deletion: {Id} - Operation: {OperationId}", 
+                    id, operationId);
+                return false;
+            }
+
+            // Check if category can be safely deleted
+            if (!category.CanBeDeleted())
+            {
+                throw new InvalidOperationException(
+                    $"Cannot delete defect category '{category.Name}' because it is referenced by {category.InspectionCheckpoints.Count} inspection checkpoints");
+            }
+
+            _context.DefectCategories.Remove(category);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Deleted defect category: {Name} (ID: {Id}) - Operation: {OperationId}", 
+                category.Name, id, operationId);
+
+            return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error searching defect categories with term: {SearchTerm}", searchTerm);
-            return new List<DefectCategory>();
+            _logger.LogError(ex, "Error deleting defect category: {Id} - Operation: {OperationId}", id, operationId);
+            throw;
         }
     }
 
-    public async Task<bool> BulkUpdateSortOrderAsync(Dictionary<int, int> sortOrders)
+    /// <summary>
+    /// Get available category groups
+    /// </summary>
+    public async Task<List<string>> GetCategoryGroupsAsync()
     {
         try
         {
-            foreach (var kvp in sortOrders)
+            var groups = await _context.DefectCategories
+                .Where(dc => dc.IsActive && !string.IsNullOrEmpty(dc.CategoryGroup))
+                .Select(dc => dc.CategoryGroup)
+                .Distinct()
+                .OrderBy(g => g)
+                .ToListAsync();
+
+            // Add standard groups that might not be in use yet
+            var standardGroups = new[]
             {
-                var defectCategory = await _context.DefectCategories.FindAsync(kvp.Key);
-                if (defectCategory != null)
+                DefectCategoryGroups.Surface,
+                DefectCategoryGroups.Dimensional,
+                DefectCategoryGroups.Material,
+                DefectCategoryGroups.Functional,
+                DefectCategoryGroups.Cosmetic,
+                DefectCategoryGroups.Assembly,
+                DefectCategoryGroups.Process,
+                DefectCategoryGroups.Handling,
+                DefectCategoryGroups.Documentation,
+                DefectCategoryGroups.Other
+            };
+
+            return groups.Union(standardGroups).Distinct().OrderBy(g => g).ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving category groups");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Get defect category statistics
+    /// </summary>
+    public async Task<DefectCategoryStatistics> GetStatisticsAsync()
+    {
+        var operationId = Guid.NewGuid().ToString("N")[..8];
+        _logger.LogInformation("Getting defect category statistics - Operation: {OperationId}", operationId);
+
+        try
+        {
+            var totalCategories = await _context.DefectCategories.CountAsync();
+            var activeCategories = await _context.DefectCategories.CountAsync(dc => dc.IsActive);
+            var categoriesWithCheckpoints = await _context.DefectCategories
+                .CountAsync(dc => dc.InspectionCheckpoints.Any());
+
+            var severityDistribution = await _context.DefectCategories
+                .Where(dc => dc.IsActive)
+                .GroupBy(dc => dc.SeverityLevel)
+                .Select(g => new { Severity = g.Key, Count = g.Count() })
+                .ToListAsync();
+
+            var groupDistribution = await _context.DefectCategories
+                .Where(dc => dc.IsActive)
+                .GroupBy(dc => dc.CategoryGroup)
+                .Select(g => new { Group = g.Key, Count = g.Count() })
+                .ToListAsync();
+
+            var statistics = new DefectCategoryStatistics
+            {
+                TotalCategories = totalCategories,
+                ActiveCategories = activeCategories,
+                InactiveCategories = totalCategories - activeCategories,
+                CategoriesWithCheckpoints = categoriesWithCheckpoints,
+                SeverityDistribution = severityDistribution.ToDictionary(x => x.Severity, x => x.Count),
+                GroupDistribution = groupDistribution.ToDictionary(x => x.Group ?? "Unknown", x => x.Count)
+            };
+
+            _logger.LogInformation("Retrieved defect category statistics: {Total} total, {Active} active - Operation: {OperationId}", 
+                totalCategories, activeCategories, operationId);
+
+            return statistics;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving defect category statistics - Operation: {OperationId}", operationId);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Reorder defect categories within a group
+    /// </summary>
+    public async Task<bool> ReorderCategoriesAsync(List<int> categoryIds)
+    {
+        var operationId = Guid.NewGuid().ToString("N")[..8];
+        _logger.LogInformation("Reordering {Count} defect categories - Operation: {OperationId}", 
+            categoryIds.Count, operationId);
+
+        try
+        {
+            var categories = await _context.DefectCategories
+                .Where(dc => categoryIds.Contains(dc.Id))
+                .ToListAsync();
+
+            for (int i = 0; i < categoryIds.Count; i++)
+            {
+                var category = categories.FirstOrDefault(dc => dc.Id == categoryIds[i]);
+                if (category != null)
                 {
-                    defectCategory.SortOrder = kvp.Value;
-                    defectCategory.LastModifiedDate = DateTime.UtcNow;
+                    category.SortOrder = (i + 1) * 10;
+                    category.LastModifiedDate = DateTime.UtcNow;
                 }
             }
 
-            var result = await _context.SaveChangesAsync();
-            
-            if (result > 0)
-            {
-                _logger.LogInformation("Bulk updated sort order for {Count} defect categories", sortOrders.Count);
-                return true;
-            }
+            await _context.SaveChangesAsync();
 
-            return false;
+            _logger.LogInformation("Reordered {Count} defect categories - Operation: {OperationId}", 
+                categories.Count, operationId);
+
+            return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error bulk updating sort order for defect categories");
-            return false;
+            _logger.LogError(ex, "Error reordering defect categories - Operation: {OperationId}", operationId);
+            throw;
         }
     }
+
+    /// <summary>
+    /// Toggle active status of a defect category
+    /// </summary>
+    public async Task<bool> ToggleActiveStatusAsync(int id)
+    {
+        var operationId = Guid.NewGuid().ToString("N")[..8];
+        _logger.LogInformation("Toggling active status for defect category: {Id} - Operation: {OperationId}", 
+            id, operationId);
+
+        try
+        {
+            var category = await _context.DefectCategories
+                .FirstOrDefaultAsync(dc => dc.Id == id);
+
+            if (category == null)
+            {
+                _logger.LogWarning("Defect category not found for status toggle: {Id} - Operation: {OperationId}", 
+                    id, operationId);
+                return false;
+            }
+
+            category.IsActive = !category.IsActive;
+            category.LastModifiedDate = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Toggled active status for defect category: {Name} to {Status} - Operation: {OperationId}", 
+                category.Name, category.IsActive ? "Active" : "Inactive", operationId);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error toggling active status for defect category: {Id} - Operation: {OperationId}", 
+                id, operationId);
+            throw;
+        }
+    }
+}
+
+/// <summary>
+/// Statistics model for defect categories
+/// </summary>
+public class DefectCategoryStatistics
+{
+    public int TotalCategories { get; set; }
+    public int ActiveCategories { get; set; }
+    public int InactiveCategories { get; set; }
+    public int CategoriesWithCheckpoints { get; set; }
+    public Dictionary<int, int> SeverityDistribution { get; set; } = new();
+    public Dictionary<string, int> GroupDistribution { get; set; } = new();
 }

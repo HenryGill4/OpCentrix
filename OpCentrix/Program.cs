@@ -148,8 +148,8 @@ builder.Services.AddScoped<OpCentrix.Services.Admin.IDatabaseManagementService, 
 // TASK 13: Inspection Checkpoint Service
 builder.Services.AddScoped<OpCentrix.Services.Admin.IInspectionCheckpointService, OpCentrix.Services.Admin.InspectionCheckpointService>();
 
-// TASK 14: Defect Category Service
-builder.Services.AddScoped<OpCentrix.Services.Admin.IDefectCategoryService, OpCentrix.Services.Admin.DefectCategoryService>();
+// SEGMENT 6A: Defect Category Service
+builder.Services.AddScoped<OpCentrix.Services.Admin.DefectCategoryService>();
 
 // TASK 15: Job Archive Service
 builder.Services.AddScoped<OpCentrix.Services.Admin.IJobArchiveService, OpCentrix.Services.Admin.JobArchiveService>();
@@ -163,6 +163,11 @@ builder.Services.AddScoped<IStagePermissionService, StagePermissionService>();
 
 // Task 6: Enhanced machine management services
 builder.Services.AddScoped<IMaterialService, MaterialService>();
+
+// Segment 7: B&T Industry Specialization Services
+builder.Services.AddScoped<IPartClassificationService, PartClassificationService>();
+builder.Services.AddScoped<ISerializationService, SerializationService>();
+builder.Services.AddScoped<IComplianceService, ComplianceService>();
 
 // Logging configuration
 builder.Logging.ClearProviders();
@@ -232,6 +237,7 @@ using (var scope = app.Services.CreateScope())
             var context = initScope.ServiceProvider.GetRequiredService<SchedulerContext>();
             var seedingService = initScope.ServiceProvider.GetRequiredService<SlsDataSeedingService>();
             var adminSeedingService = initScope.ServiceProvider.GetRequiredService<OpCentrix.Services.Admin.IAdminDataSeedingService>();
+            var partClassificationService = initScope.ServiceProvider.GetRequiredService<IPartClassificationService>();
 
             // Ensure database is created and up to date
             await context.Database.EnsureCreatedAsync();
@@ -241,6 +247,9 @@ using (var scope = app.Services.CreateScope())
             
             // Seed admin control system data (Task 2)
             await adminSeedingService.SeedAllDefaultDataAsync();
+
+            // Seed B&T part classifications (Segment 7)
+            await partClassificationService.SeedDefaultClassificationsAsync();
             
             // Load system settings into configuration (Task 3)
             var configurationService = initScope.ServiceProvider.GetRequiredService<OpCentrix.Services.Admin.ISystemConfigurationService>();
@@ -250,16 +259,19 @@ using (var scope = app.Services.CreateScope())
             OpCentrix.Services.Admin.SystemConfiguration.Initialize(app.Services);
         }
         logger.LogInformation("Database initialization completed successfully");
-        logger.LogInformation("?? TIP: Set environment variable RECREATE_DATABASE=true to recreate database on next startup");
-        logger.LogInformation("?? Test users available:");
+        logger.LogInformation("B&T Manufacturing Execution System ready!");
+        logger.LogInformation("Test users available:");
         logger.LogInformation("   admin/admin123 (Admin)");
         logger.LogInformation("   manager/manager123 (Manager)");  
         logger.LogInformation("   scheduler/scheduler123 (Scheduler)");
         logger.LogInformation("   operator/operator123 (Operator)");
         logger.LogInformation("   printer/printer123 (PrintingSpecialist)");
         logger.LogInformation("   coating/coating123 (CoatingSpecialist)");
-        logger.LogInformation("   And more... see TEST_USERS.txt for complete list");
-        logger.LogInformation("?? CLICK-THROUGH TESTING: Open browser console and run 'startClickThroughTest()' to begin comprehensive error logging");
+        logger.LogInformation("Segment 7 Features:");
+        logger.LogInformation("   - B&T Part Classification System");
+        logger.LogInformation("   - ATF/ITAR Compliance Tracking");
+        logger.LogInformation("   - Serial Number Management");
+        logger.LogInformation("   - Regulatory Documentation");
     }
     catch (Exception ex)
     {
@@ -277,11 +289,10 @@ using (var scope = app.Services.CreateScope())
 // Log application startup with correct URL
 var startupLogger = app.Services.GetRequiredService<ILogger<Program>>();
 var urls = builder.Configuration.GetValue<string>("Urls") ?? "http://localhost:5090";
-startupLogger.LogInformation("?? OpCentrix SLS Scheduler started successfully");
+startupLogger.LogInformation("OpCentrix B&T Manufacturing Execution System started successfully");
 startupLogger.LogInformation("Environment: {Environment}", app.Environment.EnvironmentName);
 startupLogger.LogInformation("URL: {Url}", urls);
 startupLogger.LogInformation("Login Page: {LoginUrl}", $"{urls}/Account/Login");
-startupLogger.LogInformation("?? Enhanced Error Logging: All pages now have comprehensive error monitoring");
 
 app.Run();
 
