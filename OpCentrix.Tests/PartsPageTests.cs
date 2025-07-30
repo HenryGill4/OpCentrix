@@ -613,7 +613,7 @@ namespace OpCentrix.Tests
             
             var formData = CreateValidPartFormData($"MAT-TEST-{material.Replace(" ", "").Replace("-", "")}");
             
-            // Update material
+            // FIXED: Update material properly - modify the existing entry instead of searching for it
             for (int i = 0; i < formData.Count; i++)
             {
                 if (formData[i].Key == "Material")
@@ -622,7 +622,17 @@ namespace OpCentrix.Tests
                     break;
                 }
             }
-            formData.Add(new KeyValuePair<string, string>("SlsMaterial", material));
+            
+            // FIXED: Also update SlsMaterial to match
+            for (int i = 0; i < formData.Count; i++)
+            {
+                if (formData[i].Key == "SlsMaterial")
+                {
+                    formData[i] = new KeyValuePair<string, string>("SlsMaterial", material);
+                    break;
+                }
+            }
+            
             formData.Add(new KeyValuePair<string, string>("__RequestVerificationToken", token)); // FIXED: Add token
 
             // Act
@@ -635,7 +645,8 @@ namespace OpCentrix.Tests
             // Verify part was created with correct material
             using var scope = _factory.Services.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<SchedulerContext>();
-            var createdPart = await context.Parts.FirstOrDefaultAsync(p => p.PartNumber == formData[0].Value);
+            var expectedPartNumber = $"MAT-TEST-{material.Replace(" ", "").Replace("-", "")}";
+            var createdPart = await context.Parts.FirstOrDefaultAsync(p => p.PartNumber == expectedPartNumber);
             
             Assert.NotNull(createdPart);
             Assert.Equal(material, createdPart.Material);
@@ -807,9 +818,9 @@ namespace OpCentrix.Tests
                 new("SupportStrategy", "Minimal supports on overhangs > 45°"),  // [Required]
                 new("ProcessParameters", "{}"),  // [Required]
                 new("QualityCheckpoints", "{}"),  // [Required]
-                new("BuildFileTemplate", ""),  // [Required]
-                new("CadFilePath", ""),  // [Required]
-                new("CadFileVersion", ""),  // [Required]
+                new("BuildFileTemplate", "default-template.slm"),  // [Required] - FIXED: Cannot be empty
+                new("CadFilePath", "/files/parts/template.step"),   // [Required] - FIXED: Cannot be empty  
+                new("CadFileVersion", "1.0"),     // [Required] - FIXED: Cannot be empty
                 new("AvgDuration", "8h 0m"),  // [Required]
                 new("PreferredMachines", "TI1,TI2"),  // [Required]
                 
@@ -879,5 +890,34 @@ namespace OpCentrix.Tests
         }
 
         #endregion
+
+        [Fact]
+        public async Task DebugPart_Creation_ShowsExactErrors()
+        {
+            // Arrange
+            await AuthenticateAsAdminAsync();
+            
+            // Get antiforgery token from parts page first
+            var partsPage = await _client.GetAsync("/Admin/Parts");
+            partsPage.EnsureSuccessStatusCode();
+            var partsContent = await partsPage.Content.ReadAsStringAsync();
+            var token = ExtractAntiforgeryToken(partsContent);
+            
+            var formData = CreateValidPartFormData("DEBUG-FORM-001");
+            formData.Add(new KeyValuePair<string, string>("__RequestVerificationToken", token));
+
+            // Act - Call the debug endpoint
+            var response = await _client.PostAsync("/Admin/Parts?handler=DebugCreate", 
+                new FormUrlEncodedContent(formData));
+
+            // Assert
+            response.EnsureSuccessStatusCode();
+            var content = await response.Content.ReadAsStringAsync();
+            
+            _output.WriteLine($"DEBUG Response: {content}");
+            
+            // The actual information will be in the logs, this test just triggers it
+            Assert.True(response.IsSuccessStatusCode);
+        }
     }
 }

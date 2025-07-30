@@ -254,8 +254,28 @@ namespace OpCentrix.Pages.Admin
             {
                 _logger.LogInformation("?? Creating new part: {PartNumber}", Part.PartNumber);
 
+                // ENHANCED DEBUGGING: Log ModelState validation details
                 if (!ModelState.IsValid)
                 {
+                    _logger.LogWarning("? ModelState validation failed for part: {PartNumber}", Part.PartNumber);
+                    
+                    // Log each specific validation error
+                    foreach (var modelError in ModelState)
+                    {
+                        if (modelError.Value?.Errors.Count > 0)
+                        {
+                            foreach (var error in modelError.Value.Errors)
+                            {
+                                _logger.LogWarning("?? VALIDATION ERROR - Field: {FieldName}, Error: {ErrorMessage}", 
+                                    modelError.Key, error.ErrorMessage);
+                            }
+                        }
+                    }
+                    
+                    // Count of validation errors for tracking
+                    var errorCount = ModelState.Values.SelectMany(v => v.Errors).Count();
+                    _logger.LogWarning("?? Total ModelState errors: {ErrorCount}", errorCount);
+                    
                     await LoadDropdownDataAsync().ConfigureAwait(false);
                     return Partial("Shared/_PartFormModal", Part);
                 }
@@ -264,8 +284,10 @@ namespace OpCentrix.Pages.Admin
                 var validationErrors = await ValidatePartAsync(Part, isCreate: true).ConfigureAwait(false);
                 if (validationErrors.Any())
                 {
+                    _logger.LogWarning("? Business validation failed for part: {PartNumber}", Part.PartNumber);
                     foreach (var error in validationErrors)
                     {
+                        _logger.LogWarning("?? BUSINESS ERROR: {ErrorMessage}", error);
                         ModelState.AddModelError("", error);
                     }
                     await LoadDropdownDataAsync().ConfigureAwait(false);
@@ -320,7 +342,7 @@ namespace OpCentrix.Pages.Admin
                                 await new Promise(resolve => setTimeout(resolve, 100));
                                 
                                 // Step 3: Wait for user to see the notification
-                                console.log('?? Step 3: Displaying notification for user...');
+                                console.log('? Step 3: Displaying notification for user...');
                                 await new Promise(resolve => setTimeout(resolve, 1500));
                                 
                                 // Step 4: Fade out notification before navigation
@@ -435,7 +457,7 @@ namespace OpCentrix.Pages.Admin
                                 await new Promise(resolve => setTimeout(resolve, 100));
                                 
                                 // Step 3: Wait for user to see the notification
-                                console.log('?? Step 3: Displaying notification for user...');
+                                console.log('? Step 3: Displaying notification for user...');
                                 await new Promise(resolve => setTimeout(resolve, 1500));
                                 
                                 // Step 4: Fade out notification before navigation
@@ -763,6 +785,7 @@ namespace OpCentrix.Pages.Admin
         /// <summary>
         /// Ensure part has all required default values to prevent NULL errors
         /// ENHANCED: Comprehensive defaults for ALL database NOT NULL constraints
+        /// SEGMENT 1 FIX 1.1.3: Fixed AdminOverrideBy required field issue
         /// </summary>
         private void EnsurePartDefaults(Part part)
         {
@@ -805,9 +828,16 @@ namespace OpCentrix.Pages.Admin
             // Duration and Display - NOT NULL fields
             part.AvgDuration ??= "8h 0m";
             
-            // Admin Override Fields - NOT NULL fields
+            // CRITICAL FIX: Admin Override Fields - NOT NULL fields
+            // AdminOverrideBy is [Required] but should have a valid default
+            if (string.IsNullOrWhiteSpace(part.AdminOverrideBy))
+            {
+                part.AdminOverrideBy = User.Identity?.Name ?? "System";
+                _logger.LogDebug("?? Set AdminOverrideBy to: {AdminOverrideBy}", part.AdminOverrideBy);
+            }
+            
+            // AdminOverrideReason can be empty (nullable string)
             part.AdminOverrideReason ??= "";
-            part.AdminOverrideBy ??= "";
             
             // NUMERIC DEFAULTS - Ensure all numeric NOT NULL fields have valid values
             if (part.PowderRequirementKg <= 0) part.PowderRequirementKg = 0.5;
@@ -1190,6 +1220,54 @@ namespace OpCentrix.Pages.Admin
             }
         }
 
+        // DEBUGGING: Add a simple test endpoint to check what data is being received
+        [HttpPost]
+        public async Task<IActionResult> OnPostDebugCreateAsync()
+        {
+            try
+            {
+                _logger.LogInformation("?? DEBUG: Starting part creation debug");
+                
+                // Log the actual form data received
+                _logger.LogInformation("?? DEBUG: Form data received:");
+                foreach (var formField in Request.Form)
+                {
+                    _logger.LogInformation("?? DEBUG: {Key} = {Value}", formField.Key, formField.Value);
+                }
+                
+                // Log the Part object state after model binding
+                _logger.LogInformation("?? DEBUG: Part object after model binding:");
+                _logger.LogInformation("?? DEBUG: PartNumber = {PartNumber}", Part.PartNumber ?? "NULL");
+                _logger.LogInformation("?? DEBUG: Name = {Name}", Part.Name ?? "NULL");
+                _logger.LogInformation("?? DEBUG: Description = {Description}", Part.Description ?? "NULL");
+                _logger.LogInformation("?? DEBUG: AdminOverrideBy = {AdminOverrideBy}", Part.AdminOverrideBy ?? "NULL");
+                
+                // Log ModelState validation
+                _logger.LogInformation("?? DEBUG: ModelState.IsValid = {IsValid}", ModelState.IsValid);
+                
+                if (!ModelState.IsValid)
+                {
+                    foreach (var modelError in ModelState)
+                    {
+                        if (modelError.Value?.Errors.Count > 0)
+                        {
+                            foreach (var error in modelError.Value.Errors)
+                            {
+                                _logger.LogWarning("?? DEBUG VALIDATION ERROR - Field: {FieldName}, Error: {ErrorMessage}", 
+                                    modelError.Key, error.ErrorMessage);
+                            }
+                        }
+                    }
+                }
+                
+                return Content("DEBUG: Check logs for detailed information", "text/plain");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "? DEBUG: Error in debug endpoint");
+                return Content($"DEBUG ERROR: {ex.Message}", "text/plain");
+            }
+        }
         // Helper methods for the view
         public string GetSortDirection(string column)
         {

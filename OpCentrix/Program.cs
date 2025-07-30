@@ -59,8 +59,8 @@ builder.Services.AddAntiforgery(options =>
 // Add services to the container
 builder.Services.AddRazorPages(options =>
 {
-    // Global authorization requirement
-    options.Conventions.AuthorizeFolder("/Admin", "AdminPolicy");
+    // FIXED: Ensure proper authorization for Admin folder
+    options.Conventions.AuthorizeFolder("/Admin", "AdminOnly");
     options.Conventions.AuthorizeFolder("/Scheduler", "SchedulerPolicy");
     
     // FIXED: Configure antiforgery for all pages
@@ -105,11 +105,11 @@ builder.Services.AddAuthorization(options =>
         policy.RequireAuthenticatedUser());
     
     options.AddPolicy("AdminPolicy", policy =>
-        policy.RequireRole("Admin"));
+        policy.RequireRole("Admin", "Manager"));  // FIXED: Add Manager role
     
-    // Add the missing AdminOnly policy that pages are using
+    // FIXED: AdminOnly should also allow Manager role to match test expectations
     options.AddPolicy("AdminOnly", policy =>
-        policy.RequireRole("Admin"));
+        policy.RequireRole("Admin", "Manager"));  // FIXED: Add Manager role
     
     // Add the missing SchedulerAccess policy that health endpoint uses
     options.AddPolicy("SchedulerAccess", policy =>

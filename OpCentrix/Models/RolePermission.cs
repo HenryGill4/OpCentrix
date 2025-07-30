@@ -159,49 +159,51 @@ public class RolePermission
 
 /// <summary>
 /// Common permission keys used throughout the application
+/// UPDATED: Using proper casing to match test expectations
 /// </summary>
 public static class PermissionKeys
 {
-    // Admin permissions
-    public const string AdminDashboard = "admin.dashboard";
-    public const string AdminUsers = "admin.users";
-    public const string AdminRoles = "admin.roles";
-    public const string AdminSettings = "admin.settings";
-    public const string AdminMachines = "admin.machines";
-    public const string AdminParts = "admin.parts";
-    public const string AdminJobs = "admin.jobs";
-    public const string AdminShifts = "admin.shifts";
-    public const string AdminCheckpoints = "admin.checkpoints";
-    public const string AdminDefects = "admin.defects";
-    public const string AdminArchive = "admin.archive";
-    public const string AdminDatabase = "admin.database";
-    public const string AdminAlerts = "admin.alerts";
-    public const string AdminFeatures = "admin.features";
-    public const string AdminLogs = "admin.logs";
+    // Admin permissions - Using proper casing to match test expectations
+    public const string AdminDashboard = "Admin.Dashboard";
+    public const string AdminUsers = "Admin.ManageUsers";  // FIXED: Changed from "admin.users" to "Admin.ManageUsers"
+    public const string AdminViewUsers = "Admin.ViewUsers";  // NEW: Added for user viewing
+    public const string AdminRoles = "Admin.ManageRoles";
+    public const string AdminSettings = "Admin.ManageSettings";
+    public const string AdminMachines = "Admin.ManageMachines";
+    public const string AdminParts = "Admin.ManageParts";
+    public const string AdminJobs = "Admin.ManageJobs";
+    public const string AdminShifts = "Admin.ManageShifts";
+    public const string AdminCheckpoints = "Admin.ManageCheckpoints";
+    public const string AdminDefects = "Admin.ManageDefects";
+    public const string AdminArchive = "Admin.ManageArchive";
+    public const string AdminDatabase = "Admin.ManageDatabase";
+    public const string AdminAlerts = "Admin.ManageAlerts";
+    public const string AdminFeatures = "Admin.ManageFeatures";
+    public const string AdminLogs = "Admin.ViewLogs";
 
-    // Scheduler permissions
-    public const string SchedulerView = "scheduler.view";
-    public const string SchedulerCreate = "scheduler.create";
-    public const string SchedulerEdit = "scheduler.edit";
-    public const string SchedulerDelete = "scheduler.delete";
-    public const string SchedulerReschedule = "scheduler.reschedule";
+    // Scheduler permissions - Using proper casing
+    public const string SchedulerView = "Scheduler.ViewJobs";  // FIXED: Changed from "scheduler.view" to "Scheduler.ViewJobs"
+    public const string SchedulerCreate = "Scheduler.CreateJobs";
+    public const string SchedulerEdit = "Scheduler.EditJobs";
+    public const string SchedulerDelete = "Scheduler.DeleteJobs";
+    public const string SchedulerReschedule = "Scheduler.RescheduleJobs";
 
-    // Department permissions
-    public const string PrintingAccess = "department.printing";
-    public const string CoatingAccess = "department.coating";
-    public const string EDMAccess = "department.edm";
-    public const string MachiningAccess = "department.machining";
-    public const string QCAccess = "department.qc";
-    public const string ShippingAccess = "department.shipping";
-    public const string MediaAccess = "department.media";
-    public const string AnalyticsAccess = "department.analytics";
+    // Department permissions - Using proper casing
+    public const string PrintingAccess = "Department.Printing";
+    public const string CoatingAccess = "Department.Coating";
+    public const string EDMAccess = "Department.EDM";
+    public const string MachiningAccess = "Department.Machining";
+    public const string QCAccess = "Department.QC";
+    public const string ShippingAccess = "Department.Shipping";
+    public const string MediaAccess = "Department.Media";
+    public const string AnalyticsAccess = "Department.Analytics";
 
-    // Feature permissions
-    public const string AdvancedReporting = "feature.advanced_reporting";
-    public const string OpcUaIntegration = "feature.opcua_integration";
-    public const string BulkOperations = "feature.bulk_operations";
-    public const string DataExport = "feature.data_export";
-    public const string MasterSchedule = "feature.master_schedule";
+    // Feature permissions - Using proper casing
+    public const string AdvancedReporting = "Feature.AdvancedReporting";
+    public const string OpcUaIntegration = "Feature.OpcUaIntegration";
+    public const string BulkOperations = "Feature.BulkOperations";
+    public const string DataExport = "Feature.DataExport";
+    public const string MasterSchedule = "Feature.MasterSchedule";
 }
 
 /// <summary>

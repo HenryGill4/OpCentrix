@@ -237,6 +237,16 @@ public class RolePermissionService : IRolePermissionService
 
     private string GetPermissionCategory(string permissionKey)
     {
+        if (permissionKey.StartsWith("Admin."))
+            return "Admin";
+        if (permissionKey.StartsWith("Scheduler."))
+            return "Scheduler";
+        if (permissionKey.StartsWith("Department."))
+            return "Department";
+        if (permissionKey.StartsWith("Feature."))
+            return "Feature";
+        
+        // Legacy support for lowercase format
         if (permissionKey.StartsWith("admin."))
             return "Admin";
         if (permissionKey.StartsWith("scheduler."))
@@ -255,6 +265,7 @@ public class RolePermissionService : IRolePermissionService
         {
             PermissionKeys.AdminDashboard => "Access to admin dashboard",
             PermissionKeys.AdminUsers => "Manage user accounts",
+            PermissionKeys.AdminViewUsers => "View user accounts",
             PermissionKeys.AdminRoles => "Manage user roles and permissions",
             PermissionKeys.AdminSettings => "Manage system settings",
             PermissionKeys.AdminMachines => "Manage machine configurations",
@@ -263,6 +274,19 @@ public class RolePermissionService : IRolePermissionService
             PermissionKeys.SchedulerCreate => "Create new jobs",
             PermissionKeys.SchedulerEdit => "Edit existing jobs",
             PermissionKeys.SchedulerDelete => "Delete jobs",
+            
+            // Legacy support for lowercase format
+            "admin.dashboard" => "Access to admin dashboard",
+            "admin.users" => "Manage user accounts",
+            "admin.roles" => "Manage user roles and permissions",
+            "admin.settings" => "Manage system settings",
+            "admin.machines" => "Manage machine configurations", 
+            "admin.parts" => "Manage part definitions",
+            "scheduler.view" => "View scheduling interface",
+            "scheduler.create" => "Create new jobs",
+            "scheduler.edit" => "Edit existing jobs",
+            "scheduler.delete" => "Delete jobs",
+            
             _ => $"Permission for {permissionKey}"
         };
     }

@@ -59,6 +59,7 @@ public class OpCentrixWebApplicationFactory : WebApplicationFactory<Program>
             }
         });
 
+        // FIXED: Use Testing environment to ensure proper test behavior
         builder.UseEnvironment("Testing");
     }
 

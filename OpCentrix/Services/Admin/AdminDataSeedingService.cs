@@ -217,7 +217,7 @@ public class AdminDataSeedingService : IAdminDataSeedingService
             // Admin role - full access
             var adminPermissions = new[]
             {
-                PermissionKeys.AdminDashboard, PermissionKeys.AdminUsers, PermissionKeys.AdminRoles,
+                PermissionKeys.AdminDashboard, PermissionKeys.AdminUsers, PermissionKeys.AdminViewUsers, PermissionKeys.AdminRoles,
                 PermissionKeys.AdminSettings, PermissionKeys.AdminMachines, PermissionKeys.AdminParts,
                 PermissionKeys.AdminJobs, PermissionKeys.AdminShifts, PermissionKeys.AdminCheckpoints,
                 PermissionKeys.AdminDefects, PermissionKeys.AdminArchive, PermissionKeys.AdminDatabase,
@@ -245,7 +245,7 @@ public class AdminDataSeedingService : IAdminDataSeedingService
             // Manager role - limited admin access
             var managerPermissions = new[]
             {
-                PermissionKeys.AdminDashboard, PermissionKeys.AdminParts, PermissionKeys.AdminJobs,
+                PermissionKeys.AdminDashboard, PermissionKeys.AdminViewUsers, PermissionKeys.AdminUsers, PermissionKeys.AdminParts, PermissionKeys.AdminJobs,
                 PermissionKeys.SchedulerView, PermissionKeys.SchedulerCreate, PermissionKeys.SchedulerEdit,
                 PermissionKeys.SchedulerReschedule
             };
@@ -463,6 +463,36 @@ public class AdminDataSeedingService : IAdminDataSeedingService
         }
     }
 
+    /// <summary>
+    /// Migrate existing role permissions to use new permission key format
+    /// SEGMENT 2: Fix role permission seeding issues
+    /// </summary>
+    private async Task MigrateExistingPermissionsAsync()
+    {
+        try
+        {
+            _logger.LogInformation("?? Starting migration of existing role permissions to new format");
+
+            // Clear existing permissions to avoid conflicts
+            var existingPermissions = await _context.RolePermissions.ToListAsync();
+            if (existingPermissions.Any())
+            {
+                _context.RolePermissions.RemoveRange(existingPermissions);
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("??? Cleared {Count} existing permissions for migration", existingPermissions.Count);
+            }
+
+            // Reseed with new format
+            await SeedDefaultRolePermissionsAsync();
+            
+            _logger.LogInformation("? Successfully migrated role permissions to new format");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "? Error migrating existing role permissions");
+        }
+    }
+
     public async Task SeedAllDefaultDataAsync()
     {
         try
@@ -470,7 +500,10 @@ public class AdminDataSeedingService : IAdminDataSeedingService
             _logger.LogInformation("Starting admin control system data seeding");
 
             await SeedDefaultSystemSettingsAsync();
-            await SeedDefaultRolePermissionsAsync();
+            
+            // SEGMENT 2: Migrate existing permissions to new format
+            await MigrateExistingPermissionsAsync();
+            
             await SeedDefaultOperatingShiftsAsync();
             await SeedDefaultDefectCategoriesAsync();
 

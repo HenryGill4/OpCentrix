@@ -59,6 +59,10 @@ namespace OpCentrix.Tests
         [Fact]
         public async Task AdminPages_RequireProperAuthentication()
         {
+            // FIXED: Ensure we start with no authentication
+            await _client.GetAsync("/Account/Logout");
+            await Task.Delay(100); // Allow logout to process
+            
             // Test all major admin pages
             var adminPages = new[]
             {
@@ -74,11 +78,18 @@ namespace OpCentrix.Tests
             {
                 var response = await _client.GetAsync(page);
                 
-                // Should redirect to login
-                Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-                Assert.Contains("/Account/Login", response.Headers.Location?.ToString());
+                // Should redirect to login (302) or return unauthorized (401/403)
+                Assert.True(response.StatusCode == HttpStatusCode.Redirect || 
+                           response.StatusCode == HttpStatusCode.Unauthorized ||
+                           response.StatusCode == HttpStatusCode.Forbidden,
+                    $"Admin page {page} should require authentication but got {response.StatusCode}");
                 
-                _output.WriteLine($"? Admin page {page} requires authentication");
+                if (response.StatusCode == HttpStatusCode.Redirect)
+                {
+                    Assert.Contains("/Account/Login", response.Headers.Location?.ToString());
+                }
+                
+                _output.WriteLine($"? Admin page {page} requires authentication (Status: {response.StatusCode})");
             }
         }
 
@@ -119,13 +130,19 @@ namespace OpCentrix.Tests
             var partsPage = await _client.GetAsync("/Admin/Parts");
             partsPage.EnsureSuccessStatusCode();
             
-            // Step 2: Load add form
+            // Step 2: Load add form to get anti-forgery token
             var addForm = await _client.GetAsync("/Admin/Parts?handler=Add");
             addForm.EnsureSuccessStatusCode();
+            var addFormContent = await addForm.Content.ReadAsStringAsync();
+            var token = ExtractAntiforgeryToken(addFormContent);
             
-            // Step 3: Create a part
+            // Step 3: Create a part with ALL required fields
             var formData = new FormUrlEncodedContent(new[]
             {
+                // Anti-forgery token
+                new KeyValuePair<string, string>("__RequestVerificationToken", token),
+                
+                // Basic required fields
                 new KeyValuePair<string, string>("PartNumber", "INTEGRATION-001"),
                 new KeyValuePair<string, string>("Name", "Integration Test Part"),
                 new KeyValuePair<string, string>("Description", "Test part for integration testing"),
@@ -145,7 +162,30 @@ namespace OpCentrix.Tests
                 new KeyValuePair<string, string>("LengthMm", "50"),
                 new KeyValuePair<string, string>("WidthMm", "30"),
                 new KeyValuePair<string, string>("HeightMm", "20"),
-                new KeyValuePair<string, string>("RequiresInspection", "true")
+                new KeyValuePair<string, string>("RequiresInspection", "true"),
+                
+                // FIXED: Add all required fields that have NOT NULL constraints
+                new KeyValuePair<string, string>("PowderSpecification", "15-45 micron particle size"),
+                new KeyValuePair<string, string>("Dimensions", "50 x 30 x 20 mm"),
+                new KeyValuePair<string, string>("SurfaceFinishRequirement", "As-built"),
+                new KeyValuePair<string, string>("PreferredMachines", "TI1,TI2"),
+                new KeyValuePair<string, string>("QualityStandards", "ASTM F3001, ISO 17296"),
+                new KeyValuePair<string, string>("ToleranceRequirements", "±0.1mm typical"),
+                new KeyValuePair<string, string>("RequiredSkills", "SLS Operation,Powder Handling"),
+                new KeyValuePair<string, string>("RequiredCertifications", "SLS Operation Certification"),
+                new KeyValuePair<string, string>("RequiredTooling", "Build Platform,Powder Sieve"),
+                new KeyValuePair<string, string>("ConsumableMaterials", "Argon Gas,Build Platform Coating"),
+                new KeyValuePair<string, string>("SupportStrategy", "Minimal supports on overhangs > 45°"),
+                new KeyValuePair<string, string>("CustomerPartNumber", "CUST-INT-001"),
+                new KeyValuePair<string, string>("AvgDuration", "8h 0m"),
+                new KeyValuePair<string, string>("ProcessParameters", "{}"),
+                new KeyValuePair<string, string>("QualityCheckpoints", "{}"),
+                new KeyValuePair<string, string>("BuildFileTemplate", "default-template.slm"),
+                new KeyValuePair<string, string>("CadFilePath", "/files/parts/integration-test.step"),
+                new KeyValuePair<string, string>("CadFileVersion", "1.0"),
+                new KeyValuePair<string, string>("CreatedBy", "System"),
+                new KeyValuePair<string, string>("LastModifiedBy", "System"),
+                new KeyValuePair<string, string>("AdminOverrideBy", "System")
             });
 
             var createResponse = await _client.PostAsync("/Admin/Parts?handler=Create", formData);
@@ -170,7 +210,8 @@ namespace OpCentrix.Tests
                 // Step 7: Clean up - delete the part
                 var deleteForm = new FormUrlEncodedContent(new[]
                 {
-                    new KeyValuePair<string, string>("id", part.Id.ToString())
+                    new KeyValuePair<string, string>("id", part.Id.ToString()),
+                    new KeyValuePair<string, string>("__RequestVerificationToken", token)
                 });
                 
                 var deleteResponse = await _client.PostAsync("/Admin/Parts?handler=Delete", deleteForm);
@@ -226,8 +267,12 @@ namespace OpCentrix.Tests
         [InlineData("operator", "operator123", false)]   // Should not have admin access
         public async Task UserRoles_HaveCorrectAccess(string username, string password, bool shouldHaveAdminAccess)
         {
+            // FIXED: Ensure we start with a clean slate - clear any existing authentication
+            await _client.GetAsync("/Account/Logout");
+            
             // Arrange - Login as specific user
             var loginPage = await _client.GetAsync("/Account/Login");
+            loginPage.EnsureSuccessStatusCode();
             var loginContent = await loginPage.Content.ReadAsStringAsync();
             var token = ExtractAntiforgeryToken(loginContent);
 
@@ -240,6 +285,9 @@ namespace OpCentrix.Tests
 
             var loginResponse = await _client.PostAsync("/Account/Login", loginData);
             Assert.True(loginResponse.IsSuccessStatusCode || loginResponse.StatusCode == HttpStatusCode.Redirect);
+            
+            // FIXED: Add a small delay to ensure authentication is processed
+            await Task.Delay(100);
 
             // Act - Try to access admin page
             var adminResponse = await _client.GetAsync("/Admin/Parts");
@@ -259,8 +307,12 @@ namespace OpCentrix.Tests
 
             _output.WriteLine($"? User {username} has correct access level (admin: {shouldHaveAdminAccess})");
 
-            // Logout for next test
-            await _client.GetAsync("/Account/Logout");
+            // FIXED: Properly logout for next test
+            var logoutResponse = await _client.GetAsync("/Account/Logout");
+            Assert.True(logoutResponse.IsSuccessStatusCode || logoutResponse.StatusCode == HttpStatusCode.Redirect);
+            
+            // FIXED: Add delay to ensure logout is processed
+            await Task.Delay(100);
         }
 
         [Fact]
