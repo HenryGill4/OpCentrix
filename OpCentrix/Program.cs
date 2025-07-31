@@ -72,6 +72,9 @@ builder.Services.AddRazorPages(options =>
     options.Conventions.ConfigureFilter(new Microsoft.AspNetCore.Mvc.AutoValidateAntiforgeryTokenAttribute());
 });
 
+// FIXED: Add controllers support for API endpoints (BugReport API)
+builder.Services.AddControllers();
+
 // Database configuration
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 if (string.IsNullOrEmpty(connectionString))
@@ -206,6 +209,9 @@ builder.Services.AddScoped<PrototypeTrackingService>();
 builder.Services.AddScoped<ProductionStageService>();
 builder.Services.AddScoped<AssemblyComponentService>();
 
+// Bug Reporting System
+builder.Services.AddScoped<IBugReportService, BugReportService>();
+
 // Logging configuration
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
@@ -254,6 +260,9 @@ app.UseAuthorization();
 
 // Map Razor Pages
 app.MapRazorPages();
+
+// FIXED: Map API controllers for BugReport and other API endpoints
+app.MapControllers();
 
 // B&T MES Route Configuration (NEW)
 app.MapGet("/BT", context =>
