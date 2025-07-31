@@ -10,8 +10,15 @@
 </div>
 
 <div class="modal-body">
-    <form method="post" id="partForm" asp-page-handler="@(Model.Id == 0 ? "Create" : "Update")">
+    <!-- FIXED: Proper form action routing for Create vs Update -->
+    <form method="post" id="partForm" asp-page-handler="@(Model.Id == 0 ? "Create" : "Update")" data-part-id="@Model.Id">
         <input type="hidden" asp-for="Id" />
+        <!-- FIXED: Preserve audit fields for edit operations -->
+        @if (Model.Id > 0)
+        {
+            <input type="hidden" asp-for="CreatedDate" />
+            <input type="hidden" asp-for="CreatedBy" />
+        }
         
         <!-- Enhanced Tab Navigation -->
         <ul class="nav nav-tabs nav-justified mb-3" id="partFormTabs" role="tablist">
@@ -238,14 +245,14 @@
                     </div>
                     
                     <div class="col-md-3">
-                        <label asp-for="RecommendedLayerThickness" class="form-label">Layer Thickness (?m)</label>
+                        <label asp-for="RecommendedLayerThickness" class="form-label">Layer Thickness (µm)</label>
                         <input asp-for="RecommendedLayerThickness" type="number" step="1" class="form-control" 
                                id="layerThicknessInput" />
                         <span asp-validation-for="RecommendedLayerThickness" class="text-danger"></span>
                     </div>
                     
                     <div class="col-md-3">
-                        <label asp-for="RecommendedHatchSpacing" class="form-label">Hatch Spacing (?m)</label>
+                        <label asp-for="RecommendedHatchSpacing" class="form-label">Hatch Spacing (µm)</label>
                         <input asp-for="RecommendedHatchSpacing" type="number" step="1" class="form-control" 
                                id="hatchSpacingInput" />
                         <span asp-validation-for="RecommendedHatchSpacing" class="text-danger"></span>
@@ -435,7 +442,7 @@
                     </div>
                     
                     <div class="col-md-6">
-                        <label asp-for="MaxSurfaceRoughnessRa" class="form-label">Max Surface Roughness Ra (?m)</label>
+                        <label asp-for="MaxSurfaceRoughnessRa" class="form-label">Max Surface Roughness Ra (µm)</label>
                         <input asp-for="MaxSurfaceRoughnessRa" type="number" step="0.1" class="form-control" 
                                placeholder="25.0" />
                         <span asp-validation-for="MaxSurfaceRoughnessRa" class="text-danger"></span>
@@ -478,7 +485,13 @@
                     <div class="col-md-4">
                         <label class="form-label">Effective Duration</label>
                         <div class="form-control-plaintext bg-light border rounded p-2" id="effectiveDurationDisplay">
-                            8.0h (Standard)
+                            @{
+                                var effectiveHours = Model.AdminEstimatedHoursOverride ?? Model.EstimatedHours;
+                                var displayText = Model.AdminEstimatedHoursOverride.HasValue 
+                                    ? $"{effectiveHours:F1}h (Admin Override)" 
+                                    : $"{effectiveHours:F1}h (Standard)";
+                            }
+                            @displayText
                         </div>
                         <div class="form-text">Currently effective duration</div>
                     </div>
@@ -629,6 +642,7 @@
     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
         <i class="fas fa-times me-2"></i>Cancel
     </button>
+    <!-- FIXED: Enhanced submit button with better loading states -->
     <button type="submit" form="partForm" class="btn btn-primary" id="submitBtn">
         <span id="submitSpinner" class="spinner-border spinner-border-sm me-2 d-none" role="status"></span>
         <i class="fas fa-save me-2" id="submitIcon"></i>
@@ -636,8 +650,10 @@
     </button>
 </div>
 
-<!-- Enhanced JavaScript for Parts Form -->
+<!-- FIXED: Enhanced JavaScript for Parts Form with proper form submission handling -->
 <script>
+    console.log('?? [PART-FORM] Loading enhanced part form functionality');
+    
     // Enhanced Material Defaults with comprehensive parameters
     const MATERIAL_DEFAULTS = {
         'Ti-6Al-4V Grade 5': {
@@ -749,7 +765,7 @@
     
     // Tab Management
     window.showTab = function(tabName) {
-        console.log('?? [PARTS] Switching to tab:', tabName);
+        console.log('?? [PART-FORM] Switching to tab:', tabName);
         
         try {
             // Hide all tab content
@@ -771,26 +787,26 @@
             if (targetTab && targetButton) {
                 targetTab.classList.add('show', 'active');
                 targetButton.classList.add('active');
-                console.log('? [PARTS] Tab switched successfully:', tabName);
+                console.log('? [PART-FORM] Tab switched successfully:', tabName);
             } else {
-                console.error('? [PARTS] Tab elements not found:', tabName);
+                console.error('? [PART-FORM] Tab elements not found:', tabName);
             }
             
         } catch (error) {
-            console.error('? [PARTS] Error switching tabs:', error);
+            console.error('? [PART-FORM] Error switching tabs:', error);
         }
     };
     
     // Enhanced Material Auto-Fill
     window.updateSlsMaterial = function() {
-        console.log('?? [PARTS] Updating material defaults');
+        console.log('?? [PART-FORM] Updating material defaults');
         
         try {
             const materialSelect = document.getElementById('materialSelect');
             const slsMaterialInput = document.getElementById('slsMaterialInput');
             
             if (!materialSelect || !slsMaterialInput) {
-                console.error('? [PARTS] Material form elements not found');
+                console.error('? [PART-FORM] Material form elements not found');
                 return;
             }
             
@@ -799,7 +815,7 @@
             
             const defaults = MATERIAL_DEFAULTS[selectedMaterial];
             if (!defaults) {
-                console.log('?? [PARTS] No defaults found for material:', selectedMaterial);
+                console.log('?? [PART-FORM] No defaults found for material:', selectedMaterial);
                 return;
             }
             
@@ -831,16 +847,16 @@
             // Trigger dependent calculations
             updateDurationDisplay();
             
-            console.log('? [PARTS] Material defaults applied successfully');
+            console.log('? [PART-FORM] Material defaults applied successfully');
             
         } catch (error) {
-            console.error('? [PARTS] Error updating material defaults:', error);
+            console.error('? [PART-FORM] Error updating material defaults:', error);
         }
     };
     
     // Part Number Validation
     window.validatePartNumber = function(partNumber) {
-        console.log('?? [PARTS] Validating part number:', partNumber);
+        console.log('?? [PART-FORM] Validating part number:', partNumber);
         
         try {
             const input = document.querySelector('[name="PartNumber"]');
@@ -852,21 +868,21 @@
             if (isValid) {
                 input.classList.remove('is-invalid');
                 input.classList.add('is-valid');
-                console.log('? [PARTS] Part number format valid');
+                console.log('? [PART-FORM] Part number format valid');
             } else {
                 input.classList.add('is-invalid');
                 input.classList.remove('is-valid');
-                console.log('? [PARTS] Invalid part number format');
+                console.log('? [PART-FORM] Invalid part number format');
             }
             
         } catch (error) {
-            console.error('? [PARTS] Error validating part number:', error);
+            console.error('? [PART-FORM] Error validating part number:', error);
         }
     };
     
     // Duration and Time Management
     window.updateDurationDisplay = function() {
-        console.log('?? [PARTS] Updating duration display');
+        console.log('?? [PART-FORM] Updating duration display');
         
         try {
             const estimatedHours = parseFloat(document.getElementById('estimatedHoursInput')?.value || 0);
@@ -886,7 +902,7 @@
             }
             
         } catch (error) {
-            console.error('? [PARTS] Error updating duration display:', error);
+            console.error('? [PART-FORM] Error updating duration display:', error);
         }
     };
     
@@ -910,31 +926,157 @@
             }
             
         } catch (error) {
-            console.error('? [PARTS] Error calculating volume:', error);
+            console.error('? [PART-FORM] Error calculating volume:', error);
         }
     };
     
-    // Form submission handling
-    document.getElementById('partForm')?.addEventListener('submit', function(e) {
-        console.log('?? [PARTS] Form submission started');
-        
-        // Show loading state
-        const submitBtn = document.getElementById('submitBtn');
-        const submitSpinner = document.getElementById('submitSpinner');
-        const submitIcon = document.getElementById('submitIcon');
-        const submitText = document.getElementById('submitText');
-        
-        if (submitBtn && submitSpinner && submitIcon && submitText) {
-            submitBtn.disabled = true;
-            submitSpinner.classList.remove('d-none');
-            submitIcon.classList.add('d-none');
-            submitText.textContent = 'Saving...';
-        }
-    });
-    
-    // Initialize form on load
+    // FIXED: Enhanced form submission handling with proper success/error handling
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('?? [PARTS] Initializing Parts Form');
+        console.log('?? [PART-FORM] Initializing enhanced part form');
+        
+        const partForm = document.getElementById('partForm');
+        if (!partForm) {
+            console.error('? [PART-FORM] Form not found');
+            return;
+        }
+        
+        // Form submission handling - FIXED: Better response handling
+        partForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            console.log('?? [PART-FORM] Form submission started');
+            
+            const formData = new FormData(partForm);
+            const partId = document.querySelector('[data-part-id]')?.getAttribute('data-part-id') || '0';
+            const isEdit = partId !== '0';
+            
+            console.log('?? [PART-FORM] Submitting form - Mode:', isEdit ? 'Edit' : 'Create', 'Part ID:', partId);
+            
+            // Show loading state
+            const submitBtn = document.getElementById('submitBtn');
+            const submitSpinner = document.getElementById('submitSpinner');
+            const submitIcon = document.getElementById('submitIcon');
+            const submitText = document.getElementById('submitText');
+            
+            if (submitBtn && submitSpinner && submitIcon && submitText) {
+                submitBtn.disabled = true;
+                submitSpinner.classList.remove('d-none');
+                submitIcon.classList.add('d-none');
+                submitText.textContent = 'Saving...';
+            }
+            
+            // Ensure we have the antiforgery token
+            const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+            if (tokenInput) {
+                formData.append('__RequestVerificationToken', tokenInput.value);
+            }
+            
+            // Submit via fetch - FIXED: Proper URL construction and response handling
+            const url = partForm.action || `/Admin/Parts?handler=${isEdit ? 'Update' : 'Create'}`;
+            
+            fetch(url, {
+                method: 'POST',
+                body: formData,
+                credentials: 'same-origin',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                console.log('?? [PART-FORM] Response received:', response.status, response.statusText);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                return response.text();
+            })
+            .then(responseText => {
+                console.log('?? [PART-FORM] Response text received, length:', responseText.length);
+                
+                // FIXED: Check for success indicators in response
+                const isSuccess = responseText.includes('Part created successfully') || 
+                                 responseText.includes('Part updated successfully') ||
+                                 responseText.includes('Part saved successfully') ||
+                                 responseText.includes('window.location.href = \'/Admin/Parts\'') ||
+                                 responseText.includes('success');
+                
+                if (isSuccess) {
+                    console.log('? [PART-FORM] Form submission successful');
+                    
+                    // Show success message
+                    if (window.parent && window.parent.showToast) {
+                        window.parent.showToast('success', `Part ${isEdit ? 'updated' : 'created'} successfully!`);
+                    }
+                    
+                    // Close modal if we're in one
+                    const modal = document.getElementById('partModal') || 
+                                  window.parent?.document.getElementById('partModal');
+                    
+                    if (modal && typeof bootstrap !== 'undefined') {
+                        const bsModal = bootstrap.Modal.getInstance(modal) || 
+                                       window.parent?.bootstrap?.Modal.getInstance(modal);
+                        if (bsModal) {
+                            bsModal.hide();
+                        }
+                    }
+                    
+                    // Redirect to parts page after delay
+                    setTimeout(() => {
+                        if (window.parent) {
+                            window.parent.location.href = '/Admin/Parts';
+                        } else {
+                            window.location.href = '/Admin/Parts';
+                        }
+                    }, 1500);
+                    
+                } else {
+                    // FIXED: Handle validation errors by replacing form content
+                    console.log('?? [PART-FORM] Form submission returned with validation errors');
+                    
+                    // Check if response contains form with validation errors
+                    if (responseText.includes('modal-body') || responseText.includes('validation-summary') || responseText.includes('field-validation-error')) {
+                        // Replace the current form content with the response (which includes validation errors)
+                        const modalContent = document.getElementById('partModalContent') || 
+                                            window.parent?.document.getElementById('partModalContent');
+                        
+                        if (modalContent) {
+                            modalContent.innerHTML = responseText;
+                            console.log('?? [PART-FORM] Form updated with validation errors');
+                        } else {
+                            // Fallback: reload the current form
+                            console.log('?? [PART-FORM] Validation errors detected, but modal content not found');
+                            
+                            if (window.parent && window.parent.showToast) {
+                                window.parent.showToast('error', 'Validation errors occurred. Please check the form and try again.');
+                            }
+                        }
+                    } else {
+                        throw new Error('Unknown response format received from server');
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('? [PART-FORM] Form submission error:', error);
+                
+                // Show error message
+                if (window.parent && window.parent.showToast) {
+                    window.parent.showToast('error', `Failed to ${isEdit ? 'update' : 'create'} part: ${error.message}`);
+                } else {
+                    alert(`Error: Failed to ${isEdit ? 'update' : 'create'} part. ${error.message}`);
+                }
+            })
+            .finally(() => {
+                // Reset loading state
+                if (submitBtn && submitSpinner && submitIcon && submitText) {
+                    submitBtn.disabled = false;
+                    submitSpinner.classList.add('d-none');
+                    submitIcon.classList.remove('d-none');
+                    submitText.textContent = isEdit ? 'Update Part' : 'Create Part';
+                }
+                
+                console.log('?? [PART-FORM] Form submission completed');
+            });
+        });
         
         try {
             // Initialize calculations
@@ -949,14 +1091,14 @@
                 });
             }
             
-            console.log('? [PARTS] Form initialized successfully');
+            console.log('? [PART-FORM] Form initialized successfully');
             
         } catch (error) {
-            console.error('? [PARTS] Error initializing form:', error);
+            console.error('? [PART-FORM] Error initializing form:', error);
         }
-    });
+    }); 
     
-    console.log('?? [PARTS] Enhanced Parts Form with production-ready functionality loaded');
+    console.log('? [PART-FORM] Enhanced Parts Form with production-ready functionality loaded');
 </script>
 
 <style>

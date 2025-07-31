@@ -20,7 +20,7 @@
             <div class="d-flex gap-3">
                 <button type="button" 
                         class="btn btn-primary btn-lg" 
-                        onclick="loadPartForm('add')"
+                        onclick="handleAddPartClick()"
                         data-bs-toggle="tooltip" 
                         title="Add New Part">
                     <i class="fas fa-plus me-2"></i>Add New Part
@@ -338,9 +338,9 @@
                                                 </button>
                                             </form>
                                             
-                                            <!-- Edit button -->
+                                            <!-- Edit button - FIXED: Use consistent function naming -->
                                             <button type="button" class="btn btn-sm btn-primary" 
-                                                    onclick="loadPartForm('edit', @part.Id)" 
+                                                    onclick="handleEditPartClick(@part.Id)" 
                                                     data-bs-toggle="tooltip" title="Edit Part">
                                                 <i class="fas fa-edit"></i>
                                             </button>
@@ -355,7 +355,7 @@
                                             <!-- Delete button -->
                                             <button type="button" 
                                                     class="btn btn-sm btn-outline-danger" 
-                                                    onclick="deletePart(@part.Id, '@part.PartNumber', '@part.Name')" 
+                                                    onclick="handleDeletePartClick(@part.Id, '@part.PartNumber', '@part.Name')" 
                                                     data-bs-toggle="tooltip" 
                                                     title="Delete Part">
                                                 <i class="fas fa-trash"></i>
@@ -421,7 +421,7 @@
                     <p class="text-muted">Try adjusting your search criteria or add a new part to get started.</p>
                     <button type="button" 
                             class="btn btn-primary btn-lg" 
-                            onclick="loadPartForm('add')">
+                            onclick="handleAddPartClick()">
                         <i class="fas fa-plus me-2"></i>Add Your First Part
                     </button>
                 </div>
@@ -449,10 +449,13 @@
     @Html.AntiForgeryToken()
 </form>
 
-<!-- Keep existing JavaScript unchanged -->
+<!-- FIXED: Enhanced JavaScript with proper global function definitions -->
 <script>
-    console.log('?? [PARTS] Loading global functions to prevent ReferenceError issues');
+    console.log('?? [PARTS] Loading enhanced parts page functionality');
     
+    // Global variables
+    let antiforgeryToken = '';
+
     // MATERIAL DEFAULTS - Available globally for form functions
     const MATERIAL_DEFAULTS = {
         'Ti-6Al-4V Grade 5': {
@@ -562,336 +565,42 @@
         }
     };
 
-    // GLOBAL FUNCTION 1: validatePartNumber - Called by onblur in form
-    window.validatePartNumber = function(partNumber) {
-        console.log('?? [PARTS] Validating part number:', partNumber);
-        
-        try {
-            const input = document.querySelector('[name="PartNumber"]');
-            if (!input || !partNumber) return false;
-            
-            // Remove previous validation classes
-            input.classList.remove('is-invalid', 'is-valid');
-            
-            // Basic validation - you can customize this pattern
-            const isValid = partNumber.length >= 3 && partNumber.length <= 50;
-            
-            if (isValid) {
-                input.classList.add('is-valid');
-                console.log('? [PARTS] Part number format valid');
-                return true;
-            } else {
-                input.classList.add('is-invalid');
-                console.log('? [PARTS] Invalid part number format');
-                return false;
-            }
-            
-        } catch (error) {
-            console.error('? [PARTS] Error validating part number:', error);
-            return false;
-        }
-    };
-
-    // GLOBAL FUNCTION 2: showTab - Called by onclick in form tabs
-    window.showTab = function(tabName) {
-        console.log('?? [PARTS] Switching to tab:', tabName);
-        
-        try {
-            // Hide all tab content
-            const allTabs = document.querySelectorAll('.tab-pane');
-            allTabs.forEach(tab => {
-                tab.classList.remove('show', 'active');
-            });
-            
-            // Remove active from all tab buttons
-            const allButtons = document.querySelectorAll('.nav-link');
-            allButtons.forEach(button => {
-                button.classList.remove('active');
-            });
-            
-            // Show selected tab
-            const targetTab = document.getElementById(tabName);
-            const targetButton = document.getElementById(tabName + '-tab');
-            
-            if (targetTab && targetButton) {
-                targetTab.classList.add('show', 'active');
-                targetButton.classList.add('active');
-                console.log('? [PARTS] Tab switched successfully:', tabName);
-                return true;
-            } else {
-                console.error('? [PARTS] Tab elements not found:', tabName);
-                return false;
-            }
-            
-        } catch (error) {
-            console.error('? [PARTS] Error switching tabs:', error);
-            return false;
-        }
-    };
-
-    // GLOBAL FUNCTION 3: updateSlsMaterial - Called by onchange in material select
-    window.updateSlsMaterial = function() {
-        console.log('?? [PARTS] Updating material defaults');
-        
-        try {
-            const materialSelect = document.getElementById('materialSelect');
-            const slsMaterialInput = document.getElementById('slsMaterialInput');
-            
-            if (!materialSelect || !slsMaterialInput) {
-                console.error('? [PARTS] Material form elements not found');
-                return false;
-            }
-            
-            const selectedMaterial = materialSelect.value;
-            if (!selectedMaterial) return false;
-            
-            const defaults = MATERIAL_DEFAULTS[selectedMaterial];
-            if (!defaults) {
-                console.log('?? [PARTS] No defaults found for material:', selectedMaterial);
-                return false;
-            }
-            
-            // Update form fields with material defaults
-            slsMaterialInput.value = defaults.slsMaterial;
-            
-            // Update SLS parameters
-            const fieldMappings = {
-                'laserPowerInput': defaults.laserPower,
-                'scanSpeedInput': defaults.scanSpeed,
-                'layerThicknessInput': defaults.layerThickness,
-                'hatchSpacingInput': defaults.hatchSpacing,
-                'buildTempInput': defaults.buildTemperature,
-                'argonPurityInput': defaults.argonPurity,
-                'oxygenContentInput': defaults.oxygenContent,
-                'materialCostInput': defaults.materialCost,
-                'laborCostInput': defaults.laborCost,
-                'machineCostInput': defaults.machineOperatingCost,
-                'estimatedHoursInput': defaults.estimatedHours
-            };
-            
-            let updatedCount = 0;
-            Object.keys(fieldMappings).forEach(elementId => {
-                const element = document.getElementById(elementId);
-                if (element && (!element.value || element.value == '0')) {
-                    element.value = fieldMappings[elementId];
-                    updatedCount++;
-                    
-                    // Trigger change event for dependent calculations
-                    if (element.onchange) {
-                        element.onchange();
-                    }
-                }
-            });
-            
-            // Trigger dependent calculations
-            if (window.updateDurationDisplay) {
-                window.updateDurationDisplay();
-            }
-            
-            console.log('? [PARTS] Material defaults applied successfully:', updatedCount, 'fields updated');
-            return true;
-            
-        } catch (error) {
-            console.error('? [PARTS] Error updating material defaults:', error);
-            return false;
-        }
-    };
-
-    // GLOBAL FUNCTION 4: updateDurationDisplay - Called by onchange in hours inputs
-    window.updateDurationDisplay = function() {
-        console.log('?? [PARTS] Updating duration display');
-        
-        try {
-            const estimatedHours = parseFloat(document.getElementById('estimatedHoursInput')?.value || 0);
-            const adminOverride = parseFloat(document.getElementById('adminOverrideInput')?.value || 0);
-            const displayElement = document.getElementById('effectiveDurationDisplay');
-            
-            if (displayElement) {
-                const effectiveHours = adminOverride > 0 ? adminOverride : estimatedHours;
-                const displayText = adminOverride > 0 
-                    ? `${effectiveHours.toFixed(1)}h (Admin Override)` 
-                    : `${effectiveHours.toFixed(1)}h (Standard)`;
-                
-                displayElement.textContent = displayText;
-                displayElement.className = adminOverride > 0 
-                    ? 'form-control-plaintext bg-warning bg-opacity-25 border rounded p-2 fw-bold'
-                    : 'form-control-plaintext bg-light border rounded p-2';
-                
-                console.log('? [PARTS] Duration display updated:', displayText);
-                return true;
-            }
-            
-            return false;
-            
-        } catch (error) {
-            console.error('? [PARTS] Error updating duration display:', error);
-            return false;
-        }
-    };
-
-    // GLOBAL FUNCTION 5: calculateVolume - Called by onchange in dimension inputs
-    window.calculateVolume = function() {
-        console.log('?? [PARTS] Calculating volume');
-        
-        try {
-            const length = parseFloat(document.querySelector('[name="LengthMm"]')?.value || 0);
-            const width = parseFloat(document.querySelector('[name="WidthMm"]')?.value || 0);
-            const height = parseFloat(document.querySelector('[name="HeightMm"]')?.value || 0);
-            
-            const volume = length * width * height;
-            const volumeInput = document.getElementById('volumeInput');
-            const dimensionsInput = document.getElementById('dimensionsInput');
-            
-            let updated = false;
-            
-            if (volumeInput) {
-                volumeInput.value = Math.round(volume);
-                updated = true;
-            }
-            
-            if (dimensionsInput && length > 0 && width > 0 && height > 0) {
-                dimensionsInput.value = `${length} × ${width} × ${height} mm`;
-                updated = true;
-            }
-            
-            if (updated) {
-                console.log('? [PARTS] Volume calculated:', Math.round(volume), 'mm³');
-            }
-            
-            return updated;
-            
-        } catch (error) {
-            console.error('? [PARTS] Error calculating volume:', error);
-            return false;
-        }
-    };
-
-    // GLOBAL FUNCTION 6: updateOverrideDisplay - Called by onchange in override inputs  
-    window.updateOverrideDisplay = function() {
-        console.log('?? [PARTS] Updating override display');
-        
-        try {
-            const adminOverrideInput = document.getElementById('adminOverrideInput');
-            const adminOverrideReasonInput = document.querySelector('[name="AdminOverrideReason"]');
-            
-            if (!adminOverrideInput || !adminOverrideReasonInput) {
-                console.log('?? [PARTS] Override display elements not found');
-                return false;
-            }
-            
-            const overrideValue = parseFloat(adminOverrideInput.value || 0);
-            const hasOverride = overrideValue > 0;
-            
-            // Make reason field required if override is set
-            if (hasOverride) {
-                adminOverrideReasonInput.setAttribute('required', 'required');
-                adminOverrideReasonInput.placeholder = 'Reason for override is required';
-                
-                // Add visual indication
-                adminOverrideInput.classList.add('border-warning');
-                adminOverrideReasonInput.classList.add('border-warning');
-            } else {
-                adminOverrideReasonInput.removeAttribute('required');
-                adminOverrideReasonInput.placeholder = 'Reason for duration override (optional)';
-                
-                // Remove visual indication
-                adminOverrideInput.classList.remove('border-warning');
-                adminOverrideReasonInput.classList.remove('border-warning');
-            }
-            
-            // Also update duration display if function exists
-            if (window.updateDurationDisplay) {
-                window.updateDurationDisplay();
-            }
-            
-            console.log('? [PARTS] Override display updated - Override active:', hasOverride);
-            return true;
-            
-        } catch (error) {
-            console.error('? [PARTS] Error updating override display:', error);
-            return false;
-        }
-    };
-
-    // GLOBAL FUNCTION 7: updateMaterialDefaults - Alternative name for updateSlsMaterial
-    window.updateMaterialDefaults = function() {
-        console.log('?? [PARTS] updateMaterialDefaults called - delegating to updateSlsMaterial');
-        return window.updateSlsMaterial();
-    };
-
-    // GLOBAL FUNCTION 8: handlePartFormResponse - Handle HTMX form responses
-    window.handlePartFormResponse = function(event) {
-        console.log('?? [PARTS] Handling part form response', event);
-        
-        try {
-            const xhr = event.detail?.xhr;
-            if (!xhr) {
-                console.error('? [PARTS] No XHR object in response event');
-                return false;
-            }
-            
-            // Check if successful
-            if (xhr.status >= 200 && xhr.status < 300) {
-                const responseText = xhr.responseText || '';
-                
-                // Check for success indicators in response
-                if (responseText.includes('success') || responseText.includes('saved')) {
-                    console.log('? [PARTS] Form submission successful');
-                    
-                    // Close modal if function exists
-                    if (typeof bootstrap !== 'undefined') {
-                        const modal = document.getElementById('partModal');
-                        if (modal) {
-                            const modalInstance = bootstrap.Modal.getInstance(modal);
-                            if (modalInstance) {
-                                modalInstance.hide();
-                            }
-                        }
-                    }
-                    
-                    // Show success message
-                    if (window.showToast) {
-                        window.showToast('success', 'Part saved successfully!');
-                    }
-                    
-                    // Refresh page after delay
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1500);
-                    
-                    return true;
-                }
-            }
-            
-            // Handle errors
-            console.log('?? [PARTS] Form response indicates error or validation failure');
-            return false;
-            
-        } catch (error) {
-            console.error('? [PARTS] Error handling form response:', error);
-            return false;
-        }
-    };
-
-    console.log('? [PARTS] All global functions loaded successfully - ReferenceError issues resolved');
-</script>
-
-<!-- Enhanced JavaScript for the Parts page -->
-<script>
-    // Global variables
-    let antiforgeryToken = '';
+    // ===================================================================
+    // MAIN BUTTON HANDLERS - FIXED: Global scope with consistent naming
+    // ===================================================================
 
     /**
-     * Delete part with confirmation - MOVED TO GLOBAL SCOPE
+     * Handle Add Part button click - FIXED: Global function
      */
-    window.deletePart = function(partId, partNumber, partName) {
+    window.handleAddPartClick = function() {
+        console.log('?? [PARTS] Add part button clicked');
+        loadPartForm('add');
+    };
+
+    /**
+     * Handle Edit Part button click - FIXED: Global function
+     */
+    window.handleEditPartClick = function(partId) {
+        console.log('?? [PARTS] Edit part button clicked for ID:', partId);
+        
+        if (!partId || partId <= 0) {
+            console.error('? [PARTS] Invalid part ID for edit:', partId);
+            showToast('error', 'Invalid part ID');
+            return;
+        }
+        
+        loadPartForm('edit', partId);
+    };
+
+    /**
+     * Handle Delete Part button click - FIXED: Global function
+     */
+    window.handleDeletePartClick = function(partId, partNumber, partName) {
         console.log('??? [PARTS] Delete part button clicked for:', partNumber);
         
         if (!partId || partId <= 0) {
-            console.error('? [PARTS] Invalid part ID:', partId);
-            if (window.showToast) {
-                window.showToast('error', 'Invalid part ID');
-            }
+            console.error('? [PARTS] Invalid part ID for delete:', partId);
+            showToast('error', 'Invalid part ID');
             return;
         }
         
@@ -913,8 +622,6 @@
                     tokenInput.name = '__RequestVerificationToken';
                     tokenInput.value = antiforgeryToken;
                     form.appendChild(tokenInput);
-                } else {
-                    console.warn('?? [PARTS] No antiforgery token available');
                 }
                 
                 // Add part ID
@@ -932,41 +639,37 @@
                 
             } catch (error) {
                 console.error('? [PARTS] Error creating delete form:', error);
-                if (window.showToast) {
-                    window.showToast('error', 'Failed to delete part. Please try again.');
-                }
+                showToast('error', 'Failed to delete part. Please try again.');
             }
         } else {
-            console.log('? [PARTS] Delete cancelled');
+            console.log('?? [PARTS] Delete cancelled');
         }
     };
 
-    /**
-     * Alternative delete handler for better compatibility
-     */
-    window.handleDeletePartClick = function(partId, partNumber, partName) {
-        console.log('??? [PARTS] Alternative delete handler called for:', partNumber);
-        return window.deletePart(partId, partNumber, partName);
-    };
+    // ===================================================================
+    // CORE FUNCTIONALITY - FIXED: Properly structured loadPartForm
+    // ===================================================================
 
     /**
-     * Load part form (add or edit) - MOVED TO GLOBAL SCOPE
+     * Load part form (add or edit) - FIXED: Enhanced error handling and proper modal management
      */
-    window.loadPartForm = function(action, partId = null) {
-        console.log('?? [PARTS] Loading part form:', action, partId);
+    function loadPartForm(action, partId = null) {
+        console.log('?? [PARTS] Loading part form:', action, partId ? `ID: ${partId}` : 'new part');
         
         // Validate inputs
         if (!action || (action !== 'add' && action !== 'edit')) {
             console.error('? [PARTS] Invalid action:', action);
+            showToast('error', 'Invalid action specified');
             return;
         }
         
         if (action === 'edit' && (!partId || partId <= 0)) {
             console.error('? [PARTS] Invalid partId for edit:', partId);
+            showToast('error', 'Invalid part ID for editing');
             return;
         }
         
-        // Build URL
+        // Build URL - FIXED: Proper handler routing
         let url = '/Admin/Parts?handler=';
         if (action === 'add') {
             url += 'Add';
@@ -974,13 +677,14 @@
             url += `Edit&id=${partId}`;
         }
         
+        console.log('?? [PARTS] Request URL:', url);
+        
         // Get modal elements
         const modal = document.getElementById('partModal');
         const modalContent = document.getElementById('partModalContent');
         
         if (!modal || !modalContent) {
-            console.error('? [PARTS] Modal elements not found');
-            // Fallback to full page
+            console.error('? [PARTS] Modal elements not found, redirecting to full page');
             window.location.href = url;
             return;
         }
@@ -988,15 +692,17 @@
         // Show loading state
         modalContent.innerHTML = createLoadingContent(action);
         
-        // Show modal
+        // Show modal - FIXED: Better Bootstrap 5 compatibility
         try {
+            let bootstrapModal;
             if (typeof bootstrap !== 'undefined') {
-                const bootstrapModal = new bootstrap.Modal(modal, {
+                bootstrapModal = new bootstrap.Modal(modal, {
                     backdrop: 'static',
                     keyboard: true
                 });
                 bootstrapModal.show();
             } else {
+                // Fallback for when Bootstrap isn't available
                 modal.style.display = 'block';
                 modal.classList.add('show');
                 document.body.classList.add('modal-open');
@@ -1008,9 +714,9 @@
             return;
         }
         
-        // Fetch form content with timeout
+        // Fetch form content - FIXED: Enhanced error handling
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
         
         fetch(url, {
             method: 'GET',
@@ -1025,6 +731,8 @@
         .then(response => {
             clearTimeout(timeoutId);
             
+            console.log('?? [PARTS] Response received:', response.status, response.statusText);
+            
             if (!response.ok) {
                 throw new Error(`Server error: ${response.status} ${response.statusText}`);
             }
@@ -1037,25 +745,29 @@
             return response.text();
         })
         .then(html => {
+            clearTimeout(timeoutId);
+            
             if (!html || html.trim() === '') {
                 throw new Error('Empty response received from server');
             }
             
-            // Check for error indicators
-            if (html.includes('<!DOCTYPE html>')) {
+            // Check for error indicators - FIXED: Better error detection
+            if (html.includes('<!DOCTYPE html>') && !html.includes('modal-header')) {
                 throw new Error('Received full page instead of form partial');
             }
+            
+            console.log('? [PARTS] Form HTML received, length:', html.length);
             
             // Load content into modal
             modalContent.innerHTML = html;
             
-            // Initialize form after loading
+            // Initialize form after loading - FIXED: Proper initialization
             setTimeout(() => {
                 initializeFormComponents();
                 setModalFocus();
-            }, 100);
+                console.log('? [PARTS] Form initialized successfully');
+            }, 200);
             
-            console.log('? [PARTS] Part form loaded successfully');
         })
         .catch(error => {
             clearTimeout(timeoutId);
@@ -1063,14 +775,205 @@
             
             const errorMessage = getErrorMessage(error);
             modalContent.innerHTML = createErrorContent(action, errorMessage, url);
+            showToast('error', `Failed to load ${action} form: ${errorMessage}`);
         });
-    };
+    }
+
+    // ===================================================================
+    // FORM FUNCTIONS - FIXED: Global scope for form callbacks
+    // ===================================================================
 
     /**
-     * Show part details in modal - MOVED TO GLOBAL SCOPE
+     * Form callback functions - FIXED: All moved to global scope
      */
+    window.validatePartNumber = function(partNumber) {
+        console.log('?? [PARTS] Validating part number:', partNumber);
+        
+        try {
+            const input = document.querySelector('[name="PartNumber"]');
+            if (!input || !partNumber) return false;
+            
+            input.classList.remove('is-invalid', 'is-valid');
+            
+            const isValid = partNumber.length >= 3 && partNumber.length <= 50;
+            
+            if (isValid) {
+                input.classList.add('is-valid');
+                console.log('? [PARTS] Part number format valid');
+                return true;
+            } else {
+                input.classList.add('is-invalid');
+                console.log('? [PARTS] Invalid part number format');
+                return false;
+            }
+            
+        } catch (error) {
+            console.error('? [PARTS] Error validating part number:', error);
+            return false;
+        }
+    };
+
+    window.showTab = function(tabName) {
+        console.log('?? [PARTS] Switching to tab:', tabName);
+        
+        try {
+            const allTabs = document.querySelectorAll('.tab-pane');
+            allTabs.forEach(tab => {
+                tab.classList.remove('show', 'active');
+            });
+            
+            const allButtons = document.querySelectorAll('.nav-link');
+            allButtons.forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            const targetTab = document.getElementById(tabName);
+            const targetButton = document.getElementById(tabName + '-tab');
+            
+            if (targetTab && targetButton) {
+                targetTab.classList.add('show', 'active');
+                targetButton.classList.add('active');
+                console.log('? [PARTS] Tab switched successfully:', tabName);
+                return true;
+            } else {
+                console.error('? [PARTS] Tab elements not found:', tabName);
+                return false;
+            }
+            
+        } catch (error) {
+            console.error('? [PARTS] Error switching tabs:', error);
+            return false;
+        }
+    };
+
+    window.updateSlsMaterial = function() {
+        console.log('?? [PARTS] Updating material defaults');
+        
+        try {
+            const materialSelect = document.getElementById('materialSelect');
+            const slsMaterialInput = document.getElementById('slsMaterialInput');
+            
+            if (!materialSelect || !slsMaterialInput) {
+                console.warn('?? [PARTS] Material form elements not found');
+                return false;
+            }
+            
+            const selectedMaterial = materialSelect.value;
+            if (!selectedMaterial) {
+                console.log('?? [PARTS] No material selected');
+                return false;
+            }
+            
+            const defaults = MATERIAL_DEFAULTS[selectedMaterial];
+            if (!defaults) {
+                console.log('?? [PARTS] No defaults found for material:', selectedMaterial);
+                return false;
+            }
+            
+            // Update form fields with material defaults
+            slsMaterialInput.value = defaults.slsMaterial;
+            
+            const fieldMappings = {
+                'laserPowerInput': defaults.laserPower,
+                'scanSpeedInput': defaults.scanSpeed,
+                'layerThicknessInput': defaults.layerThickness,
+                'hatchSpacingInput': defaults.hatchSpacing,
+                'buildTempInput': defaults.buildTemperature,
+                'argonPurityInput': defaults.argonPurity,
+                'oxygenContentInput': defaults.oxygenContent,
+                'materialCostInput': defaults.materialCost,
+                'laborCostInput': defaults.laborCost,
+                'machineCostInput': defaults.machineOperatingCost,
+                'estimatedHoursInput': defaults.estimatedHours
+            };
+            
+            let updatedCount = 0;
+            Object.keys(fieldMappings).forEach(elementId => {
+                const element = document.getElementById(elementId);
+                if (element && (!element.value || element.value == '0')) {
+                    element.value = fieldMappings[elementId];
+                    updatedCount++;
+                    
+                    if (element.onchange) {
+                        element.onchange();
+                    }
+                }
+            });
+            
+            if (window.updateDurationDisplay) {
+                window.updateDurationDisplay();
+            }
+            
+            console.log('? [PARTS] Material defaults applied:', updatedCount, 'fields updated');
+            return true;
+            
+        } catch (error) {
+            console.error('? [PARTS] Error updating material defaults:', error);
+            return false;
+        }
+    };
+
+    window.updateDurationDisplay = function() {
+        try {
+            const estimatedHours = parseFloat(document.getElementById('estimatedHoursInput')?.value || 0);
+            const adminOverride = parseFloat(document.getElementById('adminOverrideInput')?.value || 0);
+            const displayElement = document.getElementById('effectiveDurationDisplay');
+            
+            if (displayElement) {
+                const effectiveHours = adminOverride > 0 ? adminOverride : estimatedHours;
+                const displayText = adminOverride > 0 
+                    ? `${effectiveHours.toFixed(1)}h (Admin Override)` 
+                    : `${effectiveHours.toFixed(1)}h (Standard)`;
+                
+                displayElement.textContent = displayText;
+                displayElement.className = adminOverride > 0 
+                    ? 'form-control-plaintext bg-warning bg-opacity-25 border rounded p-2 fw-bold'
+                    : 'form-control-plaintext bg-light border rounded p-2';
+                
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error('? [PARTS] Error updating duration display:', error);
+            return false;
+        }
+    };
+
+    window.calculateVolume = function() {
+        try {
+            const length = parseFloat(document.querySelector('[name="LengthMm"]')?.value || 0);
+            const width = parseFloat(document.querySelector('[name="WidthMm"]')?.value || 0);
+            const height = parseFloat(document.querySelector('[name="HeightMm"]')?.value || 0);
+            
+            const volume = length * width * height;
+            const volumeInput = document.getElementById('volumeInput');
+            const dimensionsInput = document.getElementById('dimensionsInput');
+            
+            let updated = false;
+            
+            if (volumeInput) {
+                volumeInput.value = Math.round(volume);
+                updated = true;
+            }
+            
+            if (dimensionsInput && length > 0 && width > 0 && height > 0) {
+                dimensionsInput.value = `${length} × ${width} × ${height} mm`;
+                updated = true;
+            }
+            
+            return updated;
+        } catch (error) {
+            console.error('? [PARTS] Error calculating volume:', error);
+            return false;
+        }
+    };
+
+    // ===================================================================
+    // UTILITY FUNCTIONS
+    // ===================================================================
+
     window.showPartDetails = function(partId) {
-        console.log('??? [PARTS] Showing part details for ID:', partId);
+        console.log('?? [PARTS] Showing part details for ID:', partId);
         
         fetch(`/Admin/Parts?handler=PartData&id=${partId}`, {
             headers: {
@@ -1078,16 +981,13 @@
             }
         })
         .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
             return response.json();
         })
         .then(part => {
             const details = createPartDetailsContent(part);
             document.getElementById('partModalContent').innerHTML = details;
             
-            // Show modal
             if (typeof bootstrap !== 'undefined') {
                 const modal = new bootstrap.Modal(document.getElementById('partModal'));
                 modal.show();
@@ -1097,20 +997,10 @@
         })
         .catch(error => {
             console.error('? [PARTS] Error loading part details:', error);
-            
-            const errorContent = createErrorContent('Details', error.message, '');
-            document.getElementById('partModalContent').innerHTML = errorContent;
-            
-            if (typeof bootstrap !== 'undefined') {
-                const modal = new bootstrap.Modal(document.getElementById('partModal'));
-                modal.show();
-            }
+            showToast('error', 'Failed to load part details');
         });
     };
 
-    /**
-     * Change page size - MOVED TO GLOBAL SCOPE
-     */
     window.changePageSize = function(newSize) {
         const url = new URL(window.location);
         url.searchParams.set('PageSize', newSize);
@@ -1118,14 +1008,10 @@
         window.location.href = url.toString();
     };
 
-    /**
-     * Show toast notification with enhanced Bootstrap 5 support - MOVED TO GLOBAL SCOPE
-     */
     window.showToast = function(type, message) {
         console.log(`?? [PARTS] Showing ${type} toast:`, message);
         
         try {
-            // Create toast if Bootstrap is available
             if (typeof bootstrap !== 'undefined') {
                 const toastId = 'toast-' + Date.now();
                 const toastHtml = `
@@ -1140,7 +1026,6 @@
                     </div>
                 `;
                 
-                // Get or create toast container
                 let toastContainer = document.getElementById('toast-container');
                 if (!toastContainer) {
                     toastContainer = document.createElement('div');
@@ -1150,63 +1035,41 @@
                     document.body.appendChild(toastContainer);
                 }
                 
-                // Add toast
                 toastContainer.insertAdjacentHTML('beforeend', toastHtml);
                 const toastElement = document.getElementById(toastId);
                 const toast = new bootstrap.Toast(toastElement);
                 toast.show();
                 
-                // Remove after hiding
                 toastElement.addEventListener('hidden.bs.toast', () => {
                     toastElement.remove();
                 });
                 
                 console.log('? [PARTS] Bootstrap toast displayed successfully');
             } else {
-                // Fallback to browser alert
                 console.warn('?? [PARTS] Bootstrap not available, using alert fallback');
                 alert(`${type.toUpperCase()}: ${message}`);
             }
         } catch (error) {
             console.error('? [PARTS] Error showing toast:', error);
-            // Ultimate fallback
             alert(`${type.toUpperCase()}: ${message}`);
         }
     };
 
-    /**
-     * Debug function to test delete functionality - MOVED TO GLOBAL SCOPE
-     */
-    window.debugDeleteFunction = function() {
-        console.group('?? [PARTS] Delete Function Debug');
-        console.log('deletePart function available:', typeof window.deletePart);
-        console.log('handleDeletePartClick function available:', typeof window.handleDeletePartClick);
-        console.log('antiforgeryToken available:', !!antiforgeryToken);
-        console.log('antiforgeryToken value:', antiforgeryToken ? 'Present' : 'Missing');
-        
-        // Test with fake data
-        if (typeof window.deletePart === 'function') {
-            console.log('Testing deletePart function (dry run)...');
-            // Don't actually call it to avoid unwanted deletion
-        }
-        
-        console.groupEnd();
-    };
+    // ===================================================================
+    // INITIALIZATION
+    // ===================================================================
 
-    // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('?? [PARTS] Initializing Parts page');
+        console.log('?? [PARTS] Initializing enhanced Parts page');
         
         try {
-            // Initialize antiforgery token with enhanced detection
+            // Initialize antiforgery token
             let tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
             
-            // If not found in current page, try to find in forms
             if (!tokenInput) {
                 tokenInput = document.querySelector('form input[name="__RequestVerificationToken"]');
             }
             
-            // If still not found, try the antiforgery form at the bottom of the page
             if (!tokenInput) {
                 const hiddenForm = document.querySelector('form[style*="display: none"]');
                 if (hiddenForm) {
@@ -1218,28 +1081,7 @@
                 antiforgeryToken = tokenInput.value;
                 console.log('? [PARTS] Antiforgery token initialized successfully');
             } else {
-                console.warn('?? [PARTS] Antiforgery token not found - delete operations may fail');
-                
-                // Try to create a temporary form to get token
-                fetch('/Admin/Parts', {
-                    method: 'GET',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                })
-                .then(response => response.text())
-                .then(html => {
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-                    const token = doc.querySelector('input[name="__RequestVerificationToken"]');
-                    if (token) {
-                        antiforgeryToken = token.value;
-                        console.log('? [PARTS] Antiforgery token retrieved via AJAX');
-                    }
-                })
-                .catch(error => {
-                    console.warn('?? [PARTS] Failed to retrieve antiforgery token:', error);
-                });
+                console.warn('?? [PARTS] Antiforgery token not found');
             }
             
             // Initialize Bootstrap tooltips
@@ -1254,20 +1096,18 @@
                 console.log('? [PARTS] Bootstrap tooltips initialized');
             }
             
-            // Check for success/error messages in URL parameters
+            // Check for URL messages
             const urlParams = new URLSearchParams(window.location.search);
             const successMessage = urlParams.get('success');
             const errorMessage = urlParams.get('error');
             
             if (successMessage) {
-                window.showToast('success', decodeURIComponent(successMessage));
-                // Clean up URL
+                showToast('success', decodeURIComponent(successMessage));
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
             
             if (errorMessage) {
-                window.showToast('error', decodeURIComponent(errorMessage));
-                // Clean up URL
+                showToast('error', decodeURIComponent(errorMessage));
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
             
@@ -1279,19 +1119,17 @@
     });
 
     /**
-     * Initialize form components after modal content loads
+     * Helper functions for modal content generation
      */
     function initializeFormComponents() {
         try {
-            // Initialize Bootstrap tooltips
             const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-            tooltipTriggerList.forEach(tooltipTriggerEl => {
-                if (typeof bootstrap !== 'undefined') {
+            if (typeof bootstrap !== 'undefined') {
+                tooltipTriggerList.forEach(tooltipTriggerEl => {
                     new bootstrap.Tooltip(tooltipTriggerEl);
-                }
-            });
+                });
+            }
             
-            // Initialize form validation
             const forms = document.querySelectorAll('form');
             forms.forEach(form => {
                 if (form.checkValidity) {
@@ -1311,9 +1149,6 @@
         }
     }
 
-    /**
-     * Set focus to first input in modal
-     */
     function setModalFocus() {
         try {
             const modal = document.getElementById('partModal');
@@ -1322,7 +1157,7 @@
                 if (firstInput && typeof firstInput.focus === 'function') {
                     setTimeout(() => {
                         firstInput.focus();
-                    }, 200);
+                    }, 300);
                 }
             }
         } catch (error) {
@@ -1330,9 +1165,6 @@
         }
     }
 
-    /**
-     * Helper functions for content generation
-     */
     function createLoadingContent(action) {
         return `
             <div class="modal-header bg-primary text-white">
@@ -1482,7 +1314,7 @@
         return `Error: ${message}`;
     }
 
-    console.log('?? [PARTS] Parts page script loaded successfully with enhanced visual design');
+    console.log('? [PARTS] Enhanced Parts page script loaded successfully with proper edit functionality');
 </script>
 
 <!-- TempData message handling -->
