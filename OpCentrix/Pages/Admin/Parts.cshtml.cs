@@ -351,7 +351,7 @@ namespace OpCentrix.Pages.Admin
         }
 
         /// <summary>
-        /// Delete part
+        /// ENHANCED: Delete part with comprehensive dependency checking and error handling
         /// </summary>
         public async Task<IActionResult> OnPostDeleteAsync(int id)
         {
@@ -360,37 +360,124 @@ namespace OpCentrix.Pages.Admin
 
             try
             {
+                if (id <= 0)
+                {
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Invalid part ID for deletion: {PartId}", operationId, id);
+                    TempData["ErrorMessage"] = "Invalid part ID";
+                    return RedirectToPage();
+                }
+
                 var part = await _context.Parts.FindAsync(id);
                 if (part == null)
                 {
                     _logger.LogWarning("?? [PARTS-{OperationId}] Part not found for deletion: ID {PartId}", operationId, id);
-                    TempData["ErrorMessage"] = "Part not found";
+                    TempData["ErrorMessage"] = "Part not found. It may have already been deleted.";
                     return RedirectToPage();
                 }
 
-                // Check if part is used in any jobs
-                var jobCount = await _context.BuildJobs.CountAsync(j => j.PartId == part.Id);
+                // ENHANCED: Check multiple dependency types
+                var dependencies = new List<string>();
+                
+                // Check Jobs (using PartNumber reference)
+                var jobCount = await _context.Jobs.CountAsync(j => j.PartNumber == part.PartNumber);
                 if (jobCount > 0)
                 {
-                    _logger.LogWarning("?? [PARTS-{OperationId}] Cannot delete part with jobs: {PartNumber} ({JobCount} jobs)", 
-                        operationId, part.PartNumber, jobCount);
-                    TempData["ErrorMessage"] = $"Cannot delete part '{part.PartNumber}' because it is used in {jobCount} job(s). Please complete or remove those jobs first.";
+                    dependencies.Add($"{jobCount} scheduled job(s)");
+                }
+
+                // Check BuildJobs (using PartId reference)  
+                var buildJobCount = await _context.BuildJobs.CountAsync(bj => bj.PartId == part.Id);
+                if (buildJobCount > 0)
+                {
+                    dependencies.Add($"{buildJobCount} build job(s)");
+                }
+
+                // Check SerialNumbers (only if the DbSet exists)
+                var serialNumberCount = await _context.SerialNumbers.CountAsync(sn => sn.PartId == part.Id);
+                if (serialNumberCount > 0)
+                {
+                    dependencies.Add($"{serialNumberCount} serial number(s)");
+                }
+
+                // Check JobNotes (only if the DbSet exists)
+                var jobNoteCount = await _context.JobNotes.CountAsync(jn => jn.PartId == part.Id);
+                if (jobNoteCount > 0)
+                {
+                    dependencies.Add($"{jobNoteCount} job note(s)");
+                }
+
+                // Check InspectionCheckpoints (only if the DbSet exists)
+                var checkpointCount = await _context.InspectionCheckpoints.CountAsync(ic => ic.PartId == part.Id);
+                if (checkpointCount > 0)
+                {
+                    dependencies.Add($"{checkpointCount} inspection checkpoint(s)");
+                }
+
+                // Check ComplianceDocuments (only if the DbSet exists)
+                var complianceDocCount = await _context.ComplianceDocuments.CountAsync(cd => cd.PartId == part.Id);
+                if (complianceDocCount > 0)
+                {
+                    dependencies.Add($"{complianceDocCount} compliance document(s)");
+                }
+
+                // Check PrototypeJobs (only if the DbSet exists)
+                var prototypeJobCount = await _context.PrototypeJobs.CountAsync(pj => pj.PartId == part.Id);
+                if (prototypeJobCount > 0)
+                {
+                    dependencies.Add($"{prototypeJobCount} prototype job(s)");
+                }
+
+                if (dependencies.Any())
+                {
+                    var dependencyList = string.Join(", ", dependencies);
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Cannot delete part with dependencies: {PartNumber} - Dependencies: {Dependencies}", 
+                        operationId, part.PartNumber, dependencyList);
+                    TempData["ErrorMessage"] = $"Cannot delete part '{part.PartNumber}' because it is referenced by {dependencyList}. Please remove or complete those items first.";
                     return RedirectToPage();
                 }
 
-                _context.Parts.Remove(part);
-                await _context.SaveChangesAsync();
+                // Proceed with deletion using transaction
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                
+                try
+                {
+                    _context.Parts.Remove(part);
+                    var saveResult = await _context.SaveChangesAsync();
+                    
+                    if (saveResult > 0)
+                    {
+                        await transaction.CommitAsync();
+                        
+                        _logger.LogInformation("? [PARTS-{OperationId}] Part deleted successfully: {PartNumber} (ID: {PartId})", 
+                            operationId, part.PartNumber, part.Id);
 
-                _logger.LogInformation("? [PARTS-{OperationId}] Part deleted successfully: {PartNumber} (ID: {PartId})", 
-                    operationId, part.PartNumber, part.Id);
-
-                TempData["SuccessMessage"] = $"Part '{part.PartNumber}' deleted successfully";
+                        TempData["SuccessMessage"] = $"Part '{part.PartNumber}' deleted successfully";
+                        return RedirectToPage();
+                    }
+                    else
+                    {
+                        await transaction.RollbackAsync();
+                        _logger.LogWarning("?? [PARTS-{OperationId}] No rows affected during part deletion", operationId);
+                        TempData["ErrorMessage"] = "Failed to delete part. No changes were made.";
+                        return RedirectToPage();
+                    }
+                }
+                catch (Exception dbEx)
+                {
+                    await transaction.RollbackAsync();
+                    throw; // Re-throw to be caught by outer catch
+                }
+            }
+            catch (DbUpdateException dbEx)
+            {
+                _logger.LogError(dbEx, "? [PARTS-{OperationId}] Database error deleting part ID: {PartId}", operationId, id);
+                TempData["ErrorMessage"] = "Database error occurred while deleting the part. It may be referenced by other data.";
                 return RedirectToPage();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "?? [PARTS-{OperationId}] Error deleting part ID: {PartId}", operationId, id);
-                TempData["ErrorMessage"] = "An error occurred while deleting the part. Please try again.";
+                _logger.LogError(ex, "? [PARTS-{OperationId}] Error deleting part ID: {PartId}", operationId, id);
+                TempData["ErrorMessage"] = "An unexpected error occurred while deleting the part. Please try again.";
                 return RedirectToPage();
             }
         }

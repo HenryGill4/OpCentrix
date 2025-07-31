@@ -537,6 +537,13 @@
             params.append('id', jobId);
         }
         
+        // ENHANCEMENT: Include part pre-population parameters if available
+        const prePopulatePartId = '@ViewData["PrePopulatePartId"]';
+        if (prePopulatePartId && prePopulatePartId !== '' && !jobId) {
+            params.append('partId', prePopulatePartId);
+            console.log('?? [MODAL] Adding part pre-population:', prePopulatePartId);
+        }
+        
         const url = `/Scheduler?${params.toString()}`;
         
         console.log('?? [MODAL] Fetching modal content from:', url);
@@ -678,7 +685,49 @@
             this.setupZoomControls();
             this.setupOrientationToggle();
             this.setupAddJobButton();
+            this.handlePartPrePopulation(); // NEW: Handle automatic modal opening
             this.logDebugInfo();
+        },
+        
+        // ENHANCEMENT: Handle automatic modal opening from Parts page
+        handlePartPrePopulation() {
+            const shouldOpenModal = '@ViewData["ShouldOpenModal"]' === 'True';
+            const prePopulatePartId = '@ViewData["PrePopulatePartId"]';
+            const prePopulatePartNumber = '@ViewData["PrePopulatePartNumber"]';
+            const prePopulateSource = '@ViewData["PrePopulateSource"]';
+            
+            if (shouldOpenModal && prePopulatePartId && prePopulateSource === 'parts') {
+                console.log('?? [PREPOPULATE] Detected part pre-population request:', {
+                    partId: prePopulatePartId,
+                    partNumber: prePopulatePartNumber,
+                    source: prePopulateSource
+                });
+                
+                // Wait for page to fully load, then open modal
+                setTimeout(() => {
+                    // Default to first available machine and today's date for new job
+                    const machines = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ViewModel.Machines));
+                    const defaultMachine = machines.length > 0 ? machines[0] : 'TI1';
+                    const today = new Date().toISOString().split('T')[0];
+                    
+                    console.log('?? [PREPOPULATE] Opening modal with defaults:', {
+                        machine: defaultMachine,
+                        date: today,
+                        partId: prePopulatePartId
+                    });
+                    
+                    if (window.openJobModal) {
+                        window.openJobModal(defaultMachine, today);
+                        
+                        // Show success message about the redirection
+                        if (window.showSuccessNotification) {
+                            window.showSuccessNotification(`Opening scheduler for part ${prePopulatePartNumber}`);
+                        }
+                    } else {
+                        console.error('? [PREPOPULATE] openJobModal function not available');
+                    }
+                }, 500); // Give the page time to fully initialize
+            }
         },
         
         // Setup Add Job button
@@ -739,7 +788,7 @@
             
             // Background click handling
             document.addEventListener('click', (e) => {
-                if (e.target.id === 'modal-container' || e.target.classList.contains('modal-backdrop')) {
+                if (e.target.classList.contains('modal-backdrop')) {
                     window.closeJobModal();
                 }
             });
@@ -1022,6 +1071,12 @@
                 console.log('Is empty state:', @isEmptyState.ToString().ToLower());
                 console.log('Has real machines:', @hasRealMachines.ToString().ToLower());
                 console.log('openJobModal function available:', typeof window.openJobModal === 'function');
+                console.log('Pre-populate data:', {
+                    shouldOpen: '@ViewData["ShouldOpenModal"]' === 'True',
+                    partId: '@ViewData["PrePopulatePartId"]',
+                    partNumber: '@ViewData["PrePopulatePartNumber"]',
+                    source: '@ViewData["PrePopulateSource"]'
+                });
                 console.log('==============================================');
                 </text>
             }

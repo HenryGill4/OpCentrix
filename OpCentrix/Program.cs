@@ -149,6 +149,9 @@ builder.Services.AddAuthorization(options =>
 
 // Register application services
 builder.Services.AddScoped<ISchedulerService, SchedulerService>();
+builder.Services.AddScoped<ITimeSlotService, TimeSlotService>(); // NEW: Time slot calculation service
+builder.Services.AddScoped<IPrintJobLogService, PrintJobLogService>();
+builder.Services.AddScoped<IPrintTrackingService, PrintTrackingService>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<IMasterScheduleService, MasterScheduleService>(); // Task 12: Master Schedule Service
 builder.Services.AddScoped<SlsDataSeedingService>(); // SLS Data Seeding Service
@@ -379,7 +382,7 @@ using (var scope = app.Services.CreateScope())
 // Log application startup with correct URL
 var startupLogger = app.Services.GetRequiredService<ILogger<Program>>();
 var urls = builder.Configuration.GetValue<string>("Urls") ?? "http://localhost:5090";
-startupLogger.LogInformation("OpCentrix B&T Manufacturing Execution System started successfully");
+startupLogger.LogInformation("OpCentrix B&T Manufacturing Execution System startedSuccessfully");
 startupLogger.LogInformation("Environment: {Environment}", app.Environment.EnvironmentName);
 startupLogger.LogInformation("URL: {Url}", urls);
 startupLogger.LogInformation("Login Page: {LoginUrl}", $"{urls}/Account/Login");

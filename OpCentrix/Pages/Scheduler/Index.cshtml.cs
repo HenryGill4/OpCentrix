@@ -22,16 +22,18 @@ namespace OpCentrix.Pages.Scheduler
         private readonly SchedulerContext _context;
         private readonly ISchedulerService _schedulerService;
         private readonly IMachineManagementService _machineService;
+        private readonly ITimeSlotService _timeSlotService; // NEW: Time slot service
         private readonly ILogger<IndexModel> _logger;
 
         public SchedulerPageViewModel ViewModel { get; set; } = new();
         public FooterSummaryViewModel Summary { get; set; } = new();
 
-        public IndexModel(SchedulerContext context, ISchedulerService schedulerService, IMachineManagementService machineService, ILogger<IndexModel> logger)
+        public IndexModel(SchedulerContext context, ISchedulerService schedulerService, IMachineManagementService machineService, ITimeSlotService timeSlotService, ILogger<IndexModel> logger)
         {
             _context = context;
             _schedulerService = schedulerService;
             _machineService = machineService;
+            _timeSlotService = timeSlotService; // NEW: Inject time slot service
             _logger = logger;
         }
 
@@ -69,6 +71,25 @@ namespace OpCentrix.Pages.Scheduler
                 // Generate efficient summary data
                 _logger.LogDebug("🔧 [SCHEDULER-{OperationId}] Generating optimized summary", operationId);
                 await GenerateOptimizedSummaryAsync(operationId);
+
+                // ENHANCEMENT: Handle part pre-population from Parts page
+                var prePopulate = Request.Query.ContainsKey("prePopulate") && 
+                    bool.TryParse(Request.Query["prePopulate"], out var shouldPrePopulate) && shouldPrePopulate;
+                
+                if (prePopulate)
+                {
+                    _logger.LogInformation("🎯 [SCHEDULER-{OperationId}] Detected part pre-population request from Parts page", operationId);
+                    
+                    // Store the request info for JavaScript to handle modal opening
+                    ViewData["PrePopulatePartId"] = Request.Query["partId"].ToString();
+                    ViewData["PrePopulatePartNumber"] = Request.Query["partNumber"].ToString();
+                    ViewData["PrePopulatePartName"] = Request.Query["partName"].ToString();
+                    ViewData["PrePopulateSource"] = "parts";
+                    ViewData["ShouldOpenModal"] = true;
+                    
+                    _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Part pre-population data stored: PartId={PartId}, PartNumber={PartNumber}", 
+                        operationId, ViewData["PrePopulatePartId"], ViewData["PrePopulatePartNumber"]);
+                }
 
                 _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Scheduler loaded successfully: {JobCount} jobs across {MachineCount} machines",
                     operationId, ViewModel.Jobs.Count, ViewModel.Machines.Count);
@@ -312,7 +333,7 @@ namespace OpCentrix.Pages.Scheduler
         public async Task<IActionResult> OnGetShowAddModalAsync(string machineId, string date, int? id)
         {
             var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogDebug("?? [SCHEDULER-{OperationId}] Opening modal for machine: {MachineId}, date: {Date}, jobId: {JobId}",
+            _logger.LogDebug("🎯 [SCHEDULER-{OperationId}] Opening modal for machine: {MachineId}, date: {Date}, jobId: {JobId}",
                 operationId, machineId, date, id);
 
             try
@@ -321,14 +342,14 @@ namespace OpCentrix.Pages.Scheduler
                 if (!DateTime.TryParse(date, out var parsedDate))
                 {
                     parsedDate = DateTime.UtcNow;
-                    _logger.LogWarning("?? [SCHEDULER-{OperationId}] Invalid date provided: {Date}, using current time", operationId, date);
+                    _logger.LogWarning("⚠️ [SCHEDULER-{OperationId}] Invalid date provided: {Date}, using current time", operationId, date);
                 }
 
                 Job job;
                 if (id.HasValue)
                 {
                     // Load existing job with related data
-                    _logger.LogDebug("?? [SCHEDULER-{OperationId}] Loading existing job with ID: {JobId}", operationId, id.Value);
+                    _logger.LogDebug("🔍 [SCHEDULER-{OperationId}] Loading existing job with ID: {JobId}", operationId, id.Value);
 
                     job = await _context.Jobs
                         .Include(j => j.Part)
@@ -337,35 +358,100 @@ namespace OpCentrix.Pages.Scheduler
 
                     if (job == null)
                     {
-                        _logger.LogWarning("?? [SCHEDULER-{OperationId}] Job with ID {JobId} not found", operationId, id.Value);
+                        _logger.LogWarning("⚠️ [SCHEDULER-{OperationId}] Job with ID {JobId} not found", operationId, id.Value);
                         return await CreateJobNotFoundModalAsync(machineId, parsedDate, operationId);
                     }
 
-                    _logger.LogDebug("? [SCHEDULER-{OperationId}] Found existing job: {PartNumber}", operationId, job.PartNumber);
+                    _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Found existing job: {PartNumber}", operationId, job.PartNumber);
                 }
                 else
                 {
                     // Create new job with sensible defaults
-                    _logger.LogDebug("?? [SCHEDULER-{OperationId}] Creating new job with defaults", operationId);
+                    _logger.LogDebug("🔧 [SCHEDULER-{OperationId}] Creating new job with defaults", operationId);
                     job = CreateNewJobWithDefaults(machineId, parsedDate, operationId);
                 }
 
                 // Load active parts efficiently
-                _logger.LogDebug("?? [SCHEDULER-{OperationId}] Loading active parts for modal", operationId);
+                _logger.LogDebug("📦 [SCHEDULER-{OperationId}] Loading active parts for modal", operationId);
                 var parts = await _context.Parts
                     .Where(p => p.IsActive)
                     .OrderBy(p => p.PartNumber)
                     .AsNoTracking()
                     .ToListAsync();
 
-                _logger.LogDebug("? [SCHEDULER-{OperationId}] Modal data prepared: {PartCount} parts available",
+                // ENHANCEMENT: Check for part pre-population from Parts page
+                var prePopulatePartId = Request.Query.ContainsKey("partId") ? 
+                    (int.TryParse(Request.Query["partId"], out var pId) ? pId : (int?)null) : null;
+
+                if (prePopulatePartId.HasValue && job.Id == 0) // Only for new jobs
+                {
+                    _logger.LogInformation("🎯 [SCHEDULER-{OperationId}] Pre-populating job with part ID: {PartId}", operationId, prePopulatePartId.Value);
+                    
+                    var selectedPart = parts.FirstOrDefault(p => p.Id == prePopulatePartId.Value);
+                    if (selectedPart != null)
+                    {
+                        // Pre-populate job with part data
+                        job.PartId = selectedPart.Id;
+                        job.PartNumber = selectedPart.PartNumber;
+                        
+                        // Use effective duration (respects admin overrides)
+                        var effectiveDuration = selectedPart.HasAdminOverride ? 
+                            selectedPart.AdminEstimatedHoursOverride!.Value : 
+                            selectedPart.EstimatedHours;
+                        
+                        job.EstimatedHours = effectiveDuration;
+                        job.ScheduledEnd = job.ScheduledStart.AddHours(effectiveDuration);
+                        
+                        // Pre-populate SLS parameters from part
+                        job.SlsMaterial = selectedPart.SlsMaterial ?? "Ti-6Al-4V Grade 5";
+                        job.LaserPowerWatts = selectedPart.RecommendedLaserPower;
+                        job.ScanSpeedMmPerSec = selectedPart.RecommendedScanSpeed;
+                        job.LayerThicknessMicrons = selectedPart.RecommendedLayerThickness;
+                        job.HatchSpacingMicrons = selectedPart.RecommendedHatchSpacing;
+                        job.BuildTemperatureCelsius = selectedPart.RecommendedBuildTemperature;
+                        job.ArgonPurityPercent = selectedPart.RequiredArgonPurity;
+                        job.OxygenContentPpm = selectedPart.MaxOxygenContent;
+                        job.EstimatedPowderUsageKg = selectedPart.PowderRequirementKg;
+                        job.PreheatingTimeMinutes = selectedPart.PreheatingTimeMinutes;
+                        job.CoolingTimeMinutes = selectedPart.CoolingTimeMinutes;
+                        job.PostProcessingTimeMinutes = selectedPart.PostProcessingTimeMinutes;
+                        
+                        // Set cost data from part
+                        job.MaterialCostPerKg = selectedPart.MaterialCostPerKg;
+                        job.LaborCostPerHour = selectedPart.StandardLaborCostPerHour;
+                        job.MachineOperatingCostPerHour = selectedPart.MachineOperatingCostPerHour;
+                        job.ArgonCostPerHour = selectedPart.ArgonCostPerHour;
+                        
+                        // Set machine compatibility
+                        var materialType = selectedPart.SlsMaterial?.Contains("Ti-6Al-4V") == true ? "Titanium" :
+                                          selectedPart.SlsMaterial?.Contains("Inconel") == true ? "Inconel" : "Other";
+                        
+                        // Suggest compatible machine if current one isn't suitable
+                        if ((materialType == "Titanium" && machineId == "INC") ||
+                            (materialType == "Inconel" && (machineId == "TI1" || machineId == "TI2")))
+                        {
+                            job.MachineId = materialType == "Titanium" ? "TI1" : "INC";
+                            _logger.LogInformation("🔄 [SCHEDULER-{OperationId}] Adjusted machine from {OriginalMachine} to {NewMachine} for material compatibility", 
+                                operationId, machineId, job.MachineId);
+                        }
+                        
+                        _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Job pre-populated with part: {PartNumber}, Duration: {Duration}h (Admin Override: {HasOverride})", 
+                            operationId, selectedPart.PartNumber, effectiveDuration, selectedPart.HasAdminOverride);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("⚠️ [SCHEDULER-{_OPERATIONId}] Part ID {PartId} not found in active parts list", operationId, prePopulatePartId.Value);
+                    }
+                }
+
+                _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Modal data prepared: {PartCount} parts available",
                     operationId, parts.Count);
 
                 return Partial("_AddEditJobModal", new AddEditJobViewModel { Job = job, Parts = parts });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "? [SCHEDULER-{OperationId}] Error opening add/edit modal: {ErrorMessage}",
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error opening add/edit modal: {ErrorMessage}",
                     operationId, ex.Message);
                 return await CreateErrorModalAsync(machineId, DateTime.TryParse(date, out var d) ? d : DateTime.UtcNow, operationId, ex);
             }
@@ -377,17 +463,27 @@ namespace OpCentrix.Pages.Scheduler
             {
                 // Use UTC for all default date/time values
                 var now = DateTime.UtcNow;
+                
+                // ENHANCEMENT: Calculate next available time slot for the machine
+                var nextAvailableTime = Task.Run(async () => 
+                    await _timeSlotService.GetNextAvailableTimeAsync(machineId, startDate, 8.0)).Result;
+                
+                _logger.LogInformation("🎯 [SCHEDULER-{OperationId}] Next available time for {Machine}: {StartTime}", 
+                    operationId, machineId, nextAvailableTime);
+                
                 var job = new Job
                 {
                     MachineId = machineId,
-                    ScheduledStart = startDate,
-                    ScheduledEnd = startDate.AddHours(8), // Default 8-hour job
+                    ScheduledStart = nextAvailableTime, // Use calculated next available time
+                    ScheduledEnd = nextAvailableTime.AddHours(8), // Default 8-hour job
                     CreatedDate = now,
                     LastModifiedDate = now,
                     Status = "Scheduled",
                     Priority = 3,
                     Quantity = 1,
                     PartNumber = "00-0000", // TEMP: Valid format, will be overwritten when part is selected
+                    EstimatedHours = 8.0, // Default duration
+                    
                     // SLS-specific defaults
                     SlsMaterial = "Ti-6Al-4V Grade 5",
                     LaserPowerWatts = 200,
@@ -400,11 +496,23 @@ namespace OpCentrix.Pages.Scheduler
                     RequiresArgonPurge = true,
                     RequiresPreheating = true,
                     RequiresPowderSieving = true,
-                    DensityPercentage = 99.5
+                    DensityPercentage = 99.5,
+                    
+                    // Cost defaults
+                    MaterialCostPerKg = 450.00m,
+                    LaborCostPerHour = 85.00m,
+                    MachineOperatingCostPerHour = 125.00m,
+                    ArgonCostPerHour = 15.00m,
+                    
+                    // Process time defaults
+                    PreheatingTimeMinutes = 60,
+                    CoolingTimeMinutes = 240,
+                    PostProcessingTimeMinutes = 45,
+                    EstimatedPowderUsageKg = 0.5
                 };
 
-                _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Created new job defaults for machine {MachineId}",
-                    operationId, machineId);
+                _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Created new job defaults for machine {MachineId} with next available time {StartTime}",
+                    operationId, machineId, nextAvailableTime);
 
                 return job;
             }
@@ -412,7 +520,23 @@ namespace OpCentrix.Pages.Scheduler
             {
                 _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error creating new job defaults: {ErrorMessage}",
                     operationId, ex.Message);
-                throw;
+                
+                // Fallback to basic defaults if time slot service fails
+                var fallbackStart = startDate.Hour < 6 ? startDate.Date.AddHours(6) : startDate;
+                return new Job
+                {
+                    MachineId = machineId,
+                    ScheduledStart = fallbackStart,
+                    ScheduledEnd = fallbackStart.AddHours(8),
+                    CreatedDate = DateTime.UtcNow,
+                    LastModifiedDate = DateTime.UtcNow,
+                    Status = "Scheduled",
+                    Priority = 3,
+                    Quantity = 1,
+                    PartNumber = "00-0000",
+                    EstimatedHours = 8.0,
+                    SlsMaterial = "Ti-6Al-4V Grade 5"
+                };
             }
         }
 
@@ -513,7 +637,7 @@ namespace OpCentrix.Pages.Scheduler
                     return await CreateValidationErrorAsync(job, string.Join("; ", validationErrors), operationId);
                 }
 
-                // Get part information with detailed logging BEFORE validation
+                // Get part information with detailed logging
                 _logger.LogDebug("🔧 [SCHEDULER-{OperationId}] Looking up part with ID: {PartId}", operationId, job.PartId);
                 var part = await _context.Parts.FindAsync(job.PartId);
                 if (part == null)
@@ -1272,6 +1396,109 @@ namespace OpCentrix.Pages.Scheduler
             {
                 _logger.LogError(ex, "❌ Error getting user orientation preference: {ErrorMessage}", ex.Message);
                 return "horizontal"; // Safe default
+            }
+        }
+
+        public async Task<IActionResult> OnGetCheckTimeSlotAsync(string machineId, string startTime, string endTime, int? excludeJobId = null)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogDebug("🔍 [SCHEDULER-{OperationId}] Checking time slot availability for {Machine}: {Start} to {End}", 
+                operationId, machineId, startTime, endTime);
+
+            try
+            {
+                if (!DateTime.TryParse(startTime, out var start) || !DateTime.TryParse(endTime, out var end))
+                {
+                    return new JsonResult(new { available = false, error = "Invalid date format" });
+                }
+
+                var isAvailable = await _timeSlotService.IsTimeSlotAvailableAsync(machineId, start, end, excludeJobId);
+                var conflicts = await _timeSlotService.GetConflictingJobsAsync(machineId, start, end, excludeJobId);
+
+                if (isAvailable)
+                {
+                    _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Time slot is available", operationId);
+                    return new JsonResult(new { 
+                        available = true, 
+                        message = "Time slot is available" 
+                    });
+                }
+                else
+                {
+                    _logger.LogDebug("❌ [SCHEDULER-{OperationId}] Time slot conflicts with {ConflictCount} existing jobs", 
+                        operationId, conflicts.Count);
+                    
+                    var conflictInfo = conflicts.Select(c => new {
+                        id = c.Id,
+                        partNumber = c.PartNumber,
+                        startTime = c.ScheduledStart.ToString("MMM d, h:mm tt"),
+                        endTime = c.ScheduledEnd.ToString("h:mm tt"),
+                        duration = c.DurationHours.ToString("F1") + "h"
+                    }).ToList();
+
+                    return new JsonResult(new { 
+                        available = false, 
+                        conflicts = conflictInfo,
+                        message = $"Conflicts with {conflicts.Count} existing job(s)"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error checking time slot: {ErrorMessage}", 
+                    operationId, ex.Message);
+                
+                return new JsonResult(new { 
+                    available = false, 
+                    error = "Error checking availability. Please try again." 
+                });
+            }
+        }
+
+        public async Task<IActionResult> OnGetSuggestNextTimeAsync(string machineId, double durationHours = 8.0, string? preferredStart = null)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogDebug("💡 [SCHEDULER-{OperationId}] Suggesting next available time for {Machine}, duration: {Duration}h", 
+                operationId, machineId, durationHours);
+
+            try
+            {
+                DateTime? preferred = null;
+                if (!string.IsNullOrEmpty(preferredStart) && DateTime.TryParse(preferredStart, out var prefDate))
+                {
+                    preferred = prefDate;
+                }
+
+                var nextAvailable = await _timeSlotService.GetNextAvailableTimeAsync(machineId, preferred, durationHours);
+                var suggestedEnd = nextAvailable.AddHours(durationHours);
+
+                _logger.LogInformation("💡 [SCHEDULER-{OperationId}] Suggested time slot: {Start} to {End}", 
+                    operationId, nextAvailable, suggestedEnd);
+
+                return new JsonResult(new {
+                    startTime = nextAvailable.ToString("yyyy-MM-ddTHH:mm"),
+                    endTime = suggestedEnd.ToString("yyyy-MM-ddTHH:mm"),
+                    displayStart = nextAvailable.ToString("MMM d, h:mm tt"),
+                    displayEnd = suggestedEnd.ToString("h:mm tt"),
+                    durationHours = durationHours,
+                    message = $"Next available: {nextAvailable:MMM d, h:mm tt}"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error suggesting next time: {ErrorMessage}", 
+                    operationId, ex.Message);
+                
+                // Fallback suggestion
+                var fallback = DateTime.UtcNow.Date.AddDays(1).AddHours(6); // Tomorrow at 6 AM
+                return new JsonResult(new {
+                    startTime = fallback.ToString("yyyy-MM-ddTHH:mm"),
+                    endTime = fallback.AddHours(durationHours).ToString("yyyy-MM-ddTHH:mm"),
+                    displayStart = fallback.ToString("MMM d, h:mm tt"),
+                    displayEnd = fallback.AddHours(durationHours).ToString("h:mm tt"),
+                    durationHours = durationHours,
+                    message = "Suggested fallback time (system error occurred)"
+                });
             }
         }
     }
