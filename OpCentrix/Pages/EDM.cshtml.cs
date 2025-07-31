@@ -65,7 +65,13 @@ namespace OpCentrix.Pages
                     return Page();
                 }
 
-                // Generate log number
+                // Check if this is an update operation
+                if (LogEntry.Id > 0)
+                {
+                    return await OnPostUpdateLogAsync();
+                }
+
+                // Generate log number for new entries
                 var logNumber = await GenerateLogNumberAsync();
 
                 // Create EDM log entry
@@ -176,6 +182,159 @@ namespace OpCentrix.Pages
             }
         }
 
+        public async Task<IActionResult> OnGetLogDetailAsync(int id)
+        {
+            try
+            {
+                var log = await _context.EDMLogs
+                    .Where(l => l.Id == id && l.IsActive)
+                    .Select(l => new
+                    {
+                        l.Id,
+                        l.LogNumber,
+                        l.PartNumber,
+                        l.Quantity,
+                        l.LogDate,
+                        l.Shift,
+                        l.OperatorName,
+                        l.OperatorInitials,
+                        l.StartTime,
+                        l.EndTime,
+                        l.Measurement1,
+                        l.Measurement2,
+                        l.ToleranceStatus,
+                        l.ScrapIssues,
+                        l.Notes,
+                        l.TotalTime,
+                        l.CreatedDate,
+                        l.CreatedBy
+                    })
+                    .FirstOrDefaultAsync();
+
+                if (log == null)
+                {
+                    return new JsonResult(new { error = "Log not found" });
+                }
+
+                return new JsonResult(log);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving EDM log detail for ID: {LogId}", id);
+                return new JsonResult(new { error = "Failed to retrieve log details" });
+            }
+        }
+
+        public async Task<IActionResult> OnPostDeleteLogAsync(int id)
+        {
+            try
+            {
+                var log = await _context.EDMLogs
+                    .FirstOrDefaultAsync(l => l.Id == id && l.IsActive);
+
+                if (log == null)
+                {
+                    return new JsonResult(new { 
+                        success = false, 
+                        message = "Log not found or already deleted" 
+                    });
+                }
+
+                // Soft delete - mark as inactive
+                log.IsActive = false;
+                log.LastModifiedBy = User?.Identity?.Name ?? "System";
+                log.LastModifiedDate = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("EDM Log {LogNumber} (ID: {LogId}) deleted by {User}", 
+                    log.LogNumber, id, User?.Identity?.Name ?? "System");
+
+                return new JsonResult(new { 
+                    success = true, 
+                    message = $"Log #{log.LogNumber} deleted successfully" 
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting EDM log with ID: {LogId}", id);
+                return new JsonResult(new { 
+                    success = false, 
+                    message = "Failed to delete log. Please try again." 
+                });
+            }
+        }
+
+        public async Task<IActionResult> OnPostUpdateLogAsync()
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return new JsonResult(new { 
+                        success = false, 
+                        message = "Invalid data provided" 
+                    });
+                }
+
+                var existingLog = await _context.EDMLogs
+                    .FirstOrDefaultAsync(l => l.Id == LogEntry.Id && l.IsActive);
+
+                if (existingLog == null)
+                {
+                    return new JsonResult(new { 
+                        success = false, 
+                        message = "Log not found" 
+                    });
+                }
+
+                // Update the existing log
+                existingLog.PartNumber = LogEntry.PartNumber;
+                existingLog.Quantity = LogEntry.Quantity;
+                existingLog.LogDate = LogEntry.LogDate;
+                existingLog.Shift = LogEntry.Shift ?? "";
+                existingLog.OperatorName = LogEntry.OperatorName;
+                existingLog.OperatorInitials = LogEntry.OperatorInitials;
+                existingLog.StartTime = LogEntry.StartTime ?? "";
+                existingLog.EndTime = LogEntry.EndTime ?? "";
+                existingLog.Measurement1 = LogEntry.Measurement1 ?? "";
+                existingLog.Measurement2 = LogEntry.Measurement2 ?? "";
+                existingLog.ToleranceStatus = LogEntry.ToleranceStatus ?? "";
+                existingLog.ScrapIssues = LogEntry.ScrapIssues ?? "";
+                existingLog.Notes = LogEntry.Notes ?? "";
+                existingLog.TotalTime = CalculateTotalTime(LogEntry.StartTime, LogEntry.EndTime);
+                existingLog.LastModifiedBy = User?.Identity?.Name ?? "System";
+                existingLog.LastModifiedDate = DateTime.UtcNow;
+
+                // Try to link to existing part
+                var existingPart = await _context.Parts
+                    .FirstOrDefaultAsync(p => p.PartNumber == LogEntry.PartNumber && p.IsActive);
+                if (existingPart != null)
+                {
+                    existingLog.PartId = existingPart.Id;
+                }
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("EDM Log {LogNumber} (ID: {LogId}) updated by {User}", 
+                    existingLog.LogNumber, existingLog.Id, User?.Identity?.Name ?? "System");
+
+                return new JsonResult(new { 
+                    success = true, 
+                    message = $"Log #{existingLog.LogNumber} updated successfully",
+                    logNumber = existingLog.LogNumber
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating EDM log");
+                return new JsonResult(new { 
+                    success = false, 
+                    message = "Failed to update log. Please try again." 
+                });
+            }
+        }
+
         private async Task LoadDashboardDataAsync()
         {
             var today = DateTime.Today;
@@ -279,6 +438,8 @@ namespace OpCentrix.Pages
 
     public class EDMLogEntry
     {
+        public int Id { get; set; }
+
         [Required]
         [StringLength(50)]
         public string PartNumber { get; set; } = string.Empty;
