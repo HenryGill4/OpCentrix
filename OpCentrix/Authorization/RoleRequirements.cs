@@ -32,7 +32,10 @@ namespace OpCentrix.Authorization
                 return;
             }
 
-            var userRole = user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+            // FIXED: Check for consistent role claim - try both claim types
+            var userRole = user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ??
+                          user.FindFirst("Role")?.Value;
+                          
             if (string.IsNullOrEmpty(userRole) || !_roles.Contains(userRole))
             {
                 context.Result = new ForbidResult();
@@ -87,9 +90,10 @@ namespace OpCentrix.Authorization
         public MediaAccessAttribute() : base(UserRoles.Admin, UserRoles.Manager, UserRoles.MediaSpecialist) { }
     }
 
+    // FIXED: Ensure PrintingAccess includes Admin and all appropriate roles
     public class PrintingAccessAttribute : RoleRequirementAttribute
     {
-        public PrintingAccessAttribute() : base(UserRoles.Admin, UserRoles.Manager, UserRoles.PrintingSpecialist) { }
+        public PrintingAccessAttribute() : base(UserRoles.Admin, UserRoles.Manager, UserRoles.PrintingSpecialist, UserRoles.Operator) { }
     }
 
     public class AnalyticsAccessAttribute : RoleRequirementAttribute
@@ -98,7 +102,7 @@ namespace OpCentrix.Authorization
     }
 
     /// <summary>
-    /// Requires Admin role access - NEW simple attribute approach
+    /// Requires Admin role access - FIXED to use consistent claim checking
     /// </summary>
     public class AdminAccessAttribute : Attribute, IAuthorizationFilter
     {
@@ -112,7 +116,10 @@ namespace OpCentrix.Authorization
                 return;
             }
 
-            var userRole = user.FindFirst("Role")?.Value ?? "";
+            // FIXED: Check both claim types consistently
+            var userRole = user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ??
+                          user.FindFirst("Role")?.Value ?? "";
+                          
             if (userRole != "Admin")
             {
                 context.Result = new RedirectToPageResult("/Account/AccessDenied");
@@ -135,7 +142,9 @@ namespace OpCentrix.Authorization
                 return;
             }
 
-            var userRole = user.FindFirst("Role")?.Value ?? "";
+            // FIXED: Check both claim types consistently
+            var userRole = user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ??
+                          user.FindFirst("Role")?.Value ?? "";
             var allowedRoles = new[] { "Admin", "Manager", "Scheduler", "Operator", "PrintingSpecialist" };
             
             if (!allowedRoles.Contains(userRole))
@@ -146,7 +155,7 @@ namespace OpCentrix.Authorization
     }
 
     /// <summary>
-    /// Requires Manager level access (Admin, Manager) - NEW simple attribute approach
+    /// Requires Manager level access (Admin, Manager) - FIXED with consistent claim checking
     /// </summary>
     public class ManagerAccessAttribute : Attribute, IAuthorizationFilter
     {
@@ -160,7 +169,9 @@ namespace OpCentrix.Authorization
                 return;
             }
 
-            var userRole = user.FindFirst("Role")?.Value ?? "";
+            // FIXED: Check both claim types consistently
+            var userRole = user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ??
+                          user.FindFirst("Role")?.Value ?? "";
             var allowedRoles = new[] { "Admin", "Manager" };
             
             if (!allowedRoles.Contains(userRole))
@@ -171,7 +182,7 @@ namespace OpCentrix.Authorization
     }
 
     /// <summary>
-    /// Requires Print Tracking access (Admin, Manager, Operator, PrintingSpecialist) - NEW for print tracking pages
+    /// Requires Print Tracking access (Admin, Manager, Operator, PrintingSpecialist) - FIXED for print tracking pages
     /// </summary>
     public class PrintTrackingAccessAttribute : Attribute, IAuthorizationFilter
     {
@@ -185,7 +196,9 @@ namespace OpCentrix.Authorization
                 return;
             }
 
-            var userRole = user.FindFirst("Role")?.Value ?? "";
+            // FIXED: Check both claim types consistently and ensure Admin has access
+            var userRole = user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ??
+                          user.FindFirst("Role")?.Value ?? "";
             var allowedRoles = new[] { "Admin", "Manager", "Operator", "PrintingSpecialist" };
             
             if (!allowedRoles.Contains(userRole))
