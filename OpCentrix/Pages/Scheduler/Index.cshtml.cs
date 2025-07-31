@@ -707,40 +707,13 @@ namespace OpCentrix.Pages.Scheduler
                     _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Job {Action} successfully: {JobId} - {PartNumber}",
                         operationId, logAction, job.Id, job.PartNumber);
 
-                    // **CRITICAL FIX: Return script response to close modal and update machine row**
-                    var script = $@"
-                        <script>
-                            // Close the modal
-                            if (window.closeJobModal) {{
-                                window.closeJobModal();
-                            }} else {{
-                                const modal = document.getElementById('job-modal-container');
-                                if (modal) {{
-                                    modal.style.display = 'none';
-                                    modal.classList.add('hidden');
-                                    document.body.style.overflow = '';
-                                }}
-                            }}
-                            
-                            // Show success notification
-                            if (window.showSuccessNotification) {{
-                                window.showSuccessNotification('Job {logAction.ToLower()} successfully!');
-                            }}
-                            
-                            // Trigger machine row update via HTMX
-                            htmx.ajax('GET', '/Scheduler?handler=GetMachineRow&machineId={job.MachineId}', {{
-                                target: '#machine-row-{job.MachineId}',
-                                swap: 'outerHTML'
-                            }});
-                            
-                            // Update footer summary
-                            htmx.ajax('GET', '/Scheduler?handler=GetFooterSummary', {{
-                                target: '#footer-summary',
-                                swap: 'innerHTML'
-                            }});
-                        </script>";
-
-                    return Content(script, "text/html");
+                    // **FIXED: Return success indicator to trigger JavaScript refresh**
+                    return new JsonResult(new { 
+                        success = true, 
+                        jobId = job.Id,
+                        action = logAction,
+                        message = $"Job {logAction.ToLower()} successfully!"
+                    });
                 }
                 catch (Exception transactionEx)
                 {
@@ -1498,6 +1471,53 @@ namespace OpCentrix.Pages.Scheduler
                     displayEnd = fallback.AddHours(durationHours).ToString("h:mm tt"),
                     durationHours = durationHours,
                     message = "Suggested fallback time (system error occurred)"
+                });
+            }
+        }
+
+        public async Task<IActionResult> OnPostDeleteJobAsync(int id)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("🗑️ [SCHEDULER-{OperationId}] Request to delete job: {JobId}", operationId, id);
+
+            try
+            {
+                var job = await _context.Jobs.FindAsync(id);
+                if (job == null)
+                {
+                    _logger.LogWarning("⚠️ [SCHEDULER-{OperationId}] Job not found for deletion: {JobId}", operationId, id);
+                    return new JsonResult(new { 
+                        success = false, 
+                        error = "Job not found" 
+                    });
+                }
+
+                _logger.LogDebug("🔍 [SCHEDULER-{OperationId}] Found job to delete: {PartNumber} on {MachineId}",
+                    operationId, job.PartNumber, job.MachineId);
+
+                // Create audit log before deletion
+                await CreateAuditLogAsync(job, "Deleted", operationId);
+
+                // Remove the job
+                _context.Jobs.Remove(job);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Job deleted successfully: {JobId} - {PartNumber}",
+                    operationId, id, job.PartNumber);
+
+                return new JsonResult(new { 
+                    success = true, 
+                    message = "Job deleted successfully!" 
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error deleting job {JobId}: {ErrorMessage}",
+                    operationId, id, ex.Message);
+
+                return new JsonResult(new { 
+                    success = false, 
+                    error = "Error deleting job. Please try again." 
                 });
             }
         }
