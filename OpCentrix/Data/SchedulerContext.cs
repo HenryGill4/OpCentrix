@@ -45,6 +45,9 @@ namespace OpCentrix.Data
         // Task 6: Enhanced machine management
         public DbSet<Material> Materials { get; set; }
 
+        // EDM Operations tracking
+        public DbSet<EDMLog> EDMLogs { get; set; }
+
         // Segment 7: B&T Industry Specialization
         public DbSet<PartClassification> PartClassifications { get; set; }
         public DbSet<ComplianceRequirement> ComplianceRequirements { get; set; }
@@ -409,6 +412,59 @@ namespace OpCentrix.Data
             modelBuilder.Entity<User>().HasKey(e => e.Id);
             modelBuilder.Entity<UserSettings>().HasKey(e => e.Id);
             modelBuilder.Entity<JobLogEntry>().HasKey(e => e.Id);
+
+            // Configure EDMLog entity
+            modelBuilder.Entity<EDMLog>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.LogNumber).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.PartNumber).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Quantity).IsRequired();
+                entity.Property(e => e.LogDate).IsRequired();
+                entity.Property(e => e.Shift).HasMaxLength(50).HasDefaultValue("");
+                entity.Property(e => e.OperatorName).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.OperatorInitials).IsRequired().HasMaxLength(10);
+                entity.Property(e => e.StartTime).HasMaxLength(10).HasDefaultValue("");
+                entity.Property(e => e.EndTime).HasMaxLength(10).HasDefaultValue("");
+                entity.Property(e => e.Measurement1).HasMaxLength(50).HasDefaultValue("");
+                entity.Property(e => e.Measurement2).HasMaxLength(50).HasDefaultValue("");
+                entity.Property(e => e.ToleranceStatus).HasMaxLength(50).HasDefaultValue("");
+                entity.Property(e => e.ScrapIssues).HasMaxLength(200).HasDefaultValue("");
+                entity.Property(e => e.Notes).HasMaxLength(2000).HasDefaultValue("");
+                entity.Property(e => e.TotalTime).HasMaxLength(50).HasDefaultValue("");
+                entity.Property(e => e.CreatedBy).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.LastModifiedBy).HasMaxLength(100).HasDefaultValue("");
+                entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.IsActive).HasDefaultValue(true);
+                entity.Property(e => e.MachineUsed).HasMaxLength(100).HasDefaultValue("");
+                entity.Property(e => e.ProcessType).HasMaxLength(100).HasDefaultValue("EDM");
+                entity.Property(e => e.QualityNotes).HasMaxLength(500).HasDefaultValue("");
+                entity.Property(e => e.IsCompleted).HasDefaultValue(false);
+                entity.Property(e => e.RequiresReview).HasDefaultValue(false);
+                entity.Property(e => e.ReviewedBy).HasMaxLength(100).HasDefaultValue("");
+                entity.Property(e => e.ReviewNotes).HasMaxLength(500).HasDefaultValue("");
+                entity.Property(e => e.ProcessParameters).HasMaxLength(2000).HasDefaultValue("{}");
+                entity.Property(e => e.Measurements).HasMaxLength(1000).HasDefaultValue("{}");
+
+                // Foreign key relationship to Part (optional)
+                entity.HasOne(e => e.Part)
+                    .WithMany()
+                    .HasForeignKey(e => e.PartId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                // Indexes for performance
+                entity.HasIndex(e => e.LogNumber).IsUnique();
+                entity.HasIndex(e => e.PartNumber);
+                entity.HasIndex(e => e.LogDate);
+                entity.HasIndex(e => e.OperatorName);
+                entity.HasIndex(e => e.CreatedDate);
+                entity.HasIndex(e => e.IsActive);
+                entity.HasIndex(e => e.IsCompleted);
+                entity.HasIndex(e => e.RequiresReview);
+                entity.HasIndex(e => new { e.LogDate, e.OperatorName });
+                entity.HasIndex(e => new { e.PartNumber, e.LogDate });
+            });
         }
         
         private void ConfigureAdminEntities(ModelBuilder modelBuilder)
@@ -558,11 +614,68 @@ namespace OpCentrix.Data
             modelBuilder.Entity<BuildJobPart>().HasKey(e => e.PartEntryId);
             modelBuilder.Entity<DelayLog>().HasKey(e => e.DelayId);
             modelBuilder.Entity<Material>().HasKey(e => e.Id);
+            modelBuilder.Entity<JobNote>().HasKey(e => e.Id);
+            modelBuilder.Entity<JobStage>().HasKey(e => e.Id);
+            modelBuilder.Entity<StageDependency>().HasKey(e => e.Id);
+            modelBuilder.Entity<StageNote>().HasKey(e => e.Id);
             modelBuilder.Entity<User>().HasKey(e => e.Id);
             modelBuilder.Entity<UserSettings>().HasKey(e => e.Id);
             modelBuilder.Entity<JobLogEntry>().HasKey(e => e.Id);
-        }
 
+            // Configure EDMLog entity
+            modelBuilder.Entity<EDMLog>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.LogNumber).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.PartNumber).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Quantity).IsRequired();
+                entity.Property(e => e.LogDate).IsRequired();
+                entity.Property(e => e.Shift).HasMaxLength(50).HasDefaultValue("");
+                entity.Property(e => e.OperatorName).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.OperatorInitials).IsRequired().HasMaxLength(10);
+                entity.Property(e => e.StartTime).HasMaxLength(10).HasDefaultValue("");
+                entity.Property(e => e.EndTime).HasMaxLength(10).HasDefaultValue("");
+                entity.Property(e => e.Measurement1).HasMaxLength(50).HasDefaultValue("");
+                entity.Property(e => e.Measurement2).HasMaxLength(50).HasDefaultValue("");
+                entity.Property(e => e.ToleranceStatus).HasMaxLength(50).HasDefaultValue("");
+                entity.Property(e => e.ScrapIssues).HasMaxLength(200).HasDefaultValue("");
+                entity.Property(e => e.Notes).HasMaxLength(2000).HasDefaultValue("");
+                entity.Property(e => e.TotalTime).HasMaxLength(50).HasDefaultValue("");
+                entity.Property(e => e.CreatedBy).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.LastModifiedBy).HasMaxLength(100).HasDefaultValue("");
+                entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.IsActive).HasDefaultValue(true);
+                entity.Property(e => e.MachineUsed).HasMaxLength(100).HasDefaultValue("");
+                entity.Property(e => e.ProcessType).HasMaxLength(100).HasDefaultValue("EDM");
+                entity.Property(e => e.QualityNotes).HasMaxLength(500).HasDefaultValue("");
+                entity.Property(e => e.IsCompleted).HasDefaultValue(false);
+                entity.Property(e => e.RequiresReview).HasDefaultValue(false);
+                entity.Property(e => e.ReviewedBy).HasMaxLength(100).HasDefaultValue("");
+                entity.Property(e => e.ReviewNotes).HasMaxLength(500).HasDefaultValue("");
+                entity.Property(e => e.ProcessParameters).HasMaxLength(2000).HasDefaultValue("{}");
+                entity.Property(e => e.Measurements).HasMaxLength(1000).HasDefaultValue("{}");
+
+                // Foreign key relationship to Part (optional)
+                entity.HasOne(e => e.Part)
+                    .WithMany()
+                    .HasForeignKey(e => e.PartId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                // Indexes for performance
+                entity.HasIndex(e => e.LogNumber).IsUnique();
+                entity.HasIndex(e => e.PartNumber);
+                entity.HasIndex(e => e.LogDate);
+                entity.HasIndex(e => e.OperatorName);
+                entity.HasIndex(e => e.CreatedDate);
+                entity.HasIndex(e => e.IsActive);
+                entity.HasIndex(e => e.IsCompleted);
+                entity.HasIndex(e => e.RequiresReview);
+                entity.HasIndex(e => new { e.LogDate, e.OperatorName });
+                entity.HasIndex(e => new { e.PartNumber, e.LogDate });
+            });
+        }
+        
         private void ConfigureBTEntities(ModelBuilder modelBuilder)
         {
             // Configure PartClassification entity - Segment 7.1
