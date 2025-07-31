@@ -881,55 +881,76 @@
     // Global variables
     let antiforgeryToken = '';
 
-    // Initialize on page load
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('?? [PARTS] Initializing Parts page');
+    /**
+     * Delete part with confirmation - MOVED TO GLOBAL SCOPE
+     */
+    window.deletePart = function(partId, partNumber, partName) {
+        console.log('??? [PARTS] Delete part button clicked for:', partNumber);
         
-        try {
-            // Initialize antiforgery token
-            const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
-            if (tokenInput) {
-                antiforgeryToken = tokenInput.value;
-                console.log('? [PARTS] Antiforgery token initialized');
+        if (!partId || partId <= 0) {
+            console.error('? [PARTS] Invalid part ID:', partId);
+            if (window.showToast) {
+                window.showToast('error', 'Invalid part ID');
             }
-            
-            // Initialize Bootstrap tooltips
-            if (typeof bootstrap !== 'undefined') {
-                const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-                tooltipTriggerList.forEach(tooltipTriggerEl => {
-                    new bootstrap.Tooltip(tooltipTriggerEl, {
-                        trigger: 'hover',
-                        delay: { show: 500, hide: 100 }
-                    });
-                });
-            }
-            
-            // Check for success/error messages
-            const urlParams = new URLSearchParams(window.location.search);
-            const successMessage = urlParams.get('success');
-            const errorMessage = urlParams.get('error');
-            
-            if (successMessage) {
-                showToast('success', successMessage);
-                // Clean up URL
-                window.history.replaceState({}, document.title, window.location.pathname);
-            }
-            
-            if (errorMessage) {
-                showToast('error', errorMessage);
-                // Clean up URL
-                window.history.replaceState({}, document.title, window.location.pathname);
-            }
-            
-            console.log('? [PARTS] Parts page initialized successfully');
-            
-        } catch (error) {
-            console.error('? [PARTS] Error initializing Parts page:', error);
+            return;
         }
-    });
+        
+        const message = `Are you sure you want to delete part "${partNumber}" (${partName})?\n\nThis action cannot be undone.`;
+        
+        if (confirm(message)) {
+            console.log('? [PARTS] Delete confirmed, submitting form');
+            
+            try {
+                const form = document.createElement('form');
+                form.method = 'post';
+                form.action = '/Admin/Parts?handler=Delete';
+                form.style.display = 'none';
+                
+                // Add antiforgery token
+                if (antiforgeryToken) {
+                    const tokenInput = document.createElement('input');
+                    tokenInput.type = 'hidden';
+                    tokenInput.name = '__RequestVerificationToken';
+                    tokenInput.value = antiforgeryToken;
+                    form.appendChild(tokenInput);
+                } else {
+                    console.warn('?? [PARTS] No antiforgery token available');
+                }
+                
+                // Add part ID
+                const idInput = document.createElement('input');
+                idInput.type = 'hidden';
+                idInput.name = 'id';
+                idInput.value = partId;
+                form.appendChild(idInput);
+                
+                // Submit form
+                document.body.appendChild(form);
+                form.submit();
+                
+                console.log('? [PARTS] Delete form submitted');
+                
+            } catch (error) {
+                console.error('? [PARTS] Error creating delete form:', error);
+                if (window.showToast) {
+                    window.showToast('error', 'Failed to delete part. Please try again.');
+                }
+            }
+        } else {
+            console.log('? [PARTS] Delete cancelled');
+        }
+    };
 
     /**
-     * Load part form (add or edit) - Production Ready
+     * Alternative delete handler for better compatibility
+     */
+    window.handleDeletePartClick = function(partId, partNumber, partName) {
+        console.log('??? [PARTS] Alternative delete handler called for:', partNumber);
+        return window.deletePart(partId, partNumber, partName);
+    };
+
+    /**
+     * Load part form (add or edit) - MOVED TO GLOBAL SCOPE
      */
     window.loadPartForm = function(action, partId = null) {
         console.log('?? [PARTS] Loading part form:', action, partId);
@@ -1046,43 +1067,7 @@
     };
 
     /**
-     * Delete part with confirmation
-     */
-    window.deletePart = function(partId, partNumber, partName) {
-        console.log('??? [PARTS] Delete part button clicked for:', partNumber);
-        
-        const message = `Are you sure you want to delete part "${partNumber}" (${partName})?\n\nThis action cannot be undone.`;
-        
-        if (confirm(message)) {
-            console.log('? [PARTS] Delete confirmed, submitting form');
-            
-            const form = document.createElement('form');
-            form.method = 'post';
-            form.action = '/Admin/Parts?handler=Delete';
-            
-            // Add antiforgery token
-            const tokenInput = document.createElement('input');
-            tokenInput.type = 'hidden';
-            tokenInput.name = '__RequestVerificationToken';
-            tokenInput.value = antiforgeryToken;
-            form.appendChild(tokenInput);
-            
-            // Add part ID
-            const idInput = document.createElement('input');
-            idInput.type = 'hidden';
-            idInput.name = 'id';
-            idInput.value = partId;
-            form.appendChild(idInput);
-            
-            document.body.appendChild(form);
-            form.submit();
-        } else {
-            console.log('? [PARTS] Delete cancelled');
-        }
-    };
-
-    /**
-     * Show part details in modal
+     * Show part details in modal - MOVED TO GLOBAL SCOPE
      */
     window.showPartDetails = function(partId) {
         console.log('??? [PARTS] Showing part details for ID:', partId);
@@ -1124,7 +1109,7 @@
     };
 
     /**
-     * Change page size
+     * Change page size - MOVED TO GLOBAL SCOPE
      */
     window.changePageSize = function(newSize) {
         const url = new URL(window.location);
@@ -1132,6 +1117,166 @@
         url.searchParams.set('PageNumber', '1');
         window.location.href = url.toString();
     };
+
+    /**
+     * Show toast notification with enhanced Bootstrap 5 support - MOVED TO GLOBAL SCOPE
+     */
+    window.showToast = function(type, message) {
+        console.log(`?? [PARTS] Showing ${type} toast:`, message);
+        
+        try {
+            // Create toast if Bootstrap is available
+            if (typeof bootstrap !== 'undefined') {
+                const toastId = 'toast-' + Date.now();
+                const toastHtml = `
+                    <div id="${toastId}" class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true" data-bs-delay="5000">
+                        <div class="d-flex">
+                            <div class="toast-body">
+                                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                                ${message}
+                            </div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                    </div>
+                `;
+                
+                // Get or create toast container
+                let toastContainer = document.getElementById('toast-container');
+                if (!toastContainer) {
+                    toastContainer = document.createElement('div');
+                    toastContainer.id = 'toast-container';
+                    toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+                    toastContainer.style.zIndex = '1055';
+                    document.body.appendChild(toastContainer);
+                }
+                
+                // Add toast
+                toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+                const toastElement = document.getElementById(toastId);
+                const toast = new bootstrap.Toast(toastElement);
+                toast.show();
+                
+                // Remove after hiding
+                toastElement.addEventListener('hidden.bs.toast', () => {
+                    toastElement.remove();
+                });
+                
+                console.log('? [PARTS] Bootstrap toast displayed successfully');
+            } else {
+                // Fallback to browser alert
+                console.warn('?? [PARTS] Bootstrap not available, using alert fallback');
+                alert(`${type.toUpperCase()}: ${message}`);
+            }
+        } catch (error) {
+            console.error('? [PARTS] Error showing toast:', error);
+            // Ultimate fallback
+            alert(`${type.toUpperCase()}: ${message}`);
+        }
+    };
+
+    /**
+     * Debug function to test delete functionality - MOVED TO GLOBAL SCOPE
+     */
+    window.debugDeleteFunction = function() {
+        console.group('?? [PARTS] Delete Function Debug');
+        console.log('deletePart function available:', typeof window.deletePart);
+        console.log('handleDeletePartClick function available:', typeof window.handleDeletePartClick);
+        console.log('antiforgeryToken available:', !!antiforgeryToken);
+        console.log('antiforgeryToken value:', antiforgeryToken ? 'Present' : 'Missing');
+        
+        // Test with fake data
+        if (typeof window.deletePart === 'function') {
+            console.log('Testing deletePart function (dry run)...');
+            // Don't actually call it to avoid unwanted deletion
+        }
+        
+        console.groupEnd();
+    };
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('?? [PARTS] Initializing Parts page');
+        
+        try {
+            // Initialize antiforgery token with enhanced detection
+            let tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+            
+            // If not found in current page, try to find in forms
+            if (!tokenInput) {
+                tokenInput = document.querySelector('form input[name="__RequestVerificationToken"]');
+            }
+            
+            // If still not found, try the antiforgery form at the bottom of the page
+            if (!tokenInput) {
+                const hiddenForm = document.querySelector('form[style*="display: none"]');
+                if (hiddenForm) {
+                    tokenInput = hiddenForm.querySelector('input[name="__RequestVerificationToken"]');
+                }
+            }
+            
+            if (tokenInput) {
+                antiforgeryToken = tokenInput.value;
+                console.log('? [PARTS] Antiforgery token initialized successfully');
+            } else {
+                console.warn('?? [PARTS] Antiforgery token not found - delete operations may fail');
+                
+                // Try to create a temporary form to get token
+                fetch('/Admin/Parts', {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const token = doc.querySelector('input[name="__RequestVerificationToken"]');
+                    if (token) {
+                        antiforgeryToken = token.value;
+                        console.log('? [PARTS] Antiforgery token retrieved via AJAX');
+                    }
+                })
+                .catch(error => {
+                    console.warn('?? [PARTS] Failed to retrieve antiforgery token:', error);
+                });
+            }
+            
+            // Initialize Bootstrap tooltips
+            if (typeof bootstrap !== 'undefined') {
+                const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+                tooltipTriggerList.forEach(tooltipTriggerEl => {
+                    new bootstrap.Tooltip(tooltipTriggerEl, {
+                        trigger: 'hover',
+                        delay: { show: 500, hide: 100 }
+                    });
+                });
+                console.log('? [PARTS] Bootstrap tooltips initialized');
+            }
+            
+            // Check for success/error messages in URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const successMessage = urlParams.get('success');
+            const errorMessage = urlParams.get('error');
+            
+            if (successMessage) {
+                window.showToast('success', decodeURIComponent(successMessage));
+                // Clean up URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+            
+            if (errorMessage) {
+                window.showToast('error', decodeURIComponent(errorMessage));
+                // Clean up URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+            
+            console.log('? [PARTS] Parts page initialized successfully');
+            
+        } catch (error) {
+            console.error('? [PARTS] Error initializing Parts page:', error);
+        }
+    });
 
     /**
      * Initialize form components after modal content loads
@@ -1301,7 +1446,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <form method="post" asp-page-handler="ScheduleJob" class="d-inline">
+                <form method="post" asp-page-handler="ScheduleJob" class="d-inline">      
                     <input type="hidden" name="partId" value="${part.id}" />
                     <button type="submit" class="btn btn-success">
                         <i class="fas fa-calendar-plus me-2"></i>Schedule Job
@@ -1337,52 +1482,28 @@
         return `Error: ${message}`;
     }
 
-    /**
-     * Show toast notification
-     */
-    function showToast(type, message) {
-        // Create toast if Bootstrap is available
-        if (typeof bootstrap !== 'undefined') {
-            const toastHtml = `
-                <div class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0" role="alert" aria-live="assertive" aria-atomic="true">
-                    <div class="d-flex">
-                        <div class="toast-body">
-                            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
-                            ${message}
-                        </div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                    </div>
-                </div>
-            `;
-            
-            // Get or create toast container
-            let toastContainer = document.getElementById('toast-container');
-            if (!toastContainer) {
-                toastContainer = document.createElement('div');
-                toastContainer.id = 'toast-container';
-                toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
-                toastContainer.style.zIndex = '1055';
-                document.body.appendChild(toastContainer);
-            }
-            
-            // Add toast
-            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
-            const toastElement = toastContainer.lastElementChild;
-            const toast = new bootstrap.Toast(toastElement);
-            toast.show();
-            
-            // Remove after hiding
-            toastElement.addEventListener('hidden.bs.toast', () => {
-                toastElement.remove();
-            });
-        } else {
-            // Fallback to alert
-            alert(message);
-        }
-    }
-
-    // Make showToast globally available
-    window.showToast = showToast;
-
     console.log('?? [PARTS] Parts page script loaded successfully with enhanced visual design');
 </script>
+
+<!-- TempData message handling -->
+@if(TempData["SuccessMessage"] != null)
+{
+    <script>
+        setTimeout(() => {
+            if (window.showToast) {
+                window.showToast('success', '@Html.Raw(Html.Encode(TempData["SuccessMessage"]))');
+            }
+        }, 500);
+    </script>
+}
+
+@if(TempData["ErrorMessage"] != null)
+{
+    <script>
+        setTimeout(() => {
+            if (window.showToast) {
+                window.showToast('error', '@Html.Raw(Html.Encode(TempData["ErrorMessage"]))');
+            }
+        }, 500);
+    </script>
+}

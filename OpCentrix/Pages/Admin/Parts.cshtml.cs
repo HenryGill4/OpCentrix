@@ -177,7 +177,7 @@ namespace OpCentrix.Pages.Admin
         }
 
         /// <summary>
-        /// Create new part
+        /// Create new part - ENHANCED with better error handling and validation
         /// </summary>
         public async Task<IActionResult> OnPostCreateAsync()
         {
@@ -186,6 +186,13 @@ namespace OpCentrix.Pages.Admin
 
             try
             {
+                if (Part == null)
+                {
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Part data is null", operationId);
+                    ModelState.AddModelError("", "Part data is required");
+                    return Partial("Shared/_PartForm", new Part());
+                }
+
                 // Validate required fields
                 var validationErrors = ValidatePartData(Part);
                 if (validationErrors.Any())
@@ -217,49 +224,90 @@ namespace OpCentrix.Pages.Admin
                 Part.LastModifiedDate = DateTime.UtcNow;
                 Part.LastModifiedBy = User.Identity?.Name ?? "System";
 
-                // Add to database
-                _context.Parts.Add(Part);
-                await _context.SaveChangesAsync();
-
-                _logger.LogInformation("? [PARTS-{OperationId}] Part created successfully: {PartNumber} (ID: {PartId})", 
-                    operationId, Part.PartNumber, Part.Id);
-
-                // Return success response with JavaScript to close modal and refresh
-                var successScript = $@"
-                    <script>
-                        console.log('? Part created successfully: {Part.PartNumber}');
+                // Use transaction for data integrity
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                
+                try
+                {
+                    // Add to database
+                    _context.Parts.Add(Part);
+                    var saveResult = await _context.SaveChangesAsync();
+                    
+                    if (saveResult > 0)
+                    {
+                        await transaction.CommitAsync();
                         
-                        // Close modal
-                        const modal = document.getElementById('partModal');
-                        if (modal && typeof bootstrap !== 'undefined') {{
-                            const bsModal = bootstrap.Modal.getInstance(modal);
-                            if (bsModal) bsModal.hide();
-                        }}
-                        
-                        // Show success message
-                        if (typeof showToast === 'function') {{
-                            showToast('success', 'Part ""{Part.PartNumber}"" created successfully!');
-                        }}
-                        
-                        // Redirect after delay to show success message
-                        setTimeout(() => {{
-                            console.log('?? Redirecting to refresh parts list');
-                            window.location.href = '/Admin/Parts';
-                        }}, 1000);
-                    </script>";
+                        _logger.LogInformation("? [PARTS-{OperationId}] Part created successfully: {PartNumber} (ID: {PartId})", 
+                            operationId, Part.PartNumber, Part.Id);
 
-                return Content(successScript, "text/html");
+                        // Return success response with JavaScript to close modal and refresh
+                        var successScript = $@"
+                            <script>
+                                console.log('? Part created successfully: {Part.PartNumber}');
+                                
+                                // Close modal
+                                const modal = document.getElementById('partModal');
+                                if (modal && typeof bootstrap !== 'undefined') {{
+                                    const bsModal = bootstrap.Modal.getInstance(modal);
+                                    if (bsModal) bsModal.hide();
+                                }}
+                                
+                                // Show success message
+                                if (typeof window.showToast === 'function') {{
+                                    window.showToast('success', 'Part ""{Part.PartNumber}"" created successfully!');
+                                }}
+                                
+                                // Redirect after delay to show success message
+                                setTimeout(() => {{
+                                    console.log('?? Redirecting to refresh parts list');
+                                    window.location.href = '/Admin/Parts';
+                                }}, 1500);
+                            </script>";
+
+                        return Content(successScript, "text/html");
+                    }
+                    else
+                    {
+                        await transaction.RollbackAsync();
+                        _logger.LogWarning("?? [PARTS-{OperationId}] No rows affected during part creation", operationId);
+                        ModelState.AddModelError("", "Failed to create part. No changes were made to the database.");
+                        return Partial("Shared/_PartForm", Part);
+                    }
+                }
+                catch (Exception dbEx)
+                {
+                    await transaction.RollbackAsync();
+                    throw; // Re-throw to be caught by outer catch
+                }
+            }
+            catch (DbUpdateException dbEx)
+            {
+                _logger.LogError(dbEx, "? [PARTS-{OperationId}] Database error creating part: {PartNumber}", operationId, Part?.PartNumber);
+                
+                // Check for specific constraint violations
+                var errorMessage = "A database error occurred while creating the part.";
+                if (dbEx.Message.Contains("UNIQUE") || dbEx.Message.Contains("duplicate"))
+                {
+                    errorMessage = "A part with this number or unique identifier already exists.";
+                }
+                else if (dbEx.Message.Contains("FOREIGN KEY") || dbEx.Message.Contains("constraint"))
+                {
+                    errorMessage = "Invalid reference data. Please check your selections and try again.";
+                }
+                
+                ModelState.AddModelError("", errorMessage);
+                return Partial("Shared/_PartForm", Part);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "?? [PARTS-{OperationId}] Error creating part: {PartNumber}", operationId, Part?.PartNumber);
-                ModelState.AddModelError("", "An error occurred while creating the part. Please try again.");
+                _logger.LogError(ex, "? [PARTS-{OperationId}] Unexpected error creating part: {PartNumber}", operationId, Part?.PartNumber);
+                ModelState.AddModelError("", $"An unexpected error occurred while creating the part: {ex.Message}. Please try again.");
                 return Partial("Shared/_PartForm", Part);
             }
         }
 
         /// <summary>
-        /// Update existing part
+        /// Update existing part - ENHANCED with better error handling and validation
         /// </summary>
         public async Task<IActionResult> OnPostUpdateAsync()
         {
@@ -269,6 +317,13 @@ namespace OpCentrix.Pages.Admin
 
             try
             {
+                if (Part == null)
+                {
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Part data is null", operationId);
+                    ModelState.AddModelError("", "Part data is required");
+                    return Partial("Shared/_PartForm", new Part());
+                }
+
                 // Validate required fields
                 var validationErrors = ValidatePartData(Part);
                 if (validationErrors.Any())
@@ -287,7 +342,7 @@ namespace OpCentrix.Pages.Admin
                 if (existingPart == null)
                 {
                     _logger.LogWarning("?? [PARTS-{OperationId}] Part not found for update: ID {PartId}", operationId, Part.Id);
-                    ModelState.AddModelError("", "Part not found");
+                    ModelState.AddModelError("", "Part not found. It may have been deleted by another user.");
                     return Partial("Shared/_PartForm", Part);
                 }
 
@@ -302,50 +357,88 @@ namespace OpCentrix.Pages.Admin
                     return Partial("Shared/_PartForm", Part);
                 }
 
-                // Preserve audit fields
+                // Preserve audit fields and other important data
                 Part.CreatedDate = existingPart.CreatedDate;
                 Part.CreatedBy = existingPart.CreatedBy;
                 Part.LastModifiedDate = DateTime.UtcNow;
                 Part.LastModifiedBy = User.Identity?.Name ?? "System";
 
-                // Update part
-                _context.Entry(existingPart).CurrentValues.SetValues(Part);
-                await _context.SaveChangesAsync();
-
-                _logger.LogInformation("? [PARTS-{OperationId}] Part updated successfully: {PartNumber} (ID: {PartId})", 
-                    operationId, Part.PartNumber, Part.Id);
-
-                // Return success response with JavaScript to close modal and refresh
-                var successScript = $@"
-                    <script>
-                        console.log('? Part updated successfully: {Part.PartNumber}');
+                // Use transaction for data integrity
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                
+                try
+                {
+                    // Update part using explicit property mapping to avoid EF tracking issues
+                    _context.Entry(existingPart).CurrentValues.SetValues(Part);
+                    
+                    var saveResult = await _context.SaveChangesAsync();
+                    
+                    if (saveResult > 0)
+                    {
+                        await transaction.CommitAsync();
                         
-                        // Close modal
-                        const modal = document.getElementById('partModal');
-                        if (modal && typeof bootstrap !== 'undefined') {{
-                            const bsModal = bootstrap.Modal.getInstance(modal);
-                            if (bsModal) bsModal.hide();
-                        }}
-                        
-                        // Show success message
-                        if (typeof showToast === 'function') {{
-                            showToast('success', 'Part ""{Part.PartNumber}"" updated successfully!');
-                        }}
-                        
-                        // Redirect after delay to show success message
-                        setTimeout(() => {{
-                            console.log('?? Redirecting to refresh parts list');
-                            window.location.href = '/Admin/Parts';
-                        }}, 1000);
-                    </script>";
+                        _logger.LogInformation("? [PARTS-{OperationId}] Part updated successfully: {PartNumber} (ID: {PartId})", 
+                            operationId, Part.PartNumber, Part.Id);
 
-                return Content(successScript, "text/html");
+                        // Return success response with JavaScript to close modal and refresh
+                        var successScript = $@"
+                            <script>
+                                console.log('? Part updated successfully: {Part.PartNumber}');
+                                
+                                // Close modal
+                                const modal = document.getElementById('partModal');
+                                if (modal && typeof bootstrap !== 'undefined') {{
+                                    const bsModal = bootstrap.Modal.getInstance(modal);
+                                    if (bsModal) bsModal.hide();
+                                }}
+                                
+                                // Show success message
+                                if (typeof window.showToast === 'function') {{
+                                    window.showToast('success', 'Part ""{Part.PartNumber}"" updated successfully!');
+                                }}
+                                
+                                // Redirect after delay to show success message
+                                setTimeout(() => {{
+                                    console.log('?? Redirecting to refresh parts list');
+                                    window.location.href = '/Admin/Parts';
+                                }}, 1500);
+                            </script>";
+
+                        return Content(successScript, "text/html");
+                    }
+                    else
+                    {
+                        await transaction.RollbackAsync();
+                        _logger.LogWarning("?? [PARTS-{OperationId}] No rows affected during part update", operationId);
+                        ModelState.AddModelError("", "No changes were detected or saved. Please verify your changes and try again.");
+                        return Partial("Shared/_PartForm", Part);
+                    }
+                }
+                catch (Exception dbEx)
+                {
+                    await transaction.RollbackAsync();
+                    throw; // Re-throw to be caught by outer catch
+                }
+            }
+            catch (DbUpdateConcurrencyException concurrencyEx)
+            {
+                _logger.LogError(concurrencyEx, "? [PARTS-{OperationId}] Concurrency error updating part: {PartNumber} (ID: {PartId})", 
+                    operationId, Part?.PartNumber, Part?.Id);
+                ModelState.AddModelError("", "This part has been modified by another user. Please reload the form and try again.");
+                return Partial("Shared/_PartForm", Part);
+            }
+            catch (DbUpdateException dbEx)
+            {
+                _logger.LogError(dbEx, "? [PARTS-{OperationId}] Database error updating part: {PartNumber} (ID: {PartId})", 
+                    operationId, Part?.PartNumber, Part?.Id);
+                ModelState.AddModelError("", "A database error occurred while updating the part. Please check for data conflicts and try again.");
+                return Partial("Shared/_PartForm", Part);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "?? [PARTS-{OperationId}] Error updating part: {PartNumber} (ID: {PartId})", 
+                _logger.LogError(ex, "? [PARTS-{OperationId}] Unexpected error updating part: {PartNumber} (ID: {PartId})", 
                     operationId, Part?.PartNumber, Part?.Id);
-                ModelState.AddModelError("", "An error occurred while updating the part. Please try again.");
+                ModelState.AddModelError("", $"An unexpected error occurred while updating the part: {ex.Message}. Please try again.");
                 return Partial("Shared/_PartForm", Part);
             }
         }
@@ -375,56 +468,105 @@ namespace OpCentrix.Pages.Admin
                     return RedirectToPage();
                 }
 
-                // ENHANCED: Check multiple dependency types
+                // ENHANCED: Check multiple dependency types with safe error handling
                 var dependencies = new List<string>();
                 
-                // Check Jobs (using PartNumber reference)
-                var jobCount = await _context.Jobs.CountAsync(j => j.PartNumber == part.PartNumber);
-                if (jobCount > 0)
+                try
                 {
-                    dependencies.Add($"{jobCount} scheduled job(s)");
+                    // Check Jobs (using PartNumber reference)
+                    var jobCount = await _context.Jobs.CountAsync(j => j.PartNumber == part.PartNumber);
+                    if (jobCount > 0)
+                    {
+                        dependencies.Add($"{jobCount} scheduled job(s)");
+                    }
+                }
+                catch (Exception jobEx)
+                {
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Error checking job dependencies: {Error}", operationId, jobEx.Message);
                 }
 
-                // Check BuildJobs (using PartId reference)  
-                var buildJobCount = await _context.BuildJobs.CountAsync(bj => bj.PartId == part.Id);
-                if (buildJobCount > 0)
+                try
                 {
-                    dependencies.Add($"{buildJobCount} build job(s)");
+                    // Check BuildJobs (using PartId reference)  
+                    var buildJobCount = await _context.BuildJobs.CountAsync(bj => bj.PartId == part.Id);
+                    if (buildJobCount > 0)
+                    {
+                        dependencies.Add($"{buildJobCount} build job(s)");
+                    }
+                }
+                catch (Exception buildJobEx)
+                {
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Error checking build job dependencies: {Error}", operationId, buildJobEx.Message);
                 }
 
-                // Check SerialNumbers (only if the DbSet exists)
-                var serialNumberCount = await _context.SerialNumbers.CountAsync(sn => sn.PartId == part.Id);
-                if (serialNumberCount > 0)
+                try
                 {
-                    dependencies.Add($"{serialNumberCount} serial number(s)");
+                    // Check SerialNumbers
+                    var serialNumberCount = await _context.SerialNumbers.CountAsync(sn => sn.PartId == part.Id);
+                    if (serialNumberCount > 0)
+                    {
+                        dependencies.Add($"{serialNumberCount} serial number(s)");
+                    }
+                }
+                catch (Exception serialEx)
+                {
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Error checking serial number dependencies: {Error}", operationId, serialEx.Message);
                 }
 
-                // Check JobNotes (only if the DbSet exists)
-                var jobNoteCount = await _context.JobNotes.CountAsync(jn => jn.PartId == part.Id);
-                if (jobNoteCount > 0)
+                try
                 {
-                    dependencies.Add($"{jobNoteCount} job note(s)");
+                    // Check JobNotes
+                    var jobNoteCount = await _context.JobNotes.CountAsync(jn => jn.PartId == part.Id);
+                    if (jobNoteCount > 0)
+                    {
+                        dependencies.Add($"{jobNoteCount} job note(s)");
+                    }
+                }
+                catch (Exception noteEx)
+                {
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Error checking job note dependencies: {Error}", operationId, noteEx.Message);
                 }
 
-                // Check InspectionCheckpoints (only if the DbSet exists)
-                var checkpointCount = await _context.InspectionCheckpoints.CountAsync(ic => ic.PartId == part.Id);
-                if (checkpointCount > 0)
+                try
                 {
-                    dependencies.Add($"{checkpointCount} inspection checkpoint(s)");
+                    // Check InspectionCheckpoints
+                    var checkpointCount = await _context.InspectionCheckpoints.CountAsync(ic => ic.PartId == part.Id);
+                    if (checkpointCount > 0)
+                    {
+                        dependencies.Add($"{checkpointCount} inspection checkpoint(s)");
+                    }
+                }
+                catch (Exception checkpointEx)
+                {
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Error checking inspection checkpoint dependencies: {Error}", operationId, checkpointEx.Message);
                 }
 
-                // Check ComplianceDocuments (only if the DbSet exists)
-                var complianceDocCount = await _context.ComplianceDocuments.CountAsync(cd => cd.PartId == part.Id);
-                if (complianceDocCount > 0)
+                try
                 {
-                    dependencies.Add($"{complianceDocCount} compliance document(s)");
+                    // Check ComplianceDocuments
+                    var complianceDocCount = await _context.ComplianceDocuments.CountAsync(cd => cd.PartId == part.Id);
+                    if (complianceDocCount > 0)
+                    {
+                        dependencies.Add($"{complianceDocCount} compliance document(s)");
+                    }
+                }
+                catch (Exception complianceEx)
+                {
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Error checking compliance document dependencies: {Error}", operationId, complianceEx.Message);
                 }
 
-                // Check PrototypeJobs (only if the DbSet exists)
-                var prototypeJobCount = await _context.PrototypeJobs.CountAsync(pj => pj.PartId == part.Id);
-                if (prototypeJobCount > 0)
+                try
                 {
-                    dependencies.Add($"{prototypeJobCount} prototype job(s)");
+                    // Check PrototypeJobs
+                    var prototypeJobCount = await _context.PrototypeJobs.CountAsync(pj => pj.PartId == part.Id);
+                    if (prototypeJobCount > 0)
+                    {
+                        dependencies.Add($"{prototypeJobCount} prototype job(s)");
+                    }
+                }
+                catch (Exception prototypeEx)
+                {
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Error checking prototype job dependencies: {Error}", operationId, prototypeEx.Message);
                 }
 
                 if (dependencies.Any())
@@ -471,13 +613,13 @@ namespace OpCentrix.Pages.Admin
             catch (DbUpdateException dbEx)
             {
                 _logger.LogError(dbEx, "? [PARTS-{OperationId}] Database error deleting part ID: {PartId}", operationId, id);
-                TempData["ErrorMessage"] = "Database error occurred while deleting the part. It may be referenced by other data.";
+                TempData["ErrorMessage"] = "Database error occurred while deleting the part. The part may be referenced by other data that prevents deletion.";
                 return RedirectToPage();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "? [PARTS-{OperationId}] Error deleting part ID: {PartId}", operationId, id);
-                TempData["ErrorMessage"] = "An unexpected error occurred while deleting the part. Please try again.";
+                _logger.LogError(ex, "? [PARTS-{OperationId}] Unexpected error deleting part ID: {PartId}", operationId, id);
+                TempData["ErrorMessage"] = $"An unexpected error occurred while deleting the part: {ex.Message}. Please try again or contact support if the issue persists.";
                 return RedirectToPage();
             }
         }
