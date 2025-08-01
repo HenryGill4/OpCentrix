@@ -642,6 +642,139 @@ namespace OpCentrix.Pages.Admin
 
         #endregion
 
+        #region API Endpoints
+
+        /// <summary>
+        /// Get part data as JSON for AJAX requests
+        /// </summary>
+        public async Task<IActionResult> OnGetPartDataAsync(int id)
+        {
+            try
+            {
+                _logger.LogInformation("Getting part data for ID: {PartId}", id);
+                
+                if (id <= 0)
+                {
+                    _logger.LogWarning("Invalid part ID requested: {PartId}", id);
+                    return BadRequest("Invalid part ID");
+                }
+
+                var part = await _context.Parts
+                    .Include(p => p.PartClassification)
+                    .FirstOrDefaultAsync(p => p.Id == id);
+                    
+                if (part == null)
+                {
+                    _logger.LogWarning("Part not found for ID: {PartId}", id);
+                    return NotFound("Part not found");
+                }
+
+                // Get stage requirements for this part
+                var stageRequirements = await _context.PartStageRequirements
+                    .Where(psr => psr.PartId == id && psr.IsActive)
+                    .Include(psr => psr.ProductionStage)
+                    .OrderBy(psr => psr.ExecutionOrder)
+                    .ToListAsync();
+
+                // Create response object
+                var partData = new
+                {
+                    id = part.Id,
+                    partNumber = part.PartNumber,
+                    name = part.Name,
+                    description = part.Description,
+                    industry = part.Industry,
+                    application = part.Application,
+                    material = part.Material,
+                    slsMaterial = part.SlsMaterial,
+                    estimatedHours = part.EstimatedHours,
+                    adminEstimatedHoursOverride = part.AdminEstimatedHoursOverride,
+                    adminOverrideReason = part.AdminOverrideReason,
+                    hasAdminOverride = part.HasAdminOverride,
+                    processType = part.ProcessType,
+                    requiredMachineType = part.RequiredMachineType,
+                    materialCostPerKg = part.MaterialCostPerKg,
+                    standardLaborCostPerHour = part.StandardLaborCostPerHour,
+                    partCategory = part.PartCategory,
+                    partClass = part.PartClass,
+                    customerPartNumber = part.CustomerPartNumber,
+                    dimensions = part.Dimensions,
+                    weightGrams = part.WeightGrams,
+                    isActive = part.IsActive,
+                    requiresFDA = part.RequiresFDA,
+                    requiresAS9100 = part.RequiresAS9100,
+                    requiresNADCAP = part.RequiresNADCAP,
+                    complexityLevel = part.ComplexityLevel,
+                    complexityScore = part.ComplexityScore,
+                    createdDate = part.CreatedDate,
+                    createdBy = part.CreatedBy,
+                    lastModifiedDate = part.LastModifiedDate,
+                    lastModifiedBy = part.LastModifiedBy,
+                    // Manufacturing requirements (legacy boolean flags)
+                    requiresSLSPrinting = part.RequiresSLSPrinting,
+                    requiresCNCMachining = part.RequiresCNCMachining,
+                    requiresEDMOperations = part.RequiresEDMOperations,
+                    requiresAssembly = part.RequiresAssembly,
+                    requiresFinishing = part.RequiresFinishing,
+                    requiresInspection = part.RequiresInspection,
+                    // Process parameters
+                    recommendedLaserPower = part.RecommendedLaserPower,
+                    recommendedScanSpeed = part.RecommendedScanSpeed,
+                    recommendedLayerThickness = part.RecommendedLayerThickness,
+                    recommendedBuildTemperature = part.RecommendedBuildTemperature,
+                    // Stage requirements
+                    stageRequirements = stageRequirements.Select(sr => new
+                    {
+                        id = sr.Id,
+                        productionStageId = sr.ProductionStageId,
+                        stageName = sr.ProductionStage?.Name,
+                        executionOrder = sr.ExecutionOrder,
+                        estimatedHours = sr.EstimatedHours,
+                        isRequired = sr.IsRequired,
+                        notes = sr.ProductionStage?.Description // Use description instead of Notes
+                    }).ToList()
+                };
+
+                _logger.LogInformation("Successfully retrieved part data for ID: {PartId}", id);
+                return new JsonResult(partData);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving part data for ID: {PartId}", id);
+                return StatusCode(500, "Error retrieving part data");
+            }
+        }
+
+        /// <summary>
+        /// Schedule a job for a specific part
+        /// </summary>
+        public async Task<IActionResult> OnPostScheduleJobAsync(int partId)
+        {
+            try
+            {
+                _logger.LogInformation("Scheduling job for part ID: {PartId}", partId);
+                
+                var part = await _context.Parts.FindAsync(partId);
+                if (part == null)
+                {
+                    TempData["ErrorMessage"] = "Part not found";
+                    return RedirectToPage();
+                }
+
+                // Redirect to scheduler with part pre-selected
+                TempData["SuccessMessage"] = $"Redirecting to scheduler for part '{part.PartNumber}'";
+                return RedirectToPage("/Scheduler/Index", new { partNumber = part.PartNumber });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error scheduling job for part ID: {PartId}", partId);
+                TempData["ErrorMessage"] = "Error scheduling job. Please try again.";
+                return RedirectToPage();
+            }
+        }
+
+        #endregion
+
         #region Private Helper Methods
 
         private async Task EnsureDefaultStagesExist()

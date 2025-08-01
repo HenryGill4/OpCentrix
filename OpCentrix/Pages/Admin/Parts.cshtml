@@ -790,29 +790,114 @@
     window.showPartDetails = function(partId) {
         console.log('?? [PARTS] Showing part details for ID:', partId);
         
-        fetch(`/Admin/Parts?handler=PartData&id=${partId}`, {
-            headers: {
-                'RequestVerificationToken': antiforgeryToken
+        if (!partId || partId <= 0) {
+            console.error('? [PARTS] Invalid part ID for details:', partId);
+            showToast('error', 'Invalid part ID');
+            return;
+        }
+        
+        // Show loading modal first
+        const modal = document.getElementById('partModal');
+        const modalContent = document.getElementById('partModalContent');
+        
+        if (!modal || !modalContent) {
+            console.error('? [PARTS] Modal elements not found');
+            showToast('error', 'Modal not available');
+            return;
+        }
+        
+        // Show loading state
+        modalContent.innerHTML = createLoadingContent('details');
+        
+        // Show modal
+        try {
+            if (typeof bootstrap !== 'undefined') {
+                const bootstrapModal = new bootstrap.Modal(modal);
+                bootstrapModal.show();
+            } else {
+                modal.style.display = 'block';
+                modal.classList.add('show');
+                document.body.classList.add('modal-open');
             }
+        } catch (error) {
+            console.error('? [PARTS] Error showing modal:', error);
+            showToast('error', 'Failed to open details modal');
+            return;
+        }
+        
+        // Fetch part data with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+        
+        fetch(`/Admin/Parts?handler=PartData&id=${partId}`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'RequestVerificationToken': antiforgeryToken
+            },
+            signal: controller.signal,
+            credentials: 'same-origin'
         })
         .then(response => {
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            clearTimeout(timeoutId);
+            
+            console.log('?? [PARTS] Part data response:', response.status, response.statusText);
+            
+            if (!response.ok) {
+                if (response.status === 404) {
+                    throw new Error('Part not found. It may have been deleted.');
+                } else if (response.status === 500) {
+                    throw new Error('Server error occurred while loading part details.');
+                } else {
+                    throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                }
+            }
+            
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Invalid response format. Expected JSON data.');
+            }
+            
             return response.json();
         })
         .then(part => {
-            const details = createPartDetailsContent(part);
-            document.getElementById('partModalContent').innerHTML = details;
+            clearTimeout(timeoutId);
             
-            if (typeof bootstrap !== 'undefined') {
-                const modal = new bootstrap.Modal(document.getElementById('partModal'));
-                modal.show();
+            if (!part || !part.id) {
+                throw new Error('Invalid part data received from server');
             }
             
-            console.log('? [PARTS] Part details loaded successfully');
+            console.log('? [PARTS] Part details loaded successfully:', part.partNumber);
+            
+            // Generate and display part details
+            const details = createPartDetailsContent(part);
+            modalContent.innerHTML = details;
+            
+            // Initialize any tooltips in the details content
+            setTimeout(() => {
+                if (typeof bootstrap !== 'undefined') {
+                    const tooltipTriggerList = modalContent.querySelectorAll('[data-bs-toggle="tooltip"]');
+                    tooltipTriggerList.forEach(tooltipTriggerEl => {
+                        new bootstrap.Tooltip(tooltipTriggerEl);
+                    });
+                }
+            }, 100);
         })
         .catch(error => {
+            clearTimeout(timeoutId);
             console.error('? [PARTS] Error loading part details:', error);
-            showToast('error', 'Failed to load part details');
+            
+            let errorMessage = 'Failed to load part details';
+            if (error.name === 'AbortError') {
+                errorMessage = 'Request timed out. Please check your connection and try again.';
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            
+            // Show error in modal
+            modalContent.innerHTML = createErrorContent('details', errorMessage, `/Admin/Parts`);
+            showToast('error', errorMessage);
         });
     };
 
@@ -979,6 +1064,10 @@
     }
 
     function createLoadingContent(action) {
+        const actionText = action === 'add' ? 'Add Part' : 
+                          action === 'edit' ? 'Edit Part' : 
+                          action === 'details' ? 'Part Details' : 'Part';
+        
         return `
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title">
@@ -987,16 +1076,25 @@
                             <span class="visually-hidden">Loading...</span>
                         </div>
                         <i class="fas fa-cogs me-2"></i>
-                        Loading ${action === 'add' ? 'Add Part' : 'Edit Part'} Form...
+                        Loading ${actionText}...
                     </div>
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body text-center py-5">
-                <div class="spinner-border text-primary mb-3" role="status">
+                <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
                     <span class="visually-hidden">Loading...</span>
                 </div>
-                <p class="text-muted">Loading part form with stage management...</p>
+                <p class="text-muted">
+                    ${action === 'details' ? 'Loading part details...' : 
+                      action === 'add' ? 'Loading part form with stage management...' : 
+                      'Loading part form...'}
+                </p>
+                <div class="progress" style="height: 6px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                         role="progressbar" style="width: 100%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100">
+                    </div>
+                </div>
             </div>
         `;
     }
@@ -1037,36 +1135,157 @@
                     <i class="fas fa-cogs me-2"></i>
                     Part Details: ${part.partNumber}
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="row">
                     <div class="col-md-6">
-                        <h6 class="text-primary">Basic Information</h6>
+                        <h6 class="text-primary border-bottom pb-2 mb-3">
+                            <i class="fas fa-info-circle me-2"></i>Basic Information
+                        </h6>
+                        <div class="mb-3">
+                            <strong>Part Number:</strong> 
+                            <span class="badge bg-primary ms-2">${part.partNumber}</span>
+                        </div>
                         <p><strong>Name:</strong> ${part.name || 'N/A'}</p>
                         <p><strong>Description:</strong> ${part.description || 'N/A'}</p>
-                        <p><strong>Industry:</strong> ${part.industry || 'N/A'}</p>
+                        <p><strong>Industry:</strong> 
+                            <span class="badge bg-info">${part.industry || 'N/A'}</span>
+                        </p>
                         <p><strong>Application:</strong> ${part.application || 'N/A'}</p>
-                        <p><strong>Category:</strong> ${part.partCategory || 'N/A'}</p>
-                        <p><strong>Class:</strong> ${part.partClass || 'N/A'}</p>
-                        <p><strong>Customer Part:</strong> ${part.customerPartNumber || 'N/A'}</p>
+                        <p><strong>Category:</strong> 
+                            <span class="badge bg-secondary">${part.partCategory || 'N/A'}</span>
+                        </p>
+                        <p><strong>Class:</strong> 
+                            <span class="badge ${getClassBadgeColor(part.partClass)}">${part.partClass || 'N/A'}</span>
+                        </p>
+                        ${part.customerPartNumber ? `<p><strong>Customer Part #:</strong> ${part.customerPartNumber}</p>` : ''}
+                        <p><strong>Status:</strong> 
+                            <span class="badge ${part.isActive ? 'bg-success' : 'bg-secondary'}">
+                                <i class="fas fa-${part.isActive ? 'check-circle' : 'pause-circle'} me-1"></i>
+                                ${part.isActive ? 'Active' : 'Inactive'}
+                            </span>
+                        </p>
                     </div>
                     <div class="col-md-6">
-                        <h6 class="text-primary">Manufacturing Details</h6>
-                        <p><strong>Material:</strong> ${part.material || 'N/A'}</p>
-                        <p><strong>SLS Material:</strong> ${part.slsMaterial || 'N/A'}</p>
-                        <p><strong>Estimated Hours:</strong> ${part.estimatedHours || 0}h</p>
-                        ${part.adminEstimatedHoursOverride ? `<p><strong>Override Hours:</strong> ${part.adminEstimatedHoursOverride}h</p>` : ''}
+                        <h6 class="text-primary border-bottom pb-2 mb-3">
+                            <i class="fas fa-cogs me-2"></i>Manufacturing Details
+                        </h6>
+                        <p><strong>Material:</strong> 
+                            <span class="badge bg-success">${part.material || 'N/A'}</span>
+                        </p>
+                        ${part.slsMaterial !== part.material ? `<p><strong>SLS Material:</strong> <span class="badge bg-success">${part.slsMaterial || 'N/A'}</span></p>` : ''}
+                        <p><strong>Estimated Hours:</strong> 
+                            <span class="fw-bold text-info">${part.estimatedHours || 0}h</span>
+                        </p>
+                        ${part.adminEstimatedHoursOverride ? `
+                            <p><strong>Override Hours:</strong> 
+                                <span class="fw-bold text-warning">${part.adminEstimatedHoursOverride}h</span>
+                                <span class="badge bg-warning text-dark ms-1">ADMIN OVERRIDE</span>
+                            </p>
+                            ${part.adminOverrideReason ? `<p><strong>Override Reason:</strong> <em>${part.adminOverrideReason}</em></p>` : ''}
+                        ` : ''}
                         <p><strong>Process Type:</strong> ${part.processType || 'N/A'}</p>
-                        <p><strong>Required Machine:</strong> ${part.requiredMachineType || 'N/A'}</p>
-                        <p><strong>Material Cost:</strong> $${part.materialCostPerKg || 0}/kg</p>
+                        <p><strong>Required Machine:</strong> 
+                            <span class="badge bg-warning text-dark">${part.requiredMachineType || 'N/A'}</span>
+                        </p>
+                        <p><strong>Material Cost:</strong> 
+                            <span class="text-success fw-bold">$${(part.materialCostPerKg || 0).toFixed(2)}/kg</span>
+                        </p>
+                        <p><strong>Labor Rate:</strong> 
+                            <span class="text-info fw-bold">$${(part.standardLaborCostPerHour || 0).toFixed(2)}/hr</span>
+                        </p>
+                        ${part.dimensions ? `<p><strong>Dimensions:</strong> ${part.dimensions}</p>` : ''}
+                        ${part.weightGrams > 0 ? `<p><strong>Weight:</strong> ${part.weightGrams}g</p>` : ''}
+                    </div>
+                </div>
+                
+                ${part.stageRequirements && part.stageRequirements.length > 0 ? `
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2 mb-3">
+                                <i class="fas fa-tasks me-2"></i>Manufacturing Stages
+                            </h6>
+                            <div class="row">
+                                ${part.stageRequirements.map(stage => `
+                                    <div class="col-md-6 mb-3">
+                                        <div class="card border-left-primary h-100">
+                                            <div class="card-body p-3">
+                                                <div class="d-flex align-items-center justify-content-between">
+                                                    <span class="badge bg-primary">#${stage.executionOrder}</span>
+                                                    <small class="text-muted">${(stage.estimatedHours || 0).toFixed(1)}h</small>
+                                                </div>
+                                                <h6 class="card-title mt-2 mb-1">${stage.stageName}</h6>
+                                                ${stage.isRequired ? '<small class="text-danger">Required</small>' : '<small class="text-muted">Optional</small>'}
+                                                ${stage.notes ? `<p class="card-text small mt-1">${stage.notes}</p>` : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
+                
+                ${(part.requiresFDA || part.requiresAS9100 || part.requiresNADCAP) ? `
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2 mb-3">
+                                <i class="fas fa-certificate me-2"></i>Compliance Requirements
+                            </h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                ${part.requiresFDA ? '<span class="badge bg-danger"><i class="fas fa-shield-alt me-1"></i>FDA</span>' : ''}
+                                ${part.requiresAS9100 ? '<span class="badge bg-danger"><i class="fas fa-certificate me-1"></i>AS9100</span>' : ''}
+                                ${part.requiresNADCAP ? '<span class="badge bg-danger"><i class="fas fa-award me-1"></i>NADCAP</span>' : ''}
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
+                
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <h6 class="text-primary border-bottom pb-2 mb-3">
+                            <i class="fas fa-wrench me-2"></i>Process Parameters
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Laser Power:</strong> ${part.recommendedLaserPower || 0}W</p>
+                                <p><strong>Scan Speed:</strong> ${part.recommendedScanSpeed || 0} mm/s</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Layer Thickness:</strong> ${part.recommendedLayerThickness || 0}?m</p>
+                                <p><strong>Build Temperature:</strong> ${part.recommendedBuildTemperature || 0}°C</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <h6 class="text-muted border-bottom pb-2 mb-3">
+                            <i class="fas fa-clock me-2"></i>Audit Information
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><small><strong>Created:</strong> ${formatDate(part.createdDate)} by ${part.createdBy}</small></p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><small><strong>Modified:</strong> ${formatDate(part.lastModifiedDate)} by ${part.lastModifiedBy}</small></p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <form method="post" asp-page-handler="ScheduleJob" class="d-inline">      
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Close
+                </button>
+                <button type="button" class="btn btn-primary" onclick="handleEditPartClick(${part.id})">
+                    <i class="fas fa-edit me-2"></i>Edit Part
+                </button>
+                <form method="post" action="/Admin/Parts?handler=ScheduleJob" class="d-inline">      
                     <input type="hidden" name="partId" value="${part.id}" />
+                    <input type="hidden" name="__RequestVerificationToken" value="${antiforgeryToken}" />
                     <button type="submit" class="btn btn-success">
                         <i class="fas fa-calendar-plus me-2"></i>Schedule Job
                     </button>
@@ -1075,30 +1294,25 @@
         `;
     }
 
-    function getErrorMessage(error) {
-        if (error.name === 'AbortError') {
-            return 'Request timed out. Please check your internet connection and try again.';
+    // Helper function for class badge colors
+    function getClassBadgeColor(partClass) {
+        switch(partClass) {
+            case 'A': return 'bg-danger';
+            case 'B': return 'bg-warning text-dark';
+            case 'C': return 'bg-info';
+            default: return 'bg-secondary';
         }
-        
-        const message = error.message || 'Unknown error occurred';
-        
-        if (message.includes('404')) {
-            return 'The requested form could not be found. Please refresh the page and try again.';
+    }
+
+    // Helper function for date formatting
+    function formatDate(dateString) {
+        if (!dateString) return 'N/A';
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        } catch {
+            return dateString;
         }
-        
-        if (message.includes('500')) {
-            return 'Server error occurred. Please try again in a few moments.';
-        }
-        
-        if (message.includes('full page')) {
-            return 'Configuration error detected. Please refresh the page and try again.';
-        }
-        
-        if (message.includes('Network')) {
-            return 'Network connection error. Please check your internet connection.';
-        }
-        
-        return `Error: ${message}`;
     }
 
     console.log('? [PARTS] Enhanced Parts page with stage management loaded successfully');
