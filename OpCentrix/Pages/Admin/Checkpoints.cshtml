@@ -1,4 +1,4 @@
-@page
+﻿@page
 @model OpCentrix.Pages.Admin.CheckpointsModel
 @{
     ViewData["Title"] = "Inspection Checkpoints";
@@ -391,148 +391,131 @@
     
     <script>
         // Checkpoints Page JavaScript - Using OpCentrix Admin Module
-        document.addEventListener('DOMContentLoaded', function() {
-            
-            // Setup dimensional fields toggle
-            setupDimensionalToggle();
-            
-            // Setup duplicate checkpoint functionality
-            setupDuplicateCheckpoint();
-            
-            // Setup custom data action handlers
-            setupCustomActions();
-            
-            console.log('? [CHECKPOINTS] Page initialized successfully');
+        // Define functions at global scope
+function setupDimensionalToggle() {
+    const inspectionTypeSelect = document.querySelector('[data-toggle-dimensional]');
+    if (inspectionTypeSelect) {
+        inspectionTypeSelect.addEventListener('change', toggleDimensionalFields);
+        toggleDimensionalFields(); // Initial check
+    }
+}
+
+function toggleDimensionalFields() {
+    const inspectionTypeSelect = document.querySelector('[data-toggle-dimensional]');
+    const dimensionalFields = document.getElementById('dimensionalFields');
+    
+    if (inspectionTypeSelect && dimensionalFields) {
+        const isDimensional = inspectionTypeSelect.value === 'Dimensional';
+        dimensionalFields.style.display = isDimensional ? 'block' : 'none';
+        
+        // Update required status for dimensional fields
+        const dimensionalInputs = dimensionalFields.querySelectorAll('input, select');
+        dimensionalInputs.forEach(input => {
+            if (isDimensional) {
+                // Make certain fields required for dimensional inspections
+                if (input.name.includes('TargetValue') || input.name.includes('Unit')) {
+                    input.setAttribute('required', 'required');
+                }
+            } else {
+                input.removeAttribute('required');
+            }
         });
+    }
+}
 
-        /**
-         * Setup dimensional fields toggle
-         */
-        function setupDimensionalToggle() {
-            const inspectionTypeSelect = document.querySelector('[data-toggle-dimensional]');
-            if (inspectionTypeSelect) {
-                inspectionTypeSelect.addEventListener('change', toggleDimensionalFields);
-                toggleDimensionalFields(); // Initial check
-            }
-        }
-
-        /**
-         * Toggle dimensional fields visibility
-         */
-        function toggleDimensionalFields() {
-            const inspectionTypeSelect = document.querySelector('[data-toggle-dimensional]');
-            const dimensionalFields = document.getElementById('dimensionalFields');
+function setupDuplicateCheckpoint() {
+    const duplicateModal = document.getElementById('duplicateModal');
+    if (duplicateModal) {
+        duplicateModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const sourceId = button.getAttribute('data-checkpoint-id');
+            const sourceName = button.getAttribute('data-checkpoint-name');
             
-            if (inspectionTypeSelect && dimensionalFields) {
-                const isDimensional = inspectionTypeSelect.value === 'Dimensional';
-                dimensionalFields.style.display = isDimensional ? 'block' : 'none';
-                
-                // Update required status for dimensional fields
-                const dimensionalInputs = dimensionalFields.querySelectorAll('input, select');
-                dimensionalInputs.forEach(input => {
-                    if (isDimensional) {
-                        // Make certain fields required for dimensional inspections
-                        if (input.name.includes('TargetValue') || input.name.includes('Unit')) {
-                            input.setAttribute('required', 'required');
-                        }
-                    } else {
-                        input.removeAttribute('required');
-                    }
-                });
-            }
-        }
+            document.getElementById('sourceCheckpointId').value = sourceId;
+            document.getElementById('sourceCheckpointName').textContent = sourceName;
+        });
+    }
+}
 
-        /**
-         * Setup duplicate checkpoint functionality
-         */
-        function setupDuplicateCheckpoint() {
-            // Listen for Bootstrap modal events
-            const duplicateModal = document.getElementById('duplicateModal');
-            if (duplicateModal) {
-                duplicateModal.addEventListener('show.bs.modal', function (event) {
-                    const button = event.relatedTarget;
-                    const sourceId = button.getAttribute('data-checkpoint-id');
-                    const sourceName = button.getAttribute('data-checkpoint-name');
-                    
-                    document.getElementById('sourceCheckpointId').value = sourceId;
-                    document.getElementById('sourceCheckpointName').textContent = sourceName;
-                });
-            }
+function setupCustomActions() {
+    document.addEventListener('click', function(e) {
+        const target = e.target;
+        
+        // Handle duplicate checkpoint action
+        if (target.getAttribute('data-action') === 'duplicate-checkpoint') {
+            e.preventDefault();
+            showDuplicateModal(target);
         }
+    });
+}
 
-        /**
-         * Setup custom data action handlers
-         */
-        function setupCustomActions() {
-            document.addEventListener('click', function(e) {
-                const target = e.target;
-                
-                // Handle duplicate checkpoint action
-                if (target.getAttribute('data-action') === 'duplicate-checkpoint') {
-                    e.preventDefault();
-                    showDuplicateModal(target);
+function showDuplicateModal(button) {
+    const checkpointId = button.getAttribute('data-checkpoint-id');
+    const checkpointName = button.getAttribute('data-checkpoint-name');
+    
+    // Populate modal data
+    document.getElementById('sourceCheckpointId').value = checkpointId;
+    document.getElementById('sourceCheckpointName').textContent = checkpointName;
+    
+    // Show Bootstrap modal
+    const duplicateModal = new bootstrap.Modal(document.getElementById('duplicateModal'));
+    duplicateModal.show();
+}
+
+function checkValidationErrors() {
+    const validationErrors = document.querySelectorAll('.text-danger');
+    const hasErrors = Array.from(validationErrors).some(error => error.textContent.trim());
+    
+    if (hasErrors) {
+        // Determine which modal has errors and show it
+        const createModal = document.querySelector('#createCheckpointModal .text-danger');
+        const duplicateModal = document.querySelector('#duplicateModal .text-danger');
+        
+        if (createModal && createModal.textContent.trim()) {
+            const modal = new bootstrap.Modal(document.getElementById('createCheckpointModal'));
+            modal.show();
+        } else if (duplicateModal && duplicateModal.textContent.trim()) {
+            const modal = new bootstrap.Modal(document.getElementById('duplicateModal'));
+            modal.show();
+        }
+        
+        // Show validation summary
+        const validationSummary = document.querySelector('[asp-validation-summary] .alert');
+        if (validationSummary && hasErrors) {
+            validationSummary.classList.remove('d-none');
+        }
+    }
+}
+
+// Now initialize everything when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    setupDimensionalToggle();
+    setupDuplicateCheckpoint();
+    setupCustomActions();
+    checkValidationErrors();
+    
+    // Reset loading states when modals are closed
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('hidden.bs.modal', function() {
+            const submitBtns = this.querySelectorAll('[id$="SubmitBtn"]');
+            submitBtns.forEach(btn => {
+                if (window.OpCentrixAdmin && window.OpCentrixAdmin.Loading) {
+                    OpCentrixAdmin.Loading.hide(btn);
                 }
             });
-        }
-
-        /**
-         * Show duplicate modal using Bootstrap modal
-         */
-        function showDuplicateModal(button) {
-            const checkpointId = button.getAttribute('data-checkpoint-id');
-            const checkpointName = button.getAttribute('data-checkpoint-name');
-            
-            // Populate modal data
-            document.getElementById('sourceCheckpointId').value = checkpointId;
-            document.getElementById('sourceCheckpointName').textContent = checkpointName;
-            
-            // Show Bootstrap modal
-            const duplicateModal = new bootstrap.Modal(document.getElementById('duplicateModal'));
-            duplicateModal.show();
-        }
-
-        // Handle server-side validation errors by showing the modal
-        document.addEventListener('DOMContentLoaded', function() {
-            // Check if there are validation errors and show the appropriate modal
-            const validationErrors = document.querySelectorAll('.text-danger');
-            const hasErrors = Array.from(validationErrors).some(error => error.textContent.trim());
-            
-            if (hasErrors) {
-                // Determine which modal has errors and show it
-                const createModal = document.querySelector('#createCheckpointModal .text-danger');
-                const duplicateModal = document.querySelector('#duplicateModal .text-danger');
-                
-                if (createModal && createModal.textContent.trim()) {
-                    const modal = new bootstrap.Modal(document.getElementById('createCheckpointModal'));
-                    modal.show();
-                } else if (duplicateModal && duplicateModal.textContent.trim()) {
-                    const modal = new bootstrap.Modal(document.getElementById('duplicateModal'));
-                    modal.show();
-                }
-                
-                // Show validation summary
-                const validationSummary = document.querySelector('[asp-validation-summary] .alert');
-                if (validationSummary && hasErrors) {
-                    validationSummary.classList.remove('d-none');
-                }
-            }
         });
+    });
+    
+    console.log('✅ [CHECKPOINTS] Page initialized successfully');
+});
 
-        // Reset loading states when modals are closed
-        document.querySelectorAll('.modal').forEach(modal => {
-            modal.addEventListener('hidden.bs.modal', function() {
-                const submitBtns = this.querySelectorAll('[id$="SubmitBtn"]');
-                submitBtns.forEach(btn => OpCentrixAdmin.Loading.hide(btn));
-            });
-        });
-
-        // Global functions for backward compatibility
-        window.CheckpointsPage = {
-            toggleDimensionalFields,
-            showDuplicateModal,
-            setupDimensionalToggle,
-            setupDuplicateCheckpoint
-        };
+// Global functions for backward compatibility
+window.CheckpointsPage = {
+    toggleDimensionalFields,
+    showDuplicateModal,
+    setupDimensionalToggle,
+    setupDuplicateCheckpoint
+};
     </script>
 }
 

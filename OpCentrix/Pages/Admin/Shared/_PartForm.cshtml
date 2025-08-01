@@ -23,7 +23,7 @@
         <!-- Enhanced Tab Navigation -->
         <ul class="nav nav-tabs nav-justified mb-3" id="partFormTabs" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="basic-tab" type="button" onclick="showTab('basic')" 
+                <button class="nav-link active" id="basic-tab" type="button" onclick="window.showTab && window.showTab('basic')" 
                         data-bs-toggle="tab" data-bs-target="#basic" role="tab">
                     <i class="fas fa-info-circle me-1"></i>
                     <span class="d-none d-md-inline">Basic Info</span>
@@ -31,7 +31,7 @@
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="material-tab" type="button" onclick="showTab('material')" 
+                <button class="nav-link" id="material-tab" type="button" onclick="window.showTab && window.showTab('material')" 
                         data-bs-toggle="tab" data-bs-target="#material" role="tab">
                     <i class="fas fa-flask me-1"></i>
                     <span class="d-none d-md-inline">Material & SLS</span>
@@ -39,7 +39,7 @@
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="manufacturing-tab" type="button" onclick="showTab('manufacturing')" 
+                <button class="nav-link" id="manufacturing-tab" type="button" onclick="window.showTab && window.showTab('manufacturing')" 
                         data-bs-toggle="tab" data-bs-target="#manufacturing" role="tab">
                     <i class="fas fa-cogs me-1"></i>
                     <span class="d-none d-md-inline">Manufacturing</span>
@@ -47,7 +47,7 @@
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="physical-tab" type="button" onclick="showTab('physical')" 
+                <button class="nav-link" id="physical-tab" type="button" onclick="window.showTab && window.showTab('physical')" 
                         data-bs-toggle="tab" data-bs-target="#physical" role="tab">
                     <i class="fas fa-cube me-1"></i>
                     <span class="d-none d-md-inline">Physical</span>
@@ -55,7 +55,7 @@
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="cost-tab" type="button" onclick="showTab('cost')" 
+                <button class="nav-link" id="cost-tab" type="button" onclick="window.showTab && window.showTab('cost')" 
                         data-bs-toggle="tab" data-bs-target="#cost" role="tab">
                     <i class="fas fa-dollar-sign me-1"></i>
                     <span class="d-none d-md-inline">Cost & Time</span>
@@ -63,7 +63,7 @@
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="quality-tab" type="button" onclick="showTab('quality')" 
+                <button class="nav-link" id="quality-tab" type="button" onclick="window.showTab && window.showTab('quality')" 
                         data-bs-toggle="tab" data-bs-target="#quality" role="tab">
                     <i class="fas fa-award me-1"></i>
                     <span class="d-none d-md-inline">Quality</span>
@@ -71,7 +71,7 @@
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="stages-tab" type="button" onclick="showTab('stages')" 
+                <button class="nav-link" id="stages-tab" type="button" onclick="window.showTab && window.showTab('stages')" 
                         data-bs-toggle="tab" data-bs-target="#stages" role="tab">
                     <i class="fas fa-tasks me-1"></i>
                     <span class="d-none d-md-inline">Manufacturing Stages</span>
@@ -96,7 +96,7 @@
                         <label asp-for="PartNumber" class="form-label required">Part Number</label>
                         <input asp-for="PartNumber" class="form-control" required 
                                placeholder="e.g., PT-001-2024" 
-                               onblur="validatePartNumber(this.value)" />
+                               onblur="window.validatePartNumber && window.validatePartNumber(this.value)" />
                         <span asp-validation-for="PartNumber" class="text-danger"></span>
                         <div class="form-text">Unique identifier for this part</div>
                     </div>
@@ -201,7 +201,7 @@
                     <div class="col-md-6">
                         <label asp-for="Material" class="form-label required">Primary Material</label>
                         <select asp-for="Material" class="form-select" id="materialSelect" 
-                                onchange="updateSlsMaterial()" required>
+                                onchange="window.updateSlsMaterial && window.updateSlsMaterial()" required>
                             <option value="">Select Material</option>
                             <optgroup label="Titanium Alloys">
                                 <option value="Ti-6Al-4V Grade 5">Ti-6Al-4V Grade 5 (Standard)</option>
@@ -388,21 +388,21 @@
                     <div class="col-md-3">
                         <label asp-for="LengthMm" class="form-label">Length (mm)</label>
                         <input asp-for="LengthMm" type="number" step="0.1" class="form-control" 
-                               placeholder="0.0" onchange="calculateVolume()" />
+                               placeholder="0.0" onchange="window.calculateVolume && window.calculateVolume()" />
                         <span asp-validation-for="LengthMm" class="text-danger"></span>
                     </div>
                     
                     <div class="col-md-3">
                         <label asp-for="WidthMm" class="form-label">Width (mm)</label>
                         <input asp-for="WidthMm" type="number" step="0.1" class="form-control" 
-                               placeholder="0.0" onchange="calculateVolume()" />
+                               placeholder="0.0" onchange="window.calculateVolume && window.calculateVolume()" />
                         <span asp-validation-for="WidthMm" class="text-danger"></span>
                     </div>
                     
                     <div class="col-md-3">
                         <label asp-for="HeightMm" class="form-label">Height (mm)</label>
                         <input asp-for="HeightMm" type="number" step="0.1" class="form-control" 
-                               placeholder="0.0" onchange="calculateVolume()" />
+                               placeholder="0.0" onchange="window.calculateVolume && window.calculateVolume()" />
                         <span asp-validation-for="HeightMm" class="text-danger"></span>
                     </div>
                     
@@ -477,7 +477,7 @@
                     <div class="col-md-4">
                         <label asp-for="EstimatedHours" class="form-label required">Standard Estimated Hours</label>
                         <input asp-for="EstimatedHours" type="number" step="0.1" min="0.1" class="form-control" 
-                               required onchange="updateDurationDisplay()" id="estimatedHoursInput" />
+                               required onchange="window.updateDurationDisplay && window.updateDurationDisplay()" id="estimatedHoursInput" />
                         <span asp-validation-for="EstimatedHours" class="text-danger"></span>
                         <div class="form-text">Standard manufacturing time estimate</div>
                     </div>
@@ -485,7 +485,7 @@
                     <div class="col-md-4">
                         <label asp-for="AdminEstimatedHoursOverride" class="form-label">Admin Override Hours</label>
                         <input asp-for="AdminEstimatedHoursOverride" type="number" step="0.1" min="0.1" 
-                               class="form-control" onchange="updateDurationDisplay()" id="adminOverrideInput" />
+                               class="form-control" onchange="window.updateDurationDisplay && window.updateDurationDisplay()" id="adminOverrideInput" />
                         <span asp-validation-for="AdminEstimatedHoursOverride" class="text-danger"></span>
                         <div class="form-text">Leave blank to use standard hours</div>
                     </div>
@@ -665,9 +665,13 @@
     </button>
 </div>
 
-<!-- FIXED: Enhanced JavaScript for Parts Form with proper form submission handling -->
+<!-- FIXED: All JavaScript functions now properly exposed to global scope -->
 <script>
     console.log('?? [PART-FORM] Loading enhanced part form functionality');
+    
+    // ===================================================================
+    // GLOBAL FUNCTION DEFINITIONS - Available for inline event handlers
+    // ===================================================================
     
     // Enhanced Material Defaults with comprehensive parameters
     const MATERIAL_DEFAULTS = {
@@ -778,7 +782,10 @@
         }
     };
     
-    // Tab Management
+    // ===================================================================
+    // TAB MANAGEMENT - NOW GLOBALLY ACCESSIBLE
+    // ===================================================================
+    
     window.showTab = function(tabName) {
         console.log('?? [PART-FORM] Switching to tab:', tabName);
         
@@ -812,7 +819,10 @@
         }
     };
     
-    // Enhanced Material Auto-Fill
+    // ===================================================================
+    // MATERIAL MANAGEMENT - NOW GLOBALLY ACCESSIBLE
+    // ===================================================================
+    
     window.updateSlsMaterial = function() {
         console.log('?? [PART-FORM] Updating material defaults');
         
@@ -822,16 +832,19 @@
             
             if (!materialSelect || !slsMaterialInput) {
                 console.error('? [PART-FORM] Material form elements not found');
-                return;
+                return false;
             }
             
             const selectedMaterial = materialSelect.value;
-            if (!selectedMaterial) return;
+            if (!selectedMaterial) {
+                console.log('?? [PART-FORM] No material selected');
+                return false;
+            }
             
             const defaults = MATERIAL_DEFAULTS[selectedMaterial];
             if (!defaults) {
                 console.log('?? [PART-FORM] No defaults found for material:', selectedMaterial);
-                return;
+                return false;
             }
             
             // Update form fields with material defaults
@@ -852,50 +865,80 @@
                 'estimatedHoursInput': defaults.estimatedHours
             };
             
+            let updatedCount = 0;
             Object.keys(fieldMappings).forEach(elementId => {
                 const element = document.getElementById(elementId);
                 if (element && (!element.value || element.value == '0')) {
                     element.value = fieldMappings[elementId];
+                    updatedCount++;
                 }
             });
             
             // Trigger dependent calculations
-            updateDurationDisplay();
+            if (window.updateDurationDisplay) {
+                window.updateDurationDisplay();
+            }
             
-            console.log('? [PART-FORM] Material defaults applied successfully');
+            console.log('? [PART-FORM] Material defaults applied successfully, fields updated:', updatedCount);
+            return true;
             
         } catch (error) {
             console.error('? [PART-FORM] Error updating material defaults:', error);
+            return false;
         }
     };
     
-    // Part Number Validation
+    // ===================================================================
+    // PART NUMBER VALIDATION - NOW GLOBALLY ACCESSIBLE
+    // ===================================================================
+    
     window.validatePartNumber = function(partNumber) {
         console.log('?? [PART-FORM] Validating part number:', partNumber);
         
         try {
             const input = document.querySelector('[name="PartNumber"]');
-            if (!input || !partNumber) return;
+            if (!input) {
+                console.warn('?? [PART-FORM] Part number input not found');
+                return false;
+            }
+            
+            if (!partNumber || partNumber.trim() === '') {
+                // Clear validation state for empty input
+                input.classList.remove('is-valid', 'is-invalid');
+                return false;
+            }
             
             // Basic validation - you can customize this pattern
-            const isValid = partNumber.length >= 3 && partNumber.length <= 50;
+            // This is a flexible pattern that allows various formats
+            const partNumberPattern = /^[A-Za-z0-9][A-Za-z0-9\-_]{2,49}$/;
+            const isValidFormat = partNumberPattern.test(partNumber);
             
-            if (isValid) {
+            if (isValidFormat) {
                 input.classList.remove('is-invalid');
                 input.classList.add('is-valid');
-                console.log('? [PART-FORM] Part number format valid');
+                console.log('? [PART-FORM] Part number format valid:', partNumber);
+                
+                // TODO: Add server-side duplicate checking here if needed
+                // You can add an AJAX call to check for duplicates
+                
+                return true;
             } else {
                 input.classList.add('is-invalid');
                 input.classList.remove('is-valid');
-                console.log('? [PART-FORM] Invalid part number format');
+                console.log('? [PART-FORM] Invalid part number format:', partNumber);
+                return false;
             }
             
         } catch (error) {
             console.error('? [PART-FORM] Error validating part number:', error);
+            return false;
         }
     };
     
-    // Duration and Time Management
+    // ===================================================================
+    // DURATION CALCULATIONS - NOW GLOBALLY ACCESSIBLE
+    // ===================================================================
+    
     window.updateDurationDisplay = function() {
         console.log('?? [PART-FORM] Updating duration display');
         
@@ -914,6 +957,10 @@
                 displayElement.className = adminOverride > 0 
                     ? 'form-control-plaintext bg-warning bg-opacity-25 border rounded p-2 fw-bold'
                     : 'form-control-plaintext bg-light border rounded p-2';
+                
+                console.log('? [PART-FORM] Duration display updated:', displayText);
+            } else {
+                console.warn('?? [PART-FORM] Duration display element not found');
             }
             
         } catch (error) {
@@ -921,8 +968,13 @@
         }
     };
     
-    // Physical properties calculations
+    // ===================================================================
+    // PHYSICAL PROPERTIES CALCULATIONS - NOW GLOBALLY ACCESSIBLE
+    // ===================================================================
+    
     window.calculateVolume = function() {
+        console.log('?? [PART-FORM] Calculating volume from dimensions');
+        
         try {
             const length = parseFloat(document.querySelector('[name="LengthMm"]')?.value || 0);
             const width = parseFloat(document.querySelector('[name="WidthMm"]')?.value || 0);
@@ -934,10 +986,12 @@
             
             if (volumeInput) {
                 volumeInput.value = Math.round(volume);
+                console.log('? [PART-FORM] Volume calculated:', Math.round(volume), 'mm³');
             }
             
             if (dimensionsInput && length > 0 && width > 0 && height > 0) {
                 dimensionsInput.value = `${length} × ${width} × ${height} mm`;
+                console.log('? [PART-FORM] Dimensions string updated');
             }
             
         } catch (error) {
@@ -945,7 +999,48 @@
         }
     };
     
-    // FIXED: Enhanced form submission handling with proper success/error handling
+    // ===================================================================
+    // MANUFACTURING STAGES - NOW GLOBALLY ACCESSIBLE
+    // ===================================================================
+    
+    window.addStage = function() {
+        console.log('?? [PART-FORM] Adding new manufacturing stage');
+        
+        try {
+            const container = document.getElementById('stagesContainer');
+            if (!container) {
+                console.error('? [PART-FORM] Stages container not found');
+                return;
+            }
+            
+            // Create new stage row
+            const newRow = document.createElement('div');
+            newRow.className = 'col-12 mb-3';
+            newRow.innerHTML = `
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label">Stage Description</label>
+                        <input type="text" class="form-control" placeholder="e.g., Material Preparation" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Estimated Duration (h)</label>
+                        <input type="number" class="form-control" step="0.1" placeholder="e.g., 2.5" />
+                    </div>
+                </div>
+            `;
+            
+            container.appendChild(newRow);
+            console.log('? [PART-FORM] New stage row added');
+            
+        } catch (error) {
+            console.error('? [PART-FORM] Error adding new stage:', error);
+        }
+    };
+    
+    // ===================================================================
+    // FORM INITIALIZATION AND ENHANCED ERROR HANDLING
+    // ===================================================================
+    
     document.addEventListener('DOMContentLoaded', function() {
         console.log('?? [PART-FORM] Initializing enhanced part form');
         
@@ -955,7 +1050,7 @@
             return;
         }
         
-        // Form submission handling - FIXED: Better response handling
+        // Enhanced form submission handling
         partForm.addEventListener('submit', function(e) {
             e.preventDefault();
             console.log('?? [PART-FORM] Form submission started');
@@ -985,7 +1080,7 @@
                 formData.append('__RequestVerificationToken', tokenInput.value);
             }
             
-            // Submit via fetch - FIXED: Proper URL construction and response handling
+            // Submit via fetch with proper error handling
             const url = partForm.action || `/Admin/Parts?handler=${isEdit ? 'Update' : 'Create'}`;
             
             fetch(url, {
@@ -1008,7 +1103,7 @@
             .then(responseText => {
                 console.log('?? [PART-FORM] Response text received, length:', responseText.length);
                 
-                // FIXED: Check for success indicators in response
+                // Check for success indicators in response
                 const isSuccess = responseText.includes('Part created successfully') || 
                                  responseText.includes('Part updated successfully') ||
                                  responseText.includes('Part saved successfully') ||
@@ -1045,7 +1140,7 @@
                     }, 1500);
                     
                 } else {
-                    // FIXED: Handle validation errors by replacing form content
+                    // Handle validation errors by replacing form content
                     console.log('?? [PART-FORM] Form submission returned with validation errors');
                     
                     // Check if response contains form with validation errors
@@ -1095,8 +1190,12 @@
         
         try {
             // Initialize calculations
-            updateDurationDisplay();
-            calculateVolume();
+            if (window.updateDurationDisplay) {
+                window.updateDurationDisplay();
+            }
+            if (window.calculateVolume) {
+                window.calculateVolume();
+            }
             
             // Initialize tooltips
             const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
@@ -1108,47 +1207,23 @@
             
             console.log('? [PART-FORM] Form initialized successfully');
             
+            // Log available global functions for debugging
+            const availableFunctions = {
+                showTab: typeof window.showTab,
+                updateSlsMaterial: typeof window.updateSlsMaterial,
+                validatePartNumber: typeof window.validatePartNumber,
+                updateDurationDisplay: typeof window.updateDurationDisplay,
+                calculateVolume: typeof window.calculateVolume,
+                addStage: typeof window.addStage
+            };
+            console.log('? [PART-FORM] Global functions available:', availableFunctions);
+            
         } catch (error) {
             console.error('? [PART-FORM] Error initializing form:', error);
         }
     }); 
     
     console.log('? [PART-FORM] Enhanced Parts Form with production-ready functionality loaded');
-    
-    // Manufacturing Stages JavaScript
-    window.addStage = function() {
-        console.log('?? [PART-FORM] Adding new manufacturing stage');
-        
-        try {
-            const container = document.getElementById('stagesContainer');
-            if (!container) {
-                console.error('? [PART-FORM] Stages container not found');
-                return;
-            }
-            
-            // Create new stage row
-            const newRow = document.createElement('div');
-            newRow.className = 'col-12 mb-3';
-            newRow.innerHTML = `
-                <div class="row g-3">
-                    <div class="col-md-8">
-                        <label class="form-label">Stage Description</label>
-                        <input type="text" class="form-control" placeholder="e.g., Material Preparation" />
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Estimated Duration (h)</label>
-                        <input type="number" class="form-control" step="0.1" placeholder="e.g., 2.5" />
-                    </div>
-                </div>
-            `;
-            
-            container.appendChild(newRow);
-            console.log('? [PART-FORM] New stage row added:', newRow);
-            
-        } catch (error) {
-            console.error('? [PART-FORM] Error adding new stage:', error);
-        }
-    };
 </script>
 
 <style>
