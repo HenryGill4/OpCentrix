@@ -1,0 +1,380 @@
+@model OpCentrix.Models.Part
+
+<div class="row g-3">
+    <div class="col-12">
+        <h6 class="text-primary border-bottom pb-2 mb-3">
+            <i class="fas fa-tasks me-2"></i>Manufacturing Stage Requirements
+        </h6>
+        <p class="text-muted mb-4">Configure which manufacturing stages are required for this part.</p>
+    </div>
+    
+    <!-- SLS Printing Stage -->
+    <div class="col-12">
+        <div class="card border-primary mb-3">
+            <div class="card-header bg-primary text-white">
+                <div class="form-check mb-0">
+                    <input asp-for="RequiresSLSPrinting" class="form-check-input stage-checkbox" type="checkbox" 
+                           onchange="updateStagesSummary()" />
+                    <label asp-for="RequiresSLSPrinting" class="form-check-label fw-bold">
+                        <i class="fas fa-print me-2"></i>SLS Metal Printing (Primary Manufacturing)
+                    </label>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <label asp-for="ProcessType" class="form-label">Process Type</label>
+                        <select asp-for="ProcessType" class="form-select">
+                            <option value="SLS Metal">SLS Metal</option>
+                            <option value="SLS Polymer">SLS Polymer</option>
+                            <option value="DMLS">DMLS</option>
+                            <option value="EBM">EBM</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="RequiredMachineType" class="form-label">Required Machine</label>
+                        <input asp-for="RequiredMachineType" class="form-control" placeholder="e.g., TruPrint 3000" />
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input asp-for="RequiresSupports" class="form-check-input" type="checkbox" />
+                            <label asp-for="RequiresSupports" class="form-check-label">Requires Support Structures</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- EDM Operations Stage -->
+    <div class="col-12">
+        <div class="card border-warning mb-3">
+            <div class="card-header bg-warning text-dark">
+                <div class="form-check mb-0">
+                    <input asp-for="RequiresEDMOperations" class="form-check-input stage-checkbox" type="checkbox" 
+                           onchange="updateStagesSummary()" />
+                    <label asp-for="RequiresEDMOperations" class="form-check-label fw-bold">
+                        <i class="fas fa-bolt me-2"></i>EDM Operations (Electrical Discharge Machining)
+                    </label>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    EDM operations are typically used for complex internal geometries and precise hole creation.
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- CNC Machining Stage -->
+    <div class="col-12">
+        <div class="card border-success mb-3">
+            <div class="card-header bg-success text-white">
+                <div class="form-check mb-0">
+                    <input asp-for="RequiresCNCMachining" class="form-check-input stage-checkbox" type="checkbox" 
+                           onchange="updateStagesSummary()" />
+                    <label asp-for="RequiresCNCMachining" class="form-check-label fw-bold">
+                        <i class="fas fa-cogs me-2"></i>CNC Machining (Secondary Operations)
+                    </label>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    CNC machining provides precise dimensional control and surface finish improvements.
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Assembly Stage -->
+    <div class="col-12">
+        <div class="card border-info mb-3">
+            <div class="card-header bg-info text-white">
+                <div class="form-check mb-0">
+                    <input asp-for="RequiresAssembly" class="form-check-input stage-checkbox" type="checkbox" 
+                           onchange="updateStagesSummary()" />
+                    <label asp-for="RequiresAssembly" class="form-check-label fw-bold">
+                        <i class="fas fa-puzzle-piece me-2"></i>Assembly Operations
+                    </label>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input asp-for="IsAssemblyComponent" class="form-check-input" type="checkbox" />
+                            <label asp-for="IsAssemblyComponent" class="form-check-label">Is Assembly Component</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input asp-for="IsSubAssembly" class="form-check-input" type="checkbox" />
+                            <label asp-for="IsSubAssembly" class="form-check-label">Is Sub-Assembly</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Finishing Stage -->
+    <div class="col-12">
+        <div class="card border-secondary mb-3">
+            <div class="card-header bg-secondary text-white">
+                <div class="form-check mb-0">
+                    <input asp-for="RequiresFinishing" class="form-check-input stage-checkbox" type="checkbox" 
+                           onchange="updateStagesSummary()" />
+                    <label asp-for="RequiresFinishing" class="form-check-label fw-bold">
+                        <i class="fas fa-brush me-2"></i>Finishing Operations
+                    </label>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <label asp-for="SurfaceFinishRequirement" class="form-label">Surface Finish Type</label>
+                        <select asp-for="SurfaceFinishRequirement" class="form-select">
+                            <option value="As-built">As-built</option>
+                            <option value="Machined">Machined</option>
+                            <option value="Polished">Polished</option>
+                            <option value="Sandblasted">Sandblasted</option>
+                            <option value="Coated">Coated</option>
+                            <option value="Anodized">Anodized</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="MaxSurfaceRoughnessRa" class="form-label">Max Surface Roughness Ra (µm)</label>
+                        <input asp-for="MaxSurfaceRoughnessRa" type="number" step="0.1" class="form-control" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Testing and Quality Stages -->
+    <div class="col-12">
+        <div class="card border-dark mb-3">
+            <div class="card-header bg-dark text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-check-circle me-2"></i>Testing & Quality Assurance Stages
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input asp-for="RequiresPressureTesting" class="form-check-input stage-checkbox" type="checkbox" 
+                                   onchange="updateStagesSummary()" />
+                            <label asp-for="RequiresPressureTesting" class="form-check-label">Pressure Testing</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input asp-for="RequiresProofTesting" class="form-check-input stage-checkbox" type="checkbox" 
+                                   onchange="updateStagesSummary()" />
+                            <label asp-for="RequiresProofTesting" class="form-check-label">Proof Testing</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input asp-for="RequiresDimensionalVerification" class="form-check-input stage-checkbox" type="checkbox" 
+                                   onchange="updateStagesSummary()" />
+                            <label asp-for="RequiresDimensionalVerification" class="form-check-label">Dimensional Verification</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input asp-for="RequiresSurfaceFinishVerification" class="form-check-input stage-checkbox" type="checkbox" 
+                                   onchange="updateStagesSummary()" />
+                            <label asp-for="RequiresSurfaceFinishVerification" class="form-check-label">Surface Finish Verification</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input asp-for="RequiresMaterialCertification" class="form-check-input stage-checkbox" type="checkbox" 
+                                   onchange="updateStagesSummary()" />
+                            <label asp-for="RequiresMaterialCertification" class="form-check-label">Material Certification</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input asp-for="RequiresSoundTesting" class="form-check-input stage-checkbox" type="checkbox" 
+                                   onchange="updateStagesSummary()" />
+                            <label asp-for="RequiresSoundTesting" class="form-check-label">Sound Testing</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Approval Stages -->
+    <div class="col-12">
+        <div class="card border-danger mb-3">
+            <div class="card-header bg-danger text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-stamp me-2"></i>Approval & Review Stages
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input asp-for="RequiresEngineeringApproval" class="form-check-input stage-checkbox" type="checkbox" 
+                                   onchange="updateStagesSummary()" />
+                            <label asp-for="RequiresEngineeringApproval" class="form-check-label">Engineering Approval</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input asp-for="RequiresQualityApproval" class="form-check-input stage-checkbox" type="checkbox" 
+                                   onchange="updateStagesSummary()" />
+                            <label asp-for="RequiresQualityApproval" class="form-check-label">Quality Approval</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input asp-for="RequiresComplianceApproval" class="form-check-input stage-checkbox" type="checkbox" 
+                                   onchange="updateStagesSummary()" />
+                            <label asp-for="RequiresComplianceApproval" class="form-check-label">Compliance Approval</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Stage Summary -->
+    <div class="col-12">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h6 class="text-primary mb-2">
+                    <i class="fas fa-chart-line me-2"></i>Manufacturing Stage Summary
+                </h6>
+                <div id="stagesSummaryContent">
+                    <p class="text-muted">Select stages above to see estimated process time and complexity.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Stage summary function for the stages manager
+    window.updateStagesSummary = function() {
+        try {
+            const stages = [];
+            let estimatedTotalHours = 0;
+            const baseHours = parseFloat(document.querySelector('[name="EstimatedHours"]')?.value || 8);
+            
+            // Primary manufacturing stages
+            if (document.querySelector('[name="RequiresSLSPrinting"]')?.checked) {
+                stages.push('<span class="badge bg-primary me-1"><i class="fas fa-print me-1"></i>SLS</span>');
+                estimatedTotalHours += baseHours;
+            }
+            
+            // Secondary operations
+            if (document.querySelector('[name="RequiresEDMOperations"]')?.checked) {
+                stages.push('<span class="badge bg-warning text-dark me-1"><i class="fas fa-bolt me-1"></i>EDM</span>');
+                estimatedTotalHours += baseHours * 0.3;
+            }
+            
+            if (document.querySelector('[name="RequiresCNCMachining"]')?.checked) {
+                stages.push('<span class="badge bg-success me-1"><i class="fas fa-cogs me-1"></i>CNC</span>');
+                estimatedTotalHours += baseHours * 0.4;
+            }
+            
+            if (document.querySelector('[name="RequiresAssembly"]')?.checked) {
+                stages.push('<span class="badge bg-info me-1"><i class="fas fa-puzzle-piece me-1"></i>Assembly</span>');
+                estimatedTotalHours += 2;
+            }
+            
+            if (document.querySelector('[name="RequiresFinishing"]')?.checked) {
+                stages.push('<span class="badge bg-secondary me-1"><i class="fas fa-brush me-1"></i>Finishing</span>');
+                estimatedTotalHours += 3;
+            }
+            
+            // Testing stages
+            if (document.querySelector('[name="RequiresPressureTesting"]')?.checked) {
+                stages.push('<span class="badge bg-dark me-1"><i class="fas fa-gauge me-1"></i>Pressure Test</span>');
+                estimatedTotalHours += 1;
+            }
+            
+            if (document.querySelector('[name="RequiresProofTesting"]')?.checked) {
+                stages.push('<span class="badge bg-dark me-1"><i class="fas fa-check me-1"></i>Proof Test</span>');
+                estimatedTotalHours += 2;
+            }
+            
+            if (document.querySelector('[name="RequiresDimensionalVerification"]')?.checked) {
+                stages.push('<span class="badge bg-dark me-1"><i class="fas fa-ruler me-1"></i>Dimensional</span>');
+                estimatedTotalHours += 0.5;
+            }
+            
+            // Approval stages
+            if (document.querySelector('[name="RequiresEngineeringApproval"]')?.checked) {
+                stages.push('<span class="badge bg-danger me-1"><i class="fas fa-engineering me-1"></i>Eng. Approval</span>');
+                estimatedTotalHours += 0.5;
+            }
+            
+            if (document.querySelector('[name="RequiresQualityApproval"]')?.checked) {
+                stages.push('<span class="badge bg-danger me-1"><i class="fas fa-award me-1"></i>Quality Approval</span>');
+                estimatedTotalHours += 0.5;
+            }
+            
+            const summaryElement = document.getElementById('stagesSummaryContent');
+            if (summaryElement) {
+                if (stages.length > 0) {
+                    const complexity = estimatedTotalHours > 24 ? 'Very Complex' : 
+                                     estimatedTotalHours > 12 ? 'Complex' : 
+                                     estimatedTotalHours > 6 ? 'Medium' : 'Simple';
+                    
+                    const complexityBadgeClass = complexity === 'Very Complex' ? 'bg-dark' :
+                                                complexity === 'Complex' ? 'bg-danger' :
+                                                complexity === 'Medium' ? 'bg-warning' : 'bg-success';
+                    
+                    summaryElement.innerHTML = `
+                        <div class="row">
+                            <div class="col-md-8">
+                                <strong>Selected Stages:</strong><br>
+                                ${stages.join(' ')}
+                            </div>
+                            <div class="col-md-4">
+                                <strong>Estimated Total Time:</strong> ${estimatedTotalHours.toFixed(1)} hours<br>
+                                <strong>Complexity Level:</strong> <span class="badge ${complexityBadgeClass}">${complexity}</span>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    summaryElement.innerHTML = '<p class="text-muted">Select stages above to see estimated process time and complexity.</p>';
+                }
+            }
+            
+            console.log('? [STAGES-MANAGER] Stage summary updated successfully');
+            return true;
+            
+        } catch (error) {
+            console.error('? [STAGES-MANAGER] Error updating stage summary:', error);
+            return false;
+        }
+    };
+
+    // Initialize stage management
+    document.addEventListener('DOMContentLoaded', function() {
+        try {
+            // Initialize stage checkbox event listeners
+            const stageCheckboxes = document.querySelectorAll('.stage-checkbox');
+            stageCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', updateStagesSummary);
+            });
+            
+            // Initial stage summary update
+            setTimeout(updateStagesSummary, 500);
+            
+            console.log('? [STAGES-MANAGER] Stage management initialized');
+        } catch (error) {
+            console.error('? [STAGES-MANAGER] Error initializing stage management:', error);
+        }
+    });
+</script>

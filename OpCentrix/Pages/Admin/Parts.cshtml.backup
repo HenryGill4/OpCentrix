@@ -2,7 +2,7 @@
 @model OpCentrix.Pages.Admin.PartsModel
 @{
     ViewData["Title"] = "Parts Management";
-    ViewData["Description"] = "Manage SLS manufacturing parts and specifications with stage management";
+    ViewData["Description"] = "Manage SLS manufacturing parts and specifications";
     Layout = "~/Pages/Admin/Shared/_AdminLayout.cshtml";
 }
 
@@ -15,7 +15,7 @@
                     <i class="fas fa-cogs text-primary"></i>
                     Parts Management
                 </h1>
-                <p class="parts-page-subtitle">Multi-Stage Manufacturing Parts & Workflow Management</p>
+                <p class="parts-page-subtitle">SLS Manufacturing Parts & Specifications</p>
             </div>
             <div class="d-flex gap-3">
                 <button type="button" 
@@ -25,12 +25,6 @@
                         title="Add New Part">
                     <i class="fas fa-plus me-2"></i>Add New Part
                 </button>
-                <a href="/Admin/ProductionStages" 
-                   class="btn btn-outline-info"
-                   data-bs-toggle="tooltip" 
-                   title="Manage Production Stages">
-                    <i class="fas fa-tasks me-2"></i>Manage Stages
-                </a>
                 <button type="button" 
                         class="btn btn-outline-secondary" 
                         onclick="window.location.reload()" 
@@ -41,7 +35,7 @@
             </div>
         </div>
 
-        <!-- Enhanced Statistics Cards with Stage Info -->
+        <!-- Enhanced Statistics Cards -->
         <div class="row g-4">
             <div class="col-md-3">
                 <div class="card parts-stats-card active-parts border-0">
@@ -78,7 +72,7 @@
         </div>
     </div>
 
-    <!-- Enhanced Filters Section with Complexity Filter -->
+    <!-- Enhanced Filters Section -->
     <div class="card parts-filter-section mb-4">
         <div class="card-header parts-filter-header">
             <h6 class="parts-filter-title">
@@ -88,7 +82,7 @@
         </div>
         <div class="card-body">
             <form method="get" class="row g-3" id="filterForm">
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <label for="SearchTerm" class="form-label">
                         <i class="fas fa-search me-1"></i>Search
                     </label>
@@ -135,18 +129,6 @@
                         }
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label for="ComplexityFilter" class="form-label">
-                        <i class="fas fa-layer-group me-1"></i>Complexity
-                    </label>
-                    <select asp-for="ComplexityFilter" class="form-select">
-                        <option value="">All Complexities</option>
-                        @foreach (var complexity in Model.AvailableComplexityLevels)
-                        {
-                            <option value="@complexity" selected="@(Model.ComplexityFilter == complexity)">@complexity</option>
-                        }
-                    </select>
-                </div>
                 <div class="col-md-1">
                     <label class="form-label">
                         <i class="fas fa-toggle-on me-1"></i>Status
@@ -155,7 +137,10 @@
                         <input asp-for="ActiveOnly" class="form-check-input" type="checkbox" />
                         <label asp-for="ActiveOnly" class="form-check-label">Active Only</label>
                     </div>
-                    <button type="submit" class="btn btn-primary btn-sm w-100 mt-1">
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label d-block">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100">
                         <i class="fas fa-filter"></i>
                         <span class="d-none d-lg-inline ms-1">Apply</span>
                     </button>
@@ -164,7 +149,7 @@
         </div>
     </div>
 
-    <!-- Enhanced Parts Table with Stage Indicators -->
+    <!-- Enhanced Parts Table -->
     <div class="card parts-card border-0">
         <div class="card-header bg-white border-bottom">
             <div class="d-flex justify-content-between align-items-center">
@@ -197,39 +182,32 @@
                         <thead class="table-light">
                             <tr>
                                 <th>
-                                    <a href="?SortBy=PartNumber&SortDirection=@Model.GetSortDirection("PartNumber")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ComplexityFilter=@Model.ComplexityFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
+                                    <a href="?SortBy=PartNumber&SortDirection=@Model.GetSortDirection("PartNumber")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
                                        class="text-decoration-none">
                                         <i class="fas fa-hashtag me-1"></i>
                                         Part Number @Model.GetSortIcon("PartNumber")
                                     </a>
                                 </th>
                                 <th>
-                                    <a href="?SortBy=Name&SortDirection=@Model.GetSortDirection("Name")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ComplexityFilter=@Model.ComplexityFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
+                                    <a href="?SortBy=Name&SortDirection=@Model.GetSortDirection("Name")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
                                        class="text-decoration-none">
                                         <i class="fas fa-tag me-1"></i>
                                         Name @Model.GetSortIcon("Name")
                                     </a>
                                 </th>
                                 <th>
-                                    <a href="?SortBy=Material&SortDirection=@Model.GetSortDirection("Material")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ComplexityFilter=@Model.ComplexityFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
+                                    <a href="?SortBy=Material&SortDirection=@Model.GetSortDirection("Material")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
                                        class="text-decoration-none">
                                         <i class="fas fa-flask me-1"></i>
                                         Material @Model.GetSortIcon("Material")
                                     </a>
                                 </th>
                                 <th>
-                                    <i class="fas fa-tasks me-1"></i>
-                                    Manufacturing Stages
+                                    <i class="fas fa-industry me-1"></i>
+                                    Industry
                                 </th>
                                 <th>
-                                    <a href="?SortBy=Complexity&SortDirection=@Model.GetSortDirection("Complexity")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ComplexityFilter=@Model.ComplexityFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
-                                       class="text-decoration-none">
-                                        <i class="fas fa-layer-group me-1"></i>
-                                        Complexity @Model.GetSortIcon("Complexity")
-                                    </a>
-                                </th>
-                                <th>
-                                    <a href="?SortBy=Hours&SortDirection=@Model.GetSortDirection("Hours")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ComplexityFilter=@Model.ComplexityFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
+                                    <a href="?SortBy=Hours&SortDirection=@Model.GetSortDirection("Hours")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
                                        class="text-decoration-none">
                                         <i class="fas fa-clock me-1"></i>
                                         Duration @Model.GetSortIcon("Hours")
@@ -248,9 +226,6 @@
                         <tbody>
                             @foreach (var part in Model.Parts)
                             {
-                                var partStages = Model.GetPartStages(part.Id);
-                                var totalStageTime = partStages.Sum(s => s.EstimatedHours ?? (double)(s.ProductionStage?.DefaultSetupMinutes ?? 60) / 60.0);
-                                
                                 <tr class="@(part.HasAdminOverride ? "parts-admin-override" : "")">
                                     <td>
                                         <div class="fw-bold text-primary">@part.PartNumber</div>
@@ -264,17 +239,14 @@
                                     </td>
                                     <td>
                                         <div class="fw-semibold">@part.Name</div>
-                                        @if (!string.IsNullOrEmpty(part.Description) && part.Description.Length > 40)
+                                        @if (!string.IsNullOrEmpty(part.Description) && part.Description.Length > 50)
                                         {
-                                            <div class="small text-muted">@(part.Description.Substring(0, 40))...</div>
+                                            <div class="small text-muted">@(part.Description.Substring(0, 50))...</div>
                                         }
                                         else if (!string.IsNullOrEmpty(part.Description))
                                         {
                                             <div class="small text-muted">@part.Description</div>
                                         }
-                                        <div class="small text-info mt-1">
-                                            <i class="fas fa-building me-1"></i>@part.Industry
-                                        </div>
                                     </td>
                                     <td>
                                         <span class="badge parts-badge bg-primary">
@@ -290,105 +262,13 @@
                                         }
                                     </td>
                                     <td>
-                                        <!-- Stage Indicators -->
-                                        @if (partStages.Any())
-                                        {
-                                            <div class="d-flex flex-wrap gap-1 mb-1">
-                                                @foreach (var stage in partStages.OrderBy(s => s.ExecutionOrder))
-                                                {
-                                                    var badgeClass = stage.ProductionStage?.Name switch
-                                                    {
-                                                        var n when n.Contains("SLS") || n.Contains("Printing") => "bg-primary",
-                                                        var n when n.Contains("CNC") || n.Contains("Machining") => "bg-success", 
-                                                        var n when n.Contains("EDM") => "bg-warning text-dark",
-                                                        var n when n.Contains("Assembly") => "bg-info",
-                                                        var n when n.Contains("Finishing") => "bg-secondary",
-                                                        var n when n.Contains("Quality") || n.Contains("Inspection") => "bg-danger",
-                                                        _ => "bg-dark"
-                                                    };
-                                                    
-                                                    var stageIcon = stage.ProductionStage?.Name switch
-                                                    {
-                                                        var n when n.Contains("SLS") || n.Contains("Printing") => "fas fa-print",
-                                                        var n when n.Contains("CNC") || n.Contains("Machining") => "fas fa-cogs",
-                                                        var n when n.Contains("EDM") => "fas fa-bolt",
-                                                        var n when n.Contains("Assembly") => "fas fa-puzzle-piece",
-                                                        var n when n.Contains("Finishing") => "fas fa-brush",
-                                                        var n when n.Contains("Quality") || n.Contains("Inspection") => "fas fa-search",
-                                                        _ => "fas fa-tasks"
-                                                    };
-                                                    
-                                                    <span class="badge stage-indicator @badgeClass" 
-                                                          data-bs-toggle="tooltip" 
-                                                          title="@stage.ProductionStage?.Name - Order: @stage.ExecutionOrder - Est: @((stage.EstimatedHours ?? (double)(stage.ProductionStage?.DefaultSetupMinutes ?? 60) / 60.0).ToString("F1"))h">
-                                                        <i class="@stageIcon me-1"></i>
-                                                        @(stage.ExecutionOrder)
-                                                    </span>
-                                                }
-                                            </div>
-                                            <div class="small text-muted">
-                                                <i class="fas fa-route me-1"></i>
-                                                @partStages.Count stage@(partStages.Count == 1 ? "" : "s") 
-                                                (@totalStageTime.ToString("F1")h total)
-                                            </div>
-                                        }
-                                        else
-                                        {
-                                            <!-- Fallback to boolean flags for legacy parts -->
-                                            <div class="d-flex flex-wrap gap-1 mb-1">
-                                                @if (part.RequiresSLSPrinting)
-                                                {
-                                                    <span class="badge stage-indicator bg-primary" data-bs-toggle="tooltip" title="SLS Printing Required">
-                                                        <i class="fas fa-print me-1"></i>SLS
-                                                    </span>
-                                                }
-                                                @if (part.RequiresEDMOperations)
-                                                {
-                                                    <span class="badge stage-indicator bg-warning text-dark" data-bs-toggle="tooltip" title="EDM Operations Required">
-                                                        <i class="fas fa-bolt me-1"></i>EDM
-                                                    </span>
-                                                }
-                                                @if (part.RequiresCNCMachining)
-                                                {
-                                                    <span class="badge stage-indicator bg-success" data-bs-toggle="tooltip" title="CNC Machining Required">
-                                                        <i class="fas fa-cogs me-1"></i>CNC
-                                                    </span>
-                                                }
-                                                @if (part.RequiresAssembly)
-                                                {
-                                                    <span class="badge stage-indicator bg-info" data-bs-toggle="tooltip" title="Assembly Required">
-                                                        <i class="fas fa-puzzle-piece me-1"></i>Assembly
-                                                    </span>
-                                                }
-                                                @if (part.RequiresFinishing)
-                                                {
-                                                    <span class="badge stage-indicator bg-secondary" data-bs-toggle="tooltip" title="Finishing Required">
-                                                        <i class="fas fa-brush me-1"></i>Finishing
-                                                    </span>
-                                                }
-                                                @if (part.RequiresInspection)
-                                                {
-                                                    <span class="badge stage-indicator bg-danger" data-bs-toggle="tooltip" title="Quality Inspection Required">
-                                                        <i class="fas fa-search me-1"></i>QC
-                                                    </span>
-                                                }
-                                            </div>
-                                            <div class="small text-muted">
-                                                <i class="fas fa-exclamation-triangle me-1"></i>
-                                                Legacy stage flags
-                                            </div>
-                                        }
-                                    </td>
-                                    <td>
-                                        <!-- Complexity Level -->
-                                        <span class="badge complexity-badge @Model.GetComplexityBadgeClass(part.ComplexityLevel)" 
-                                              data-bs-toggle="tooltip" 
-                                              title="Complexity Score: @part.ComplexityScore">
-                                            <i class="fas fa-layer-group me-1"></i>
-                                            @part.ComplexityLevel
+                                        <span class="badge parts-badge bg-info">
+                                            <i class="fas fa-building me-1"></i>
+                                            @part.Industry
                                         </span>
                                         <div class="small text-muted mt-1">
-                                            Score: @part.ComplexityScore
+                                            <i class="fas fa-wrench me-1"></i>
+                                            @part.Application
                                         </div>
                                     </td>
                                     <td>
@@ -410,13 +290,6 @@
                                                 <i class="fas fa-clock me-1"></i>
                                                 @part.EstimatedHours.ToString("F1")h
                                             </div>
-                                            @if (partStages.Any() && totalStageTime > part.EstimatedHours)
-                                            {
-                                                <div class="small text-info">
-                                                    <i class="fas fa-plus me-1"></i>
-                                                    +@((totalStageTime - part.EstimatedHours).ToString("F1"))h stages
-                                                </div>
-                                            }
                                         }
                                     </td>
                                     <td>
@@ -425,7 +298,7 @@
                                                 <i class="fas fa-@(part.IsActive ? "check-circle" : "pause-circle") me-1"></i>
                                                 @(part.IsActive ? "Active" : "Inactive")
                                             </span>
-                                            <span class="badge parts-badge @(part.PartClass == "A" ? "bg-danger" : part.PartClass == "B" ? "bg-warning text-dark" : "bg-info")">
+                                            <span class="badge parts-badge @Model.GetPriorityBadgeClass(part.PartClass)">
                                                 <i class="fas fa-star me-1"></i>
                                                 Class @part.PartClass
                                             </span>
@@ -465,7 +338,7 @@
                                                 </button>
                                             </form>
                                             
-                                            <!-- Edit button -->
+                                            <!-- Edit button - FIXED: Use consistent function naming -->
                                             <button type="button" class="btn btn-sm btn-primary" 
                                                     onclick="handleEditPartClick(@part.Id)" 
                                                     data-bs-toggle="tooltip" title="Edit Part">
@@ -506,7 +379,7 @@
                                         @if (Model.PageNumber > 1)
                                         {
                                             <li class="page-item">
-                                                <a class="page-link" href="?PageNumber=@(Model.PageNumber - 1)&SortBy=@Model.SortBy&SortDirection=@Model.SortDirection&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ComplexityFilter=@Model.ComplexityFilter&ActiveOnly=@Model.ActiveOnly">
+                                                <a class="page-link" href="?PageNumber=@(Model.PageNumber - 1)&SortBy=@Model.SortBy&SortDirection=@Model.SortDirection&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ActiveOnly=@Model.ActiveOnly">
                                                     <i class="fas fa-chevron-left me-1"></i>Previous
                                                 </a>
                                             </li>
@@ -515,14 +388,14 @@
                                         @for (int i = Math.Max(1, Model.PageNumber - 2); i <= Math.Min(Model.TotalPages, Model.PageNumber + 2); i++)
                                         {
                                             <li class="page-item @(i == Model.PageNumber ? "active" : "")">
-                                                <a class="page-link" href="?PageNumber=@i&SortBy=@Model.SortBy&SortDirection=@Model.SortDirection&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ComplexityFilter=@Model.ComplexityFilter&ActiveOnly=@Model.ActiveOnly">@i</a>
+                                                <a class="page-link" href="?PageNumber=@i&SortBy=@Model.SortBy&SortDirection=@Model.SortDirection&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ActiveOnly=@Model.ActiveOnly">@i</a>
                                             </li>
                                         }
 
                                         @if (Model.PageNumber < Model.TotalPages)
                                         {
                                             <li class="page-item">
-                                                <a class="page-link" href="?PageNumber=@(Model.PageNumber + 1)&SortBy=@Model.SortBy&SortDirection=@Model.SortDirection&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ComplexityFilter=@Model.ComplexityFilter&ActiveOnly=@Model.ActiveOnly">
+                                                <a class="page-link" href="?PageNumber=@(Model.PageNumber + 1)&SortBy=@Model.SortBy&SortDirection=@Model.SortDirection&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ActiveOnly=@Model.ActiveOnly">
                                                     Next<i class="fas fa-chevron-right ms-1"></i>
                                                 </a>
                                             </li>
@@ -576,22 +449,137 @@
     @Html.AntiForgeryToken()
 </form>
 
-<!-- Enhanced JavaScript with stage management support -->
+<!-- FIXED: Enhanced JavaScript with proper global function definitions -->
 <script>
-    console.log('?? [PARTS] Loading enhanced parts page with stage management');
+    console.log('?? [PARTS] Loading enhanced parts page functionality');
     
     // Global variables
     let antiforgeryToken = '';
 
+    // MATERIAL DEFAULTS - Available globally for form functions
+    const MATERIAL_DEFAULTS = {
+        'Ti-6Al-4V Grade 5': {
+            slsMaterial: 'Ti-6Al-4V Grade 5',
+            laserPower: 200,
+            scanSpeed: 1200,
+            layerThickness: 30,
+            hatchSpacing: 120,
+            buildTemperature: 180,
+            argonPurity: 99.9,
+            oxygenContent: 50,
+            materialCost: 450.00,
+            laborCost: 85.00,
+            machineOperatingCost: 125.00,
+            estimatedHours: 8.0,
+            argonCost: 15.00
+        },
+        'Ti-6Al-4V ELI Grade 23': {
+            slsMaterial: 'Ti-6Al-4V ELI Grade 23',
+            laserPower: 180,
+            scanSpeed: 1450,
+            layerThickness: 30,
+            hatchSpacing: 120,
+            buildTemperature: 165,
+            argonPurity: 99.95,
+            oxygenContent: 30,
+            materialCost: 550.00,
+            laborCost: 85.00,
+            machineOperatingCost: 125.00,
+            estimatedHours: 8.5,
+            argonCost: 15.00
+        },
+        'Inconel 718': {
+            slsMaterial: 'Inconel 718',
+            laserPower: 285,
+            scanSpeed: 960,
+            layerThickness: 40,
+            hatchSpacing: 110,
+            buildTemperature: 200,
+            argonPurity: 99.9,
+            oxygenContent: 50,
+            materialCost: 750.00,
+            laborCost: 95.00,
+            machineOperatingCost: 135.00,
+            estimatedHours: 12.0,
+            argonCost: 18.00
+        },
+        'Inconel 625': {
+            slsMaterial: 'Inconel 625',
+            laserPower: 275,
+            scanSpeed: 980,
+            layerThickness: 40,
+            hatchSpacing: 110,
+            buildTemperature: 195,
+            argonPurity: 99.9,
+            oxygenContent: 30,
+            materialCost: 800.00,
+            laborCost: 95.00,
+            machineOperatingCost: 135.00,
+            estimatedHours: 12.5,
+            argonCost: 18.00
+        },
+        '316L Stainless Steel': {
+            slsMaterial: '316L Stainless Steel',
+            laserPower: 200,
+            scanSpeed: 1150,
+            layerThickness: 30,
+            hatchSpacing: 120,
+            buildTemperature: 170,
+            argonPurity: 99.5,
+            oxygenContent: 100,
+            materialCost: 150.00,
+            laborCost: 75.00,
+            machineOperatingCost: 115.00,
+            estimatedHours: 6.0,
+            argonCost: 12.00
+        },
+        '17-4 PH Stainless Steel': {
+            slsMaterial: '17-4 PH Stainless Steel',
+            laserPower: 195,
+            scanSpeed: 1250,
+            layerThickness: 30,
+            hatchSpacing: 120,
+            buildTemperature: 165,
+            argonPurity: 99.5,
+            oxygenContent: 100,
+            materialCost: 180.00,
+            laborCost: 80.00,
+            machineOperatingCost: 120.00,
+            estimatedHours: 7.0,
+            argonCost: 12.00
+        },
+        'AlSi10Mg': {
+            slsMaterial: 'AlSi10Mg',
+            laserPower: 175,
+            scanSpeed: 1350,
+            layerThickness: 30,
+            hatchSpacing: 130,
+            buildTemperature: 160,
+            argonPurity: 99.5,
+            oxygenContent: 100,
+            materialCost: 80.00,
+            laborCost: 70.00,
+            machineOperatingCost: 100.00,
+            estimatedHours: 5.0,
+            argonCost: 10.00
+        }
+    };
+
     // ===================================================================
-    // MAIN BUTTON HANDLERS
+    // MAIN BUTTON HANDLERS - FIXED: Global scope with consistent naming
     // ===================================================================
 
+    /**
+     * Handle Add Part button click - FIXED: Global function
+     */
     window.handleAddPartClick = function() {
         console.log('?? [PARTS] Add part button clicked');
         loadPartForm('add');
     };
 
+    /**
+     * Handle Edit Part button click - FIXED: Global function
+     */
     window.handleEditPartClick = function(partId) {
         console.log('?? [PARTS] Edit part button clicked for ID:', partId);
         
@@ -604,6 +592,9 @@
         loadPartForm('edit', partId);
     };
 
+    /**
+     * Handle Delete Part button click - FIXED: Global function
+     */
     window.handleDeletePartClick = function(partId, partNumber, partName) {
         console.log('??? [PARTS] Delete part button clicked for:', partNumber);
         
@@ -613,7 +604,7 @@
             return;
         }
         
-        const message = `Are you sure you want to delete part "${partNumber}" (${partName})?\n\nThis will also delete all associated stage requirements.\n\nThis action cannot be undone.`;
+        const message = `Are you sure you want to delete part "${partNumber}" (${partName})?\n\nThis action cannot be undone.`;
         
         if (confirm(message)) {
             console.log('? [PARTS] Delete confirmed, submitting form');
@@ -651,14 +642,17 @@
                 showToast('error', 'Failed to delete part. Please try again.');
             }
         } else {
-            console.log('? [PARTS] Delete cancelled');
+            console.log('?? [PARTS] Delete cancelled');
         }
     };
 
     // ===================================================================
-    // CORE FUNCTIONALITY
+    // CORE FUNCTIONALITY - FIXED: Properly structured loadPartForm
     // ===================================================================
 
+    /**
+     * Load part form (add or edit) - FIXED: Enhanced error handling and proper modal management
+     */
     function loadPartForm(action, partId = null) {
         console.log('?? [PARTS] Loading part form:', action, partId ? `ID: ${partId}` : 'new part');
         
@@ -675,7 +669,7 @@
             return;
         }
         
-        // Build URL
+        // Build URL - FIXED: Proper handler routing
         let url = '/Admin/Parts?handler=';
         if (action === 'add') {
             url += 'Add';
@@ -698,7 +692,7 @@
         // Show loading state
         modalContent.innerHTML = createLoadingContent(action);
         
-        // Show modal
+        // Show modal - FIXED: Better Bootstrap 5 compatibility
         try {
             let bootstrapModal;
             if (typeof bootstrap !== 'undefined') {
@@ -708,6 +702,7 @@
                 });
                 bootstrapModal.show();
             } else {
+                // Fallback for when Bootstrap isn't available
                 modal.style.display = 'block';
                 modal.classList.add('show');
                 document.body.classList.add('modal-open');
@@ -719,7 +714,7 @@
             return;
         }
         
-        // Fetch form content
+        // Fetch form content - FIXED: Enhanced error handling
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000);
         
@@ -756,6 +751,7 @@
                 throw new Error('Empty response received from server');
             }
             
+            // Check for error indicators - FIXED: Better error detection
             if (html.includes('<!DOCTYPE html>') && !html.includes('modal-header')) {
                 throw new Error('Received full page instead of form partial');
             }
@@ -765,7 +761,7 @@
             // Load content into modal
             modalContent.innerHTML = html;
             
-            // Initialize form after loading
+            // Initialize form after loading - FIXED: Proper initialization
             setTimeout(() => {
                 initializeFormComponents();
                 setModalFocus();
@@ -782,6 +778,195 @@
             showToast('error', `Failed to load ${action} form: ${errorMessage}`);
         });
     }
+
+    // ===================================================================
+    // FORM FUNCTIONS - FIXED: Global scope for form callbacks
+    // ===================================================================
+
+    /**
+     * Form callback functions - FIXED: All moved to global scope
+     */
+    window.validatePartNumber = function(partNumber) {
+        console.log('?? [PARTS] Validating part number:', partNumber);
+        
+        try {
+            const input = document.querySelector('[name="PartNumber"]');
+            if (!input || !partNumber) return false;
+            
+            input.classList.remove('is-invalid', 'is-valid');
+            
+            const isValid = partNumber.length >= 3 && partNumber.length <= 50;
+            
+            if (isValid) {
+                input.classList.add('is-valid');
+                console.log('? [PARTS] Part number format valid');
+                return true;
+            } else {
+                input.classList.add('is-invalid');
+                console.log('? [PARTS] Invalid part number format');
+                return false;
+            }
+            
+        } catch (error) {
+            console.error('? [PARTS] Error validating part number:', error);
+            return false;
+        }
+    };
+
+    window.showTab = function(tabName) {
+        console.log('?? [PARTS] Switching to tab:', tabName);
+        
+        try {
+            const allTabs = document.querySelectorAll('.tab-pane');
+            allTabs.forEach(tab => {
+                tab.classList.remove('show', 'active');
+            });
+            
+            const allButtons = document.querySelectorAll('.nav-link');
+            allButtons.forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            const targetTab = document.getElementById(tabName);
+            const targetButton = document.getElementById(tabName + '-tab');
+            
+            if (targetTab && targetButton) {
+                targetTab.classList.add('show', 'active');
+                targetButton.classList.add('active');
+                console.log('? [PARTS] Tab switched successfully:', tabName);
+                return true;
+            } else {
+                console.error('? [PARTS] Tab elements not found:', tabName);
+                return false;
+            }
+            
+        } catch (error) {
+            console.error('? [PARTS] Error switching tabs:', error);
+            return false;
+        }
+    };
+
+    window.updateSlsMaterial = function() {
+        console.log('?? [PARTS] Updating material defaults');
+        
+        try {
+            const materialSelect = document.getElementById('materialSelect');
+            const slsMaterialInput = document.getElementById('slsMaterialInput');
+            
+            if (!materialSelect || !slsMaterialInput) {
+                console.warn('?? [PARTS] Material form elements not found');
+                return false;
+            }
+            
+            const selectedMaterial = materialSelect.value;
+            if (!selectedMaterial) {
+                console.log('?? [PARTS] No material selected');
+                return false;
+            }
+            
+            const defaults = MATERIAL_DEFAULTS[selectedMaterial];
+            if (!defaults) {
+                console.log('?? [PARTS] No defaults found for material:', selectedMaterial);
+                return false;
+            }
+            
+            // Update form fields with material defaults
+            slsMaterialInput.value = defaults.slsMaterial;
+            
+            const fieldMappings = {
+                'laserPowerInput': defaults.laserPower,
+                'scanSpeedInput': defaults.scanSpeed,
+                'layerThicknessInput': defaults.layerThickness,
+                'hatchSpacingInput': defaults.hatchSpacing,
+                'buildTempInput': defaults.buildTemperature,
+                'argonPurityInput': defaults.argonPurity,
+                'oxygenContentInput': defaults.oxygenContent,
+                'materialCostInput': defaults.materialCost,
+                'laborCostInput': defaults.laborCost,
+                'machineCostInput': defaults.machineOperatingCost,
+                'estimatedHoursInput': defaults.estimatedHours
+            };
+            
+            let updatedCount = 0;
+            Object.keys(fieldMappings).forEach(elementId => {
+                const element = document.getElementById(elementId);
+                if (element && (!element.value || element.value == '0')) {
+                    element.value = fieldMappings[elementId];
+                    updatedCount++;
+                    
+                    if (element.onchange) {
+                        element.onchange();
+                    }
+                }
+            });
+            
+            if (window.updateDurationDisplay) {
+                window.updateDurationDisplay();
+            }
+            
+            console.log('? [PARTS] Material defaults applied:', updatedCount, 'fields updated');
+            return true;
+            
+        } catch (error) {
+            console.error('? [PARTS] Error updating material defaults:', error);
+            return false;
+        }
+    };
+
+    window.updateDurationDisplay = function() {
+        try {
+            const estimatedHours = parseFloat(document.getElementById('estimatedHoursInput')?.value || 0);
+            const adminOverride = parseFloat(document.getElementById('adminOverrideInput')?.value || 0);
+            const displayElement = document.getElementById('effectiveDurationDisplay');
+            
+            if (displayElement) {
+                const effectiveHours = adminOverride > 0 ? adminOverride : estimatedHours;
+                const displayText = adminOverride > 0 
+                    ? `${effectiveHours.toFixed(1)}h (Admin Override)` 
+                    : `${effectiveHours.toFixed(1)}h (Standard)`;
+                
+                displayElement.textContent = displayText;
+                displayElement.className = adminOverride > 0 
+                    ? 'form-control-plaintext bg-warning bg-opacity-25 border rounded p-2 fw-bold'
+                    : 'form-control-plaintext bg-light border rounded p-2';
+                
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error('? [PARTS] Error updating duration display:', error);
+            return false;
+        }
+    };
+
+    window.calculateVolume = function() {
+        try {
+            const length = parseFloat(document.querySelector('[name="LengthMm"]')?.value || 0);
+            const width = parseFloat(document.querySelector('[name="WidthMm"]')?.value || 0);
+            const height = parseFloat(document.querySelector('[name="HeightMm"]')?.value || 0);
+            
+            const volume = length * width * height;
+            const volumeInput = document.getElementById('volumeInput');
+            const dimensionsInput = document.getElementById('dimensionsInput');
+            
+            let updated = false;
+            
+            if (volumeInput) {
+                volumeInput.value = Math.round(volume);
+                updated = true;
+            }
+            
+            if (dimensionsInput && length > 0 && width > 0 && height > 0) {
+                dimensionsInput.value = `${length} × ${width} × ${height} mm`;
+                updated = true;
+            }
+            
+            return updated;
+        } catch (error) {
+            console.error('? [PARTS] Error calculating volume:', error);
+            return false;
+        }
+    };
 
     // ===================================================================
     // UTILITY FUNCTIONS
@@ -875,7 +1060,7 @@
     // ===================================================================
 
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('?? [PARTS] Initializing enhanced Parts page with stage management');
+        console.log('?? [PARTS] Initializing enhanced Parts page');
         
         try {
             // Initialize antiforgery token
@@ -926,14 +1111,16 @@
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
             
-            console.log('? [PARTS] Enhanced Parts page with stage management initialized successfully');
+            console.log('? [PARTS] Parts page initialized successfully');
             
         } catch (error) {
             console.error('? [PARTS] Error initializing Parts page:', error);
         }
     });
 
-    // Helper functions for modal content generation
+    /**
+     * Helper functions for modal content generation
+     */
     function initializeFormComponents() {
         try {
             const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
@@ -996,7 +1183,7 @@
                 <div class="spinner-border text-primary mb-3" role="status">
                     <span class="visually-hidden">Loading...</span>
                 </div>
-                <p class="text-muted">Loading part form with stage management...</p>
+                <p class="text-muted">Loading part form...</p>
             </div>
         `;
     }
@@ -1018,6 +1205,14 @@
                         ${errorMessage}
                     </div>
                 </div>
+                <div class="mt-3">
+                    <h6 class="text-muted">What you can do:</h6>
+                    <ul class="text-muted small">
+                        <li>Try refreshing the page and attempting again</li>
+                        <li>Check your internet connection</li>
+                        <li>Contact support if the problem persists</li>
+                    </ul>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
@@ -1026,6 +1221,9 @@
                 <button type="button" class="btn btn-primary" onclick="window.location.reload()">
                     <i class="fas fa-sync-alt me-2"></i>Refresh Page
                 </button>
+                ${fallbackUrl ? `<button type="button" class="btn btn-info" onclick="window.open('${fallbackUrl}', '_blank')">
+                    <i class="fas fa-external-link-alt me-2"></i>Open in New Tab
+                </button>` : ''}
             </div>
         `;
     }
@@ -1060,6 +1258,21 @@
                         <p><strong>Process Type:</strong> ${part.processType || 'N/A'}</p>
                         <p><strong>Required Machine:</strong> ${part.requiredMachineType || 'N/A'}</p>
                         <p><strong>Material Cost:</strong> $${part.materialCostPerKg || 0}/kg</p>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <h6 class="text-primary">Physical Properties</h6>
+                        <p><strong>Dimensions:</strong> ${part.lengthMm || 0} × ${part.widthMm || 0} × ${part.heightMm || 0} mm</p>
+                        <p><strong>Weight:</strong> ${part.weightGrams || 0}g</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-primary">Quality Requirements</h6>
+                        <p><strong>Requires Inspection:</strong> ${part.requiresInspection ? 'Yes' : 'No'}</p>
+                        <p><strong>Requires Certification:</strong> ${part.requiresCertification ? 'Yes' : 'No'}</p>
+                        <p><strong>FDA Required:</strong> ${part.requiresFDA ? 'Yes' : 'No'}</p>
+                        <p><strong>AS9100 Required:</strong> ${part.requiresAS9100 ? 'Yes' : 'No'}</p>
+                        <p><strong>NADCAP Required:</strong> ${part.requiresNADCAP ? 'Yes' : 'No'}</p>
                     </div>
                 </div>
             </div>
@@ -1101,120 +1314,8 @@
         return `Error: ${message}`;
     }
 
-    console.log('? [PARTS] Enhanced Parts page with stage management loaded successfully');
+    console.log('? [PARTS] Enhanced Parts page script loaded successfully with proper edit functionality');
 </script>
-
-<!-- Enhanced CSS for stage indicators and complexity levels -->
-<style>
-    .stage-indicator {
-        font-size: 0.75rem;
-        font-weight: 500;
-        border-radius: 4px;
-        padding: 2px 6px;
-        margin: 1px;
-        display: inline-flex;
-        align-items: center;
-        white-space: nowrap;
-    }
-
-    .complexity-badge {
-        font-size: 0.8rem;
-        font-weight: 600;
-        border-radius: 6px;
-        padding: 4px 8px;
-        display: inline-flex;
-        align-items: center;
-    }
-
-    .parts-admin-override {
-        background-color: rgba(255, 193, 7, 0.1);
-        border-left: 3px solid #ffc107;
-    }
-
-    .parts-stats-card {
-        transition: transform 0.2s ease-in-out;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    .parts-stats-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-    }
-
-    .parts-stats-number {
-        font-size: 2rem;
-        font-weight: 700;
-        line-height: 1;
-    }
-
-    .parts-stats-label {
-        font-size: 0.9rem;
-        color: #6c757d;
-        margin-top: 5px;
-    }
-
-    .parts-badge {
-        font-size: 0.75rem;
-        font-weight: 500;
-        margin: 1px;
-    }
-
-    .parts-empty-state {
-        text-align: center;
-        padding: 60px 20px;
-    }
-
-    .parts-filter-header {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        border-bottom: 1px solid #dee2e6;
-    }
-
-    .parts-filter-title {
-        margin: 0;
-        color: #495057;
-        font-weight: 600;
-    }
-
-    .parts-table th {
-        background-color: #f8f9fa;
-        font-weight: 600;
-        color: #495057;
-        border-color: #dee2e6;
-        position: sticky;
-        top: 0;
-        z-index: 10;
-    }
-
-    .parts-table th a {
-        color: #495057;
-        text-decoration: none;
-    }
-
-    .parts-table th a:hover {
-        color: #007bff;
-    }
-
-    .parts-table tbody tr:hover {
-        background-color: rgba(0, 123, 255, 0.05);
-    }
-
-    .parts-btn-group .btn {
-        border-radius: 4px;
-        font-size: 0.8rem;
-        padding: 4px 8px;
-    }
-
-    @@media (max-width: 768px) {
-        .parts-stats-number {
-            font-size: 1.5rem;
-        }
-        
-        .stage-indicator {
-            font-size: 0.7rem;
-            padding: 1px 4px;
-        }
-    }
-</style>
 
 <!-- TempData message handling -->
 @if(TempData["SuccessMessage"] != null)

@@ -63,6 +63,7 @@ namespace OpCentrix.Data
         public DbSet<ProductionStageExecution> ProductionStageExecutions { get; set; }
         public DbSet<AssemblyComponent> AssemblyComponents { get; set; }
         public DbSet<PrototypeTimeLog> PrototypeTimeLogs { get; set; }
+        public DbSet<PartStageRequirement> PartStageRequirements { get; set; } = null!;
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {

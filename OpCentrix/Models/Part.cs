@@ -1026,5 +1026,130 @@ namespace OpCentrix.Models
         }
         
         #endregion
+        
+        #region Stage Management Helper Properties - NEW SECTION FOR PARTS REFACTORING
+        
+        /// <summary>
+        /// Get all required manufacturing stages for this part
+        /// </summary>
+        [NotMapped]
+        public List<string> RequiredStages 
+        {
+            get
+            {
+                var stages = new List<string>();
+                
+                if (RequiresSLSPrinting) stages.Add("SLS Printing");
+                if (RequiresEDMOperations) stages.Add("EDM Operations");
+                if (RequiresCNCMachining) stages.Add("CNC Machining");
+                if (RequiresAssembly) stages.Add("Assembly");
+                if (RequiresFinishing) stages.Add("Finishing");
+                
+                return stages;
+            }
+        }
+
+        /// <summary>
+        /// Get stage indicators for display
+        /// </summary>
+        [NotMapped]
+        public List<StageIndicator> StageIndicators
+        {
+            get
+            {
+                var indicators = new List<StageIndicator>();
+                
+                if (RequiresSLSPrinting) 
+                    indicators.Add(new StageIndicator { Name = "SLS", Class = "bg-primary", Icon = "fas fa-print", Title = "SLS Printing" });
+                if (RequiresEDMOperations) 
+                    indicators.Add(new StageIndicator { Name = "EDM", Class = "bg-warning", Icon = "fas fa-bolt", Title = "EDM Operations" });
+                if (RequiresCNCMachining) 
+                    indicators.Add(new StageIndicator { Name = "CNC", Class = "bg-success", Icon = "fas fa-cogs", Title = "CNC Machining" });
+                if (RequiresAssembly) 
+                    indicators.Add(new StageIndicator { Name = "Assembly", Class = "bg-info", Icon = "fas fa-puzzle-piece", Title = "Assembly Operations" });
+                if (RequiresFinishing) 
+                    indicators.Add(new StageIndicator { Name = "Finishing", Class = "bg-secondary", Icon = "fas fa-brush", Title = "Finishing Operations" });
+                
+                return indicators;
+            }
+        }
+
+        /// <summary>
+        /// Calculate total estimated process time including all stages
+        /// </summary>
+        [NotMapped]
+        public decimal TotalEstimatedProcessTime
+        {
+            get
+            {
+                decimal totalMinutes = 0;
+                
+                // Convert hours to minutes for main process
+                totalMinutes += (decimal)(EstimatedHours * 60);
+                
+                // Add additional stage times (estimated percentages of main process)
+                if (RequiresEDMOperations) totalMinutes += (decimal)(EstimatedHours * 60 * 0.3); // 30% additional
+                if (RequiresCNCMachining) totalMinutes += (decimal)(EstimatedHours * 60 * 0.4); // 40% additional
+                if (RequiresAssembly) totalMinutes += 120; // 2 hours fixed
+                if (RequiresFinishing) totalMinutes += 180; // 3 hours fixed
+                
+                return Math.Round(totalMinutes / 60, 2); // Return in hours
+            }
+        }
+
+        /// <summary>
+        /// Get count of required stages
+        /// </summary>
+        [NotMapped]
+        public int RequiredStageCount => RequiredStages.Count;
+
+        /// <summary>
+        /// Get manufacturing complexity level based on stages and time
+        /// </summary>
+        [NotMapped]
+        public string ComplexityLevel
+        {
+            get
+            {
+                var score = 0;
+                
+                // Time complexity
+                if (EstimatedHours > 24) score += 4;
+                else if (EstimatedHours > 12) score += 3;
+                else if (EstimatedHours > 6) score += 2;
+                else if (EstimatedHours > 2) score += 1;
+                
+                // Stage complexity
+                score += RequiredStageCount;
+                
+                return score switch
+                {
+                    <= 2 => "Simple",
+                    <= 4 => "Medium",
+                    <= 6 => "Complex",
+                    _ => "Very Complex"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Get complexity score for sorting/filtering
+        /// </summary>
+        [NotMapped]
+        public int ComplexityScore
+        {
+            get
+            {
+                var score = RequiredStageCount;
+                if (EstimatedHours > 24) score += 4;
+                else if (EstimatedHours > 12) score += 3;
+                else if (EstimatedHours > 6) score += 2;
+                else if (EstimatedHours > 2) score += 1;
+                
+                return score;
+            }
+        }
+
+        #endregion
     }
 }

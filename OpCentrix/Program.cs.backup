@@ -227,12 +227,6 @@ else
     builder.Logging.SetMinimumLevel(LogLevel.Information);
 }
 
-// Register the new PartStageService
-builder.Services.AddScoped<IPartStageService, PartStageService>();
-
-// Register the ProductionStageSeederService for default data
-builder.Services.AddScoped<IProductionStageSeederService, ProductionStageSeederService>();
-
 var app = builder.Build();
 
 // Configure the HTTP request pipeline
@@ -350,11 +344,6 @@ using (var scope = app.Services.CreateScope())
             // Initialize production stages for prototype tracking (Phase 0.5)
             var productionStageService = initScope.ServiceProvider.GetRequiredService<ProductionStageService>();
             await productionStageService.CreateDefaultStagesAsync();
-            
-            // Seed default production stages for Parts refactoring (NEW)
-            var productionStageSeeder = initScope.ServiceProvider.GetRequiredService<IProductionStageSeederService>();
-            var seededStageCount = await productionStageSeeder.SeedDefaultStagesAsync();
-            logger.LogInformation("Production stages seeded: {Count} stages available", seededStageCount);
             
             // Load system settings into configuration (Task 3)
             var configurationService = initScope.ServiceProvider.GetRequiredService<OpCentrix.Services.Admin.ISystemConfigurationService>();

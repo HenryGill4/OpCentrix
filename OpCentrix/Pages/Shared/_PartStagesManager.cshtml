@@ -1,0 +1,137 @@
+@model OpCentrix.Models.Part
+
+<!-- Manufacturing Stages Management Tab Content -->
+<div class="row g-3">
+    <div class="col-12">
+        <h6 class="text-primary border-bottom pb-2 mb-3">
+            <i class="fas fa-tasks me-2"></i>Manufacturing Stages Management
+        </h6>
+        <div class="alert alert-info d-flex align-items-start" role="alert">
+            <i class="fas fa-info-circle me-3 mt-1"></i>
+            <div>
+                <strong>Stage-Based Manufacturing:</strong>
+                Configure the manufacturing stages required for this part. The new normalized stage system provides better workflow management than the legacy boolean flags.
+            </div>
+        </div>
+    </div>
+
+    <!-- Current Implementation Status --> 
+    <div class="col-12">
+        <div class="card border-warning">
+            <div class="card-header bg-warning text-dark"> 
+                <h6 class="mb-0">
+                    <i class="fas fa-wrench me-2"></i>Implementation Status
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <p class="mb-2"><strong>Current Status:</strong> Basic stage management framework is in place</p>
+                        <p class="mb-2"><strong>Part Information:</strong> @(Model.Id == 0 ? "New Part" : $"Editing Part ID: {Model.Id}") | Part Number: @(Model.PartNumber ?? "Not yet assigned")</p>
+                        <p class="mb-0"><strong>Temporary Solution:</strong> Use the legacy manufacturing flags in the Quality & Testing tab until the full stage management is available.</p>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded p-3 bg-light">
+                            <h6 class="text-info">Available Soon:</h6>
+                            <ul class="list-unstyled mb-0 small">
+                                <li><i class="fas fa-check text-success me-1"></i> Visual stage workflow</li>
+                                <li><i class="fas fa-check text-success me-1"></i> Stage-based time estimation</li>
+                                <li><i class="fas fa-check text-success me-1"></i> Dependency management</li>
+                                <li><i class="fas fa-check text-success me-1"></i> Resource allocation</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Legacy Manufacturing Flags Helper -->
+    <div class="col-12">
+        <div class="card border-info">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Current Manufacturing Requirements Configuration
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="mb-3">Configure the manufacturing processes this part requires using the checkboxes in the <strong>Quality & Testing</strong> tab:</p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-secondary">Primary Processes:</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-industry text-primary me-2"></i><strong>SLS Printing:</strong> Selective Laser Sintering</li>
+                            <li><i class="fas fa-cogs text-secondary me-2"></i><strong>CNC Machining:</strong> Post-processing machining</li>
+                            <li><i class="fas fa-bolt text-warning me-2"></i><strong>EDM Operations:</strong> Electrical Discharge Machining</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-secondary">Secondary Processes:</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-puzzle-piece text-info me-2"></i><strong>Assembly:</strong> Multi-component assembly</li>
+                            <li><i class="fas fa-paint-brush text-success me-2"></i><strong>Finishing:</strong> Surface treatment and coating</li>
+                            <li><i class="fas fa-search text-danger me-2"></i><strong>Quality Inspection:</strong> Final quality control</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="alert alert-light mt-3 mb-0">
+                    <i class="fas fa-lightbulb text-warning me-2"></i>
+                    <strong>Tip:</strong> Switch to the <strong>Quality & Testing</strong> tab to configure these requirements for now. 
+                    The advanced stage management interface will be available in a future update.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="col-12">
+        <div class="d-flex justify-content-center gap-3">
+            <button type="button" class="btn btn-outline-primary" onclick="showTab('quality')" data-bs-toggle="tooltip" title="Go to Quality & Testing tab">
+                <i class="fas fa-arrow-right me-2"></i>Configure Manufacturing Requirements
+            </button>
+            <a href="/Admin/ProductionStages" class="btn btn-outline-info" target="_blank" data-bs-toggle="tooltip" title="Manage production stages in a new tab">
+                <i class="fas fa-external-link-alt me-2"></i>Manage Production Stages
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Enhanced JavaScript -->
+<script>
+    console.log('?? [STAGE-MANAGER] Stage management tab loaded for part:', '@(Model.PartNumber ?? "New Part")');
+    
+    // Initialize tooltips
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Bootstrap tooltips if available
+        if (typeof bootstrap !== 'undefined') {
+            const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+            const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+        }
+    });
+    
+    console.log('? [STAGE-MANAGER] Manufacturing Stages tab ready');
+</script>
+
+<!-- Enhanced CSS -->
+<style>
+    .card-header h6 {
+        font-weight: 600;
+    }
+    
+    .alert-info {
+        border-left: 4px solid #17a2b8;
+    }
+    
+    .alert-light {
+        background-color: #f8f9fa;
+        border-color: #e9ecef;
+    }
+    
+    .list-unstyled li {
+        padding: 0.25rem 0;
+    }
+    
+    .bg-light {
+        background-color: #f8f9fa !important;
+    }
+</style>

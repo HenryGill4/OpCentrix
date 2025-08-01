@@ -70,14 +70,6 @@
                     <span class="d-md-none">QC</span>
                 </button>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="stages-tab" type="button" onclick="showTab('stages')" 
-                        data-bs-toggle="tab" data-bs-target="#stages" role="tab">
-                    <i class="fas fa-tasks me-1"></i>
-                    <span class="d-none d-md-inline">Manufacturing Stages</span>
-                    <span class="d-md-none">Stages</span>
-                </button>
-            </li>
         </ul>
 
         <!-- Tab Content Container -->
@@ -569,14 +561,7 @@
                 </div>
             </div>
             
-            <!-- TAB 6: Manufacturing Stages - NEW TAB -->
-            <div class="tab-pane fade" id="stages" role="tabpanel">
-                @{
-                    await Html.RenderPartialAsync("_PartStagesManager", Model);
-                }
-            </div>
-            
-            <!-- TAB 7: Quality & Testing (moved from 6) -->
+            <!-- TAB 6: Quality & Testing -->
             <div class="tab-pane fade" id="quality" role="tabpanel">
                 <div class="row g-3">
                     <div class="col-12">
@@ -1114,41 +1099,6 @@
     }); 
     
     console.log('? [PART-FORM] Enhanced Parts Form with production-ready functionality loaded');
-    
-    // Manufacturing Stages JavaScript
-    window.addStage = function() {
-        console.log('?? [PART-FORM] Adding new manufacturing stage');
-        
-        try {
-            const container = document.getElementById('stagesContainer');
-            if (!container) {
-                console.error('? [PART-FORM] Stages container not found');
-                return;
-            }
-            
-            // Create new stage row
-            const newRow = document.createElement('div');
-            newRow.className = 'col-12 mb-3';
-            newRow.innerHTML = `
-                <div class="row g-3">
-                    <div class="col-md-8">
-                        <label class="form-label">Stage Description</label>
-                        <input type="text" class="form-control" placeholder="e.g., Material Preparation" />
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Estimated Duration (h)</label>
-                        <input type="number" class="form-control" step="0.1" placeholder="e.g., 2.5" />
-                    </div>
-                </div>
-            `;
-            
-            container.appendChild(newRow);
-            console.log('? [PART-FORM] New stage row added:', newRow);
-            
-        } catch (error) {
-            console.error('? [PART-FORM] Error adding new stage:', error);
-        }
-    };
 </script>
 
 <style>

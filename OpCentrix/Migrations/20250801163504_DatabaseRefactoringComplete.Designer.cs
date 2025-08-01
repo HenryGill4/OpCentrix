@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using OpCentrix.Data;
 
@@ -10,9 +11,11 @@ using OpCentrix.Data;
 namespace OpCentrix.Migrations
 {
     [DbContext(typeof(SchedulerContext))]
-    partial class SchedulerContextModelSnapshot : ModelSnapshot
+    [Migration("20250801163504_DatabaseRefactoringComplete")]
+    partial class DatabaseRefactoringComplete
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.11");
@@ -4085,97 +4088,6 @@ namespace OpCentrix.Migrations
                     b.ToTable("PartClassifications");
                 });
 
-            modelBuilder.Entity("OpCentrix.Models.PartStageRequirement", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("AllowParallel")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("EstimatedCost")
-                        .HasColumnType("decimal(10,2)");
-
-                    b.Property<double?>("EstimatedHours")
-                        .HasColumnType("REAL");
-
-                    b.Property<int>("ExecutionOrder")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("IsBlocking")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("IsRequired")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("LastModifiedBy")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("LastModifiedDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("PartId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("ProductionStageId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("QualityRequirements")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("RequiredMaterials")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("RequiredTooling")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("RequirementNotes")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("SetupTimeMinutes")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("SpecialInstructions")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("StageParameters")
-                        .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PartId");
-
-                    b.HasIndex("ProductionStageId");
-
-                    b.ToTable("PartStageRequirements");
-                });
-
             modelBuilder.Entity("OpCentrix.Models.ProductionStage", b =>
                 {
                     b.Property<int>("Id")
@@ -5527,25 +5439,6 @@ namespace OpCentrix.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("PartClassification");
-                });
-
-            modelBuilder.Entity("OpCentrix.Models.PartStageRequirement", b =>
-                {
-                    b.HasOne("OpCentrix.Models.Part", "Part")
-                        .WithMany()
-                        .HasForeignKey("PartId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("OpCentrix.Models.ProductionStage", "ProductionStage")
-                        .WithMany()
-                        .HasForeignKey("ProductionStageId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Part");
-
-                    b.Navigation("ProductionStage");
                 });
 
             modelBuilder.Entity("OpCentrix.Models.ProductionStageExecution", b =>
