@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using OpCentrix.Data;
 using OpCentrix.Models;
 using OpCentrix.Services;
+using OpCentrix.Services.Admin; // FIXED: Add Admin namespace
 using System.Text.Json;
 
 namespace OpCentrix.Pages.Admin
@@ -19,13 +20,13 @@ namespace OpCentrix.Pages.Admin
         private readonly SchedulerContext _context;
         private readonly ILogger<PartsModel> _logger;
         private readonly IPartStageService _partStageService;
-        private readonly IProductionStageSeederService _productionStageSeeder;
+        private readonly OpCentrix.Services.Admin.IProductionStageSeederService _productionStageSeeder; // FIXED: Use fully qualified name
 
         public PartsModel(
             SchedulerContext context,
             ILogger<PartsModel> logger,
             IPartStageService partStageService,
-            IProductionStageSeederService productionStageSeeder)
+            OpCentrix.Services.Admin.IProductionStageSeederService productionStageSeeder) // FIXED: Use fully qualified name
         {
             _context = context;
             _logger = logger;

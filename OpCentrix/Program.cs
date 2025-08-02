@@ -230,8 +230,8 @@ else
 // Register the new PartStageService
 builder.Services.AddScoped<IPartStageService, PartStageService>();
 
-// Register the ProductionStageSeederService for default data
-builder.Services.AddScoped<IProductionStageSeederService, ProductionStageSeederService>();
+// FIXED: Use only the Admin namespace ProductionStageSeederService to resolve ambiguity - COMPLETE FIX
+builder.Services.AddScoped<OpCentrix.Services.Admin.IProductionStageSeederService, OpCentrix.Services.Admin.ProductionStageSeederService>();
 
 // Register the new StageTemplateService for custom field templates - PLACEHOLDER
 // builder.Services.AddScoped<IStageTemplateService, StageTemplateService>();
@@ -354,8 +354,8 @@ using (var scope = app.Services.CreateScope())
             var productionStageService = initScope.ServiceProvider.GetRequiredService<ProductionStageService>();
             await productionStageService.CreateDefaultStagesAsync();
             
-            // Seed default production stages for Parts refactoring (NEW)
-            var productionStageSeeder = initScope.ServiceProvider.GetRequiredService<IProductionStageSeederService>();
+            // FIXED: Use the Admin namespace service for production stage seeding - COMPLETE FIX
+            var productionStageSeeder = initScope.ServiceProvider.GetRequiredService<OpCentrix.Services.Admin.IProductionStageSeederService>();
             var seededStageCount = await productionStageSeeder.SeedDefaultStagesAsync();
             logger.LogInformation("Production stages seeded: {Count} stages available", seededStageCount);
             
