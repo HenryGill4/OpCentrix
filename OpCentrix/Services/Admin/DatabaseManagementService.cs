@@ -1088,16 +1088,39 @@ public class DatabaseManagementService : IDatabaseManagementService
             }
 
             // Check for overlapping jobs on same machine
-            var overlappingJobs = await _context.Jobs
+            // First get all scheduled jobs grouped by machine, then check overlaps in memory
+            var scheduledJobs = await _context.Jobs
                 .Where(j => j.Status == "Scheduled")
-                .GroupBy(j => j.MachineId)
-                .SelectMany(g => g.SelectMany(j1 => g.Where(j2 => j2.Id != j1.Id && 
-                    j1.ScheduledStart < j2.ScheduledEnd && j2.ScheduledStart < j1.ScheduledEnd)))
-                .CountAsync();
+                .Select(j => new { j.Id, j.MachineId, j.ScheduledStart, j.ScheduledEnd })
+                .ToListAsync();
             
-            if (overlappingJobs > 0)
+            var overlappingJobsCount = 0;
+            var processedPairs = new HashSet<string>();
+            
+            foreach (var job1 in scheduledJobs)
             {
-                issues.Add($"{overlappingJobs / 2} overlapping job conflicts detected");
+                var overlappingJobs = scheduledJobs
+                    .Where(job2 => job2.MachineId == job1.MachineId && 
+                                   job2.Id != job1.Id &&
+                                   job1.ScheduledStart < job2.ScheduledEnd && 
+                                   job2.ScheduledStart < job1.ScheduledEnd)
+                    .ToList();
+                
+                foreach (var job2 in overlappingJobs)
+                {
+                    // Create a unique pair identifier to avoid counting the same overlap twice
+                    var pairKey = job1.Id < job2.Id ? $"{job1.Id}-{job2.Id}" : $"{job2.Id}-{job1.Id}";
+                    if (!processedPairs.Contains(pairKey))
+                    {
+                        processedPairs.Add(pairKey);
+                        overlappingJobsCount++;
+                    }
+                }
+            }
+            
+            if (overlappingJobsCount > 0)
+            {
+                issues.Add($"{overlappingJobsCount} overlapping job conflicts detected");
             }
         }
         catch (Exception ex)

@@ -174,18 +174,18 @@
                     </div>
                     
                     <div class="col-md-3">
-                        <div class="form-check mt-4">
-                            <input asp-for="IsActive" class="form-check-input" type="checkbox" />
-                            <label asp-for="IsActive" class="form-check-label">Active</label>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-3">
-                        <div class="form-check mt-4">
-                            <input asp-for="IsAssemblyComponent" class="form-check-input" type="checkbox" />
-                            <label asp-for="IsAssemblyComponent" class="form-check-label">Assembly Component</label>
-                        </div>
-                    </div>
+    <div class="form-check mt-4">
+        <input asp-for="IsActive" class="form-check-input" type="checkbox" />
+        <label asp-for="IsActive" class="form-check-label">Active</label>
+    </div>
+</div>
+
+<div class="col-md-3">
+    <div class="form-check mt-4">
+        <input asp-for="IsAssemblyComponent" class="form-check-input" type="checkbox" />
+        <label asp-for="IsAssemblyComponent" class="form-check-label">Assembly Component</label>
+    </div>
+</div>
                 </div>
             </div>
 
@@ -856,7 +856,7 @@
                 'scanSpeedInput': defaults.scanSpeed,
                 'layerThicknessInput': defaults.layerThickness,
                 'hatchSpacingInput': defaults.hatchSpacing,
-                'buildTempInput': defaults.buildTemperature,
+                'buildTempInput' : defaults.buildTemperature,
                 'argonPurityInput': defaults.argonPurity,
                 'oxygenContentInput': defaults.oxygenContent,
                 'materialCostInput': defaults.materialCost,
@@ -1246,9 +1246,40 @@
         border-color: #dc3545;
     }
     
+    /* FIXED: Prevent horizontal scrolling, only allow vertical */
     .tab-content {
         max-height: 60vh;
         overflow-y: auto;
+        overflow-x: hidden;
+        padding-right: 10px;
+    }
+    
+    /* Ensure Bootstrap rows don't cause horizontal overflow */
+    .tab-content .row {
+        margin-left: 0;
+        margin-right: 0;
+    }
+    
+    /* Ensure columns don't cause horizontal overflow */
+    .tab-content [class*="col-"] {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+    
+    /* Prevent form elements from overflowing */
+    .tab-content .form-control,
+    .tab-content .form-select,
+    .tab-content textarea {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    
+    /* Ensure proper text wrapping */
+    .tab-content .form-text,
+    .tab-content .alert,
+    .tab-content p {
+        word-wrap: break-word;
+        overflow-wrap: break-word;
     }
     
     .nav-tabs .nav-link {
@@ -1265,5 +1296,18 @@
         color: #495057;
         background-color: #fff;
         border-color: #dee2e6 #dee2e6 #fff;
+    }
+    
+    /* Additional responsive improvements */
+    @@media (max-width: 768px) {
+        .tab-content {
+            max-height: 50vh;
+            padding-right: 5px;
+        }
+        
+        .tab-content [class*="col-"] {
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+        }
     }
 </style>

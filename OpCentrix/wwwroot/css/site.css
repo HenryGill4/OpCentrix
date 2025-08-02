@@ -906,6 +906,66 @@
     gap: var(--opcentrix-spacing-2) !important;
 }
 
+/* MODAL AND TAB CONTENT SCROLLING FIXES */
+.modal-body {
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.modal-dialog {
+    max-width: 90vw;
+}
+
+/* Parts form specific fixes */
+#partFormTabsContent {
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    max-height: 60vh;
+    padding-right: 10px;
+}
+
+#partFormTabsContent .row {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+
+#partFormTabsContent [class*="col-"] {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+}
+
+/* Prevent Bootstrap utilities from causing overflow */
+.g-3 {
+    --bs-gutter-x: 1rem;
+    --bs-gutter-y: 1rem;
+}
+
+/* Ensure form elements stay within bounds */
+.modal-body .form-control,
+.modal-body .form-select,
+.modal-body textarea {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* Responsive modal adjustments */
+@media (max-width: 768px) {
+    .modal-dialog {
+        max-width: 95vw;
+        margin: 0.5rem;
+    }
+    
+    #partFormTabsContent {
+        max-height: 50vh;
+        padding-right: 5px;
+    }
+    
+    #partFormTabsContent [class*="col-"] {
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+}
+
 /* ANIMATION KEYFRAMES */
 @keyframes pulseWarning {
     0%, 100% { 
