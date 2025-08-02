@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -69,6 +70,20 @@ namespace OpCentrix.Models
 
         #endregion
 
+        #region Navigation Properties
+
+        /// <summary>
+        /// Parts produced in this build job
+        /// </summary>
+        public virtual ICollection<BuildJobPart> BuildJobParts { get; set; } = new List<BuildJobPart>();
+
+        /// <summary>
+        /// Delay logs associated with this build job
+        /// </summary>
+        public virtual ICollection<DelayLog> DelayLogs { get; set; } = new List<DelayLog>();
+
+        #endregion
+
         #region Audit Trail
 
         [Required]
@@ -112,11 +127,23 @@ namespace OpCentrix.Models
         public string JobLifecycleStatus => Status switch
         {
             "In Progress" => "?? Printing",
-            "Completed" => "?? Complete", 
-            "Aborted" => "?? Aborted",
+            "Completed" => "? Complete", 
+            "Aborted" => "? Aborted",
             "Error" => "?? Error",
             _ => "? Unknown"
         };
+
+        [NotMapped]
+        public int TotalPartsProduced => BuildJobParts?.Sum(p => p.Quantity) ?? 0;
+
+        [NotMapped]
+        public string PrimaryPartNumber => BuildJobParts?.FirstOrDefault(p => p.IsPrimary)?.PartNumber ?? "Unknown";
+
+        [NotMapped]
+        public bool HasDelays => DelayLogs?.Any() ?? false;
+
+        [NotMapped]
+        public int TotalDelayMinutes => DelayLogs?.Sum(d => d.DelayDuration) ?? 0;
 
         #endregion
 
@@ -158,6 +185,31 @@ namespace OpCentrix.Models
             ReasonForEnd = reason;
             ActualEndTime = DateTime.UtcNow;
             CompletedAt = DateTime.UtcNow;
+        }
+
+        /// <summary>
+        /// Get build efficiency percentage
+        /// </summary>
+        public double GetEfficiencyPercent()
+        {
+            if (!ScheduledStartTime.HasValue || !ScheduledEndTime.HasValue || !ActualEndTime.HasValue)
+                return 0;
+
+            var scheduledDuration = ScheduledEndTime.Value - ScheduledStartTime.Value;
+            var actualDuration = ActualEndTime.Value - ActualStartTime;
+
+            if (actualDuration.TotalMinutes <= 0)
+                return 0;
+
+            return Math.Min(100, (scheduledDuration.TotalMinutes / actualDuration.TotalMinutes) * 100);
+        }
+
+        /// <summary>
+        /// Get cost estimate based on actual time
+        /// </summary>
+        public decimal GetEstimatedCost(decimal hourlyRate = 125m)
+        {
+            return (decimal)PrintHours * hourlyRate;
         }
 
         #endregion

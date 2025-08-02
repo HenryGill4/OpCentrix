@@ -129,7 +129,7 @@ namespace OpCentrix.Pages.PrintTracking
                 {
                     UserId = userId,
                     OperatorName = user?.FullName ?? "Unknown",
-                    BuildId = buildId,
+                    BuildId = buildId ?? 0,
                     PrinterName = printerName ?? string.Empty,
                     ActualStartTime = DateTime.Now.AddHours(-4), // Default to 4 hours ago
                     ActualEndTime = DateTime.Now,

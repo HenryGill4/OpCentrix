@@ -23,7 +23,7 @@
                 
                 @Html.AntiForgeryToken()
                 
-                @if (Model.BuildId.HasValue)
+                @if (Model.BuildId > 0)
                 {
                     <input type="hidden" name="BuildId" value="@Model.BuildId" />
                 }
