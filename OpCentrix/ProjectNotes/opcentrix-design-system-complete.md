@@ -48,7 +48,7 @@ OpCentrix is a sophisticated SLS (Selective Laser Sintering) Print Job Scheduler
 - **Size**: 16px, 20px, 24px standard sizes
 - **Usage**: Semantic icons that enhance understanding
 
-## ??? **Component Architecture**
+## ?? **Component Architecture**
 
 ### **1. OpCentrix Cards**
 ```css
@@ -114,7 +114,7 @@ OpCentrix is a sophisticated SLS (Selective Laser Sintering) Print Job Scheduler
 - **Time Slots**: Interactive timeline with hover states
 - **Job Blocks**: Draggable, color-coded by status and priority
 
-## ?? **User Experience Features**
+## ? **User Experience Features**
 
 ### **1. Interactive Feedback**
 - **Hover States**: Subtle elevation and color changes
@@ -139,7 +139,7 @@ OpCentrix is a sophisticated SLS (Selective Laser Sintering) Print Job Scheduler
 - **Warning System**: 5-minute countdown with extend option
 - **Visual Indicators**: Gradient warning bar with clear messaging
 
-## ?? **Technical Implementation**
+## ??? **Technical Implementation**
 
 ### **1. CSS Architecture**
 ```
@@ -264,7 +264,7 @@ OpCentrix/wwwroot/css/site.css
 - **Touch Interactions**: Tap to view, long press for actions
 - **Horizontal Scrolling**: Smooth timeline navigation
 
-## ?? **Performance Optimizations**
+## ? **Performance Optimizations**
 
 ### **1. CSS Optimizations**
 - **Custom Properties**: Efficient variable usage
@@ -317,12 +317,12 @@ OpCentrix/wwwroot/css/site.css
    - Consistent component architecture
    - Responsive design system
 
-2. **??? Enhanced Layouts**
+2. **?? Enhanced Layouts**
    - Professional admin dashboard
    - Improved main navigation
    - Mobile-optimized interfaces
 
-3. **?? User Experience**
+3. **? User Experience**
    - Interactive feedback systems
    - Session management with visual warnings
    - Accessibility-first design
