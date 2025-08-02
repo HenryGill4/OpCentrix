@@ -1,0 +1,806 @@
+@model OpCentrix.Models.Part
+@{
+    var availableStages = ViewData["AvailableStages"] as List<OpCentrix.Models.ProductionStage> ?? new List<OpCentrix.Models.ProductionStage>();
+    var partStages = ViewData["PartStages"] as List<OpCentrix.Models.PartStageRequirement> ?? new List<OpCentrix.Models.PartStageRequirement>();
+    var availableMachines = ViewData["AvailableMachines"] as List<OpCentrix.Models.Machine> ?? new List<OpCentrix.Models.Machine>();
+}
+
+<!-- Dynamic Stage Assignment and Configuration -->
+<div class="row g-3">
+    <div class="col-12">
+        <h6 class="text-primary border-bottom pb-2 mb-3">
+            <i class="fas fa-tasks me-2"></i>Manufacturing Stage Assignment
+        </h6>
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Enhanced Stage Management:</strong> Select the stages required for this part. Each stage can be configured with custom parameters, machine assignments, and specific requirements.
+        </div>
+    </div>
+    
+    <!-- Stage Selection Buttons -->
+    <div class="col-12">
+        <div class="card border-primary">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-plus-circle me-2"></i>
+                    Available Manufacturing Stages
+                </h6>
+            </div>
+            <div class="card-body">
+                @if (availableStages.Any())
+                {
+                    <div class="row g-2">
+                        @foreach (var stage in availableStages.OrderBy(s => s.DisplayOrder))
+                        {
+                            var isSelected = partStages.Any(ps => ps.ProductionStageId == stage.Id);
+                            var buttonClass = isSelected ? "btn-success" : "btn-outline-secondary";
+                            var buttonIcon = isSelected ? "fas fa-check" : "fas fa-plus";
+                            
+                            <div class="col-md-4 col-lg-3">
+                                <button type="button" 
+                                        class="btn @buttonClass w-100 stage-selection-btn" 
+                                        data-stage-id="@stage.Id"
+                                        data-stage-name="@stage.Name"
+                                        data-stage-color="@stage.StageColor"
+                                        data-stage-icon="@stage.StageIcon"
+                                        data-stage-department="@stage.Department"
+                                        data-requires-machine="@stage.RequiresMachineAssignment.ToString().ToLower()"
+                                        onclick="toggleStageSelection(@stage.Id, '@Html.Raw(stage.Name.Replace("'", "\\'"))')"
+                                        title="@stage.Description">
+                                    <div class="d-flex align-items-center justify-content-center">
+                                        <i class="@stage.StageIcon me-2" style="color: @(isSelected ? "#fff" : stage.StageColor);"></i>
+                                        <div class="flex-grow-1 text-start">
+                                            <div class="fw-bold">@stage.Name</div>
+                                            @if (!string.IsNullOrEmpty(stage.Department))
+                                            {
+                                                <div class="small opacity-75">@stage.Department</div>
+                                            }
+                                        </div>
+                                        <i class="@buttonIcon ms-2"></i>
+                                    </div>
+                                    @if (stage.RequiresMachineAssignment)
+                                    {
+                                        <div class="small mt-1">
+                                            <i class="fas fa-cogs me-1"></i>Machine Required
+                                        </div>
+                                    }
+                                </button>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-4 text-muted">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                        <p>No production stages available.</p>
+                        <p class="small">Contact your administrator to configure production stages.</p>
+                        <a href="/Admin/ProductionStages" class="btn btn-outline-primary" target="_blank">
+                            <i class="fas fa-external-link-alt me-1"></i>Manage Stages
+                        </a>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+    
+    <!-- Selected Stages Configuration -->
+    <div class="col-12" id="selectedStagesContainer" style="display: none;">
+        <div class="card border-success">
+            <div class="card-header bg-success text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-cogs me-2"></i>
+                    Selected Stages Configuration
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="selectedStagesList">
+                    <!-- Selected stages will be populated here -->
+                </div>
+                
+                <!-- Stage Summary -->
+                <div class="mt-4 p-3 bg-light rounded" id="stageSummary" style="display: none;">
+                    <h6 class="text-primary mb-2">
+                        <i class="fas fa-calculator me-2"></i>
+                        Manufacturing Summary
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="fs-5 fw-bold text-primary" id="totalStages">0</div>
+                                <div class="small text-muted">Total Stages</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="fs-5 fw-bold text-info" id="totalDuration">0.0h</div>
+                                <div class="small text-muted">Total Duration</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="fs-5 fw-bold text-success" id="totalCost">$0.00</div>
+                                <div class="small text-muted">Estimated Cost</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="fs-5 fw-bold text-warning" id="complexityLevel">Simple</div>
+                                <div class="small text-muted">Complexity</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden inputs for form submission -->
+<div id="stageRequirementsInputs">
+    <!-- Stage requirement inputs will be generated here -->
+</div>
+
+<!-- Stage Configuration Modal -->
+<div class="modal fade" id="stageConfigModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-cogs me-2"></i>
+                    Configure Stage: <span id="modalStageTitle"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="stageConfigContent">
+                    <!-- Stage configuration form will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveStageConfiguration()">
+                    <i class="fas fa-save me-1"></i>Save Configuration
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    console.log('?? [STAGE-MANAGER] Loading dynamic stage assignment component');
+    
+    // Global variables for stage management
+    let selectedStages = new Map();
+    let availableStages = @Html.Raw(Json.Serialize(availableStages));
+    let availableMachines = @Html.Raw(Json.Serialize(availableMachines));
+    
+    // Load existing part stages
+    let existingPartStages = [];
+    let currentConfigStageId = null;
+    
+    // Make data globally available for the parts form
+    window.availableStages = availableStages;
+    window.availableMachines = availableMachines;
+    
+    // Initialize component
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('?? [STAGE-MANAGER] Initializing stage assignment component');
+        
+        // Load existing stage assignments
+        loadExistingStages();
+        
+        // Update display
+        updateSelectedStagesDisplay();
+        updateStageSummary();
+        
+        console.log('? [STAGE-MANAGER] Stage assignment component initialized');
+    });
+    
+    // Load existing part stages into the UI
+    function loadExistingStages() {
+        existingPartStages.forEach(partStage => {
+            const stage = availableStages.find(s => s.id === partStage.productionStageId);
+            if (stage) {
+                selectedStages.set(partStage.productionStageId, {
+                    id: partStage.productionStageId,
+                    name: stage.name,
+                    executionOrder: partStage.executionOrder,
+                    isRequired: partStage.isRequired,
+                    estimatedHours: partStage.estimatedHours || stage.defaultDurationHours,
+                    setupTimeMinutes: partStage.setupTimeMinutes || stage.defaultSetupMinutes,
+                    hourlyRateOverride: partStage.hourlyRateOverride,
+                    materialCost: partStage.materialCost,
+                    assignedMachineId: partStage.assignedMachineId,
+                    preferredMachineIds: partStage.preferredMachineIds ? partStage.preferredMachineIds.split(',') : [],
+                    customFieldValues: JSON.parse(partStage.customFieldValues || '{}'),
+                    specialInstructions: partStage.specialInstructions || '',
+                    requiresSpecificMachine: partStage.requiresSpecificMachine,
+                    allowParallelExecution: partStage.allowParallelExecution
+                });
+                
+                // Update button appearance
+                updateStageButton(partStage.productionStageId, true);
+            }
+        });
+    }
+    
+    // Toggle stage selection
+    window.toggleStageSelection = function(stageId, stageName) {
+        console.log(`?? [STAGE-MANAGER] Toggling stage ${stageId}: ${stageName}`);
+        
+        if (selectedStages.has(stageId)) {
+            // Remove stage
+            selectedStages.delete(stageId);
+            updateStageButton(stageId, false);
+            console.log(`? [STAGE-MANAGER] Removed stage ${stageName}`);
+        } else {
+            // Add stage
+            const stage = availableStages.find(s => s.id === stageId);
+            if (stage) {
+                selectedStages.set(stageId, {
+                    id: stageId,
+                    name: stageName,
+                    executionOrder: selectedStages.size + 1,
+                    isRequired: true,
+                    estimatedHours: stage.defaultDurationHours || 1.0,
+                    setupTimeMinutes: stage.defaultSetupMinutes || 30,
+                    hourlyRateOverride: null,
+                    materialCost: stage.defaultMaterialCost || 0,
+                    assignedMachineId: stage.defaultMachineId || '',
+                    preferredMachineIds: stage.assignedMachineIds ? stage.assignedMachineIds.split(',').filter(id => id.trim()) : [],
+                    customFieldValues: {},
+                    specialInstructions: '',
+                    requiresSpecificMachine: stage.requiresMachineAssignment || false,
+                    allowParallelExecution: stage.allowParallelExecution || false
+                });
+                updateStageButton(stageId, true);
+                console.log(`? [STAGE-MANAGER] Added stage ${stageName}`);
+            }
+        }
+        
+        updateSelectedStagesDisplay();
+        updateStageSummary();
+        generateHiddenInputs();
+    };
+    
+    // Update stage button appearance
+    function updateStageButton(stageId, selected) {
+        const button = document.querySelector(`[data-stage-id="${stageId}"]`);
+        if (button) {
+            if (selected) {
+                button.classList.remove('btn-outline-secondary');
+                button.classList.add('btn-success');
+                const icon = button.querySelector('i:last-child');
+                if (icon) {
+                    icon.className = 'fas fa-check ms-2';
+                }
+            } else {
+                button.classList.remove('btn-success');
+                button.classList.add('btn-outline-secondary');
+                const icon = button.querySelector('i:last-child');
+                if (icon) {
+                    icon.className = 'fas fa-plus ms-2';
+                }
+            }
+        }
+    }
+    
+    // Update selected stages display
+    function updateSelectedStagesDisplay() {
+        const container = document.getElementById('selectedStagesContainer');
+        const stagesList = document.getElementById('selectedStagesList');
+        
+        if (selectedStages.size === 0) {
+            container.style.display = 'none';
+            
+            // Trigger event to remove dynamic tabs
+            const event = new CustomEvent('stageConfigurationChanged', {
+                detail: selectedStages
+            });
+            document.dispatchEvent(event);
+            return;
+        }
+        
+        container.style.display = 'block';
+        
+        // Sort stages by execution order
+        const sortedStages = Array.from(selectedStages.entries())
+            .sort(([, a], [, b]) => a.executionOrder - b.executionOrder);
+        
+        const stagesHtml = sortedStages.map(([stageId, stageData]) => {
+            const stage = availableStages.find(s => s.id === parseInt(stageId));
+            const assignedMachine = stageData.assignedMachineId ? 
+                availableMachines.find(m => m.machineId === stageData.assignedMachineId) : null;
+            
+            return `
+                <div class="card mb-3 stage-config-card" data-stage-id="${stageId}">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background-color: ${stage?.stageColor || '#007bff'}15;">
+                        <div class="d-flex align-items-center">
+                            <span class="badge me-2" style="background-color: ${stage?.stageColor || '#007bff'};">${stageData.executionOrder}</span>
+                            <i class="${stage?.stageIcon || 'fas fa-cogs'} me-2" style="color: ${stage?.stageColor || '#007bff'};"></i>
+                            <strong>${stageData.name}</strong>
+                            ${stage?.department ? `<span class="badge bg-info ms-2">${stage.department}</span>` : ''}
+                        </div>
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-outline-primary" 
+                                    onclick="configureStage(${stageId})" 
+                                    title="Configure Stage">
+                                <i class="fas fa-cog"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary"
+                                    onclick="moveStageUp(${stageId})"
+                                    title="Move Up"
+                                    ${stageData.executionOrder === 1 ? 'disabled' : ''}>
+                                <i class="fas fa-arrow-up"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary"
+                                    onclick="moveStageDown(${stageId})"
+                                    title="Move Down"
+                                    ${stageData.executionOrder === selectedStages.size ? 'disabled' : ''}>
+                                <i class="fas fa-arrow-down"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-danger" 
+                                    onclick="toggleStageSelection(${stageId}, '${stageData.name}')" 
+                                    title="Remove Stage">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="small text-muted mb-1">Duration & Cost</div>
+                                <div>
+                                    <strong class="text-info">${stageData.estimatedHours}h</strong>
+                                    <span class="text-muted">$${(stageData.hourlyRateOverride || stage?.defaultHourlyRate || 85).toFixed(2)}/hr</span>
+                                </div>
+                                <div class="small text-muted">
+                                    Setup: ${stageData.setupTimeMinutes} min
+                                    ${stageData.materialCost > 0 ? ` | Materials: $${stageData.materialCost.toFixed(2)}` : ''}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="small text-muted mb-1">Machine Assignment</div>
+                                ${assignedMachine ? 
+                                    `<div><i class="fas fa-cogs text-success me-1"></i><strong>${assignedMachine.machineId}</strong> - ${assignedMachine.name}</div>` :
+                                    (stageData.requiresSpecificMachine ? 
+                                        '<div class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>Machine assignment required</div>' :
+                                        '<div class="text-muted">Any available machine</div>')
+                                }
+                                ${stageData.allowParallelExecution ? '<div class="small text-success"><i class="fas fa-arrows-alt me-1"></i>Can run in parallel</div>' : ''}
+                            </div>
+                        </div>
+                        ${stageData.specialInstructions ? `
+                            <div class="mt-2">
+                                <div class="small text-muted">Special Instructions:</div>
+                                <div class="small">${stageData.specialInstructions}</div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        stagesList.innerHTML = stagesHtml;
+        
+        // Trigger event to update dynamic tabs
+        const event = new CustomEvent('stageConfigurationChanged', {
+            detail: selectedStages
+        });
+        document.dispatchEvent(event);
+    }
+    
+    // Update stage summary
+    function updateStageSummary() {
+        const summaryDiv = document.getElementById('stageSummary');
+        
+        if (selectedStages.size === 0) {
+            summaryDiv.style.display = 'none';
+            return;
+        }
+        
+        summaryDiv.style.display = 'block';
+        
+        // Calculate totals
+        let totalDuration = 0;
+        let totalCost = 0;
+        
+        selectedStages.forEach((stageData, stageId) => {
+            const stage = availableStages.find(s => s.id === parseInt(stageId));
+            const hourlyRate = stageData.hourlyRateOverride || stage?.defaultHourlyRate || 85;
+            const setupCost = (stageData.setupTimeMinutes / 60) * hourlyRate;
+            const laborCost = stageData.estimatedHours * hourlyRate;
+            
+            totalDuration += stageData.estimatedHours;
+            totalCost += setupCost + laborCost + stageData.materialCost;
+        });
+        
+        // Determine complexity
+        let complexityLevel = 'Simple';
+        if (selectedStages.size >= 5 || totalDuration >= 24) {
+            complexityLevel = 'Very Complex';
+        } else if (selectedStages.size >= 3 || totalDuration >= 12) {
+            complexityLevel = 'Complex';
+        } else if (selectedStages.size >= 2 || totalDuration >= 4) {
+            complexityLevel = 'Medium';
+        }
+        
+        // Update display
+        document.getElementById('totalStages').textContent = selectedStages.size;
+        document.getElementById('totalDuration').textContent = `${totalDuration.toFixed(1)}h`;
+        document.getElementById('totalCost').textContent = `$${totalCost.toFixed(2)}`;
+        document.getElementById('complexityLevel').textContent = complexityLevel;
+        
+        // Update complexity color
+        const complexityElement = document.getElementById('complexityLevel');
+        complexityElement.className = `fs-5 fw-bold ${
+            complexityLevel === 'Very Complex' ? 'text-danger' :
+            complexityLevel === 'Complex' ? 'text-warning' :
+            complexityLevel === 'Medium' ? 'text-info' : 'text-success'
+        }`;
+        
+        // Store data globally for access by parts form
+        window.selectedStageData = {
+            stages: selectedStages,
+            totalDuration: totalDuration,
+            totalCost: totalCost,
+            complexityLevel: complexityLevel
+        };
+    }
+    
+    // Generate hidden inputs for form submission
+    function generateHiddenInputs() {
+        const container = document.getElementById('stageRequirementsInputs');
+        
+        let inputsHtml = '';
+        let index = 0;
+        
+        selectedStages.forEach((stageData, stageId) => {
+            inputsHtml += `
+                <input type="hidden" name="StageRequirements[${index}].ProductionStageId" value="${stageId}" />
+                <input type="hidden" name="StageRequirements[${index}].ExecutionOrder" value="${stageData.executionOrder}" />
+                <input type="hidden" name="StageRequirements[${index}].IsRequired" value="${stageData.isRequired}" />
+                <input type="hidden" name="StageRequirements[${index}].EstimatedHours" value="${stageData.estimatedHours}" />
+                <input type="hidden" name="StageRequirements[${index}].SetupTimeMinutes" value="${stageData.setupTimeMinutes}" />
+                <input type="hidden" name="StageRequirements[${index}].HourlyRateOverride" value="${stageData.hourlyRateOverride || ''}" />
+                <input type="hidden" name="StageRequirements[${index}].MaterialCost" value="${stageData.materialCost}" />
+                <input type="hidden" name="StageRequirements[${index}].AssignedMachineId" value="${stageData.assignedMachineId || ''}" />
+                <input type="hidden" name="StageRequirements[${index}].PreferredMachineIds" value="${stageData.preferredMachineIds.join(',')}" />
+                <input type="hidden" name="StageRequirements[${index}].CustomFieldValues" value="${JSON.stringify(stageData.customFieldValues).replace(/"/g, '&quot;')}" />
+                <input type="hidden" name="StageRequirements[${index}].SpecialInstructions" value="${stageData.specialInstructions}" />
+                <input type="hidden" name="StageRequirements[${index}].RequiresSpecificMachine" value="${stageData.requiresSpecificMachine}" />
+                <input type="hidden" name="StageRequirements[${index}].AllowParallelExecution" value="${stageData.allowParallelExecution}" />
+            `;
+            index++;
+        });
+        
+        container.innerHTML = inputsHtml;
+    }
+    
+    // Stage ordering functions
+    window.moveStageUp = function(stageId) {
+        const stageData = selectedStages.get(stageId);
+        if (stageData && stageData.executionOrder > 1) {
+            // Find stage with previous order
+            const prevStage = Array.from(selectedStages.entries())
+                .find(([, data]) => data.executionOrder === stageData.executionOrder - 1);
+            
+            if (prevStage) {
+                // Swap orders
+                stageData.executionOrder--;
+                prevStage[1].executionOrder++;
+                
+                updateSelectedStagesDisplay();
+                generateHiddenInputs();
+            }
+        }
+    };
+    
+    window.moveStageDown = function(stageId) {
+        const stageData = selectedStages.get(stageId);
+        if (stageData && stageData.executionOrder < selectedStages.size) {
+            // Find stage with next order
+            const nextStage = Array.from(selectedStages.entries())
+                .find(([, data]) => data.executionOrder === stageData.executionOrder + 1);
+            
+            if (nextStage) {
+                // Swap orders
+                stageData.executionOrder++;
+                nextStage[1].executionOrder--;
+                
+                updateSelectedStagesDisplay();
+                generateHiddenInputs();
+            }
+        }
+    };
+    
+    // Configure individual stage
+    window.configureStage = function(stageId) {
+        currentConfigStageId = stageId;
+        const stageData = selectedStages.get(stageId);
+        const stage = availableStages.find(s => s.id === parseInt(stageId));
+        
+        if (!stageData || !stage) return;
+        
+        // Update modal title
+        document.getElementById('modalStageTitle').textContent = stageData.name;
+        
+        // Load stage configuration form
+        loadStageConfigurationForm(stage, stageData);
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('stageConfigModal'));
+        modal.show();
+    };
+    
+    // Load stage configuration form
+    function loadStageConfigurationForm(stage, stageData) {
+        const customFields = stage.customFields || [];
+        
+        let formHtml = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-primary mb-3">Basic Configuration</h6>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Estimated Duration (hours)</label>
+                        <input type="number" class="form-control" id="config-estimatedHours" 
+                               step="0.1" min="0.1" value="${stageData.estimatedHours}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Setup Time (minutes)</label>
+                        <input type="number" class="form-control" id="config-setupTimeMinutes" 
+                               min="0" value="${stageData.setupTimeMinutes}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Hourly Rate Override ($)</label>
+                        <input type="number" class="form-control" id="config-hourlyRateOverride" 
+                               step="0.01" value="${stageData.hourlyRateOverride || ''}" 
+                               placeholder="Leave blank to use stage default ($${stage.defaultHourlyRate})">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Material Cost ($)</label>
+                        <input type="number" class="form-control" id="config-materialCost" 
+                               step="0.01" min="0" value="${stageData.materialCost}">
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <h6 class="text-primary mb-3">Machine Assignment</h6>
+                    
+                    ${stage.requiresMachineAssignment ? `
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            This stage requires specific machine assignment.
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Assigned Machine</label>
+                            <select class="form-select" id="config-assignedMachineId">
+                                <option value="">Select Machine</option>
+                                ${availableMachines.filter(m => !stage.assignedMachineIds || stage.assignedMachineIds.includes(m.machineId))
+                                    .map(machine => `
+                                        <option value="${machine.machineId}" ${stageData.assignedMachineId === machine.machineId ? 'selected' : ''}>
+                                            ${machine.machineId} - ${machine.name}
+                                        </option>
+                                    `).join('')}
+                            </select>
+                        </div>
+                    ` : `
+                        <div class="mb-3">
+                            <label class="form-label">Preferred Machines</label>
+                            <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+                                ${availableMachines.map(machine => `
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input preferred-machine" 
+                                               value="${machine.machineId}" id="pref-${machine.machineId}"
+                                               ${stageData.preferredMachineIds.includes(machine.machineId) ? 'checked' : ''}>
+                                        <label class="form-check-label" for="pref-${machine.machineId}">
+                                            <strong>${machine.machineId}</strong> - ${machine.name}
+                                        </label>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `}
+                    
+                    <div class="form-check mb-3">
+                        <input type="checkbox" class="form-check-input" id="config-allowParallelExecution" 
+                               ${stageData.allowParallelExecution ? 'checked' : ''}>
+                        <label class="form-check-label" for="config-allowParallelExecution">
+                            Allow parallel execution with other stages
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            ${customFields.length > 0 ? `
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">Custom Fields</h6>
+                        ${customFields.map(field => generateCustomFieldInput(field, stageData.customFieldValues[field.name] || field.defaultValue || '')).join('')}
+                    </div>
+                </div>
+            ` : ''}
+            
+            <div class="row mt-4">
+                <div class="col-12">
+                    <h6 class="text-primary mb-3">Special Instructions</h6>
+                    <textarea class="form-control" id="config-specialInstructions" rows="3" 
+                              placeholder="Any special instructions for this stage...">${stageData.specialInstructions}</textarea>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('stageConfigContent').innerHTML = formHtml;
+    }
+    
+    // Generate custom field input
+    function generateCustomFieldInput(field, currentValue) {
+        const fieldId = `custom-${field.name}`;
+        let input = '';
+        
+        switch (field.type) {
+            case 'number':
+                input = `
+                    <input type="number" class="form-control custom-field" 
+                           id="${fieldId}" data-field-name="${field.name}"
+                           value="${currentValue}" 
+                           ${field.required ? 'required' : ''}
+                           ${field.minValue !== null ? `min="${field.minValue}"` : ''}
+                           ${field.maxValue !== null ? `max="${field.maxValue}"` : ''}
+                           placeholder="${field.placeholderText || ''}">
+                    ${field.unit ? `<div class="form-text">Unit: ${field.unit}</div>` : ''}
+                `;
+                break;
+                
+            case 'dropdown':
+                input = `
+                    <select class="form-select custom-field" id="${fieldId}" data-field-name="${field.name}" ${field.required ? 'required' : ''}>
+                        <option value="">Select ${field.label}</option>
+                        ${(field.options || []).map(option => `
+                            <option value="${option}" ${currentValue === option ? 'selected' : ''}>${option}</option>
+                        `).join('')}
+                    </select>
+                `;
+                break;
+                
+            case 'checkbox':
+                input = `
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input custom-field" 
+                               id="${fieldId}" data-field-name="${field.name}"
+                               ${currentValue === 'true' || currentValue === true ? 'checked' : ''}>
+                        <label class="form-check-label" for="${fieldId}">${field.label}</label>
+                    </div>
+                `;
+                break;
+                
+            case 'textarea':
+                input = `
+                    <textarea class="form-control custom-field" id="${fieldId}" data-field-name="${field.name}"
+                              rows="3" ${field.required ? 'required' : ''}
+                              placeholder="${field.placeholderText || ''}">${currentValue}</textarea>
+                `;
+                break;
+                
+            case 'date':
+                input = `
+                    <input type="date" class="form-control custom-field" 
+                           id="${fieldId}" data-field-name="${field.name}"
+                           value="${currentValue}" ${field.required ? 'required' : ''}>
+                `;
+                break;
+                
+            default: // text
+                input = `
+                    <input type="text" class="form-control custom-field" 
+                           id="${fieldId}" data-field-name="${field.name}"
+                           value="${currentValue}" ${field.required ? 'required' : ''}
+                           placeholder="${field.placeholderText || ''}">
+                `;
+                break;
+        }
+        
+        if (field.type !== 'checkbox') {
+            return `
+                <div class="mb-3">
+                    <label class="form-label" for="${fieldId}">
+                        ${field.label} ${field.required ? '<span class="text-danger">*</span>' : ''}
+                    </label>
+                    ${input}
+                    ${field.description ? `<div class="form-text">${field.description}</div>` : ''}
+                </div>
+            `;
+        } else {
+            return `<div class="mb-3">${input}</div>`;
+        }
+    }
+    
+    // Save stage configuration
+    window.saveStageConfiguration = function() {
+        if (!currentConfigStageId) return;
+        
+        const stageData = selectedStages.get(currentConfigStageId);
+        if (!stageData) return;
+        
+        // Update basic configuration
+        stageData.estimatedHours = parseFloat(document.getElementById('config-estimatedHours').value) || 1.0;
+        stageData.setupTimeMinutes = parseInt(document.getElementById('config-setupTimeMinutes').value) || 30;
+        stageData.hourlyRateOverride = parseFloat(document.getElementById('config-hourlyRateOverride').value) || null;
+        stageData.materialCost = parseFloat(document.getElementById('config-materialCost').value) || 0;
+        stageData.allowParallelExecution = document.getElementById('config-allowParallelExecution').checked;
+        stageData.specialInstructions = document.getElementById('config-specialInstructions').value;
+        
+        // Update machine assignment
+        const assignedMachineSelect = document.getElementById('config-assignedMachineId');
+        if (assignedMachineSelect) {
+            stageData.assignedMachineId = assignedMachineSelect.value;
+        } else {
+            // Update preferred machines
+            const preferredCheckboxes = document.querySelectorAll('.preferred-machine:checked');
+            stageData.preferredMachineIds = Array.from(preferredCheckboxes).map(cb => cb.value);
+        }
+        
+        // Update custom fields
+        const customFieldInputs = document.querySelectorAll('.custom-field');
+        customFieldInputs.forEach(input => {
+            const fieldName = input.getAttribute('data-field-name');
+            let value;
+            
+            if (input.type === 'checkbox') {
+                value = input.checked;
+            } else {
+                value = input.value;
+            }
+            
+            stageData.customFieldValues[fieldName] = value;
+        });
+        
+        // Update displays
+        updateSelectedStagesDisplay();
+        updateStageSummary();
+        generateHiddenInputs();
+        
+        // Close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('stageConfigModal'));
+        modal.hide();
+        
+        console.log(`?? [STAGE-MANAGER] Saved configuration for stage ${currentConfigStageId}`);
+    };
+    
+    console.log('? [STAGE-MANAGER] Dynamic stage assignment component loaded');
+</script>
+
+<style>
+    .stage-selection-btn {
+        min-height: 80px;
+        transition: all 0.3s ease;
+    }
+    
+    .stage-selection-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .stage-config-card {
+        transition: all 0.3s ease;
+    }
+    
+    .stage-config-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .custom-field {
+        transition: border-color 0.3s ease;
+    }
+    
+    .custom-field:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+    }
+</style>

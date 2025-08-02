@@ -1,123 +1,174 @@
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json;
 
 namespace OpCentrix.Models
 {
     /// <summary>
-    /// Links Parts with required ProductionStages, replacing boolean stage flags in Parts table
-    /// Provides a normalized approach to stage management with configurable parameters
+    /// Links a Part to a ProductionStage, indicating that this part requires this stage
+    /// Enhanced to support custom field values and machine assignments
     /// </summary>
     public class PartStageRequirement
     {
+        [Key]
         public int Id { get; set; }
+
+        #region Core Relationships
         
         /// <summary>
-        /// Foreign key to the Part that requires this stage
+        /// The Part that requires this stage
         /// </summary>
         [Required]
         public int PartId { get; set; }
         
         /// <summary>
-        /// Foreign key to the ProductionStage that is required
+        /// The ProductionStage that is required
         /// </summary>
         [Required]
         public int ProductionStageId { get; set; }
         
+        #endregion
+        
+        #region Stage Configuration
+        
         /// <summary>
-        /// Execution order for this stage (1 = first, 2 = second, etc.)
+        /// Order in which this stage should be executed (1 = first, 2 = second, etc.)
         /// </summary>
-        [Range(1, 20)]
-        [Display(Name = "Execution Order")]
+        [Required]
+        [Range(1, 100)]
         public int ExecutionOrder { get; set; } = 1;
         
         /// <summary>
-        /// Whether this stage is mandatory or optional for this part
+        /// Whether this stage is required (true) or optional (false) for this part
         /// </summary>
-        [Display(Name = "Is Required")]
         public bool IsRequired { get; set; } = true;
         
         /// <summary>
-        /// Estimated duration in hours for this stage on this specific part
-        /// Overrides the ProductionStage default if specified
+        /// Whether this stage requirement is currently active
         /// </summary>
-        [Range(0.1, 200.0)]
-        [Display(Name = "Estimated Hours")]
-        public double? EstimatedHours { get; set; }
-        
-        /// <summary>
-        /// Stage-specific setup time in minutes for this part
-        /// </summary>
-        [Range(0, 600)]
-        [Display(Name = "Setup Time (minutes)")]
-        public int SetupTimeMinutes { get; set; } = 0;
-        
-        /// <summary>
-        /// Stage-specific parameters as JSON for this part
-        /// Examples: {"laserPower": 200, "scanSpeed": 1200, "temperature": 180}
-        /// </summary>
-        [StringLength(2000)]
-        [Display(Name = "Stage Parameters")]
-        public string StageParameters { get; set; } = "{}";
-        
-        /// <summary>
-        /// Special notes or instructions for this stage on this part
-        /// </summary>
-        [StringLength(1000)]
-        [Display(Name = "Special Instructions")]
-        public string SpecialInstructions { get; set; } = "";
-        
-        /// <summary>
-        /// Quality requirements specific to this part at this stage
-        /// </summary>
-        [StringLength(1000)]
-        [Display(Name = "Quality Requirements")]
-        public string QualityRequirements { get; set; } = "";
-        
-        /// <summary>
-        /// Required materials for this stage on this part
-        /// </summary>
-        [StringLength(500)]
-        [Display(Name = "Required Materials")]
-        public string RequiredMaterials { get; set; } = "";
-        
-        /// <summary>
-        /// Required tooling for this stage on this part
-        /// </summary>
-        [StringLength(500)]
-        [Display(Name = "Required Tooling")]
-        public string RequiredTooling { get; set; } = "";
-        
-        /// <summary>
-        /// Estimated cost for this stage on this part
-        /// </summary>
-        [Column(TypeName = "decimal(10,2)")]
-        [Display(Name = "Estimated Cost")]
-        public decimal EstimatedCost { get; set; } = 0.00m;
-        
-        /// <summary>
-        /// Whether this stage can run in parallel with others
-        /// </summary>
-        [Display(Name = "Allow Parallel Execution")]
-        public bool AllowParallel { get; set; } = false;
-        
-        /// <summary>
-        /// Whether this stage blocks subsequent stages until complete
-        /// </summary>
-        [Display(Name = "Is Blocking")]
-        public bool IsBlocking { get; set; } = true;
-        
-        /// <summary>
-        /// Active flag - allows disabling stages without deletion
-        /// </summary>
-        [Display(Name = "Is Active")]
         public bool IsActive { get; set; } = true;
         
         /// <summary>
-        /// Notes about why this stage is required for this part
+        /// Whether this stage can be executed in parallel with other stages
+        /// </summary>
+        public bool AllowParallelExecution { get; set; } = false;
+        
+        /// <summary>
+        /// Whether this stage blocks subsequent stages until completion
+        /// </summary>
+        public bool IsBlocking { get; set; } = true;
+        
+        #endregion
+        
+        #region Timing and Cost Overrides
+        
+        /// <summary>
+        /// Part-specific estimated hours (overrides stage default if set)
+        /// </summary>
+        public double? EstimatedHours { get; set; }
+        
+        /// <summary>
+        /// Part-specific setup time in minutes (overrides stage default if set)
+        /// </summary>
+        public int? SetupTimeMinutes { get; set; }
+        
+        /// <summary>
+        /// Part-specific hourly rate (overrides stage default if set)
+        /// </summary>
+        [Column(TypeName = "decimal(8,2)")]
+        public decimal? HourlyRateOverride { get; set; }
+        
+        /// <summary>
+        /// Part-specific total estimated cost (calculated if not provided)
+        /// </summary>
+        [Column(TypeName = "decimal(10,2)")]
+        public decimal EstimatedCost { get; set; } = 0.00m;
+        
+        /// <summary>
+        /// Part-specific material cost for this stage
+        /// </summary>
+        [Column(TypeName = "decimal(10,2)")]
+        public decimal MaterialCost { get; set; } = 0.00m;
+        
+        #endregion
+        
+        #region NEW: Machine Assignment
+        
+        /// <summary>
+        /// Specific machine ID assigned to execute this stage for this part
+        /// </summary>
+        [StringLength(50)]
+        public string? AssignedMachineId { get; set; }
+        
+        /// <summary>
+        /// Whether a specific machine assignment is required for this part-stage combination
+        /// </summary>
+        public bool RequiresSpecificMachine { get; set; } = false;
+        
+        /// <summary>
+        /// Preferred machine IDs (comma-separated) for this stage, in order of preference
+        /// </summary>
+        [StringLength(200)]
+        public string? PreferredMachineIds { get; set; }
+        
+        #endregion
+        
+        #region NEW: Custom Field Values
+        
+        /// <summary>
+        /// JSON object containing values for custom fields defined in the ProductionStage
+        /// Format: {"fieldName": "value", "anotherField": 123}
+        /// </summary>
+        [Column(TypeName = "TEXT")]
+        public string CustomFieldValues { get; set; } = "{}";
+        
+        #endregion
+        
+        #region Process Configuration
+        
+        /// <summary>
+        /// JSON object for stage-specific process parameters
+        /// </summary>
+        [Column(TypeName = "TEXT")]
+        public string StageParameters { get; set; } = "{}";
+        
+        /// <summary>
+        /// Required materials for this stage (JSON array)
+        /// </summary>
+        [Column(TypeName = "TEXT")]
+        public string RequiredMaterials { get; set; } = "[]";
+        
+        /// <summary>
+        /// Required tooling for this stage (comma-separated)
         /// </summary>
         [StringLength(500)]
+        public string RequiredTooling { get; set; } = "";
+        
+        /// <summary>
+        /// Quality requirements for this stage (JSON object)
+        /// </summary>
+        [Column(TypeName = "TEXT")]
+        public string QualityRequirements { get; set; } = "{}";
+        
+        #endregion
+        
+        #region Notes and Instructions
+        
+        /// <summary>
+        /// Special instructions for this part-stage combination
+        /// </summary>
+        [Column(TypeName = "TEXT")]
+        public string SpecialInstructions { get; set; } = "";
+        
+        /// <summary>
+        /// General notes about this stage requirement
+        /// </summary>
+        [Column(TypeName = "TEXT")]
         [Display(Name = "Requirement Notes")]
         public string RequirementNotes { get; set; } = "";
+        
+        #endregion
         
         #region Audit Fields
         
@@ -156,31 +207,176 @@ namespace OpCentrix.Models
         /// <returns>Part-specific hours if set, otherwise stage default</returns>
         public double GetEffectiveEstimatedHours()
         {
-            return EstimatedHours ?? (double)(ProductionStage?.DefaultSetupMinutes ?? 60) / 60.0;
+            return EstimatedHours ?? ProductionStage?.DefaultDurationHours ?? 1.0;
         }
         
         /// <summary>
-        /// Get the effective hourly rate (stage default)
+        /// Get the effective hourly rate (override or stage default)
         /// </summary>
-        /// <returns>Stage default hourly rate</returns>
+        /// <returns>Part-specific rate if set, otherwise stage default</returns>
         public decimal GetEffectiveHourlyRate()
         {
-            return ProductionStage?.DefaultHourlyRate ?? 85.00m;
+            return HourlyRateOverride ?? ProductionStage?.DefaultHourlyRate ?? 85.00m;
         }
         
         /// <summary>
         /// Calculate total estimated cost for this stage
         /// </summary>
-        /// <returns>Setup cost + (hours * rate) + material/tooling costs</returns>
+        /// <returns>Setup cost + (hours * rate) + material costs</returns>
         public decimal CalculateTotalEstimatedCost()
         {
             if (EstimatedCost > 0) return EstimatedCost;
             
             var hours = (decimal)GetEffectiveEstimatedHours();
             var rate = GetEffectiveHourlyRate();
-            var setupCost = (decimal)(SetupTimeMinutes / 60.0) * rate;
+            var setupMinutes = SetupTimeMinutes ?? ProductionStage?.DefaultSetupMinutes ?? 30;
+            var setupCost = (decimal)(setupMinutes / 60.0) * rate;
             
-            return setupCost + (hours * rate);
+            return setupCost + (hours * rate) + MaterialCost;
+        }
+
+        /// <summary>
+        /// Get custom field values as a dictionary
+        /// </summary>
+        public Dictionary<string, object> GetCustomFieldValues()
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(CustomFieldValues))
+                    return new Dictionary<string, object>();
+
+                var values = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(CustomFieldValues);
+                var result = new Dictionary<string, object>();
+
+                foreach (var kvp in values ?? new Dictionary<string, JsonElement>())
+                {
+                    object value = kvp.Value.ValueKind switch
+                    {
+                        JsonValueKind.String => kvp.Value.GetString() ?? "",
+                        JsonValueKind.Number => kvp.Value.GetDecimal(),
+                        JsonValueKind.True => true,
+                        JsonValueKind.False => false,
+                        _ => kvp.Value.ToString() ?? ""
+                    };
+                    result[kvp.Key] = value;
+                }
+
+                return result;
+            }
+            catch (JsonException)
+            {
+                return new Dictionary<string, object>();
+            }
+        }
+
+        /// <summary>
+        /// Set custom field values from a dictionary
+        /// </summary>
+        public void SetCustomFieldValues(Dictionary<string, object> values)
+        {
+            try
+            {
+                CustomFieldValues = JsonSerializer.Serialize(values, new JsonSerializerOptions 
+                { 
+                    WriteIndented = false 
+                });
+            }
+            catch (JsonException)
+            {
+                CustomFieldValues = "{}";
+            }
+        }
+
+        /// <summary>
+        /// Get a specific custom field value
+        /// </summary>
+        public T? GetCustomFieldValue<T>(string fieldName, T? defaultValue = default)
+        {
+            var values = GetCustomFieldValues();
+            if (values.TryGetValue(fieldName, out var value))
+            {
+                try
+                {
+                    return (T?)Convert.ChangeType(value, typeof(T));
+                }
+                catch
+                {
+                    return defaultValue;
+                }
+            }
+            return defaultValue;
+        }
+
+        /// <summary>
+        /// Set a specific custom field value
+        /// </summary>
+        public void SetCustomFieldValue(string fieldName, object value)
+        {
+            var values = GetCustomFieldValues();
+            values[fieldName] = value;
+            SetCustomFieldValues(values);
+        }
+        
+        /// <summary>
+        /// Get the list of preferred machine IDs
+        /// </summary>
+        public List<string> GetPreferredMachineIds()
+        {
+            if (string.IsNullOrWhiteSpace(PreferredMachineIds))
+                return new List<string>();
+
+            return PreferredMachineIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(id => id.Trim())
+                .Where(id => !string.IsNullOrEmpty(id))
+                .ToList();
+        }
+
+        /// <summary>
+        /// Set the preferred machine IDs from a list
+        /// </summary>
+        public void SetPreferredMachineIds(List<string> machineIds)
+        {
+            PreferredMachineIds = string.Join(",", machineIds.Where(id => !string.IsNullOrWhiteSpace(id)));
+        }
+
+        /// <summary>
+        /// Check if a machine can execute this stage requirement
+        /// </summary>
+        public bool CanMachineExecute(string machineId)
+        {
+            if (string.IsNullOrWhiteSpace(machineId))
+                return false;
+
+            // If specific machine required, check assignment
+            if (RequiresSpecificMachine)
+                return AssignedMachineId == machineId;
+
+            // Otherwise check if stage allows this machine
+            return ProductionStage?.CanMachineExecuteStage(machineId) ?? true;
+        }
+
+        /// <summary>
+        /// Get the best machine for this stage requirement
+        /// </summary>
+        public string? GetBestMachineId(List<string> availableMachineIds)
+        {
+            // First try assigned machine if required
+            if (RequiresSpecificMachine && !string.IsNullOrWhiteSpace(AssignedMachineId))
+            {
+                if (availableMachineIds.Contains(AssignedMachineId))
+                    return AssignedMachineId;
+            }
+
+            // Try preferred machines in order
+            var preferredMachines = GetPreferredMachineIds();
+            foreach (var machineId in preferredMachines)
+            {
+                if (availableMachineIds.Contains(machineId) && CanMachineExecute(machineId))
+                    return machineId;
+            }
+
+            // Fall back to any compatible machine
+            return availableMachineIds.FirstOrDefault(id => CanMachineExecute(id));
         }
         
         /// <summary>
@@ -193,7 +389,7 @@ namespace OpCentrix.Models
             
             try
             {
-                System.Text.Json.JsonSerializer.Deserialize<object>(StageParameters);
+                JsonSerializer.Deserialize<object>(StageParameters);
                 return true;
             }
             catch
@@ -214,19 +410,7 @@ namespace OpCentrix.Models
                 .OrderBy(s => s.ExecutionOrder)
                 .ToList();
         }
-        
-        /// <summary>
-        /// Check if this stage can start based on dependencies
-        /// </summary>
-        /// <param name="completedStageIds">IDs of completed stages</param>
-        /// <param name="allPartStages">All stages for this part</param>
-        /// <returns>True if dependencies are met</returns>
-        public bool CanStart(List<int> completedStageIds, List<PartStageRequirement> allPartStages)
-        {
-            var dependencies = GetDependencies(allPartStages);
-            return dependencies.All(d => completedStageIds.Contains(d.Id));
-        }
-        
+
         #endregion
     }
 }

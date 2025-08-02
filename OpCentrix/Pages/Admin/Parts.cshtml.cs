@@ -91,6 +91,7 @@ namespace OpCentrix.Pages.Admin
         // Stage-related properties
         public List<ProductionStage> AvailableStages { get; set; } = new List<ProductionStage>();
         public Dictionary<int, List<PartStageRequirement>> PartStages { get; set; } = new Dictionary<int, List<PartStageRequirement>>();
+        public List<Machine> AvailableMachines { get; set; } = new List<Machine>();
 
         public async Task<IActionResult> OnGetAsync()
         {
@@ -103,6 +104,7 @@ namespace OpCentrix.Pages.Admin
                 await LoadFilterOptionsAsync();
                 await LoadStatisticsAsync();
                 await LoadStageDataAsync();
+                await LoadMachinesDataAsync();
                 
                 return Page();
             }
@@ -671,9 +673,9 @@ namespace OpCentrix.Pages.Admin
 
                 // Get stage requirements for this part
                 var stageRequirements = await _context.PartStageRequirements
-                    .Where(psr => psr.PartId == id && psr.IsActive)
-                    .Include(psr => psr.ProductionStage)
-                    .OrderBy(psr => psr.ExecutionOrder)
+                    .Where(req => req.PartId == id && req.IsActive)
+                    .Include(req => req.ProductionStage)
+                    .OrderBy(req => req.ExecutionOrder)
                     .ToListAsync();
 
                 // Create response object
@@ -1181,7 +1183,7 @@ namespace OpCentrix.Pages.Admin
                     .ToListAsync();
 
                 PartStages = allPartStages
-                    .GroupBy(psr => psr.PartId)
+                    .GroupBy(partStageReq => partStageReq.PartId)
                     .ToDictionary(g => g.Key, g => g.ToList());
             }
             catch (Exception ex)
@@ -1189,6 +1191,22 @@ namespace OpCentrix.Pages.Admin
                 _logger.LogError(ex, "Error loading stage data");
                 AvailableStages = new List<ProductionStage>();
                 PartStages = new Dictionary<int, List<PartStageRequirement>>();
+            }
+        }
+
+        private async Task LoadMachinesDataAsync()
+        {
+            try
+            {
+                AvailableMachines = await _context.Machines
+                    .Where(m => m.IsActive)
+                    .OrderBy(m => m.MachineId)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading machines data");
+                AvailableMachines = new List<Machine>();
             }
         }
 
@@ -1201,12 +1219,17 @@ namespace OpCentrix.Pages.Admin
                     .OrderBy(ps => ps.DisplayOrder)
                     .ToListAsync();
 
+                ViewData["AvailableMachines"] = await _context.Machines
+                    .Where(m => m.IsActive)
+                    .OrderBy(m => m.MachineId)
+                    .ToListAsync();
+
                 if (part.Id > 0)
                 {
                     ViewData["PartStages"] = await _context.PartStageRequirements
-                        .Where(psr => psr.PartId == part.Id && psr.IsActive)
-                        .Include(psr => psr.ProductionStage)
-                        .OrderBy(psr => psr.ExecutionOrder)
+                        .Where(req => req.PartId == part.Id && req.IsActive)
+                        .Include(req => req.ProductionStage)
+                        .OrderBy(req => req.ExecutionOrder)
                         .ToListAsync();
                 }
                 else
@@ -1218,6 +1241,7 @@ namespace OpCentrix.Pages.Admin
             {
                 _logger.LogError(ex, "Error loading stage data for part {PartId}", part.Id);
                 ViewData["AvailableStages"] = new List<ProductionStage>();
+                ViewData["AvailableMachines"] = new List<Machine>();
                 ViewData["PartStages"] = new List<PartStageRequirement>();
             }
         }

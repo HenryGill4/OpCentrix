@@ -3730,3 +3730,10 @@ VALUES ('20250801170930_AddPartStageRequirementTable', '8.0.11');
 
 COMMIT;
 
+BEGIN TRANSACTION;
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20250802122703_AddCustomFieldsToProductionStages', '8.0.11');
+
+COMMIT;
+

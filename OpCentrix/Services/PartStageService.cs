@@ -153,7 +153,7 @@ namespace OpCentrix.Services
                 existing.RequiredMaterials = partStage.RequiredMaterials;
                 existing.RequiredTooling = partStage.RequiredTooling;
                 existing.EstimatedCost = partStage.EstimatedCost;
-                existing.AllowParallel = partStage.AllowParallel;
+                existing.AllowParallelExecution = partStage.AllowParallelExecution;
                 existing.IsBlocking = partStage.IsBlocking;
                 existing.RequirementNotes = partStage.RequirementNotes;
                 existing.LastModifiedDate = DateTime.UtcNow;
@@ -237,16 +237,16 @@ namespace OpCentrix.Services
                 var partStages = await GetPartStagesWithDetailsAsync(partId);
                 
                 // Calculate sequential time (non-parallel stages)
-                var sequentialStages = partStages.Where(ps => !ps.AllowParallel);
+                var sequentialStages = partStages.Where(ps => !ps.AllowParallelExecution);
                 var sequentialTime = sequentialStages.Sum(ps => ps.GetEffectiveEstimatedHours() + (ps.SetupTimeMinutes / 60.0));
                 
                 // Calculate parallel time (max of parallel stages)
-                var parallelStages = partStages.Where(ps => ps.AllowParallel);
+                var parallelStages = partStages.Where(ps => ps.AllowParallelExecution);
                 var parallelTime = parallelStages.Any() 
                     ? parallelStages.Max(ps => ps.GetEffectiveEstimatedHours() + (ps.SetupTimeMinutes / 60.0))
                     : 0;
                 
-                return sequentialTime + parallelTime;
+                return (sequentialTime ?? 0.0) + (parallelTime ?? 0.0);
             }
             catch (Exception ex)
             {
@@ -274,7 +274,7 @@ namespace OpCentrix.Services
                 score += partStages.Count;
                 
                 // Special requirements complexity
-                score += partStages.Count(ps => ps.IsRequired && !ps.AllowParallel);
+                score += partStages.Count(ps => ps.IsRequired && !ps.AllowParallelExecution);
                 
                 return score switch
                 {

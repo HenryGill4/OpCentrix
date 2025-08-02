@@ -233,6 +233,9 @@ builder.Services.AddScoped<IPartStageService, PartStageService>();
 // Register the ProductionStageSeederService for default data
 builder.Services.AddScoped<IProductionStageSeederService, ProductionStageSeederService>();
 
+// Register the new StageTemplateService for custom field templates - PLACEHOLDER
+// builder.Services.AddScoped<IStageTemplateService, StageTemplateService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline
