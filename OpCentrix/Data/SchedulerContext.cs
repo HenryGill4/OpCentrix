@@ -1057,11 +1057,30 @@ namespace OpCentrix.Data
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
                 entity.Property(e => e.IsActive).HasDefaultValue(true);
                 
+                // NEW: Configure additional columns that exist in database
+                entity.Property(e => e.CustomFieldsConfig).HasMaxLength(2000).HasDefaultValue("[]");
+                entity.Property(e => e.AssignedMachineIds).HasMaxLength(500);
+                entity.Property(e => e.RequiresMachineAssignment).HasDefaultValue(false);
+                entity.Property(e => e.DefaultMachineId).HasMaxLength(50);
+                entity.Property(e => e.StageColor).HasMaxLength(7).HasDefaultValue("#007bff");
+                entity.Property(e => e.StageIcon).HasMaxLength(50).HasDefaultValue("fas fa-cogs");
+                entity.Property(e => e.Department).HasMaxLength(100);
+                entity.Property(e => e.AllowParallelExecution).HasDefaultValue(false);
+                entity.Property(e => e.DefaultMaterialCost).HasPrecision(10, 2).HasDefaultValue(0.00m);
+                entity.Property(e => e.DefaultDurationHours).HasDefaultValue(1.0);
+                entity.Property(e => e.CreatedBy).HasMaxLength(100).HasDefaultValue("System");
+                entity.Property(e => e.LastModifiedBy).HasMaxLength(100).HasDefaultValue("System");
+                entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
+                
                 // Indexes
                 entity.HasIndex(e => e.Name);
                 entity.HasIndex(e => e.DisplayOrder);
                 entity.HasIndex(e => e.RequiredRole);
                 entity.HasIndex(e => e.IsActive);
+                entity.HasIndex(e => e.Department);
+                entity.HasIndex(e => e.StageColor);
+                entity.HasIndex(e => e.RequiresMachineAssignment);
+                entity.HasIndex(e => new { e.DisplayOrder, e.IsActive });
             });
 
             // Configure ProductionStageExecution entity  

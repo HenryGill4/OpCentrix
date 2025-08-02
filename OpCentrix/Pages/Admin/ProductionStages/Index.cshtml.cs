@@ -70,8 +70,11 @@ namespace OpCentrix.Pages.Admin.ProductionStages
                     return Page();
                 }
 
-                // Validate model state
-                if (!ModelState.IsValid)
+                // Clear validation for fields not related to stage creation
+                ModelState.Remove("ReorderStageIds");
+
+                // Validate only NewStage model state
+                if (!TryValidateModel(NewStage, nameof(NewStage)))
                 {
                     _logger.LogWarning("Model validation failed for new stage");
                     foreach (var error in ModelState.Values.SelectMany(v => v.Errors))
@@ -99,9 +102,22 @@ namespace OpCentrix.Pages.Admin.ProductionStages
                     .Where(ps => ps.IsActive)
                     .MaxAsync(ps => (int?)ps.DisplayOrder) ?? 0;
 
+                // Set required fields with defaults if not provided
                 NewStage.DisplayOrder = maxOrder + 1;
                 NewStage.CreatedDate = DateTime.UtcNow;
+                NewStage.CreatedBy = User.Identity?.Name ?? "System";
+                NewStage.LastModifiedBy = User.Identity?.Name ?? "System";
                 NewStage.IsActive = true;
+
+                // Set defaults for new fields if not provided
+                if (string.IsNullOrEmpty(NewStage.StageColor))
+                    NewStage.StageColor = "#007bff";
+                if (string.IsNullOrEmpty(NewStage.StageIcon))
+                    NewStage.StageIcon = "fas fa-cogs";
+                if (string.IsNullOrEmpty(NewStage.CustomFieldsConfig))
+                    NewStage.CustomFieldsConfig = "[]";
+                if (NewStage.DefaultDurationHours <= 0)
+                    NewStage.DefaultDurationHours = 1.0;
 
                 _context.ProductionStages.Add(NewStage);
                 await _context.SaveChangesAsync();
@@ -115,7 +131,7 @@ namespace OpCentrix.Pages.Admin.ProductionStages
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating production stage: {StageName}", NewStage?.Name ?? "null");
-                TempData["ErrorMessage"] = "Error creating production stage. Please try again.";
+                TempData["ErrorMessage"] = $"Error creating production stage: {ex.Message}";
                 await OnGetAsync();
                 return Page();
             }
@@ -152,6 +168,8 @@ namespace OpCentrix.Pages.Admin.ProductionStages
 
                 // Soft delete
                 stage.IsActive = false;
+                stage.LastModifiedBy = User.Identity?.Name ?? "System";
+                
                 await _context.SaveChangesAsync();
 
                 _logger.LogInformation("Successfully deleted production stage: {StageName}", stage.Name);
@@ -201,6 +219,7 @@ namespace OpCentrix.Pages.Admin.ProductionStages
                     if (stage != null)
                     {
                         stage.DisplayOrder = i + 1;
+                        stage.LastModifiedBy = User.Identity?.Name ?? "System";
                     }
                 }
 
@@ -272,11 +291,18 @@ namespace OpCentrix.Pages.Admin.ProductionStages
                     description = stage.Description ?? "",
                     defaultSetupMinutes = stage.DefaultSetupMinutes,
                     defaultHourlyRate = stage.DefaultHourlyRate,
+                    defaultDurationHours = stage.DefaultDurationHours,
+                    defaultMaterialCost = stage.DefaultMaterialCost,
                     requiresQualityCheck = stage.RequiresQualityCheck,
                     requiresApproval = stage.RequiresApproval,
                     allowSkip = stage.AllowSkip,
                     isOptional = stage.IsOptional,
-                    requiredRole = stage.RequiredRole ?? ""
+                    requiredRole = stage.RequiredRole ?? "",
+                    stageColor = stage.StageColor,
+                    stageIcon = stage.StageIcon,
+                    department = stage.Department ?? "",
+                    allowParallelExecution = stage.AllowParallelExecution,
+                    requiresMachineAssignment = stage.RequiresMachineAssignment
                 });
             }
             catch (Exception ex)
@@ -316,11 +342,19 @@ namespace OpCentrix.Pages.Admin.ProductionStages
                     existingStage.Description = stageData.Description;
                     existingStage.DefaultSetupMinutes = stageData.DefaultSetupMinutes;
                     existingStage.DefaultHourlyRate = stageData.DefaultHourlyRate;
+                    existingStage.DefaultDurationHours = stageData.DefaultDurationHours;
+                    existingStage.DefaultMaterialCost = stageData.DefaultMaterialCost;
                     existingStage.RequiresQualityCheck = stageData.RequiresQualityCheck;
                     existingStage.RequiresApproval = stageData.RequiresApproval;
                     existingStage.AllowSkip = stageData.AllowSkip;
                     existingStage.IsOptional = stageData.IsOptional;
                     existingStage.RequiredRole = stageData.RequiredRole;
+                    existingStage.StageColor = stageData.StageColor ?? existingStage.StageColor;
+                    existingStage.StageIcon = stageData.StageIcon ?? existingStage.StageIcon;
+                    existingStage.Department = stageData.Department;
+                    existingStage.AllowParallelExecution = stageData.AllowParallelExecution;
+                    existingStage.RequiresMachineAssignment = stageData.RequiresMachineAssignment;
+                    existingStage.LastModifiedBy = User.Identity?.Name ?? "System";
 
                     await _context.SaveChangesAsync();
 
@@ -349,6 +383,7 @@ namespace OpCentrix.Pages.Admin.ProductionStages
                     existingStage.AllowSkip = Request.Form["AllowSkip"].Contains("true");
                     existingStage.IsOptional = Request.Form["IsOptional"].Contains("true");
                     existingStage.RequiredRole = Request.Form["RequiredRole"];
+                    existingStage.LastModifiedBy = User.Identity?.Name ?? "System";
 
                     await _context.SaveChangesAsync();
 
@@ -428,12 +463,22 @@ namespace OpCentrix.Pages.Admin.ProductionStages
                     Description = "Selective Laser Sintering of metal powder",
                     DefaultSetupMinutes = 45,
                     DefaultHourlyRate = 85.00m,
+                    DefaultDurationHours = 8.0,
+                    DefaultMaterialCost = 25.00m,
                     RequiresQualityCheck = true,
                     RequiresApproval = false,
                     AllowSkip = false,
                     IsOptional = false,
                     RequiredRole = "Operator",
+                    StageColor = "#007bff",
+                    StageIcon = "fas fa-print",
+                    Department = "3D Printing",
+                    AllowParallelExecution = false,
+                    RequiresMachineAssignment = true,
+                    CustomFieldsConfig = "[]",
                     CreatedDate = DateTime.UtcNow,
+                    CreatedBy = "System",
+                    LastModifiedBy = "System",
                     IsActive = true
                 },
                 new ProductionStage
@@ -443,12 +488,22 @@ namespace OpCentrix.Pages.Admin.ProductionStages
                     Description = "Computer Numerical Control machining operations",
                     DefaultSetupMinutes = 30,
                     DefaultHourlyRate = 95.00m,
+                    DefaultDurationHours = 4.0,
+                    DefaultMaterialCost = 10.00m,
                     RequiresQualityCheck = true,
                     RequiresApproval = false,
                     AllowSkip = true,
                     IsOptional = true,
                     RequiredRole = "Machinist",
+                    StageColor = "#28a745",
+                    StageIcon = "fas fa-cogs",
+                    Department = "CNC Machining",
+                    AllowParallelExecution = false,
+                    RequiresMachineAssignment = true,
+                    CustomFieldsConfig = "[]",
                     CreatedDate = DateTime.UtcNow,
+                    CreatedBy = "System",
+                    LastModifiedBy = "System",
                     IsActive = true
                 },
                 new ProductionStage
@@ -458,12 +513,22 @@ namespace OpCentrix.Pages.Admin.ProductionStages
                     Description = "Electrical Discharge Machining for complex geometries",
                     DefaultSetupMinutes = 60,
                     DefaultHourlyRate = 120.00m,
+                    DefaultDurationHours = 6.0,
+                    DefaultMaterialCost = 15.00m,
                     RequiresQualityCheck = true,
-                    RequiresApproval = false,
+                    RequiresApproval = true,
                     AllowSkip = true,
                     IsOptional = true,
                     RequiredRole = "EDM Specialist",
+                    StageColor = "#ffc107",
+                    StageIcon = "fas fa-bolt",
+                    Department = "EDM",
+                    AllowParallelExecution = false,
+                    RequiresMachineAssignment = true,
+                    CustomFieldsConfig = "[]",
                     CreatedDate = DateTime.UtcNow,
+                    CreatedBy = "System",
+                    LastModifiedBy = "System",
                     IsActive = true
                 },
                 new ProductionStage
@@ -473,12 +538,22 @@ namespace OpCentrix.Pages.Admin.ProductionStages
                     Description = "Laser engraving of serial numbers and markings",
                     DefaultSetupMinutes = 15,
                     DefaultHourlyRate = 75.00m,
+                    DefaultDurationHours = 0.5,
+                    DefaultMaterialCost = 1.00m,
                     RequiresQualityCheck = true,
                     RequiresApproval = false,
                     AllowSkip = false,
                     IsOptional = false,
                     RequiredRole = "Operator",
+                    StageColor = "#fd7e14",
+                    StageIcon = "fas fa-laser",
+                    Department = "Laser Operations",
+                    AllowParallelExecution = true,
+                    RequiresMachineAssignment = false,
+                    CustomFieldsConfig = "[]",
                     CreatedDate = DateTime.UtcNow,
+                    CreatedBy = "System",
+                    LastModifiedBy = "System",
                     IsActive = true
                 },
                 new ProductionStage
@@ -488,12 +563,22 @@ namespace OpCentrix.Pages.Admin.ProductionStages
                     Description = "Surface preparation and finish uniformity",
                     DefaultSetupMinutes = 20,
                     DefaultHourlyRate = 65.00m,
+                    DefaultDurationHours = 3.0,
+                    DefaultMaterialCost = 8.00m,
                     RequiresQualityCheck = true,
                     RequiresApproval = false,
                     AllowSkip = true,
                     IsOptional = true,
                     RequiredRole = "Finisher",
+                    StageColor = "#6c757d",
+                    StageIcon = "fas fa-brush",
+                    Department = "Finishing",
+                    AllowParallelExecution = true,
+                    RequiresMachineAssignment = false,
+                    CustomFieldsConfig = "[]",
                     CreatedDate = DateTime.UtcNow,
+                    CreatedBy = "System",
+                    LastModifiedBy = "System",
                     IsActive = true
                 },
                 new ProductionStage
@@ -503,12 +588,22 @@ namespace OpCentrix.Pages.Admin.ProductionStages
                     Description = "Surface treatment and corrosion protection",
                     DefaultSetupMinutes = 45,
                     DefaultHourlyRate = 70.00m,
+                    DefaultDurationHours = 3.0,
+                    DefaultMaterialCost = 8.00m,
                     RequiresQualityCheck = true,
                     RequiresApproval = false,
                     AllowSkip = true,
                     IsOptional = true,
                     RequiredRole = "Coater",
+                    StageColor = "#6c757d",
+                    StageIcon = "fas fa-brush",
+                    Department = "Finishing",
+                    AllowParallelExecution = true,
+                    RequiresMachineAssignment = false,
+                    CustomFieldsConfig = "[]",
                     CreatedDate = DateTime.UtcNow,
+                    CreatedBy = "System",
+                    LastModifiedBy = "System",
                     IsActive = true
                 },
                 new ProductionStage
@@ -518,12 +613,22 @@ namespace OpCentrix.Pages.Admin.ProductionStages
                     Description = "Final assembly with end caps, springs, and hardware",
                     DefaultSetupMinutes = 30,
                     DefaultHourlyRate = 80.00m,
+                    DefaultDurationHours = 2.0,
+                    DefaultMaterialCost = 5.00m,
                     RequiresQualityCheck = true,
                     RequiresApproval = true,
                     AllowSkip = false,
                     IsOptional = false,
                     RequiredRole = "Assembler",
+                    StageColor = "#17a2b8",
+                    StageIcon = "fas fa-puzzle-piece",
+                    Department = "Assembly",
+                    AllowParallelExecution = true,
+                    RequiresMachineAssignment = false,
+                    CustomFieldsConfig = "[]",
                     CreatedDate = DateTime.UtcNow,
+                    CreatedBy = "System",
+                    LastModifiedBy = "System",
                     IsActive = true
                 },
                 new ProductionStage
@@ -533,12 +638,22 @@ namespace OpCentrix.Pages.Admin.ProductionStages
                     Description = "Final quality control and testing",
                     DefaultSetupMinutes = 10,
                     DefaultHourlyRate = 80.00m,
+                    DefaultDurationHours = 1.0,
+                    DefaultMaterialCost = 2.00m,
                     RequiresQualityCheck = true,
                     RequiresApproval = true,
                     AllowSkip = false,
                     IsOptional = false,
                     RequiredRole = "Quality Inspector",
+                    StageColor = "#dc3545",
+                    StageIcon = "fas fa-search",
+                    Department = "Quality Control",
+                    AllowParallelExecution = false,
+                    RequiresMachineAssignment = false,
+                    CustomFieldsConfig = "[]",
                     CreatedDate = DateTime.UtcNow,
+                    CreatedBy = "System",
+                    LastModifiedBy = "System",
                     IsActive = true
                 }
             };
@@ -563,10 +678,17 @@ namespace OpCentrix.Pages.Admin.ProductionStages
         public string? Description { get; set; }
         public int DefaultSetupMinutes { get; set; }
         public decimal DefaultHourlyRate { get; set; }
+        public double DefaultDurationHours { get; set; }
+        public decimal DefaultMaterialCost { get; set; }
         public bool RequiresQualityCheck { get; set; }
         public bool RequiresApproval { get; set; }
         public bool AllowSkip { get; set; }
         public bool IsOptional { get; set; }
         public string? RequiredRole { get; set; }
+        public string? StageColor { get; set; }
+        public string? StageIcon { get; set; }
+        public string? Department { get; set; }
+        public bool AllowParallelExecution { get; set; }
+        public bool RequiresMachineAssignment { get; set; }
     }
 }
