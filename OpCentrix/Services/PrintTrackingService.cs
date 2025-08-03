@@ -6,6 +6,48 @@ using OpCentrix.ViewModels.PrintTracking;
 
 namespace OpCentrix.Services
 {
+    #region Phase 2: Enhanced Build Time Tracking Models
+
+    public class BuildTimeEstimate
+    {
+        public decimal EstimatedHours { get; set; }
+        public double ConfidenceLevel { get; set; }
+        public int BasedOnBuilds { get; set; }
+        public DateTime? LastBuildDate { get; set; }
+        public bool MachineSpecific { get; set; }
+    }
+
+    public class BuildPerformanceData
+    {
+        public int BuildId { get; set; }
+        public DateTime BuildDate { get; set; }
+        public string MachineId { get; set; } = string.Empty;
+        public decimal EstimatedHours { get; set; }
+        public decimal ActualHours { get; set; }
+        public int PartCount { get; set; }
+        public string? BuildFileHash { get; set; }
+        public string Assessment { get; set; } = string.Empty;
+        public string? SupportComplexity { get; set; }
+        public int DefectCount { get; set; }
+    }
+
+    public class BuildCompletionData
+    {
+        public string? BuildFileHash { get; set; }
+        public int? LayerCount { get; set; }
+        public decimal? BuildHeight { get; set; }
+        public string? SupportComplexity { get; set; }
+        public string? PartOrientations { get; set; }
+        public string? PostProcessingNeeded { get; set; }
+        public int? DefectCount { get; set; }
+        public string? LessonsLearned { get; set; }
+        public string? TimeFactors { get; set; }
+        public decimal? PowerConsumption { get; set; }
+        public decimal? LaserOnTime { get; set; }
+    }
+
+    #endregion
+
     public interface IPrintTrackingService
     {
         Task<PrintTrackingDashboardViewModel> GetDashboardDataAsync(int userId);
@@ -26,6 +68,16 @@ namespace OpCentrix.Services
 
         // Option A: Cohort Management Integration
         Task<bool> TryCreateCohortFromCompletedBuildAsync(BuildJob buildJob);
+
+        // Phase 2: Enhanced Build Time Methods
+        Task<BuildTimeEstimate> GetBuildTimeEstimateAsync(string buildFileHash, string machineType);
+        Task LogOperatorEstimateAsync(int buildId, decimal estimatedHours, string notes);
+        Task RecordActualBuildTimeAsync(int buildId, decimal actualHours, string assessment);
+        Task AnalyzeBuildPerformanceAsync(int buildId);
+
+        // Machine Learning Data Collection
+        Task<List<BuildPerformanceData>> GetHistoricalBuildDataAsync(string partNumber);
+        Task UpdateBuildTimeLearningAsync(int buildId, BuildCompletionData data);
     }
 
     public class PrintTrackingService : IPrintTrackingService
@@ -1275,10 +1327,276 @@ namespace OpCentrix.Services
 
         #endregion
 
+        #region Phase 2: Enhanced Build Time Tracking Methods
+
+        /// <summary>
+        /// Get build time estimate based on build file hash and machine type
+        /// </summary>
+        public async Task<BuildTimeEstimate> GetBuildTimeEstimateAsync(string buildFileHash, string machineType)
+        {
+            try
+            {
+                // Get historical data for this build file hash
+                var historicalBuilds = await _context.BuildJobs
+                    .Where(b => b.BuildFileHash == buildFileHash && 
+                               b.Status == "Completed" && 
+                               b.OperatorActualHours.HasValue)
+                    .OrderByDescending(b => b.CreatedAt)
+                    .Take(10)
+                    .ToListAsync();
+
+                if (historicalBuilds.Any())
+                {
+                    var averageHours = historicalBuilds.Average(b => b.OperatorActualHours!.Value);
+                    var confidence = Math.Min(100, historicalBuilds.Count * 10); // Max 100% confidence
+
+                    return new BuildTimeEstimate
+                    {
+                        EstimatedHours = averageHours,
+                        ConfidenceLevel = confidence,
+                        BasedOnBuilds = historicalBuilds.Count,
+                        LastBuildDate = historicalBuilds.First().CreatedAt,
+                        MachineSpecific = true
+                    };
+                }
+
+                // Fallback to machine-specific averages
+                var machineAverages = await _context.BuildJobs
+                    .Where(b => b.PrinterName == machineType && 
+                               b.Status == "Completed" && 
+                               b.OperatorActualHours.HasValue)
+                    .OrderByDescending(b => b.CreatedAt)
+                    .Take(20)
+                    .ToListAsync();
+
+                if (machineAverages.Any())
+                {
+                    var averageHours = machineAverages.Average(b => b.OperatorActualHours!.Value);
+                    return new BuildTimeEstimate
+                    {
+                        EstimatedHours = averageHours,
+                        ConfidenceLevel = 30, // Lower confidence for generic estimate
+                        BasedOnBuilds = machineAverages.Count,
+                        LastBuildDate = machineAverages.First().CreatedAt,
+                        MachineSpecific = false
+                    };
+                }
+
+                // Default fallback estimate
+                return new BuildTimeEstimate
+                {
+                    EstimatedHours = 8.0m, // Default 8-hour estimate
+                    ConfidenceLevel = 10,
+                    BasedOnBuilds = 0,
+                    LastBuildDate = null,
+                    MachineSpecific = false
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting build time estimate for hash {BuildFileHash} on machine {MachineType}", 
+                    buildFileHash, machineType);
+                
+                return new BuildTimeEstimate
+                {
+                    EstimatedHours = 8.0m,
+                    ConfidenceLevel = 0,
+                    BasedOnBuilds = 0,
+                    LastBuildDate = null,
+                    MachineSpecific = false
+                };
+            }
+        }
+
+        /// <summary>
+        /// Log operator's time estimate at start of build
+        /// </summary>
+        public async Task LogOperatorEstimateAsync(int buildId, decimal estimatedHours, string notes)
+        {
+            try
+            {
+                var buildJob = await _context.BuildJobs.FindAsync(buildId);
+                if (buildJob != null)
+                {
+                    buildJob.OperatorEstimatedHours = estimatedHours;
+                    buildJob.IsLearningBuild = true;
+                    
+                    if (!string.IsNullOrEmpty(notes))
+                    {
+                        buildJob.Notes = string.IsNullOrEmpty(buildJob.Notes) 
+                            ? $"Estimate: {notes}" 
+                            : $"{buildJob.Notes}\nEstimate: {notes}";
+                    }
+
+                    await _context.SaveChangesAsync();
+                    
+                    _logger.LogInformation("Logged operator estimate of {EstimatedHours}h for build {BuildId}", 
+                        estimatedHours, buildId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error logging operator estimate for build {BuildId}", buildId);
+            }
+        }
+
+        /// <summary>
+        /// Record actual build time and operator assessment
+        /// </summary>
+        public async Task RecordActualBuildTimeAsync(int buildId, decimal actualHours, string assessment)
+        {
+            try
+            {
+                var buildJob = await _context.BuildJobs.FindAsync(buildId);
+                if (buildJob != null)
+                {
+                    buildJob.OperatorActualHours = actualHours;
+                    buildJob.OperatorBuildAssessment = assessment;
+                    
+                    // Calculate total parts in build from BuildJobParts
+                    var totalParts = await _context.BuildJobParts
+                        .Where(bjp => bjp.BuildId == buildId)
+                        .SumAsync(bjp => bjp.Quantity);
+                    
+                    buildJob.TotalPartsInBuild = totalParts;
+
+                    await _context.SaveChangesAsync();
+                    
+                    _logger.LogInformation("Recorded actual time of {ActualHours}h (assessment: {Assessment}) for build {BuildId}", 
+                        actualHours, assessment, buildId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error recording actual build time for build {BuildId}", buildId);
+            }
+        }
+
+        /// <summary>
+        /// Analyze build performance and calculate accuracy
+        /// </summary>
+        public async Task AnalyzeBuildPerformanceAsync(int buildId)
+        {
+            try
+            {
+                var buildJob = await _context.BuildJobs.FindAsync(buildId);
+                if (buildJob?.OperatorEstimatedHours.HasValue == true && 
+                    buildJob.OperatorActualHours.HasValue)
+                {
+                    var estimated = buildJob.OperatorEstimatedHours.Value;
+                    var actual = buildJob.OperatorActualHours.Value;
+                    
+                    var variance = Math.Abs(actual - estimated);
+                    var percentageError = estimated > 0 ? (variance / estimated) * 100 : 0;
+                    
+                    var performance = percentageError switch
+                    {
+                        <= 10 => "Excellent",
+                        <= 20 => "Good",
+                        <= 30 => "Fair",
+                        _ => "Needs Improvement"
+                    };
+                    
+                    // Update assessment if not already set
+                    if (string.IsNullOrEmpty(buildJob.OperatorBuildAssessment))
+                    {
+                        buildJob.OperatorBuildAssessment = actual < estimated ? "faster" : 
+                                                          actual > estimated ? "slower" : "expected";
+                    }
+
+                    var performanceNotes = $"Estimate accuracy: {performance} ({percentageError:F1}% error)";
+                    buildJob.MachinePerformanceNotes = string.IsNullOrEmpty(buildJob.MachinePerformanceNotes)
+                        ? performanceNotes
+                        : $"{buildJob.MachinePerformanceNotes}\n{performanceNotes}";
+
+                    await _context.SaveChangesAsync();
+                    
+                    _logger.LogInformation("Analyzed performance for build {BuildId}: {Performance} ({PercentageError:F1}% error)", 
+                        buildId, performance, percentageError);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error analyzing build performance for build {BuildId}", buildId);
+            }
+        }
+
+        /// <summary>
+        /// Get historical build performance data for a part number
+        /// </summary>
+        public async Task<List<BuildPerformanceData>> GetHistoricalBuildDataAsync(string partNumber)
+        {
+            try
+            {
+                var builds = await _context.BuildJobs
+                    .Include(b => b.BuildJobParts.Where(bjp => bjp.PartNumber == partNumber))
+                    .Where(b => b.BuildJobParts.Any(bjp => bjp.PartNumber == partNumber) &&
+                               b.Status == "Completed" &&
+                               b.OperatorEstimatedHours.HasValue &&
+                               b.OperatorActualHours.HasValue)
+                    .OrderByDescending(b => b.CreatedAt)
+                    .Take(50)
+                    .ToListAsync();
+
+                return builds.Select(b => new BuildPerformanceData
+                {
+                    BuildId = b.BuildId,
+                    BuildDate = b.CreatedAt,
+                    MachineId = b.PrinterName,
+                    EstimatedHours = b.OperatorEstimatedHours!.Value,
+                    ActualHours = b.OperatorActualHours!.Value,
+                    PartCount = b.TotalPartsInBuild,
+                    BuildFileHash = b.BuildFileHash,
+                    Assessment = b.OperatorBuildAssessment ?? "unknown",
+                    SupportComplexity = b.SupportComplexity,
+                    DefectCount = b.DefectCount ?? 0
+                }).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting historical build data for part {PartNumber}", partNumber);
+                return new List<BuildPerformanceData>();
+            }
+        }
+
+        /// <summary>
+        /// Update build time learning data
+        /// </summary>
+        public async Task UpdateBuildTimeLearningAsync(int buildId, BuildCompletionData data)
+        {
+            try
+            {
+                var buildJob = await _context.BuildJobs.FindAsync(buildId);
+                if (buildJob != null)
+                {
+                    // Update build job with completion data
+                    buildJob.BuildFileHash = data.BuildFileHash;
+                    buildJob.LayerCount = data.LayerCount;
+                    buildJob.BuildHeight = data.BuildHeight;
+                    buildJob.SupportComplexity = data.SupportComplexity;
+                    buildJob.PartOrientations = data.PartOrientations;
+                    buildJob.PostProcessingNeeded = data.PostProcessingNeeded;
+                    buildJob.DefectCount = data.DefectCount;
+                    buildJob.LessonsLearned = data.LessonsLearned;
+                    buildJob.TimeFactors = data.TimeFactors;
+                    buildJob.PowerConsumption = data.PowerConsumption;
+                    buildJob.LaserOnTime = data.LaserOnTime;
+
+                    await _context.SaveChangesAsync();
+                    
+                    _logger.LogInformation("Updated learning data for build {BuildId} with hash {BuildFileHash}", 
+                        buildId, data.BuildFileHash);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating build time learning for build {BuildId}", buildId);
+            }
+        }
+
+        #endregion
+
         #region Private Helper Methods
-        
-        // Note: This service has placeholder methods for missing private helpers
-        // These would be implemented fully in a production environment
         
         private string DetermineDelayReason(PrintStartViewModel model)
         {

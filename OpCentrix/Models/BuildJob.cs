@@ -147,6 +147,33 @@ namespace OpCentrix.Models
 
         #endregion
 
+        #region Enhanced Build Time Tracking Fields (Phase 2)
+
+        // Operator Build Time Tracking
+        public decimal? OperatorEstimatedHours { get; set; }  // Operator's estimate at start  
+        public decimal? OperatorActualHours { get; set; }    // Operator's logged actual time
+        public int TotalPartsInBuild { get; set; }           // Count of all parts in build
+        public string? BuildFileHash { get; set; }           // Track unique build files  
+        public bool IsLearningBuild { get; set; }            // Mark builds for ML learning
+        public string? OperatorBuildAssessment { get; set; } // "faster", "expected", "slower"
+        public string? TimeFactors { get; set; }             // JSON array of factors affecting time
+
+        // Machine Performance Tracking
+        public string? MachinePerformanceNotes { get; set; } // TI1 vs TI2 specific notes
+        public decimal? PowerConsumption { get; set; }       // Track power usage if available
+        public decimal? LaserOnTime { get; set; }            // Actual laser time from machine
+        public int? LayerCount { get; set; }                 // Number of layers in build
+        public decimal? BuildHeight { get; set; }            // Height of tallest part
+        public string? SupportComplexity { get; set; }       // "Low", "Medium", "High", "None"
+
+        // Quality and Learning Data  
+        public string? PartOrientations { get; set; }        // JSON array of part orientations
+        public string? PostProcessingNeeded { get; set; }    // Required post-processing steps
+        public int? DefectCount { get; set; }                // Number of defective parts
+        public string? LessonsLearned { get; set; }          // Operator notes for future builds
+
+        #endregion
+
         #region Helper Methods
 
         /// <summary>

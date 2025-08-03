@@ -710,34 +710,93 @@ namespace OpCentrix.Pages.Admin
         {
             try
             {
-                var partStage = new PartStageRequirement
+                _logger.LogInformation("Adding stage {StageId} to part {PartId}", stageId, partId);
+
+                if (partId <= 0 || stageId <= 0)
+                {
+                    return new JsonResult(new { success = false, message = "Invalid part or stage ID" });
+                }
+
+                // Check if the combination already exists
+                var existingRequirement = await _context.PartStageRequirements
+                    .FirstOrDefaultAsync(psr => psr.PartId == partId && psr.ProductionStageId == stageId);
+
+                if (existingRequirement != null && existingRequirement.IsActive)
+                {
+                    return new JsonResult(new { success = false, message = "Stage already assigned to this part" });
+                }
+
+                // Get the production stage
+                var productionStage = await _context.ProductionStages.FindAsync(stageId);
+                if (productionStage == null)
+                {
+                    return new JsonResult(new { success = false, message = "Production stage not found" });
+                }
+
+                // Create new stage requirement
+                var stageRequirement = new PartStageRequirement
                 {
                     PartId = partId,
                     ProductionStageId = stageId,
                     ExecutionOrder = executionOrder,
                     IsRequired = true,
                     IsActive = true,
-                    CreatedBy = User.Identity?.Name ?? "System",
-                    LastModifiedBy = User.Identity?.Name ?? "System",
+                    AllowParallelExecution = false,
+                    IsBlocking = true,
+                    EstimatedHours = productionStage.DefaultDurationHours,
+                    SetupTimeMinutes = productionStage.DefaultSetupMinutes,
+                    EstimatedCost = 0,
+                    MaterialCost = 0,
+                    RequiresSpecificMachine = productionStage.RequiresMachineAssignment,
+                    CustomFieldValues = "{}",
+                    StageParameters = "{}",
+                    RequiredMaterials = "",
+                    RequiredTooling = "",
+                    QualityRequirements = "",
+                    SpecialInstructions = "",
+                    RequirementNotes = "",
                     CreatedDate = DateTime.UtcNow,
-                    LastModifiedDate = DateTime.UtcNow
+                    LastModifiedDate = DateTime.UtcNow,
+                    CreatedBy = "System", // TODO: Get current user
+                    LastModifiedBy = "System" // TODO: Get current user
                 };
 
-                var success = await _partStageService.AddPartStageAsync(partStage);
-
-                if (success)
+                if (existingRequirement != null)
                 {
-                    return new JsonResult(new { success = true, message = "Stage added successfully" });
+                    // Reactivate existing requirement
+                    existingRequirement.IsActive = true;
+                    existingRequirement.ExecutionOrder = executionOrder;
+                    existingRequirement.LastModifiedDate = DateTime.UtcNow;
+                    existingRequirement.LastModifiedBy = "System"; // TODO: Get current user
                 }
                 else
                 {
-                    return new JsonResult(new { success = false, message = "Failed to add stage" });
+                    _context.PartStageRequirements.Add(stageRequirement);
                 }
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Successfully added stage {StageId} to part {PartId}", stageId, partId);
+
+                return new JsonResult(new 
+                { 
+                    success = true, 
+                    message = $"Stage '{productionStage.Name}' added successfully",
+                    stageRequirement = new
+                    {
+                        id = existingRequirement?.Id ?? stageRequirement.Id,
+                        partId = partId,
+                        productionStageId = stageId,
+                        stageName = productionStage.Name,
+                        executionOrder = executionOrder,
+                        estimatedHours = stageRequirement.EstimatedHours
+                    }
+                });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error adding stage {StageId} to part {PartId}", stageId, partId);
-                return new JsonResult(new { success = false, message = ex.Message });
+                return new JsonResult(new { success = false, message = "An error occurred while adding the stage" });
             }
         }
 
@@ -748,38 +807,168 @@ namespace OpCentrix.Pages.Admin
         {
             try
             {
-                var success = await _partStageService.RemovePartStageAsync(partId, stageId);
+                _logger.LogInformation("Removing stage {StageId} from part {PartId}", stageId, partId);
 
-                if (success)
+                if (partId <= 0 || stageId <= 0)
                 {
-                    return new JsonResult(new { success = true, message = "Stage removed successfully" });
+                    return new JsonResult(new { success = false, message = "Invalid part or stage ID" });
                 }
-                else
+
+                var stageRequirement = await _context.PartStageRequirements
+                    .FirstOrDefaultAsync(psr => psr.PartId == partId && psr.ProductionStageId == stageId && psr.IsActive);
+
+                if (stageRequirement == null)
                 {
-                    return new JsonResult(new { success = false, message = "Failed to remove stage" });
+                    return new JsonResult(new { success = false, message = "Stage requirement not found" });
                 }
+
+                // Soft delete by setting IsActive to false
+                stageRequirement.IsActive = false;
+                stageRequirement.LastModifiedDate = DateTime.UtcNow;
+                stageRequirement.LastModifiedBy = "System"; // TODO: Get current user
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Successfully removed stage {StageId} from part {PartId}", stageId, partId);
+
+                return new JsonResult(new 
+                { 
+                    success = true, 
+                    message = "Stage removed successfully"
+                });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error removing stage {StageId} from part {PartId}", stageId, partId);
-                return new JsonResult(new { success = false, message = ex.Message });
+                return new JsonResult(new { success = false, message = "An error occurred while removing the stage" });
             }
         }
 
         /// <summary>
-        /// Get part stage requirements
+        /// Update a stage requirement for a part
         /// </summary>
-        public async Task<IActionResult> OnGetPartStagesAsync(int partId)
+        public async Task<IActionResult> OnPostUpdateStageAsync([FromBody] UpdateStageRequest request)
         {
             try
             {
-                var stages = await _partStageService.GetPartStagesWithDetailsAsync(partId);
-                return new JsonResult(stages);
+                _logger.LogInformation("Updating stage {StageId} for part {PartId}", request.StageId, request.PartId);
+
+                if (request.PartId <= 0 || request.StageId <= 0)
+                {
+                    return new JsonResult(new { success = false, message = "Invalid part or stage ID" });
+                }
+
+                var stageRequirement = await _context.PartStageRequirements
+                    .FirstOrDefaultAsync(psr => psr.PartId == request.PartId && psr.ProductionStageId == request.StageId && psr.IsActive);
+
+                if (stageRequirement == null)
+                {
+                    return new JsonResult(new { success = false, message = "Stage requirement not found" });
+                }
+
+                // Update the stage requirement with the provided data
+                if (request.ExecutionOrder.HasValue)
+                    stageRequirement.ExecutionOrder = request.ExecutionOrder.Value;
+                
+                if (request.EstimatedHours.HasValue)
+                    stageRequirement.EstimatedHours = request.EstimatedHours.Value;
+                
+                if (request.SetupTimeMinutes.HasValue)
+                    stageRequirement.SetupTimeMinutes = request.SetupTimeMinutes.Value;
+                
+                if (request.HourlyRateOverride.HasValue)
+                    stageRequirement.HourlyRateOverride = request.HourlyRateOverride.Value;
+                
+                if (request.MaterialCost.HasValue)
+                    stageRequirement.MaterialCost = request.MaterialCost.Value;
+                
+                if (!string.IsNullOrEmpty(request.AssignedMachineId))
+                    stageRequirement.AssignedMachineId = request.AssignedMachineId;
+                
+                if (!string.IsNullOrEmpty(request.SpecialInstructions))
+                    stageRequirement.SpecialInstructions = request.SpecialInstructions;
+                
+                if (request.RequiresSpecificMachine.HasValue)
+                    stageRequirement.RequiresSpecificMachine = request.RequiresSpecificMachine.Value;
+                
+                if (request.AllowParallelExecution.HasValue)
+                    stageRequirement.AllowParallelExecution = request.AllowParallelExecution.Value;
+
+                stageRequirement.LastModifiedDate = DateTime.UtcNow;
+                stageRequirement.LastModifiedBy = "System"; // TODO: Get current user
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Successfully updated stage {StageId} for part {PartId}", request.StageId, request.PartId);
+
+                return new JsonResult(new 
+                { 
+                    success = true, 
+                    message = "Stage updated successfully",
+                    stageRequirement = new
+                    {
+                        id = stageRequirement.Id,
+                        partId = request.PartId,
+                        productionStageId = request.StageId,
+                        executionOrder = stageRequirement.ExecutionOrder,
+                        estimatedHours = stageRequirement.EstimatedHours,
+                        setupTimeMinutes = stageRequirement.SetupTimeMinutes,
+                        materialCost = stageRequirement.MaterialCost,
+                        assignedMachineId = stageRequirement.AssignedMachineId,
+                        specialInstructions = stageRequirement.SpecialInstructions
+                    }
+                });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting stages for part {PartId}", partId);
-                return new JsonResult(new List<PartStageRequirement>());
+                _logger.LogError(ex, "Error updating stage {StageId} for part {PartId}", request.StageId, request.PartId);
+                return new JsonResult(new { success = false, message = "An error occurred while updating the stage" });
+            }
+        }
+
+        /// <summary>
+        /// Get stage configuration details for a specific stage
+        /// </summary>
+        public async Task<IActionResult> OnGetStageConfigurationAsync(int stageId)
+        {
+            try
+            {
+                _logger.LogInformation("Getting configuration for stage {StageId}", stageId);
+
+                var productionStage = await _context.ProductionStages
+                    .FirstOrDefaultAsync(ps => ps.Id == stageId && ps.IsActive);
+
+                if (productionStage == null)
+                {
+                    return new JsonResult(new { success = false, message = "Production stage not found" });
+                }
+
+                return new JsonResult(new 
+                { 
+                    success = true,
+                    stage = new
+                    {
+                        id = productionStage.Id,
+                        name = productionStage.Name,
+                        description = productionStage.Description,
+                        department = productionStage.Department,
+                        stageColor = productionStage.StageColor,
+                        stageIcon = productionStage.StageIcon,
+                        defaultDurationHours = productionStage.DefaultDurationHours,
+                        defaultSetupMinutes = productionStage.DefaultSetupMinutes,
+                        defaultHourlyRate = productionStage.DefaultHourlyRate,
+                        requiresMachineAssignment = productionStage.RequiresMachineAssignment,
+                        requiresQualityCheck = productionStage.RequiresQualityCheck,
+                        requiresApproval = productionStage.RequiresApproval,
+                        allowParallelExecution = productionStage.AllowParallelExecution,
+                        customFields = productionStage.CustomFieldsConfig ?? "[]"
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting configuration for stage {StageId}", stageId);
+                return new JsonResult(new { success = false, message = "An error occurred while getting stage configuration" });
             }
         }
 
@@ -1521,11 +1710,34 @@ namespace OpCentrix.Pages.Admin
                     _logger.LogInformation("Found {Count} existing part stages for part {PartId}", partStages.Count, part.Id);
                     
                     ViewData["PartStages"] = partStages;
+                    
+                    // FIXED: Also pass the part stage data to the component as JSON for JavaScript
+                    var partStageData = partStages.Select(ps => new
+                    {
+                        id = ps.Id,
+                        partId = ps.PartId,
+                        productionStageId = ps.ProductionStageId,
+                        executionOrder = ps.ExecutionOrder,
+                        isRequired = ps.IsRequired,
+                        estimatedHours = ps.EstimatedHours ?? ps.ProductionStage?.DefaultDurationHours ?? 1.0,
+                        setupTimeMinutes = ps.SetupTimeMinutes ?? ps.ProductionStage?.DefaultSetupMinutes ?? 30,
+                        hourlyRateOverride = ps.HourlyRateOverride,
+                        materialCost = ps.MaterialCost,
+                        assignedMachineId = ps.AssignedMachineId ?? "",
+                        preferredMachineIds = ps.PreferredMachineIds ?? "",
+                        customFieldValues = ps.CustomFieldValues ?? "{}",
+                        specialInstructions = ps.SpecialInstructions ?? "",
+                        requiresSpecificMachine = ps.RequiresSpecificMachine,
+                        allowParallelExecution = ps.AllowParallelExecution
+                    }).ToList();
+                    
+                    ViewData["PartStageDataJson"] = System.Text.Json.JsonSerializer.Serialize(partStageData);
                 }
                 else
                 {
                     _logger.LogInformation("New part - no existing stages");
                     ViewData["PartStages"] = new List<PartStageRequirement>();
+                    ViewData["PartStageDataJson"] = "[]";
                 }
                 
                 // Log ViewData contents for debugging
@@ -1540,6 +1752,7 @@ namespace OpCentrix.Pages.Admin
                 ViewData["AvailableStages"] = new List<ProductionStage>();
                 ViewData["AvailableMachines"] = new List<Machine>();
                 ViewData["PartStages"] = new List<PartStageRequirement>();
+                ViewData["PartStageDataJson"] = "[]";
             }
         }
 
@@ -1782,5 +1995,26 @@ namespace OpCentrix.Pages.Admin
                 return new JsonResult(new { Error = ex.Message, StackTrace = ex.StackTrace });
             }
         }
+    }
+
+    /// <summary>
+    /// Request model for updating stage requirements
+    /// </summary>
+    public class UpdateStageRequest
+    {
+        public int PartId { get; set; }
+        public int StageId { get; set; }
+        public int? ExecutionOrder { get; set; }
+        public bool? IsRequired { get; set; }
+        public double? EstimatedHours { get; set; }
+        public int? SetupTimeMinutes { get; set; }
+        public decimal? HourlyRateOverride { get; set; }
+        public decimal? MaterialCost { get; set; }
+        public string? AssignedMachineId { get; set; }
+        public string? PreferredMachineIds { get; set; }
+        public string? CustomFieldValues { get; set; }
+        public string? SpecialInstructions { get; set; }
+        public bool? RequiresSpecificMachine { get; set; }
+        public bool? AllowParallelExecution { get; set; }
     }
 }

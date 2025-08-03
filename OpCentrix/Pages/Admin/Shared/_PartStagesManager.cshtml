@@ -3,6 +3,7 @@
     var availableStages = ViewData["AvailableStages"] as List<OpCentrix.Models.ProductionStage> ?? new List<OpCentrix.Models.ProductionStage>();
     var partStages = ViewData["PartStages"] as List<OpCentrix.Models.PartStageRequirement> ?? new List<OpCentrix.Models.PartStageRequirement>();
     var availableMachines = ViewData["AvailableMachines"] as List<OpCentrix.Models.Machine> ?? new List<OpCentrix.Models.Machine>();
+    var partStageDataJson = ViewData["PartStageDataJson"] as string ?? "[]";
 }
 
 <!-- Dynamic Stage Assignment and Configuration -->
@@ -175,8 +176,8 @@
     let availableStages = @Html.Raw(Json.Serialize(availableStages));
     let availableMachines = @Html.Raw(Json.Serialize(availableMachines));
     
-    // Load existing part stages
-    let existingPartStages = [];
+    // FIXED: Load existing part stages from ViewData
+    let existingPartStages = @Html.Raw(partStageDataJson);
     let currentConfigStageId = null;
     
     // Make data globally available for the parts form
@@ -199,6 +200,8 @@
     
     // Load existing part stages into the UI
     function loadExistingStages() {
+        console.log('?? [STAGE-MANAGER] Loading existing stages:', existingPartStages);
+        
         existingPartStages.forEach(partStage => {
             const stage = availableStages.find(s => s.id === partStage.productionStageId);
             if (stage) {
@@ -207,22 +210,26 @@
                     name: stage.name,
                     executionOrder: partStage.executionOrder,
                     isRequired: partStage.isRequired,
-                    estimatedHours: partStage.estimatedHours || stage.defaultDurationHours,
-                    setupTimeMinutes: partStage.setupTimeMinutes || stage.defaultSetupMinutes,
+                    estimatedHours: partStage.estimatedHours || stage.defaultDurationHours || 1.0,
+                    setupTimeMinutes: partStage.setupTimeMinutes || stage.defaultSetupMinutes || 30,
                     hourlyRateOverride: partStage.hourlyRateOverride,
-                    materialCost: partStage.materialCost,
-                    assignedMachineId: partStage.assignedMachineId,
+                    materialCost: partStage.materialCost || 0,
+                    assignedMachineId: partStage.assignedMachineId || '',
                     preferredMachineIds: partStage.preferredMachineIds ? partStage.preferredMachineIds.split(',') : [],
-                    customFieldValues: JSON.parse(partStage.customFieldValues || '{}'),
+                    customFieldValues: partStage.customFieldValues ? JSON.parse(partStage.customFieldValues) : {},
                     specialInstructions: partStage.specialInstructions || '',
-                    requiresSpecificMachine: partStage.requiresSpecificMachine,
-                    allowParallelExecution: partStage.allowParallelExecution
+                    requiresSpecificMachine: partStage.requiresSpecificMachine || false,
+                    allowParallelExecution: partStage.allowParallelExecution || false
                 });
                 
                 // Update button appearance
                 updateStageButton(partStage.productionStageId, true);
+                
+                console.log('? [STAGE-MANAGER] Loaded existing stage:', stage.name);
             }
         });
+        
+        console.log('? [STAGE-MANAGER] Finished loading', selectedStages.size, 'existing stages');
     }
     
     // Toggle stage selection
@@ -665,142 +672,3 @@
                         ${(field.options || []).map(option => `
                             <option value="${option}" ${currentValue === option ? 'selected' : ''}>${option}</option>
                         `).join('')}
-                    </select>
-                `;
-                break;
-                
-            case 'checkbox':
-                input = `
-                    <div class="form-check">
-                        <input type="checkbox" class="form-check-input custom-field" 
-                               id="${fieldId}" data-field-name="${field.name}"
-                               ${currentValue === 'true' || currentValue === true ? 'checked' : ''}>
-                        <label class="form-check-label" for="${fieldId}">${field.label}</label>
-                    </div>
-                `;
-                break;
-                
-            case 'textarea':
-                input = `
-                    <textarea class="form-control custom-field" id="${fieldId}" data-field-name="${field.name}"
-                              rows="3" ${field.required ? 'required' : ''}
-                              placeholder="${field.placeholderText || ''}">${currentValue}</textarea>
-                `;
-                break;
-                
-            case 'date':
-                input = `
-                    <input type="date" class="form-control custom-field" 
-                           id="${fieldId}" data-field-name="${field.name}"
-                           value="${currentValue}" ${field.required ? 'required' : ''}>
-                `;
-                break;
-                
-            default: // text
-                input = `
-                    <input type="text" class="form-control custom-field" 
-                           id="${fieldId}" data-field-name="${field.name}"
-                           value="${currentValue}" ${field.required ? 'required' : ''}
-                           placeholder="${field.placeholderText || ''}">
-                `;
-                break;
-        }
-        
-        if (field.type !== 'checkbox') {
-            return `
-                <div class="mb-3">
-                    <label class="form-label" for="${fieldId}">
-                        ${field.label} ${field.required ? '<span class="text-danger">*</span>' : ''}
-                    </label>
-                    ${input}
-                    ${field.description ? `<div class="form-text">${field.description}</div>` : ''}
-                </div>
-            `;
-        } else {
-            return `<div class="mb-3">${input}</div>`;
-        }
-    }
-    
-    // Save stage configuration
-    window.saveStageConfiguration = function() {
-        if (!currentConfigStageId) return;
-        
-        const stageData = selectedStages.get(currentConfigStageId);
-        if (!stageData) return;
-        
-        // Update basic configuration
-        stageData.estimatedHours = parseFloat(document.getElementById('config-estimatedHours').value) || 1.0;
-        stageData.setupTimeMinutes = parseInt(document.getElementById('config-setupTimeMinutes').value) || 30;
-        stageData.hourlyRateOverride = parseFloat(document.getElementById('config-hourlyRateOverride').value) || null;
-        stageData.materialCost = parseFloat(document.getElementById('config-materialCost').value) || 0;
-        stageData.allowParallelExecution = document.getElementById('config-allowParallelExecution').checked;
-        stageData.specialInstructions = document.getElementById('config-specialInstructions').value;
-        
-        // Update machine assignment
-        const assignedMachineSelect = document.getElementById('config-assignedMachineId');
-        if (assignedMachineSelect) {
-            stageData.assignedMachineId = assignedMachineSelect.value;
-        } else {
-            // Update preferred machines
-            const preferredCheckboxes = document.querySelectorAll('.preferred-machine:checked');
-            stageData.preferredMachineIds = Array.from(preferredCheckboxes).map(cb => cb.value);
-        }
-        
-        // Update custom fields
-        const customFieldInputs = document.querySelectorAll('.custom-field');
-        customFieldInputs.forEach(input => {
-            const fieldName = input.getAttribute('data-field-name');
-            let value;
-            
-            if (input.type === 'checkbox') {
-                value = input.checked;
-            } else {
-                value = input.value;
-            }
-            
-            stageData.customFieldValues[fieldName] = value;
-        });
-        
-        // Update displays
-        updateSelectedStagesDisplay();
-        updateStageSummary();
-        generateHiddenInputs();
-        
-        // Close modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('stageConfigModal'));
-        modal.hide();
-        
-        console.log(`?? [STAGE-MANAGER] Saved configuration for stage ${currentConfigStageId}`);
-    };
-    
-    console.log('? [STAGE-MANAGER] Dynamic stage assignment component loaded');
-</script>
-
-<style>
-    .stage-selection-btn {
-        min-height: 80px;
-        transition: all 0.3s ease;
-    }
-    
-    .stage-selection-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-    }
-    
-    .stage-config-card {
-        transition: all 0.3s ease;
-    }
-    
-    .stage-config-card:hover {
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-    
-    .custom-field {
-        transition: border-color 0.3s ease;
-    }
-    
-    .custom-field:focus {
-        border-color: #007bff;
-        box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
-    }
-</style>
