@@ -68,6 +68,17 @@ namespace OpCentrix.ViewModels.PrintTracking
     }
 
     /// <summary>
+    /// View model for embedded scheduler view in Print Tracking
+    /// </summary>
+    public class EmbeddedSchedulerViewModel
+    {
+        public List<Job> Jobs { get; set; } = new();
+        public List<string> Machines { get; set; } = new();
+        public List<DateTime> Dates { get; set; } = new();
+        public DateTime StartDate { get; set; } = DateTime.Today;
+    }
+
+    /// <summary>
     /// View model for the Post-Print Log Form - Enhanced for multi-stage manufacturing and compliance
     /// </summary>
     public class PostPrintViewModel

@@ -755,7 +755,7 @@
             }
         },
         
-        // Setup all event listeners
+        // Enhanced HTMX event handling
         setupEventListeners() {
             // HTMX event listeners with improved error handling
             document.body.addEventListener('htmx:beforeRequest', (e) => {
@@ -775,6 +775,34 @@
             document.body.addEventListener('htmx:sendError', (e) => {
                 this.hideLoadingIndicator();
                 this.showErrorNotification('Network error. Please check your connection.');
+            });
+            
+            // CRITICAL FIX: Add protection against full page insertion
+            document.body.addEventListener('htmx:beforeSwap', (e) => {
+                // Check if the response contains a full HTML document
+                if (e.detail.serverResponse) {
+                    const response = e.detail.serverResponse.toLowerCase();
+                    if (response.includes('<html') || response.includes('<body') || response.includes('<!doctype')) {
+                        console.error('? [HTMX] Server returned full page - canceling swap to prevent duplication');
+                        e.preventDefault(); // Cancel the swap
+                        this.showErrorNotification('Server error occurred. Please try again.');
+                        return false;
+                    }
+                }
+            });
+            
+            // CRITICAL FIX: Clean up any full page content that might have been inserted
+            document.body.addEventListener('htmx:afterSwap', (e) => {
+                // Check if the swap inserted a full page (contains html/body tags)
+                if (e.detail.target && e.detail.target.innerHTML) {
+                    const content = e.detail.target.innerHTML.toLowerCase();
+                    if (content.includes('<html') || content.includes('<body') || content.includes('<!doctype')) {
+                        console.error('? [HTMX] HTMX inserted full page content - preventing duplication');
+                        e.detail.target.innerHTML = ''; // Clear the problematic content
+                        this.showErrorNotification('An error occurred. Please refresh the page.');
+                        return;
+                    }
+                }
             });
             
             // Modal management
@@ -822,6 +850,19 @@
             const xhr = event.detail.xhr;
             const target = event.detail.target;
             
+            // CRITICAL FIX: Handle error status codes properly
+            if (xhr.status >= 400) {
+                console.error('? [HTMX] Server returned error status:', xhr.status);
+                
+                const isModal = target && target.id === 'modal-container';
+                if (isModal) {
+                    this.showErrorNotification(`Server error (${xhr.status}). Please check your input and try again.`);
+                } else {
+                    this.showErrorNotification(`Request failed (${xhr.status}). Please try again.`);
+                }
+                return;
+            }
+            
             // Check if this was a successful form submission
             if (xhr.status === 200 && target && target.id === 'modal-container') {
                 // If modal container received new content, check if it's an error or success
@@ -856,12 +897,19 @@
             if (xhr.status === 404) {
                 errorMessage = 'Page not found. Please refresh and try again.';
             } else if (xhr.status === 500) {
-                errorMessage = 'Server error. Please contact support if this continues.';
+                errorMessage = 'Server error. Please check your input and contact support if this continues.';
             } else if (xhr.status === 403) {
                 errorMessage = 'Access denied. Please check your permissions.';
+            } else if (xhr.status === 0) {
+                errorMessage = 'Network error. Please check your connection.';
             }
             
             this.showErrorNotification(errorMessage);
+            
+            // DEFENSIVE FIX: Clear any error content that might have been inserted
+            if (event.detail.target) {
+                event.detail.target.innerHTML = '';
+            }
         },
         
         // Grid style management
@@ -874,7 +922,7 @@
                 'week': '120px',
                 '12h': '60px',
                 '6h': '50px',
-                '4h': '40px', 
+                '4h': '40px',
                 '2h': '30px',
                 '1h': '25px',
                 '30min': '20px',

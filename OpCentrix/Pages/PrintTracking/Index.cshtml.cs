@@ -27,12 +27,32 @@ namespace OpCentrix.Pages.PrintTracking
             _logger = logger;
         }
 
-        public async Task OnGetAsync()
+        public async Task OnGetAsync(int? jobId = null, string? machineId = null)
         {
             try
             {
                 var userId = GetCurrentUserId();
                 Dashboard = await _printTrackingService.GetDashboardDataAsync(userId);
+                
+                // ENHANCED: Handle scheduler integration parameters
+                if (jobId.HasValue)
+                {
+                    ViewData["HighlightJobId"] = jobId.Value;
+                    ViewData["ScrollToJob"] = true;
+                    
+                    // Pre-load job details for context
+                    var job = await _context.Jobs.Include(j => j.Part).FirstOrDefaultAsync(j => j.Id == jobId.Value);
+                    if (job != null)
+                    {
+                        ViewData["JobContext"] = job;
+                        TempData["Info"] = $"Scheduler job loaded: {job.PartNumber} on {job.MachineId}";
+                    }
+                }
+                
+                if (!string.IsNullOrEmpty(machineId))
+                {
+                    ViewData["HighlightMachineId"] = machineId;
+                }
                 
                 _logger.LogInformation("Print tracking dashboard loaded for user {UserId} with role {Role}", 
                     userId, User.FindFirst("Role")?.Value ?? "Unknown");
@@ -48,7 +68,7 @@ namespace OpCentrix.Pages.PrintTracking
             }
         }
 
-        public async Task<IActionResult> OnGetStartPrintModalAsync(string? printerName = null)
+        public async Task<IActionResult> OnGetStartPrintModalAsync(string? printerName = null, int? jobId = null)
         {
             try
             {
@@ -80,6 +100,29 @@ namespace OpCentrix.Pages.PrintTracking
                         : new List<Job>()
                 };
 
+                // ENHANCED: Pre-populate from scheduler job if provided
+                if (jobId.HasValue)
+                {
+                    var scheduledJob = await _context.Jobs.Include(j => j.Part).FirstOrDefaultAsync(j => j.Id == jobId.Value);
+                    if (scheduledJob != null)
+                    {
+                        model.AssociatedScheduledJobId = scheduledJob.Id;
+                        model.PartId = scheduledJob.PartId;
+                        model.PartNumber = scheduledJob.PartNumber;
+                        model.PartDescription = scheduledJob.Part?.Description ?? "";
+                        model.Material = scheduledJob.SlsMaterial;
+                        model.Quantity = scheduledJob.Quantity;
+                        model.EstimatedHours = scheduledJob.EstimatedHours;
+                        model.ScheduledStartTime = scheduledJob.ScheduledStart;
+                        model.ScheduledEndTime = scheduledJob.ScheduledEnd;
+                        
+                        // Note: IsDelayed and DelayMinutes are computed properties based on ScheduledStartTime and ActualStartTime
+                        // They will be automatically calculated when the model is used
+                        
+                        _logger.LogInformation("Pre-populated start print form from scheduler job {JobId}", jobId.Value);
+                    }
+                }
+
                 return Partial("_StartPrintModal", model);
             }
             catch (Exception ex)
@@ -108,8 +151,17 @@ namespace OpCentrix.Pages.PrintTracking
                 _logger.LogInformation("Print started: BuildId {BuildId}, Printer {PrinterName}, User {UserId}", 
                     buildId, model.PrinterName, userId);
 
-                // Return success response that will refresh the dashboard
-                return new JsonResult(new { success = true, buildId, message = "Print started successfully!" });
+                // ENHANCED: Return success with scheduler integration info
+                var responseData = new { 
+                    success = true, 
+                    buildId, 
+                    message = "Print started successfully!",
+                    schedulerJobId = model.AssociatedScheduledJobId,
+                    partNumber = model.PartNumber,
+                    machineId = model.PrinterName
+                };
+
+                return new JsonResult(responseData);
             }
             catch (Exception ex)
             {
@@ -118,7 +170,7 @@ namespace OpCentrix.Pages.PrintTracking
             }
         }
 
-        public async Task<IActionResult> OnGetPostPrintModalAsync(int? buildId = null, string? printerName = null)
+        public async Task<IActionResult> OnGetPostPrintModalAsync(int? buildId = null, string? printerName = null, int? jobId = null)
         {
             try
             {
@@ -134,11 +186,53 @@ namespace OpCentrix.Pages.PrintTracking
                     ActualStartTime = DateTime.Now.AddHours(-4), // Default to 4 hours ago
                     ActualEndTime = DateTime.Now,
                     Parts = new List<PostPrintPartEntry> { new PostPrintPartEntry { IsPrimary = true } },
-                    AvailableParts = await _context.Parts.Where(p => p.IsActive).OrderBy(p => p.PartNumber).ToListAsync()
+                    AvailableParts = await _context.Parts.Where(p => p.IsActive).OrderBy(p => p.PartNumber).ToListAsync(),
+                    ReasonForEnd = "Completed Successfully" // Default to successful completion
                 };
 
+                // ENHANCED: Handle scheduler job integration
+                if (jobId.HasValue)
+                {
+                    var scheduledJob = await _context.Jobs.Include(j => j.Part).FirstOrDefaultAsync(j => j.Id == jobId.Value);
+                    if (scheduledJob != null)
+                    {
+                        model.JobId = scheduledJob.Id;
+                        model.PartId = scheduledJob.PartId;
+                        model.PartNumber = scheduledJob.PartNumber;
+                        model.PartDescription = scheduledJob.Part?.Description ?? "";
+                        
+                        // Pre-populate parts list from scheduler job
+                        model.Parts = new List<PostPrintPartEntry>
+                        {
+                            new PostPrintPartEntry
+                            {
+                                PartNumber = scheduledJob.PartNumber,
+                                Quantity = scheduledJob.Quantity,
+                                Description = scheduledJob.Part?.Description ?? "",
+                                Material = scheduledJob.SlsMaterial ?? "",
+                                IsPrimary = true
+                            }
+                        };
+                        
+                        // Use actual times if job was started
+                        if (scheduledJob.ActualStart.HasValue)
+                        {
+                            model.ActualStartTime = scheduledJob.ActualStart.Value;
+                        }
+                        else
+                        {
+                            model.ActualStartTime = scheduledJob.ScheduledStart;
+                        }
+                        
+                        model.ScheduledStartTime = scheduledJob.ScheduledStart;
+                        model.ScheduledEndTime = scheduledJob.ScheduledEnd;
+                        model.AssociatedJobNumber = $"Job #{scheduledJob.Id}";
+                        
+                        _logger.LogInformation("Pre-populated completion form from scheduler job {JobId}", jobId.Value);
+                    }
+                }
                 // If buildId provided, load existing build data
-                if (buildId.HasValue)
+                else if (buildId.HasValue)
                 {
                     var existingBuild = await _context.BuildJobs.FindAsync(buildId.Value);
                     if (existingBuild != null)
@@ -146,7 +240,6 @@ namespace OpCentrix.Pages.PrintTracking
                         model.PrinterName = existingBuild.PrinterName;
                         model.ActualStartTime = existingBuild.ActualStartTime;
                         model.ScheduledStartTime = existingBuild.ScheduledStartTime;
-                        // Remove SetupNotes reference since it doesn't exist in PostPrintViewModel
                     }
                 }
                 // If printerName provided, check for active build
@@ -195,7 +288,19 @@ namespace OpCentrix.Pages.PrintTracking
                     _logger.LogInformation("Print completed: BuildId {BuildId}, Printer {PrinterName}, User {UserId}", 
                         model.BuildId, model.PrinterName, userId);
 
-                    return new JsonResult(new { success = true, message = "Print completed successfully!" });
+                    // ENHANCED: Return success with scheduler integration info
+                    var responseData = new { 
+                        success = true, 
+                        message = "Print completed successfully!",
+                        buildId = model.BuildId,
+                        schedulerJobId = model.JobId,
+                        partNumber = model.PartNumber,
+                        machineId = model.PrinterName,
+                        actualHours = model.ActualHours,
+                        scheduledHours = model.EstimatedHours
+                    };
+
+                    return new JsonResult(responseData);
                 }
                 else
                 {
@@ -224,11 +329,40 @@ namespace OpCentrix.Pages.PrintTracking
             }
         }
 
+        // ENHANCED: New method to get scheduled jobs for a machine (for scheduler integration)
+        public async Task<IActionResult> OnGetScheduledJobsAsync(string machineId)
+        {
+            try
+            {
+                var jobs = await _printTrackingService.GetAvailableScheduledJobsAsync(machineId);
+                
+                var jobData = jobs.Select(j => new {
+                    id = j.Id,
+                    partNumber = j.PartNumber,
+                    partDescription = j.Part?.Description ?? "",
+                    quantity = j.Quantity,
+                    scheduledStart = j.ScheduledStart.ToString("yyyy-MM-ddTHH:mm"),
+                    scheduledEnd = j.ScheduledEnd.ToString("yyyy-MM-ddTHH:mm"),
+                    estimatedHours = j.EstimatedHours,
+                    material = j.SlsMaterial,
+                    status = j.Status,
+                    isDelayed = j.ScheduledStart < DateTime.Now
+                }).ToList();
+
+                return new JsonResult(new { success = true, jobs = jobData });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting scheduled jobs for machine {MachineId}", machineId);
+                return new JsonResult(new { success = false, error = "Error loading scheduled jobs" });
+            }
+        }
+
         public async Task<IActionResult> OnGetEmbeddedViewAsync()
         {
             try
             {
-                // Load current jobs for today and next 2 days (mini view)
+                // ENHANCED: Load current jobs with scheduler integration
                 var startDate = DateTime.Today;
                 var endDate = startDate.AddDays(3);
                 
@@ -241,8 +375,20 @@ namespace OpCentrix.Pages.PrintTracking
                     .Take(20) // Limit for mini view
                     .ToListAsync();
 
+                // Add status indicators for print tracking
+                var jobsWithStatus = jobs.Select(j => new {
+                    Job = j,
+                    IsScheduled = j.Status == "Scheduled",
+                    IsBuilding = j.Status == "Building" || j.Status == "In Progress",
+                    IsComplete = j.Status == "Completed" || j.Status == "Complete",
+                    IsDelayed = j.ActualStart.HasValue && j.ActualStart > j.ScheduledStart.AddMinutes(15) ||
+                               (!j.ActualStart.HasValue && j.ScheduledStart < DateTime.Now.AddMinutes(-15)),
+                    CanStart = j.Status == "Scheduled" && Math.Abs((j.ScheduledStart - DateTime.Now).TotalMinutes) <= 60,
+                    CanComplete = j.Status == "Building" || j.Status == "In Progress"
+                }).ToList();
+
                 // Create a proper view model for the mini scheduler
-                var miniViewModel = new EmbeddedSchedulerViewModel
+                var miniViewModel = new OpCentrix.ViewModels.PrintTracking.EmbeddedSchedulerViewModel
                 {
                     Jobs = jobs,
                     Machines = jobs.Select(j => j.MachineId).Distinct().OrderBy(m => m).ToList(),
@@ -308,7 +454,9 @@ namespace OpCentrix.Pages.PrintTracking
                     model.DelayInfo = new DelayInfo
                     {
                         DelayDuration = delayMinutes,
-                        AvailableReasons = DelayLog.DelayReasons.ToList()
+                        AvailableReasons = DelayLog.DelayReasons.ToList(),
+                        DelayReason = "Late Start", // Default reason
+                        DelayNotes = $"Print started {delayMinutes} minutes after scheduled time"
                     };
                 }
             }

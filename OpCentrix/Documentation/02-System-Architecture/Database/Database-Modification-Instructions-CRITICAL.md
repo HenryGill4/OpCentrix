@@ -72,6 +72,7 @@ sqlite3 scheduler.db ".tables"
 # Get detailed table schema
 sqlite3 scheduler.db ".schema [TableName]"
 
+
 # View all schemas at once
 sqlite3 scheduler.db ".schema"
 
@@ -229,6 +230,29 @@ sqlite3 scheduler.db "PRAGMA table_info([TableName]);"
 
 # Update existing records if needed
 sqlite3 scheduler.db "UPDATE [TableName] SET [ColumnName] = '[Value]' WHERE [Condition];"
+```
+
+#### **Executing SQL Scripts (CRITICAL: PowerShell Redirection Fix)**
+```powershell
+# WRONG: PowerShell doesn't support < redirection
+# sqlite3 scheduler.db < script.sql
+
+# CORRECT: Use .read command in SQLite
+sqlite3 scheduler.db ".read script.sql"
+
+# ALTERNATIVE: Use Get-Content with pipe
+Get-Content "script.sql" | sqlite3 scheduler.db
+
+# ALTERNATIVE: Multi-line command execution
+sqlite3 scheduler.db @"
+PRAGMA foreign_keys = ON;
+CREATE TABLE IF NOT EXISTS TestTable (Id INTEGER PRIMARY KEY);
+"@
+
+# FOR COMPLEX SCRIPTS: Use interactive mode
+sqlite3 scheduler.db
+# Then in SQLite shell: .read script.sql
+# Exit with: .quit
 ```
 
 #### **Fixing Data Issues**
@@ -439,6 +463,7 @@ WHERE ScheduledEnd <= ScheduledStart;"
 - ❌ **Never skip build verification**
 - ❌ **Never work outside OpCentrix directory**
 - ❌ **Never use `&&` operators in PowerShell**
+- ❌ **Never use `<` redirection in PowerShell** (`sqlite3 db < script.sql` fails)
 - ❌ **Never assume existing schema matches models**
 - ❌ **Never disable foreign keys without good reason**
 - ❌ **Never run VACUUM on a corrupted database**

@@ -13,9 +13,7 @@ namespace OpCentrix.Pages.Scheduler
 {
     /// <summary>
     /// Modern scheduler page using best practices and clean architecture
-    /// - Separate DTOs for different operations
-    /// - Clean validation without conflicts
-    /// - Proper separation of concerns with machine management
+    /// FIXED: Machine validation and database integration issues resolved
     /// </summary>
     [SchedulerAccess]
     public class IndexModel : PageModel
@@ -63,11 +61,14 @@ namespace OpCentrix.Pages.Scheduler
 
             try
             {
-                // Load scheduler data
+                // FIXED: Load available machines FIRST to ensure they're available for scheduler data
+                await LoadAvailableMachinesAsync(operationId);
+                
+                // Load scheduler data using the available machines
                 ViewModel = _schedulerService.GetSchedulerData(zoom, startDate);
                 
-                // Load available machines from database
-                await LoadAvailableMachinesAsync(operationId);
+                // Update machines in ViewModel to match database
+                ViewModel.Machines = AvailableMachines.Select(m => m.MachineId).ToList();
                 
                 // Load available parts for job creation
                 await LoadAvailablePartsAsync(operationId);
@@ -80,6 +81,9 @@ namespace OpCentrix.Pages.Scheduler
 
                 _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Scheduler loaded: {JobCount} jobs, {MachineCount} machines", 
                     operationId, ViewModel.Jobs.Count, AvailableMachines.Count);
+                    
+                _logger.LogInformation("🔧 [SCHEDULER-{OperationId}] Available machines: {Machines}", 
+                    operationId, string.Join(", ", AvailableMachines.Select(m => $"{m.MachineId}({m.MachineName})")));
             }
             catch (Exception ex)
             {
@@ -147,6 +151,10 @@ namespace OpCentrix.Pages.Scheduler
 
             try
             {
+                // FIXED: Load machines for validation
+                await LoadAvailableMachinesAsync(operationId);
+                await LoadAvailablePartsAsync(operationId);
+
                 // Modern validation approach
                 var validationResult = await ValidateJobRequestAsync(jobRequest, operationId);
                 if (!validationResult.IsValid)
@@ -158,9 +166,6 @@ namespace OpCentrix.Pages.Scheduler
                     
                     _logger.LogWarning("⚠️ [SCHEDULER-{OperationId}] Validation failed: {ErrorCount} errors", 
                         operationId, validationResult.Errors.Count);
-                    
-                    await LoadAvailableMachinesAsync(operationId);
-                    await LoadAvailablePartsAsync(operationId);
                     
                     var errorJob = await ConvertDtoToJobAsync(jobRequest);
                     return Partial("_AddEditJobModal", new AddEditJobViewModel
@@ -187,7 +192,7 @@ namespace OpCentrix.Pages.Scheduler
                         operationId, savedJob.Id, savedJob.PartNumber);
                 }
 
-                // CRITICAL FIX: Return JSON response for successful operations
+                // Return JSON response for successful operations with page refresh
                 var successMessage = jobRequest.Id == 0 
                     ? $"Job scheduled successfully for {savedJob.PartNumber}" 
                     : $"Job updated successfully for {savedJob.PartNumber}";
@@ -198,23 +203,45 @@ namespace OpCentrix.Pages.Scheduler
                     jobId = savedJob.Id,
                     partNumber = savedJob.PartNumber,
                     machineId = savedJob.MachineId,
-                    message = successMessage
+                    message = successMessage,
+                    refreshPage = true // Signal frontend to refresh
                 });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error processing job", operationId);
                 
-                // For exceptions, return JSON error response
-                return new JsonResult(new 
-                { 
-                    success = false, 
-                    error = "An error occurred while saving the job. Please try again.",
-                    details = ex.Message 
-                })
+                // CRITICAL FIX: Return proper JSON error response instead of throwing
+                try
                 {
-                    StatusCode = 500
-                };
+                    // Try to return modal with error if possible
+                    await LoadAvailableMachinesAsync(operationId);
+                    await LoadAvailablePartsAsync(operationId);
+                    
+                    var errorJob = await ConvertDtoToJobAsync(jobRequest);
+                    return Partial("_AddEditJobModal", new AddEditJobViewModel
+                    {
+                        Job = errorJob,
+                        Parts = AvailableParts,
+                        Machines = AvailableMachines,
+                        Errors = new List<string> { $"Error saving job: {ex.Message}" }
+                    });
+                }
+                catch (Exception innerEx)
+                {
+                    _logger.LogError(innerEx, "❌ [SCHEDULER-{OperationId}] Critical error in error handling", operationId);
+                    
+                    // Last resort: return JSON error to prevent 500
+                    return new JsonResult(new 
+                    { 
+                        success = false, 
+                        error = "An error occurred while saving the job. Please try again.",
+                        details = ex.Message 
+                    })
+                    {
+                        StatusCode = 200 // Return 200 to prevent HTMX from treating as network error
+                    };
+                }
             }
         }
 
@@ -235,12 +262,57 @@ namespace OpCentrix.Pages.Scheduler
                 await _context.SaveChangesAsync();
 
                 _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Job deleted: {JobId}", operationId, id);
-                return new JsonResult(new { success = true, message = "Job deleted successfully!" });
+                return new JsonResult(new { success = true, message = "Job deleted successfully!", refreshPage = true });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error deleting job: {JobId}", operationId, id);
                 return new JsonResult(new { success = false, error = "Error deleting job" });
+            }
+        }
+
+        // NEW: Method to start a print job (links scheduler to print tracking)
+        public async Task<IActionResult> OnPostStartPrintJobAsync(int jobId)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("🎬 [SCHEDULER-{OperationId}] Starting print job: {JobId}", operationId, jobId);
+
+            try
+            {
+                var job = await _context.Jobs
+                    .Include(j => j.Part)
+                    .FirstOrDefaultAsync(j => j.Id == jobId);
+
+                if (job == null)
+                {
+                    return new JsonResult(new { success = false, error = "Job not found" });
+                }
+
+                // Update job status to indicate it's started
+                job.Status = "Building";
+                job.ActualStart = DateTime.UtcNow;
+                job.LastModifiedDate = DateTime.UtcNow;
+                job.LastModifiedBy = User.Identity?.Name ?? "System";
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Job {JobId} started on {MachineId}", operationId, jobId, job.MachineId);
+
+                // Redirect to print tracking to complete the start process
+                return new JsonResult(new 
+                { 
+                    success = true, 
+                    message = $"Job {job.PartNumber} started successfully!",
+                    redirectUrl = $"/PrintTracking?jobId={jobId}&machineId={job.MachineId}",
+                    jobId = jobId,
+                    machineId = job.MachineId,
+                    partNumber = job.PartNumber
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error starting print job: {JobId}", operationId, jobId);
+                return new JsonResult(new { success = false, error = "Error starting print job" });
             }
         }
 
@@ -250,7 +322,20 @@ namespace OpCentrix.Pages.Scheduler
             try
             {
                 AvailableMachines = await _machineService.GetActiveMachinesAsync();
-                ViewModel.Machines = AvailableMachines.Select(m => m.MachineId).ToList();
+                
+                // FIXED: Handle case where no machines are configured yet
+                if (!AvailableMachines.Any())
+                {
+                    _logger.LogWarning("⚠️ [SCHEDULER-{OperationId}] No active machines found in database", operationId);
+                    
+                    // Try to create default machines if none exist
+                    var defaultCreated = await _machineService.SeedDefaultMachinesAsync();
+                    if (defaultCreated)
+                    {
+                        AvailableMachines = await _machineService.GetActiveMachinesAsync();
+                        _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Created default machines: {Count}", operationId, AvailableMachines.Count);
+                    }
+                }
                 
                 _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Loaded {MachineCount} machines: {Machines}",
                     operationId, AvailableMachines.Count, string.Join(", ", AvailableMachines.Select(m => m.MachineId)));
@@ -259,7 +344,6 @@ namespace OpCentrix.Pages.Scheduler
             {
                 _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error loading machines", operationId);
                 AvailableMachines = new List<Machine>();
-                ViewModel.Machines = new List<string>();
             }
         }
 
@@ -297,6 +381,13 @@ namespace OpCentrix.Pages.Scheduler
                     .ToListAsync();
 
                 _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Loaded {JobCount} jobs", operationId, ViewModel.Jobs.Count);
+                
+                // Log jobs by machine for debugging
+                var jobsByMachine = ViewModel.Jobs.GroupBy(j => j.MachineId).ToDictionary(g => g.Key, g => g.Count());
+                foreach (var kvp in jobsByMachine)
+                {
+                    _logger.LogDebug("🔧 [SCHEDULER-{OperationId}] Machine {MachineId}: {JobCount} jobs", operationId, kvp.Key, kvp.Value);
+                }
             }
             catch (Exception ex)
             {
@@ -367,6 +458,7 @@ namespace OpCentrix.Pages.Scheduler
                     PartNumber = "00-0000", // Temporary, will be set when part is selected
                     EstimatedHours = 8.0,
                     SlsMaterial = "Ti-6Al-4V Grade 5",
+                    CustomerOrderNumber = "", // CRITICAL FIX: Provide default value
                     LaserPowerWatts = 200,
                     ScanSpeedMmPerSec = 1200,
                     LayerThicknessMicrons = 30,
@@ -411,7 +503,8 @@ namespace OpCentrix.Pages.Scheduler
                     Quantity = 1,
                     PartNumber = "00-0000",
                     EstimatedHours = 8.0,
-                    SlsMaterial = "Ti-6Al-4V Grade 5"
+                    SlsMaterial = "Ti-6Al-4V Grade 5",
+                    CustomerOrderNumber = "" // CRITICAL FIX: Provide default value in fallback too
                 };
             }
         }
@@ -430,21 +523,36 @@ namespace OpCentrix.Pages.Scheduler
             if (request.ScheduledStart >= request.ScheduledEnd)
                 result.AddError(nameof(request.ScheduledEnd), "End time must be after start time");
 
-            // Business logic validation
+            // FIXED: Better machine validation with logging
             if (!string.IsNullOrWhiteSpace(request.MachineId))
             {
                 var machine = AvailableMachines.FirstOrDefault(m => m.MachineId == request.MachineId);
                 if (machine == null)
                 {
-                    result.AddError(nameof(request.MachineId), "Selected machine is not available");
+                    _logger.LogWarning("⚠️ [SCHEDULER-{OperationId}] Machine {MachineId} not found in available machines: {AvailableMachines}", 
+                        operationId, request.MachineId, string.Join(", ", AvailableMachines.Select(m => m.MachineId)));
+                    result.AddError(nameof(request.MachineId), $"Machine '{request.MachineId}' is not available. Available machines: {string.Join(", ", AvailableMachines.Select(m => m.MachineId))}");
+                }
+                else if (!machine.IsActive)
+                {
+                    result.AddError(nameof(request.MachineId), $"Machine '{request.MachineId}' is not active");
+                }
+                else if (!machine.IsAvailableForScheduling)
+                {
+                    result.AddError(nameof(request.MachineId), $"Machine '{request.MachineId}' is not available for scheduling");
                 }
             }
 
-            // IMPROVED: More lenient operating hours validation
+            // Duration validation
             var duration = request.ScheduledEnd - request.ScheduledStart;
             if (duration.TotalHours > 168) // Max 1 week
             {
                 result.AddError(nameof(request.ScheduledEnd), "Job duration cannot exceed 1 week");
+            }
+            
+            if (duration.TotalMinutes < 15) // Min 15 minutes
+            {
+                result.AddError(nameof(request.ScheduledEnd), "Job duration must be at least 15 minutes");
             }
 
             _logger.LogDebug("🔍 [SCHEDULER-{OperationId}] Validation result: {IsValid}, {ErrorCount} errors", 
@@ -480,7 +588,7 @@ namespace OpCentrix.Pages.Scheduler
                 BuildTemperatureCelsius = dto.BuildTemperatureCelsius,
                 EstimatedPowderUsageKg = dto.EstimatedPowderUsageKg,
                 Notes = dto.Notes,
-                CustomerOrderNumber = dto.CustomerOrderNumber,
+                CustomerOrderNumber = dto.CustomerOrderNumber ?? "", // CRITICAL FIX: Provide default value
                 Operator = dto.Operator,
                 IsRushJob = dto.IsRushJob,
                 
@@ -546,7 +654,7 @@ namespace OpCentrix.Pages.Scheduler
             job.BuildTemperatureCelsius = dto.BuildTemperatureCelsius;
             job.EstimatedPowderUsageKg = dto.EstimatedPowderUsageKg;
             job.Notes = dto.Notes;
-            job.CustomerOrderNumber = dto.CustomerOrderNumber;
+            job.CustomerOrderNumber = dto.CustomerOrderNumber ?? ""; // CRITICAL FIX: Provide default value
             job.Operator = dto.Operator;
             job.IsRushJob = dto.IsRushJob;
             
@@ -599,7 +707,7 @@ namespace OpCentrix.Pages.Scheduler
                 BuildTemperatureCelsius = dto.BuildTemperatureCelsius,
                 EstimatedPowderUsageKg = dto.EstimatedPowderUsageKg,
                 Notes = dto.Notes,
-                CustomerOrderNumber = dto.CustomerOrderNumber,
+                CustomerOrderNumber = dto.CustomerOrderNumber ?? "", // CRITICAL FIX: Provide default value
                 Operator = dto.Operator,
                 IsRushJob = dto.IsRushJob
             };

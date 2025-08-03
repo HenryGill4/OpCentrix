@@ -134,6 +134,9 @@ namespace OpCentrix.Data
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
                 entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
                 
+                // CRITICAL FIX: Make CustomerOrderNumber nullable and provide default
+                entity.Property(e => e.CustomerOrderNumber).HasMaxLength(100).HasDefaultValue("");
+                
                 // Indexes for performance
                 entity.HasIndex(e => new { e.MachineId, e.ScheduledStart });
                 entity.HasIndex(e => e.Status);

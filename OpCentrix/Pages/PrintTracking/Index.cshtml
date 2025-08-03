@@ -78,8 +78,15 @@
 
 @section Scripts {
     <script>
+        // Global state management
+        let autoRefreshInterval = null;
+        let isModalOpen = false;
+        
         // Enhanced modal management with better error handling
         function openStartPrintModal(printerName = null) {
+            isModalOpen = true;
+            pauseAutoRefresh(); // Stop auto-refresh when modal opens
+            
             showLoadingIndicator();
             const url = printerName 
                 ? `/PrintTracking?handler=StartPrintModal&printerName=${encodeURIComponent(printerName)}`
@@ -97,6 +104,9 @@
         }
 
         function openPostPrintModal(buildId = null, printerName = null) {
+            isModalOpen = true;
+            pauseAutoRefresh(); // Stop auto-refresh when modal opens
+            
             showLoadingIndicator();
             let url = '/PrintTracking?handler=PostPrintModal';
             const params = [];
@@ -121,6 +131,8 @@
                 modalContainer.innerHTML = '';
             }
             hideLoadingIndicator();
+            isModalOpen = false;
+            resumeAutoRefresh(); // Resume auto-refresh when modal closes
         }
 
         function refreshDashboard() {
@@ -136,6 +148,45 @@
                 showToast('Failed to refresh dashboard', 'error');
                 console.error('Dashboard refresh error:', error);
             });
+        }
+
+        // Auto-refresh management - FIXED: Proper modal checking and reasonable intervals
+        function startAutoRefresh() {
+            // Stop any existing interval
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+            
+            // Set reasonable 5-minute interval instead of aggressive 30-second
+            autoRefreshInterval = setInterval(() => {
+                // Only refresh if no modal is open and user is not actively interacting
+                if (!isModalOpen && !document.getElementById('modal-container').innerHTML) {
+                    console.log('?? [PRINT-TRACKING] Auto-refreshing dashboard...');
+                    
+                    htmx.ajax('GET', '/PrintTracking?handler=RefreshDashboard', {
+                        target: '#dashboard-content',
+                        swap: 'innerHTML'
+                    }).catch((error) => {
+                        console.warn('Auto-refresh failed (this is normal):', error);
+                        // Don't show toast for auto-refresh failures to avoid spam
+                    });
+                }
+            }, 300000); // 5 minutes (300,000ms) instead of 30 seconds
+            
+            console.log('? [PRINT-TRACKING] Auto-refresh started (5-minute interval)');
+        }
+        
+        function pauseAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+                console.log('?? [PRINT-TRACKING] Auto-refresh paused');
+            }
+        }
+        
+        function resumeAutoRefresh() {
+            console.log('?? [PRINT-TRACKING] Auto-refresh resumed');
+            startAutoRefresh();
         }
 
         // Loading indicator management
@@ -271,20 +322,6 @@
             showToast('Request timed out. Please try again.', 'error');
         });
 
-        // Auto-refresh dashboard every 30 seconds (with error handling)
-        setInterval(() => {
-            if (!document.getElementById('modal-container').innerHTML) {
-                // Only refresh if no modal is open
-                htmx.ajax('GET', '/PrintTracking?handler=RefreshDashboard', {
-                    target: '#dashboard-content',
-                    swap: 'innerHTML'
-                }).catch((error) => {
-                    console.warn('Auto-refresh failed:', error);
-                    // Don't show toast for auto-refresh failures to avoid spam
-                });
-            }
-        }, 30000);
-
         // Keyboard shortcuts
         document.addEventListener('keydown', function(event) {
             // Escape key closes modals
@@ -302,11 +339,19 @@
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Print Tracking Dashboard initialized');
             
+            // Start auto-refresh with reasonable interval
+            startAutoRefresh();
+            
             // Check for any initial errors
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('error')) {
                 showToast(urlParams.get('error'), 'error');
             }
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            pauseAutoRefresh();
         });
     </script>
 }

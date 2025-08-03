@@ -12,6 +12,7 @@
               hx-swap="innerHTML"
               hx-on::before-request="showFormLoading()" 
               hx-on::after-request="handleJobFormResponse(event)"
+              hx-on::response-error="handleJobFormError(event)"
               id="job-form"
               novalidate>
             
@@ -525,6 +526,30 @@ window.handleFormResponse = function(event) {
     }
 };
 
+// CRITICAL FIX: Add error handler for HTMX response errors
+window.handleJobFormError = function(event) {
+    console.error('? [JOB-FORM] HTMX response error:', event.detail);
+    
+    // Hide loading state
+    const submitBtn = document.getElementById('submit-job-btn');
+    const submitText = document.getElementById('submit-text');
+    const submitSpinner = document.getElementById('submit-spinner');
+    
+    if (submitBtn) submitBtn.disabled = false;
+    if (submitText) submitText.textContent = '@(Model.Job.Id == 0 ? "Schedule Job" : "Update Job")';
+    if (submitSpinner) submitSpinner.style.display = 'none';
+    
+    // Show error notification
+    if (window.showErrorNotification) {
+        window.showErrorNotification('Server error occurred. Please check your input and try again.');
+    } else {
+        alert('Server error occurred. Please check your input and try again.');
+    }
+    
+    // Prevent HTMX from inserting error page content
+    event.preventDefault();
+};
+
 // Delete job function - Available globally
 window.deleteJob = function(jobId) {
     if (!jobId) {
@@ -621,6 +646,19 @@ window.deleteJob = function(jobId) {
         console.log('?? [JOB-FORM] Response status:', xhr.status);
         console.log('?? [JOB-FORM] Response text (first 200 chars):', responseText.substring(0, 200));
         
+        // CRITICAL FIX: Handle different response scenarios properly
+        if (xhr.status >= 400) {
+            console.error('? [JOB-FORM] Server returned error status:', xhr.status);
+            
+            if (window.showErrorNotification) {
+                window.showErrorNotification(`Server error (${xhr.status}). Please check your input and try again.`);
+            }
+            
+            // Prevent HTMX from inserting error page
+            event.preventDefault();
+            return;
+        }
+        
         // Check if it's a JSON response (success case)
         if (xhr.getResponseHeader('Content-Type')?.includes('application/json') || 
             responseText.trim().startsWith('{')) {
@@ -651,7 +689,7 @@ window.deleteJob = function(jobId) {
                 } else {
                     console.error('? [JOB-FORM] Server reported failure:', response);
                     if (window.showErrorNotification) {
-                        window.showErrorNotification(response.message || response.error || 'Failed to save job');
+                        window.showErrorNotification(response.error || response.message || 'Failed to save job');
                     }
                     return;
                 }
@@ -664,8 +702,7 @@ window.deleteJob = function(jobId) {
         // Check if response contains validation errors (HTML form with errors)
         if (responseText.includes('Please correct the following') || 
             responseText.includes('error-container') || 
-            responseText.includes('validation-summary') ||
-            xhr.status >= 400) {
+            responseText.includes('validation-summary')) {
             
             console.log('?? [JOB-FORM] Form has validation errors, modal will show updated form');
             
@@ -698,6 +735,25 @@ window.deleteJob = function(jobId) {
         }
     };
     
+    // Enhanced error handler for HTMX form responses
+    window.handleJobFormError = function(event) {
+        console.error('? [JOB-FORM] HTMX request error:', event.detail);
+        
+        // Hide loading state
+        const submitBtn = document.getElementById('submit-job-btn');
+        const submitText = document.getElementById('submit-text');
+        const submitSpinner = document.getElementById('submit-spinner');
+        
+        if (submitBtn) submitBtn.disabled = false;
+        if (submitText) submitText.textContent = '@(Model.Job.Id == 0 ? "Schedule Job" : "Update Job")';
+        if (submitSpinner) submitSpinner.style.display = 'none';
+        
+        // Show generic error message
+        if (window.showErrorNotification) {
+            window.showErrorNotification('An error occurred while processing your request. Please try again.');
+        }
+    };
+    
     // Global form loading function
     window.showFormLoading = function() {
         const submitBtn = document.getElementById('submit-job-btn');
@@ -708,7 +764,7 @@ window.deleteJob = function(jobId) {
         if (submitText) submitText.textContent = 'Processing...';
         if (submitSpinner) submitSpinner.style.display = 'inline-block';
         
-        console.log('?? [JOB-FORM] Form loading state enabled');
+        console.log('? [JOB-FORM] Form loading state enabled');
     };
     
     // Form utilities and calculations
