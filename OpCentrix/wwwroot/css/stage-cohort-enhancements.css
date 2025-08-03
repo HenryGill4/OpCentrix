@@ -1,0 +1,251 @@
+/* Option A: Enhanced Job Block Styles with Stage & Cohort Support */
+
+/* Enhanced Job Block Stage Indicators */
+.stage-job-block {
+    position: relative;
+}
+
+.stage-job-block .job-context-overlay {
+    backdrop-filter: blur(1px);
+}
+
+.stage-badge {
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    max-width: 60%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: all 0.2s ease;
+}
+
+.cohort-badge {
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.job-block:hover .stage-badge,
+.job-block:hover .cohort-badge {
+    opacity: 1;
+    transform: scale(1.05);
+}
+
+/* Stage Progress Bar */
+.stage-progress-bar {
+    border-radius: 0 0 6px 6px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    background: linear-gradient(90deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.1) 100%);
+    backdrop-filter: blur(1px);
+    position: relative;
+}
+
+.progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 1px;
+    background: rgba(255,255,255,0.5);
+    box-shadow: 0 0 3px rgba(255,255,255,0.3);
+}
+
+/* Cohort Job Grouping */
+.cohort-job-block {
+    border: 1px solid rgba(255,255,255,0.2);
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3);
+}
+
+.cohort-job-block::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1));
+    border-radius: 8px;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.cohort-job-block:hover::before {
+    opacity: 1;
+}
+
+/* Stage-specific styling */
+.stage-sls { border-left: 3px solid #3B82F6; }
+.stage-cnc { border-left: 3px solid #10B981; }
+.stage-edm { border-left: 3px solid #F59E0B; }
+.stage-coating { border-left: 3px solid #8B5CF6; }
+.stage-assembly { border-left: 3px solid #06B6D4; }
+.stage-qc { border-left: 3px solid #EF4444; }
+.stage-shipping { border-left: 3px solid #6B7280; }
+
+/* Cohort Summary Bar */
+.cohort-summary-bar {
+    backdrop-filter: blur(2px);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.cohort-summary-item {
+    font-size: 10px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.cohort-summary-item:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Machine Row Enhancements */
+.machine-row[data-cohort-count]:not([data-cohort-count="0"]) {
+    border-top: 2px solid #e5e7eb;
+}
+
+.machine-row[data-cohort-count]:not([data-cohort-count="0"])::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #3B82F6, #8B5CF6, #3B82F6);
+    opacity: 0.6;
+}
+
+/* Cohort-specific job styling */
+.job-block.cohort-1 { box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.5); }
+.job-block.cohort-2 { box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.5); }
+.job-block.cohort-3 { box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.5); }
+.job-block.cohort-4 { box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.5); }
+.job-block.cohort-5 { box-shadow: 0 0 0 1px rgba(6, 182, 212, 0.5); }
+
+/* Hover effects for cohort jobs */
+.machine-row:hover .job-block[data-cohort-id] {
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+.machine-row:hover .job-block[data-cohort-id]:hover {
+    opacity: 1;
+    transform: scale(1.05);
+    z-index: 50;
+}
+
+/* Stage workflow indicators */
+.job-block[data-stage="SLS"] .stage-badge {
+    background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+}
+
+.job-block[data-stage="CNC"] .stage-badge {
+    background: linear-gradient(135deg, #10B981, #047857);
+}
+
+.job-block[data-stage="EDM"] .stage-badge {
+    background: linear-gradient(135deg, #F59E0B, #D97706);
+}
+
+.job-block[data-stage="Coating"] .stage-badge {
+    background: linear-gradient(135deg, #8B5CF6, #7C3AED);
+}
+
+/* Responsive adjustments for mobile */
+@media (max-width: 768px) {
+    .stage-badge, .cohort-badge {
+        font-size: 8px;
+        padding: 1px 2px;
+    }
+    
+    .cohort-summary-bar {
+        height: 20px;
+        font-size: 9px;
+    }
+    
+    .cohort-summary-item {
+        font-size: 8px;
+        padding: 1px 3px;
+    }
+    
+    .job-context-overlay {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1px;
+    }
+    
+    .stage-progress-bar {
+        height: 2px;
+    }
+}
+
+/* Print-friendly styles */
+@media print {
+    .cohort-summary-bar {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    
+    .stage-badge, .cohort-badge {
+        border: 1px solid #000;
+        background: #fff !important;
+        color: #000 !important;
+    }
+    
+    .stage-progress-bar {
+        border: 1px solid #000;
+        background: #fff;
+    }
+    
+    .progress-fill {
+        background: #000 !important;
+    }
+}
+
+/* Accessibility enhancements */
+.job-block[data-cohort-id]:focus,
+.job-block[data-stage]:focus {
+    outline: 2px solid #3B82F6;
+    outline-offset: 2px;
+}
+
+.stage-badge[aria-label],
+.cohort-badge[aria-label] {
+    cursor: help;
+}
+
+/* Animation for stage transitions */
+@keyframes stage-complete {
+    0% { opacity: 0.5; transform: scale(0.95); }
+    50% { opacity: 1; transform: scale(1.05); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+.job-block[data-stage-order="1"] .progress-fill {
+    animation: stage-complete 0.5s ease-in-out;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .stage-badge, .cohort-badge {
+        border: 2px solid;
+        font-weight: 700;
+    }
+    
+    .cohort-job-block {
+        border: 2px solid;
+    }
+    
+    .stage-progress-bar {
+        border: 1px solid;
+    }
+}

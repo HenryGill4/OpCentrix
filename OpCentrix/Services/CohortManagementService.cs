@@ -18,6 +18,7 @@ namespace OpCentrix.Services
         Task<List<Job>> GetCohortJobsAsync(int cohortId);
         Task<bool> AssignJobToCohortAsync(int jobId, int cohortId, string workflowStage, int stageOrder, int totalStages);
         Task<Dictionary<string, int>> GetCohortStageStatusAsync(int cohortId);
+        Task<bool> UpdateCohortStageProgressAsync(int cohortId, string stage, string status);
     }
 
     public class CohortManagementService : ICohortManagementService
@@ -115,6 +116,65 @@ namespace OpCentrix.Services
             _logger.LogInformation("Updated cohort {CohortId} status to {Status}", cohortId, status);
 
             return true;
+        }
+
+        /// <summary>
+        /// Update cohort stage progress - Option A enhancement
+        /// </summary>
+        public async Task<bool> UpdateCohortStageProgressAsync(int cohortId, string stage, string status)
+        {
+            try
+            {
+                var cohort = await _context.BuildCohorts.FindAsync(cohortId);
+                if (cohort == null) 
+                {
+                    _logger.LogWarning("Cohort {CohortId} not found for stage progress update", cohortId);
+                    return false;
+                }
+
+                // Update cohort notes with stage progress
+                var progressNote = $"{stage} stage {status} at {DateTime.UtcNow:yyyy-MM-dd HH:mm}";
+                cohort.Notes = string.IsNullOrEmpty(cohort.Notes) 
+                    ? progressNote 
+                    : $"{cohort.Notes}; {progressNote}";
+                
+                cohort.LastModifiedDate = DateTime.UtcNow;
+
+                // Update overall cohort status based on stage progress
+                if (status == "Completed")
+                {
+                    // Check if this is the final stage
+                    var remainingStages = await _context.Jobs
+                        .Where(j => j.BuildCohortId == cohortId && 
+                               j.WorkflowStage != "Shipping" && 
+                               j.Status != "Completed" && 
+                               j.Status != "Ready for QC" &&
+                               j.Status != "Ready for Shipping")
+                        .CountAsync();
+
+                    if (remainingStages == 0)
+                    {
+                        cohort.Status = "Ready for Shipping";
+                        cohort.CompletedDate = DateTime.UtcNow;
+                    }
+                    else
+                    {
+                        cohort.Status = "InProgress";
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Updated cohort {CohortId} stage progress: {Stage} {Status}", 
+                    cohortId, stage, status);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating cohort {CohortId} stage progress", cohortId);
+                return false;
+            }
         }
 
         /// <summary>

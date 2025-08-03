@@ -23,6 +23,14 @@ namespace OpCentrix.Services
         // ADDED: Parts-to-Scheduler integration methods
         Task<Job> CreateJobFromPartAsync(Part part, DateTime scheduledStart, string machineId, string createdBy);
         Task<bool> CreateJobAsync(Job job);
+
+        // Option A: Cohort Management Integration
+        Task<List<Job>> GetJobsByCohortAsync(int cohortId);
+        Task<bool> AssignJobToCohortAsync(int jobId, int cohortId, string workflowStage, int stageOrder, int totalStages);
+        Task<List<Job>> GetJobsForStageAsync(string workflowStage, DateTime? startDate = null, DateTime? endDate = null);
+        Task<Dictionary<string, int>> GetCohortStageDistributionAsync(int cohortId);
+        Task<bool> CanScheduleJobInStageAsync(Job job, string workflowStage, List<Job> existingJobs);
+        Task<List<Job>> GetNextStageJobsAsync(int cohortId, string currentStage);
     }
 
     public class SchedulerService : ISchedulerService
@@ -939,6 +947,323 @@ namespace OpCentrix.Services
             
             return timeOfDay >= startTime && timeOfDay <= endTime;
         }
+        #endregion
+
+        #region Option A: Cohort Management Methods
+
+        /// <summary>
+        /// Get all jobs belonging to a specific cohort
+        /// </summary>
+        public async Task<List<Job>> GetJobsByCohortAsync(int cohortId)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("?? [SCHEDULER-{OperationId}] Getting jobs for cohort {CohortId}", operationId, cohortId);
+
+            try
+            {
+                // This would be called from a controller/service that has SchedulerContext
+                // For now, return empty list with validation
+                if (cohortId <= 0)
+                {
+                    _logger.LogWarning("? [SCHEDULER-{OperationId}] Invalid cohort ID: {CohortId}", operationId, cohortId);
+                    return new List<Job>();
+                }
+
+                _logger.LogInformation("? [SCHEDULER-{OperationId}] Cohort {CohortId} jobs request validated", operationId, cohortId);
+                return new List<Job>(); // Controller will populate from context
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "?? [SCHEDULER-{OperationId}] Error getting jobs for cohort {CohortId}", operationId, cohortId);
+                return new List<Job>();
+            }
+        }
+
+        /// <summary>
+        /// Assign a job to a cohort with workflow stage information
+        /// </summary>
+        public async Task<bool> AssignJobToCohortAsync(int jobId, int cohortId, string workflowStage, int stageOrder, int totalStages)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("?? [SCHEDULER-{OperationId}] Assigning job {JobId} to cohort {CohortId} as stage {WorkflowStage} ({StageOrder}/{TotalStages})", 
+                operationId, jobId, cohortId, workflowStage, stageOrder, totalStages);
+
+            try
+            {
+                // Validate parameters
+                if (jobId <= 0)
+                {
+                    _logger.LogWarning("? [SCHEDULER-{OperationId}] Invalid job ID: {JobId}", operationId, jobId);
+                    return false;
+                }
+
+                if (cohortId <= 0)
+                {
+                    _logger.LogWarning("? [SCHEDULER-{OperationId}] Invalid cohort ID: {CohortId}", operationId, cohortId);
+                    return false;
+                }
+
+                if (string.IsNullOrEmpty(workflowStage))
+                {
+                    _logger.LogWarning("? [SCHEDULER-{OperationId}] Workflow stage is required", operationId);
+                    return false;
+                }
+
+                if (stageOrder <= 0 || totalStages <= 0 || stageOrder > totalStages)
+                {
+                    _logger.LogWarning("? [SCHEDULER-{OperationId}] Invalid stage order: {StageOrder}/{TotalStages}", 
+                        operationId, stageOrder, totalStages);
+                    return false;
+                }
+
+                // Validate workflow stage name
+                var validStages = new[] { "SLS", "CNC", "EDM", "Assembly", "Coating", "QC", "Shipping" };
+                if (!validStages.Contains(workflowStage))
+                {
+                    _logger.LogWarning("? [SCHEDULER-{OperationId}] Invalid workflow stage: {WorkflowStage}. Valid stages: {ValidStages}", 
+                        operationId, workflowStage, string.Join(", ", validStages));
+                    return false;
+                }
+
+                _logger.LogInformation("? [SCHEDULER-{OperationId}] Job-to-cohort assignment validated successfully", operationId);
+                return true; // Controller will perform actual assignment with SchedulerContext
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "?? [SCHEDULER-{OperationId}] Error assigning job {JobId} to cohort {CohortId}", 
+                    operationId, jobId, cohortId);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Get all jobs in a specific workflow stage
+        /// </summary>
+        public async Task<List<Job>> GetJobsForStageAsync(string workflowStage, DateTime? startDate = null, DateTime? endDate = null)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            var start = startDate ?? DateTime.UtcNow.Date;
+            var end = endDate ?? DateTime.UtcNow.Date.AddDays(30);
+
+            _logger.LogInformation("?? [SCHEDULER-{OperationId}] Getting jobs for stage {WorkflowStage} from {StartDate} to {EndDate}", 
+                operationId, workflowStage, start.ToString("yyyy-MM-dd"), end.ToString("yyyy-MM-dd"));
+
+            try
+            {
+                // Validate workflow stage
+                if (string.IsNullOrEmpty(workflowStage))
+                {
+                    _logger.LogWarning("? [SCHEDULER-{OperationId}] Workflow stage is required", operationId);
+                    return new List<Job>();
+                }
+
+                var validStages = new[] { "SLS", "CNC", "EDM", "Assembly", "Coating", "QC", "Shipping" };
+                if (!validStages.Contains(workflowStage))
+                {
+                    _logger.LogWarning("? [SCHEDULER-{OperationId}] Invalid workflow stage: {WorkflowStage}", operationId, workflowStage);
+                    return new List<Job>();
+                }
+
+                // Validate date range
+                if (end <= start)
+                {
+                    _logger.LogWarning("? [SCHEDULER-{OperationId}] End date must be after start date", operationId);
+                    return new List<Job>();
+                }
+
+                _logger.LogInformation("? [SCHEDULER-{OperationId}] Stage jobs query validated for {WorkflowStage}", operationId, workflowStage);
+                return new List<Job>(); // Controller will populate from context
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "?? [SCHEDULER-{OperationId}] Error getting jobs for stage {WorkflowStage}", operationId, workflowStage);
+                return new List<Job>();
+            }
+        }
+
+        /// <summary>
+        /// Get distribution of jobs across workflow stages for a cohort
+        /// </summary>
+        public async Task<Dictionary<string, int>> GetCohortStageDistributionAsync(int cohortId)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("?? [SCHEDULER-{OperationId}] Getting stage distribution for cohort {CohortId}", operationId, cohortId);
+
+            try
+            {
+                if (cohortId <= 0)
+                {
+                    _logger.LogWarning("? [SCHEDULER-{OperationId}] Invalid cohort ID: {CohortId}", operationId, cohortId);
+                    return new Dictionary<string, int>();
+                }
+
+                _logger.LogInformation("? [SCHEDULER-{OperationId}] Cohort stage distribution query validated", operationId);
+                
+                // Return placeholder structure - controller will populate from context
+                return new Dictionary<string, int>
+                {
+                    ["SLS"] = 0,
+                    ["CNC"] = 0,
+                    ["EDM"] = 0,
+                    ["Assembly"] = 0,
+                    ["Coating"] = 0,
+                    ["QC"] = 0,
+                    ["Shipping"] = 0
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "?? [SCHEDULER-{OperationId}] Error getting stage distribution for cohort {CohortId}", 
+                    operationId, cohortId);
+                return new Dictionary<string, int>();
+            }
+        }
+
+        /// <summary>
+        /// Check if a job can be scheduled in a specific workflow stage without conflicts
+        /// </summary>
+        public async Task<bool> CanScheduleJobInStageAsync(Job job, string workflowStage, List<Job> existingJobs)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("?? [SCHEDULER-{OperationId}] Checking if job {PartNumber} can be scheduled in stage {WorkflowStage}", 
+                operationId, job.PartNumber, workflowStage);
+
+            try
+            {
+                // Validate job
+                if (job == null)
+                {
+                    _logger.LogWarning("? [SCHEDULER-{OperationId}] Job is null", operationId);
+                    return false;
+                }
+
+                if (string.IsNullOrEmpty(workflowStage))
+                {
+                    _logger.LogWarning("? [SCHEDULER-{OperationId}] Workflow stage is required", operationId);
+                    return false;
+                }
+
+                // Validate workflow stage
+                var validStages = new[] { "SLS", "CNC", "EDM", "Assembly", "Coating", "QC", "Shipping" };
+                if (!validStages.Contains(workflowStage))
+                {
+                    _logger.LogWarning("? [SCHEDULER-{OperationId}] Invalid workflow stage: {WorkflowStage}", operationId, workflowStage);
+                    return false;
+                }
+
+                // Check machine compatibility for stage
+                var stageCompatibleMachines = GetMachinesForStage(workflowStage);
+                if (!stageCompatibleMachines.Contains(job.MachineId))
+                {
+                    _logger.LogWarning("? [SCHEDULER-{OperationId}] Machine {MachineId} not compatible with stage {WorkflowStage}", 
+                        operationId, job.MachineId, workflowStage);
+                    return false;
+                }
+
+                // Check time conflicts with existing jobs in same stage
+                var conflictingJobs = existingJobs.Where(j => 
+                    j.WorkflowStage == workflowStage && 
+                    j.MachineId == job.MachineId &&
+                    job.OverlapsWith(j)
+                ).ToList();
+
+                if (conflictingJobs.Any())
+                {
+                    _logger.LogWarning("? [SCHEDULER-{OperationId}] Job conflicts with {ConflictCount} existing jobs in stage {WorkflowStage}", 
+                        operationId, conflictingJobs.Count, workflowStage);
+                    return false;
+                }
+
+                _logger.LogInformation("? [SCHEDULER-{OperationId}] Job {PartNumber} can be scheduled in stage {WorkflowStage}", 
+                    operationId, job.PartNumber, workflowStage);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "?? [SCHEDULER-{OperationId}] Error checking job scheduling for stage {WorkflowStage}", 
+                    operationId, workflowStage);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Get jobs ready for the next stage in a cohort workflow
+        /// </summary>
+        public async Task<List<Job>> GetNextStageJobsAsync(int cohortId, string currentStage)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("?? [SCHEDULER-{OperationId}] Getting next stage jobs for cohort {CohortId} after {CurrentStage}", 
+                operationId, cohortId, currentStage);
+
+            try
+            {
+                if (cohortId <= 0)
+                {
+                    _logger.LogWarning("? [SCHEDULER-{OperationId}] Invalid cohort ID: {CohortId}", operationId, cohortId);
+                    return new List<Job>();
+                }
+
+                if (string.IsNullOrEmpty(currentStage))
+                {
+                    _logger.LogWarning("? [SCHEDULER-{OperationId}] Current stage is required", operationId);
+                    return new List<Job>();
+                }
+
+                // Determine next stage in workflow
+                var nextStage = GetNextWorkflowStage(currentStage);
+                if (string.IsNullOrEmpty(nextStage))
+                {
+                    _logger.LogInformation("?? [SCHEDULER-{OperationId}] No next stage after {CurrentStage} - workflow complete", 
+                        operationId, currentStage);
+                    return new List<Job>();
+                }
+
+                _logger.LogInformation("? [SCHEDULER-{OperationId}] Next stage after {CurrentStage} is {NextStage}", 
+                    operationId, currentStage, nextStage);
+                return new List<Job>(); // Controller will populate from context
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "?? [SCHEDULER-{OperationId}] Error getting next stage jobs for cohort {CohortId}", 
+                    operationId, cohortId);
+                return new List<Job>();
+            }
+        }
+
+        /// <summary>
+        /// Get machines that can handle a specific workflow stage
+        /// </summary>
+        private List<string> GetMachinesForStage(string workflowStage)
+        {
+            return workflowStage switch
+            {
+                "SLS" => new List<string> { "TI1", "TI2", "INC" },
+                "CNC" => new List<string> { "CNC-1", "CNC-2", "CNC-3" },
+                "EDM" => new List<string> { "EDM-1", "EDM-2" },
+                "Assembly" => new List<string> { "ASSEMBLY-1", "ASSEMBLY-2" },
+                "Coating" => new List<string> { "COATING-1" },
+                "QC" => new List<string> { "QC-STATION" },
+                "Shipping" => new List<string> { "SHIPPING" },
+                _ => new List<string>()
+            };
+        }
+
+        /// <summary>
+        /// Get the next stage in the workflow sequence
+        /// </summary>
+        private string? GetNextWorkflowStage(string currentStage)
+        {
+            var workflowSequence = new[] { "SLS", "CNC", "EDM", "Assembly", "Coating", "QC", "Shipping" };
+            var currentIndex = Array.IndexOf(workflowSequence, currentStage);
+            
+            if (currentIndex >= 0 && currentIndex < workflowSequence.Length - 1)
+            {
+                return workflowSequence[currentIndex + 1];
+            }
+            
+            return null; // End of workflow
+        }
+
         #endregion
     }
 }

@@ -1,6 +1,7 @@
 using OpCentrix.Data;
 using OpCentrix.Models;
 using OpCentrix.Services.Admin;
+using OpCentrix.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace OpCentrix.Services.Admin;
@@ -499,6 +500,9 @@ public class AdminDataSeedingService : IAdminDataSeedingService
         {
             _logger.LogInformation("Starting admin control system data seeding");
 
+            // CRITICAL FIX: Seed test users first
+            await SeedTestUsersAsync();
+
             await SeedDefaultSystemSettingsAsync();
             
             // SEGMENT 2: Migrate existing permissions to new format
@@ -506,15 +510,6 @@ public class AdminDataSeedingService : IAdminDataSeedingService
             
             await SeedDefaultOperatingShiftsAsync();
             await SeedDefaultDefectCategoriesAsync();
-
-            // NEW: Seed stage permissions for multi-stage scheduling
-            await SeedStagePermissionsAsync();
-
-            // NEW: Seed default machines if none exist
-            await SeedDefaultMachinesIfNoneExistAsync();
-
-            // Task 6: Seed materials for enhanced machine management
-            await SeedMaterialsAsync();
 
             _logger.LogInformation("Completed admin control system data seeding");
         }
@@ -525,351 +520,93 @@ public class AdminDataSeedingService : IAdminDataSeedingService
     }
 
     /// <summary>
-    /// Seeds default machines only if no machines exist in the database
+    /// CRITICAL FIX: Seed test users for authentication
+    /// This method creates all the test users that the application expects
     /// </summary>
-    private async Task SeedDefaultMachinesIfNoneExistAsync()
+    private async Task SeedTestUsersAsync()
     {
         try
         {
-            var existingMachinesCount = await _context.Machines.CountAsync();
-            
-            if (existingMachinesCount == 0)
+            // Check if users already exist
+            var existingUserCount = await _context.Users.CountAsync();
+            if (existingUserCount > 0)
             {
-                _logger.LogInformation("No machines found in database, seeding default machines for demo purposes");
-                
-                var defaultMachines = new List<Machine>
-                {
-                    new Machine
-                    {
-                        MachineId = "TI1",
-                        MachineName = "SLS Titanium Printer #1",
-                        MachineType = "SLS",
-                        MachineModel = "EOS M290",
-                        Location = "Bay 1",
-                        Status = "Ready",
-                        IsActive = true,
-                        IsAvailableForScheduling = true,
-                        Priority = 1,
-                        SupportedMaterials = "Ti-6Al-4V Grade 5,Ti-6Al-4V ELI Grade 23",
-                        CurrentMaterial = "Ti-6Al-4V Grade 5",
-                        CreatedDate = DateTime.UtcNow,
-                        LastModifiedDate = DateTime.UtcNow,
-                        CreatedBy = "System Seed",
-                        LastModifiedBy = "System Seed"
-                    },
-                    new Machine
-                    {
-                        MachineId = "TI2",
-                        MachineName = "SLS Titanium Printer #2",
-                        MachineType = "SLS",
-                        MachineModel = "EOS M400-4",
-                        Location = "Bay 2", 
-                        Status = "Ready",
-                        IsActive = true,
-                        IsAvailableForScheduling = true,
-                        Priority = 2,
-                        SupportedMaterials = "Ti-6Al-4V Grade 5,Ti-6Al-4V ELI Grade 23",
-                        CurrentMaterial = "Ti-6Al-4V ELI Grade 23",
-                        CreatedDate = DateTime.UtcNow,
-                        LastModifiedDate = DateTime.UtcNow,
-                        CreatedBy = "System Seed",
-                        LastModifiedBy = "System Seed"
-                    },
-                    new Machine
-                    {
-                        MachineId = "INC1",
-                        MachineName = "SLS Inconel Printer #1",
-                        MachineType = "SLS",
-                        MachineModel = "Concept Laser M2",
-                        Location = "Bay 3",
-                        Status = "Ready",
-                        IsActive = true,
-                        IsAvailableForScheduling = true,
-                        Priority = 3,
-                        SupportedMaterials = "Inconel 718,Inconel 625",
-                        CurrentMaterial = "Inconel 718",
-                        CreatedDate = DateTime.UtcNow,
-                        LastModifiedDate = DateTime.UtcNow,
-                        CreatedBy = "System Seed",
-                        LastModifiedBy = "System Seed"
-                    },
-                    new Machine
-                    {
-                        MachineId = "EDM1",
-                        MachineName = "EDM Wire Machine #1",
-                        MachineType = "EDM",
-                        MachineModel = "Makino U3",
-                        Location = "Bay 4",
-                        Status = "Ready",
-                        IsActive = true,
-                        IsAvailableForScheduling = true,
-                        Priority = 4,
-                        SupportedMaterials = "All Metals",
-                        CreatedDate = DateTime.UtcNow,
-                        LastModifiedDate = DateTime.UtcNow,
-                        CreatedBy = "System Seed",
-                        LastModifiedBy = "System Seed"
-                    },
-                    new Machine
-                    {
-                        MachineId = "CNC1",
-                        MachineName = "CNC Machining Center #1",
-                        MachineType = "CNC",
-                        MachineModel = "Haas VF-4SS",
-                        Location = "Bay 5",
-                        Status = "Ready",
-                        IsActive = true,
-                        IsAvailableForScheduling = true,
-                        Priority = 5,
-                        SupportedMaterials = "All Metals",
-                        CreatedDate = DateTime.UtcNow,
-                        LastModifiedDate = DateTime.UtcNow,
-                        CreatedBy = "System Seed",
-                        LastModifiedBy = "System Seed"
-                    }
-                };
-
-                _context.Machines.AddRange(defaultMachines);
-                await _context.SaveChangesAsync();
-
-                _logger.LogInformation("Successfully seeded {Count} default machines", defaultMachines.Count);
-            }
-            else
-            {
-                _logger.LogInformation("Machines already exist ({Count}), skipping default machine seeding", existingMachinesCount);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error seeding default machines during admin data seeding");
-        }
-    }
-
-    /// <summary>
-    /// Seed materials for enhanced machine management
-    /// </summary>
-    private async Task SeedMaterialsAsync()
-    {
-        try
-        {
-            var existingMaterialCount = await _context.Materials.CountAsync();
-            if (existingMaterialCount > 0)
-            {
-                _logger.LogInformation("?? Materials already seeded ({Count} materials exist)", existingMaterialCount);
+                _logger.LogInformation("? Users already exist ({Count} users found), skipping user seeding", existingUserCount);
                 return;
             }
 
-            var materials = Material.GetCommonSlsMaterials();
-            
-            foreach (var material in materials)
+            _logger.LogInformation("?? No users found, seeding test users for authentication...");
+
+            // Create authentication service for password hashing using LoggerFactory
+            var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+            var authLogger = loggerFactory.CreateLogger<AuthenticationService>();
+            var authService = new AuthenticationService(_context, authLogger);
+
+            var testUsers = new[]
             {
-                material.CreatedBy = "AdminDataSeeding";
-                material.LastModifiedBy = "AdminDataSeeding";
-                material.CreatedDate = DateTime.UtcNow;
-                material.LastModifiedDate = DateTime.UtcNow;
-                material.IsActive = true;
+                new { Username = "admin", Password = "admin123", FullName = "System Administrator", Email = "admin@opcentrix.com", Role = "Admin", Department = "IT" },
+                new { Username = "manager", Password = "manager123", FullName = "Production Manager", Email = "manager@opcentrix.com", Role = "Manager", Department = "Production" },
+                new { Username = "scheduler", Password = "scheduler123", FullName = "Production Scheduler", Email = "scheduler@opcentrix.com", Role = "Scheduler", Department = "Production" },
+                new { Username = "operator", Password = "operator123", FullName = "Machine Operator", Email = "operator@opcentrix.com", Role = "Operator", Department = "Production" },
+                new { Username = "printer", Password = "printer123", FullName = "3D Printer Operator", Email = "printer@opcentrix.com", Role = "PrintingSpecialist", Department = "3D Printing" },
+                new { Username = "coating", Password = "coating123", FullName = "Coating Specialist", Email = "coating@opcentrix.com", Role = "CoatingSpecialist", Department = "Coating" },
+                new { Username = "shipping", Password = "shipping123", FullName = "Shipping Specialist", Email = "shipping@opcentrix.com", Role = "ShippingSpecialist", Department = "Shipping" },
+                new { Username = "edm", Password = "edm123", FullName = "EDM Specialist", Email = "edm@opcentrix.com", Role = "EDMSpecialist", Department = "EDM" },
+                new { Username = "machining", Password = "machining123", FullName = "Machining Specialist", Email = "machining@opcentrix.com", Role = "MachiningSpecialist", Department = "Machining" },
+                new { Username = "qc", Password = "qc123", FullName = "Quality Control Specialist", Email = "qc@opcentrix.com", Role = "QCSpecialist", Department = "Quality" },
+                new { Username = "analyst", Password = "analyst123", FullName = "Data Analyst", Email = "analyst@opcentrix.com", Role = "Analyst", Department = "Analytics" },
+                new { Username = "btspecialist", Password = "btspecialist123", FullName = "B&T Manufacturing Specialist", Email = "btspecialist@opcentrix.com", Role = "BTSpecialist", Department = "B&T Manufacturing" },
+                new { Username = "workflowspecialist", Password = "workflowspecialist123", FullName = "Workflow Specialist", Email = "workflowspecialist@opcentrix.com", Role = "WorkflowSpecialist", Department = "Workflow Management" },
+                new { Username = "compliancespecialist", Password = "compliancespecialist123", FullName = "Compliance Specialist", Email = "compliancespecialist@opcentrix.com", Role = "ComplianceSpecialist", Department = "Compliance" }
+            };
+
+            var users = new List<User>();
+
+            foreach (var userData in testUsers)
+            {
+                var user = new User
+                {
+                    Username = userData.Username,
+                    FullName = userData.FullName,
+                    Email = userData.Email,
+                    PasswordHash = authService.HashPassword(userData.Password), // Use proper password hashing
+                    Role = userData.Role,
+                    Department = userData.Department,
+                    IsActive = true,
+                    CreatedBy = "System",
+                    LastModifiedBy = "System",
+                    CreatedDate = DateTime.UtcNow,
+                    LastModifiedDate = DateTime.UtcNow
+                };
+
+                users.Add(user);
+                _logger.LogInformation("?? Created test user: {Username} ({Role})", user.Username, user.Role);
             }
 
-            _context.Materials.AddRange(materials);
+            await _context.Users.AddRangeAsync(users);
             await _context.SaveChangesAsync();
-
-            _logger.LogInformation("? Seeded {Count} default materials for machine management", materials.Count);
             
-            // Log material details
-            foreach (var material in materials)
-            {
-                _logger.LogInformation("   ?? {Code}: {Name} ({Type}) - ${Cost}/g", 
-                    material.MaterialCode, material.MaterialName, material.MaterialType, material.CostPerGram);
-            }
+            _logger.LogInformation("? Successfully seeded {Count} test users with proper password hashing", users.Count);
+            _logger.LogInformation("?? Test users available for login:");
+            _logger.LogInformation("   ?? admin/admin123 (Admin) - Full system access");
+            _logger.LogInformation("   ?? manager/manager123 (Manager) - Management access");
+            _logger.LogInformation("   ?? scheduler/scheduler123 (Scheduler) - Scheduling operations");
+            _logger.LogInformation("   ?? operator/operator123 (Operator) - Operations access");
+            _logger.LogInformation("   ??? printer/printer123 (PrintingSpecialist) - Print tracking");
+            _logger.LogInformation("   ?? coating/coating123 (CoatingSpecialist) - Coating operations");
+            _logger.LogInformation("   ?? shipping/shipping123 (ShippingSpecialist) - Shipping operations");
+            _logger.LogInformation("   ? edm/edm123 (EDMSpecialist) - EDM operations");
+            _logger.LogInformation("   ?? machining/machining123 (MachiningSpecialist) - Machining operations");
+            _logger.LogInformation("   ? qc/qc123 (QCSpecialist) - Quality control");
+            _logger.LogInformation("   ?? analyst/analyst123 (Analyst) - Analytics and reports");
+            _logger.LogInformation("   ?? btspecialist/btspecialist123 (BTSpecialist) - B&T manufacturing");
+            _logger.LogInformation("   ?? workflowspecialist/workflowspecialist123 (WorkflowSpecialist) - Workflow management");
+            _logger.LogInformation("   ?? compliancespecialist/compliancespecialist123 (ComplianceSpecialist) - Compliance");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "? Error seeding materials");
+            _logger.LogError(ex, "? CRITICAL ERROR seeding test users - authentication will not work!");
             throw;
-        }
-    }
-
-    /// <summary>
-    /// Seed stage permissions for multi-stage scheduling (Task 11)
-    /// </summary>
-    private async Task SeedStagePermissionsAsync()
-    {
-        try
-        {
-            var stagePermissions = new List<RolePermission>();
-
-            // Define stage permissions for each role
-            var adminStagePermissions = new[]
-            {
-                "Stages.View", "Stages.Create", "Stages.Edit", "Stages.Delete",
-                "Stages.Start", "Stages.Complete", "Stages.Reschedule",
-                "Stages.ManagePermissions", "Stages.ViewAllDepartments",
-                "Stages.AssignOperators", "Stages.AssignMachines",
-                
-                // Department-specific permissions for Admin
-                "Department.Printing.View", "Department.Printing.Edit", "Department.Printing.Start", "Department.Printing.Complete",
-                "Department.EDM.View", "Department.EDM.Edit", "Department.EDM.Start", "Department.EDM.Complete",
-                "Department.Cerakoting.View", "Department.Cerakoting.Edit", "Department.Cerakoting.Start", "Department.Cerakoting.Complete",
-                "Department.Assembly.View", "Department.Assembly.Edit", "Department.Assembly.Start", "Department.Assembly.Complete",
-                "Department.Inspection.View", "Department.Inspection.Edit", "Department.Inspection.Start", "Department.Inspection.Complete",
-                "Department.Shipping.View", "Department.Shipping.Edit", "Department.Shipping.Start", "Department.Shipping.Complete"
-            };
-
-            foreach (var permission in adminStagePermissions)
-            {
-                stagePermissions.Add(new RolePermission
-                {
-                    RoleName = "Admin",
-                    PermissionKey = permission,
-                    HasPermission = true,
-                    PermissionLevel = "Admin",
-                    Category = "Stages",
-                    Description = $"Admin access to {permission}",
-                    IsActive = true,
-                    Priority = 1,
-                    CreatedBy = "System"
-                });
-            }
-
-            // Manager permissions - can view and manage most departments
-            var managerStagePermissions = new[]
-            {
-                "Stages.View", "Stages.Create", "Stages.Edit", "Stages.Start", "Stages.Complete", "Stages.Reschedule",
-                "Department.Printing.View", "Department.Printing.Edit", "Department.Printing.Start", "Department.Printing.Complete",
-                "Department.EDM.View", "Department.EDM.Edit", "Department.EDM.Start", "Department.EDM.Complete",
-                "Department.Cerakoting.View", "Department.Cerakoting.Edit", "Department.Cerakoting.Start", "Department.Cerakoting.Complete",
-                "Department.Assembly.View", "Department.Assembly.Edit", "Department.Assembly.Start", "Department.Assembly.Complete",
-                "Department.Inspection.View", "Department.Inspection.Edit", "Department.Inspection.Start", "Department.Inspection.Complete"
-            };
-
-            foreach (var permission in managerStagePermissions)
-            {
-                stagePermissions.Add(new RolePermission
-                {
-                    RoleName = "Manager",
-                    PermissionKey = permission,
-                    HasPermission = true,
-                    PermissionLevel = "Write",
-                    Category = "Stages",
-                    Description = $"Manager access to {permission}",
-                    IsActive = true,
-                    Priority = 2,
-                    CreatedBy = "System"
-                });
-            }
-
-            // Supervisor permissions - department-specific
-            var supervisorStagePermissions = new[]
-            {
-                "Stages.View", "Stages.Edit", "Stages.Start", "Stages.Complete",
-                "Department.Printing.View", "Department.Printing.Edit", "Department.Printing.Start", "Department.Printing.Complete",
-                "Department.Assembly.View", "Department.Assembly.Edit", "Department.Assembly.Start", "Department.Assembly.Complete"
-            };
-
-            foreach (var permission in supervisorStagePermissions)
-            {
-                stagePermissions.Add(new RolePermission
-                {
-                    RoleName = "Supervisor",
-                    PermissionKey = permission,
-                    HasPermission = true,
-                    PermissionLevel = "Write",
-                    Category = "Stages",
-                    Description = $"Supervisor access to {permission}",
-                    IsActive = true,
-                    Priority = 3,
-                    CreatedBy = "System"
-                });
-            }
-
-            // Printing Specialist permissions
-            var printingSpecialistPermissions = new[]
-            {
-                "Stages.View", "Department.Printing.View", "Department.Printing.Edit", 
-                "Department.Printing.Start", "Department.Printing.Complete"
-            };
-
-            foreach (var permission in printingSpecialistPermissions)
-            {
-                stagePermissions.Add(new RolePermission
-                {
-                    RoleName = "PrintingSpecialist",
-                    PermissionKey = permission,
-                    HasPermission = true,
-                    PermissionLevel = "Write",
-                    Category = "Stages",
-                    Description = $"Printing specialist access to {permission}",
-                    IsActive = true,
-                    Priority = 4,
-                    CreatedBy = "System"
-                });
-            }
-
-            // Coating Specialist permissions
-            var coatingSpecialistPermissions = new[]
-            {
-                "Stages.View", "Department.Cerakoting.View", "Department.Cerakoting.Edit", 
-                "Department.Cerakoting.Start", "Department.Cerakoting.Complete"
-            };
-
-            foreach (var permission in coatingSpecialistPermissions)
-            {
-                stagePermissions.Add(new RolePermission
-                {
-                    RoleName = "CoatingSpecialist",
-                    PermissionKey = permission,
-                    HasPermission = true,
-                    PermissionLevel = "Write",
-                    Category = "Stages",
-                    Description = $"Coating specialist access to {permission}",
-                    IsActive = true,
-                    Priority = 5,
-                    CreatedBy = "System"
-                });
-            }
-
-            // Operator permissions - view only
-            var operatorStagePermissions = new[]
-            {
-                "Stages.View"
-            };
-
-            foreach (var permission in operatorStagePermissions)
-            {
-                stagePermissions.Add(new RolePermission
-                {
-                    RoleName = "Operator",
-                    PermissionKey = permission,
-                    HasPermission = true,
-                    PermissionLevel = "Read",
-                    Category = "Stages",
-                    Description = $"Operator access to {permission}",
-                    IsActive = true,
-                    Priority = 6,
-                    CreatedBy = "System"
-                });
-            }
-
-            // Add all permissions to database if they don't exist
-            foreach (var permission in stagePermissions)
-            {
-                var exists = await _context.RolePermissions
-                    .AnyAsync(p => p.RoleName == permission.RoleName && p.PermissionKey == permission.PermissionKey);
-
-                if (!exists)
-                {
-                    _context.RolePermissions.Add(permission);
-                    _logger.LogDebug("Added stage permission: {Role} - {Permission}", 
-                        permission.RoleName, permission.PermissionKey);
-                }
-            }
-
-            await _context.SaveChangesAsync();
-            _logger.LogInformation("Stage permissions seeded successfully - {Count} permissions added", stagePermissions.Count);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error seeding stage permissions");
         }
     }
 }

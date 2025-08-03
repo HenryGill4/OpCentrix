@@ -233,6 +233,15 @@ builder.Services.AddScoped<IPartStageService, PartStageService>();
 // Option A: Multi-Stage Workflow Enhancement Service
 builder.Services.AddScoped<ICohortManagementService, CohortManagementService>();
 
+// Update PrintTrackingService registration to include cohort service
+builder.Services.AddScoped<IPrintTrackingService>(provider =>
+{
+    var context = provider.GetRequiredService<SchedulerContext>();
+    var logger = provider.GetRequiredService<ILogger<PrintTrackingService>>();
+    var cohortService = provider.GetService<ICohortManagementService>(); // Optional
+    return new PrintTrackingService(context, logger, cohortService);
+});
+
 // FIXED: Use only the Admin namespace ProductionStageSeederService to resolve ambiguity - COMPLETE FIX
 builder.Services.AddScoped<OpCentrix.Services.Admin.IProductionStageSeederService, OpCentrix.Services.Admin.ProductionStageSeederService>();
 

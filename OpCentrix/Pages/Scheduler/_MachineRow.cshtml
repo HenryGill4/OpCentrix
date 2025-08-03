@@ -8,7 +8,34 @@
     var jobsOrdered = Model.Jobs.OrderBy(j => j.ScheduledStart).ToList();
     var jobLayers = new List<List<OpCentrix.Models.Job>>();
     
-    foreach (var job in jobsOrdered)
+    // Option A: Group jobs by cohort for better visual organization
+    var cohortJobs = jobsOrdered.Where(j => j.BuildCohortId.HasValue).GroupBy(j => j.BuildCohortId).ToList();
+    var independentJobs = jobsOrdered.Where(j => !j.BuildCohortId.HasValue).ToList();
+    
+    // Process cohort jobs first to keep them together visually
+    foreach (var cohortGroup in cohortJobs)
+    {
+        foreach (var job in cohortGroup.OrderBy(j => j.StageOrder ?? 0).ThenBy(j => j.ScheduledStart))
+        {
+            var placed = false;
+            for (int l = 0; l < jobLayers.Count; l++)
+            {
+                if (!jobLayers[l].Any(j => job.OverlapsWith(j)))
+                {
+                    jobLayers[l].Add(job);
+                    placed = true;
+                    break;
+                }
+            }
+            if (!placed) 
+            {
+                jobLayers.Add(new List<OpCentrix.Models.Job> { job });
+            }
+        }
+    }
+    
+    // Then process independent jobs
+    foreach (var job in independentJobs)
     {
         var placed = false;
         for (int l = 0; l < jobLayers.Count; l++)
@@ -29,16 +56,59 @@
     // Calculate optimized layer height
     var maxLayers = Math.Max(1, jobLayers.Count);
     var layerHeight = Math.Max(30, (Model.RowHeight - 20) / maxLayers); // Minimum 30px per layer
+    
+    // Cohort summary for display
+    var cohortSummary = cohortJobs.Select(g => new { 
+        CohortId = g.Key, 
+        JobCount = g.Count(),
+        Stages = g.Select(j => j.WorkflowStage).Distinct().Count(),
+        Status = g.All(j => j.Status == "Completed") ? "Complete" : 
+                 g.Any(j => j.Status == "InProgress") ? "In Progress" : "Scheduled"
+    }).ToList();
 }
 
 <!-- Machine row container with enhanced ID for HTMX targeting -->
-<div id="machine-row-@Model.MachineId" class="relative bg-white border-gray-200 overflow-hidden" 
+<div id="machine-row-@Model.MachineId" class="relative bg-white border-gray-200 overflow-hidden machine-row" 
      style="width:calc(var(--slot-width) * @totalSlots); height:@rowHeightPx; min-height:@rowHeightPx;"
-     data-machine="@Model.MachineId">
+     data-machine="@Model.MachineId"
+     data-cohort-count="@cohortSummary.Count"
+     data-total-jobs="@jobsOrdered.Count">
+    
+    <!-- Cohort Summary Bar (if cohorts exist) -->
+    @if (cohortSummary.Any())
+    {
+        <div class="cohort-summary-bar absolute top-0 left-0 right-0 h-6 bg-gradient-to-r from-blue-50 to-purple-50 border-b border-blue-200 flex items-center px-2 z-30">
+            <div class="flex items-center space-x-3 text-xs">
+                <span class="font-medium text-gray-700">Cohorts:</span>
+                @foreach (var cohort in cohortSummary.Take(3)) // Show max 3 cohorts to prevent overflow
+                {
+                    var cohortStatusClass = cohort.Status switch
+                    {
+                        "Complete" => "bg-green-100 text-green-800 border-green-200",
+                        "In Progress" => "bg-blue-100 text-blue-800 border-blue-200", 
+                        _ => "bg-gray-100 text-gray-800 border-gray-200"
+                    };
+                    
+                    <div class="cohort-summary-item flex items-center space-x-1 px-2 py-0.5 rounded-full border @cohortStatusClass"
+                         title="Cohort @cohort.CohortId: @cohort.JobCount jobs, @cohort.Stages stages, @cohort.Status">
+                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                        </svg>
+                        <span class="font-medium">B@cohort.CohortId</span>
+                        <span class="text-xs opacity-75">(@cohort.JobCount)</span>
+                    </div>
+                }
+                @if (cohortSummary.Count > 3)
+                {
+                    <span class="text-xs text-gray-500">+@(cohortSummary.Count - 3) more</span>
+                }
+            </div>
+        </div>
+    }
     
     <!-- Grid background cells with improved responsiveness -->
-    <div class="absolute inset-0 grid" 
-         style="grid-template-columns: repeat(@totalSlots, var(--slot-width));"
+    <div class="absolute inset-0 grid @(cohortSummary.Any() ? "top-6" : "")" 
+         style="grid-template-columns: repeat(@totalSlots, var(--slot-width)); @(cohortSummary.Any() ? "height: calc(100% - 24px);" : "")"
          data-total-slots="@totalSlots">
         @for (int d = 0; d < Model.Dates.Count; d++)
         {
@@ -65,7 +135,7 @@
                 else if (isPastWorkHours) cellClasses.Add("bg-gray-25");
                 
                 <div class="@string.Join(" ", cellClasses)" 
-                     style="min-height:@rowHeightPx;"
+                     style="min-height:@(cohortSummary.Any() ? rowHeightPx.Replace(Model.RowHeight.ToString(), (Model.RowHeight - 24).ToString()) : rowHeightPx);"
                      onclick="openJobModal('@Model.MachineId', '@slotDateTime.ToString("yyyy-MM-ddTHH:mm")')"
                      title="Click to add job at @slotDateTime.ToString("MMM dd, yyyy HH:mm")"
                      data-slot-time="@slotDateTime.ToString("yyyy-MM-ddTHH:mm")">
@@ -91,8 +161,8 @@
     </div>
     
     <!-- Enhanced job blocks layer with better positioning -->
-    <div class="absolute inset-0 pointer-events-none" 
-         style="min-height:@rowHeightPx;" 
+    <div class="absolute inset-0 pointer-events-none @(cohortSummary.Any() ? "top-6" : "")" 
+         style="min-height:@rowHeightPx; @(cohortSummary.Any() ? "height: calc(100% - 24px);" : "")" 
          data-job-layer="true">
         @for (int l = 0; l < jobLayers.Count; l++)
         {
@@ -111,23 +181,33 @@
                 var leftPct = Math.Max(0, Math.Min(99, (100.0 * leftPosition / totalSlots))).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + "%";
                 var widthPct = Math.Max(1, Math.Min(100, (100.0 * widthSlots / totalSlots))).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + "%";
                 
-                // Enhanced layer positioning
+                // Enhanced layer positioning (adjusted for cohort summary bar)
                 var layerPadding = 4;
-                var top = layerPadding + l * (layerHeight + 2);
+                var baseTop = cohortSummary.Any() ? 0 : 0; // Cohort bar already handled by container positioning
+                var top = baseTop + layerPadding + l * (layerHeight + 2);
                 var height = Math.Max(24, layerHeight - 2); // Minimum 24px height
                 var topPx = $"{top}px";
                 var heightPx = $"{height}px";
                 
                 var jobLabel = $"Job: {job.PartNumber} ({job.Status}) - {job.ScheduledStart:MMM dd HH:mm} to {job.ScheduledEnd:MMM dd HH:mm} - Qty: {job.Quantity}";
                 if (!string.IsNullOrEmpty(job.Operator)) jobLabel += $" - Operator: {job.Operator}";
+                if (job.BuildCohortId.HasValue) jobLabel += $" - Cohort: B{job.BuildCohortId}";
+                if (!string.IsNullOrEmpty(job.WorkflowStage)) jobLabel += $" - Stage: {job.WorkflowStage} ({job.StageOrder}/{job.TotalStages})";
                 
-                <div class="absolute pointer-events-auto transition-all duration-200 hover:z-30 hover:scale-105 cursor-pointer rounded-lg shadow-sm hover:shadow-lg"
+                // Add cohort grouping class for styling
+                var cohortClass = job.BuildCohortId.HasValue ? $"cohort-{job.BuildCohortId}" : "";
+                var stageClass = !string.IsNullOrEmpty(job.WorkflowStage) ? $"stage-{job.WorkflowStage.ToLower()}" : "";
+                
+                <div class="absolute pointer-events-auto transition-all duration-200 hover:z-30 hover:scale-105 cursor-pointer rounded-lg shadow-sm hover:shadow-lg job-block @cohortClass @stageClass"
                      style="left:@leftPct; width:@widthPct; top:@topPx; height:@heightPx; min-width:40px;"
                      onclick="openJobModal('@Model.MachineId', '@job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")', @job.Id)"
                      title="@jobLabel" 
                      aria-label="@jobLabel"
                      data-job-id="@job.Id"
-                     data-layer="@l">
+                     data-layer="@l"
+                     data-cohort-id="@job.BuildCohortId"
+                     data-stage="@job.WorkflowStage"
+                     data-stage-order="@job.StageOrder">
                     <partial name="_JobBlock" model="job" />
                 </div>
             }
@@ -137,7 +217,7 @@
     <!-- Machine row overlay for debugging (only in development) -->
     @if (Model.Zoom != "day") // Show grid lines for detailed views
     {
-        <div class="absolute inset-0 pointer-events-none opacity-10">
+        <div class="absolute inset-0 pointer-events-none opacity-10 @(cohortSummary.Any() ? "top-6" : "")">
             <div class="grid h-full" style="grid-template-columns: repeat(@totalSlots, var(--slot-width));">
                 @for (int i = 0; i < totalSlots; i++)
                 {

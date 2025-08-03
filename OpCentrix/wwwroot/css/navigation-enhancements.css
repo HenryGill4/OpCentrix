@@ -1,0 +1,377 @@
+/* Enhanced Navigation & Stage Indicators CSS for Option A Implementation */
+
+/* Navigation Link Styles */
+.nav-link {
+    transition: all 0.2s ease-in-out;
+    position: relative;
+    overflow: hidden;
+}
+
+.nav-link::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.5s;
+}
+
+.nav-link:hover::before {
+    left: 100%;
+}
+
+/* Stage-Specific Navigation Colors */
+.nav-link.scheduler {
+    border-left: 3px solid #3B82F6;
+}
+
+.nav-link.scheduler:hover {
+    background-color: rgba(59, 130, 246, 0.1);
+    border-left-color: #1D4ED8;
+}
+
+.nav-link.stage-sls {
+    border-left: 3px solid #3B82F6;
+}
+
+.nav-link.stage-sls:hover {
+    background-color: rgba(59, 130, 246, 0.1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.nav-link.stage-edm {
+    border-left: 3px solid #EC4899;
+}
+
+.nav-link.stage-edm:hover {
+    background-color: rgba(236, 72, 153, 0.1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(236, 72, 153, 0.2);
+}
+
+.nav-link.stage-coating {
+    border-left: 3px solid #F59E0B;
+}
+
+.nav-link.stage-coating:hover {
+    background-color: rgba(245, 158, 11, 0.1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+}
+
+.nav-link.stage-qc {
+    border-left: 3px solid #10B981;
+}
+
+.nav-link.stage-qc:hover {
+    background-color: rgba(16, 185, 129, 0.1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.nav-link.stage-shipping {
+    border-left: 3px solid #6366F1;
+}
+
+.nav-link.stage-shipping:hover {
+    background-color: rgba(99, 102, 241, 0.1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+.nav-link.admin {
+    border-left: 3px solid #DC2626;
+}
+
+.nav-link.admin:hover {
+    background-color: rgba(220, 38, 38, 0.1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+}
+
+/* Active State Indicators */
+.nav-link.active {
+    background-color: rgba(59, 130, 246, 0.1);
+    color: #1D4ED8;
+    font-weight: 600;
+}
+
+.nav-link.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #3B82F6, #1D4ED8);
+    animation: slideIn 0.3s ease-out;
+}
+
+/* Stage Status Indicators */
+.stage-status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+    animation: fadeInUp 0.3s ease-out;
+}
+
+.stage-status-indicator .status-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+/* Option A Badge Animation */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.7;
+        transform: scale(1.1);
+    }
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(-100%);
+    }
+    to {
+        transform: translateX(0);
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Mobile Navigation Enhancements */
+@media (max-width: 768px) {
+    .nav-link {
+        padding: 0.75rem 1rem;
+        margin: 0.25rem 0;
+        border-radius: 0.5rem;
+        border-left: none;
+        border-left: 4px solid transparent;
+    }
+    
+    .nav-link.stage-sls {
+        border-left-color: #3B82F6;
+    }
+    
+    .nav-link.stage-edm {
+        border-left-color: #EC4899;
+    }
+    
+    .nav-link.stage-coating {
+        border-left-color: #F59E0B;
+    }
+    
+    .nav-link.stage-qc {
+        border-left-color: #10B981;
+    }
+    
+    .nav-link.stage-shipping {
+        border-left-color: #6366F1;
+    }
+    
+    .nav-link.admin {
+        border-left-color: #DC2626;
+    }
+}
+
+/* Enhanced Stage Progress Indicators */
+.stage-progress-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+}
+
+.stage-progress-step {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+}
+
+.stage-progress-step.active {
+    background-color: rgba(59, 130, 246, 0.1);
+    color: #1D4ED8;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+}
+
+.stage-progress-step.completed {
+    background-color: rgba(16, 185, 129, 0.1);
+    color: #059669;
+}
+
+.stage-progress-step .step-icon {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.625rem;
+}
+
+.stage-progress-arrow {
+    color: #9CA3AF;
+    transition: color 0.2s ease-in-out;
+}
+
+.stage-progress-arrow.active {
+    color: #3B82F6;
+}
+
+/* Footer Enhancements for Option A */
+.footer-option-a-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.75rem;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(99, 102, 241, 0.1));
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #3B82F6;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.footer-option-a-indicator .status-dot {
+    width: 0.375rem;
+    height: 0.375rem;
+    background-color: #10B981;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+/* Session Timeout Warning Enhancements */
+.session-timeout-warning {
+    background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+    border-bottom: 2px solid #F59E0B;
+    color: #92400E;
+    padding: 0.75rem 0;
+    font-weight: 500;
+    display: none;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Logo Enhancement */
+.opcentrix-logo-container {
+    position: relative;
+}
+
+.opcentrix-logo-container::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, #3B82F6, #8B5CF6, #EC4899, #F59E0B);
+    border-radius: 0.875rem;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+}
+
+.opcentrix-logo-container:hover::after {
+    opacity: 0.3;
+}
+
+/* Responsive Navigation Adjustments */
+@media (max-width: 1024px) {
+    .stage-progress-container {
+        flex-wrap: wrap;
+        gap: 0.25rem;
+    }
+    
+    .nav-link {
+        font-size: 0.875rem;
+        padding: 0.5rem 0.75rem;
+    }
+}
+
+@media (max-width: 640px) {
+    .stage-status-indicator {
+        font-size: 0.625rem;
+        padding: 0.125rem 0.5rem;
+    }
+    
+    .nav-link svg {
+        width: 1rem;
+        height: 1rem;
+    }
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+    .nav-link {
+        border-width: 2px;
+    }
+    
+    .nav-link:hover {
+        outline: 2px solid currentColor;
+        outline-offset: 2px;
+    }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+    .nav-link,
+    .stage-status-indicator,
+    .stage-progress-step {
+        transition: none;
+    }
+    
+    .nav-link::before,
+    @keyframes pulse,
+    @keyframes slideIn,
+    @keyframes fadeInUp,
+    @keyframes slideDown {
+        animation: none;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .nav,
+    .session-timeout-warning,
+    .footer-option-a-indicator {
+        display: none !important;
+    }
+}

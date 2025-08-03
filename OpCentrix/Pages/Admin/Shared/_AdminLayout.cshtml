@@ -6,9 +6,10 @@
     <title>@ViewData["Title"] - OpCentrix Admin</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/navigation-enhancements.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/OpCentrix.styles.css" asp-append-version="true" />
     
-    @* Font Awesome for icons (including fas fa-calendar-plus) *@
+    @* Font Awesome for icons *@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     
     <script src="https://unpkg.com/htmx.org@1.9.2"></script>
@@ -18,8 +19,8 @@
 </head>
 <body class="bg-gray-50 overflow-hidden">
     <div class="flex h-screen">
-        <!-- Sidebar Navigation -->
-        <div id="sidebar" style="overflow:auto !important;" class="bg-white shadow-lg w-64 fixed inset-y-0 left-0 z-50 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
+        <!-- Enhanced Admin Sidebar Navigation -->
+        <div id="sidebar" style="overflow:auto !important;" class="bg-white shadow-lg w-80 fixed inset-y-0 left-0 z-50 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
             <!-- Logo and Brand -->
             <div class="flex items-center justify-center h-16 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
                 <div class="flex items-center">
@@ -30,7 +31,7 @@
                     </div>
                     <div>
                         <div class="text-lg font-bold">OpCentrix</div>
-                        <div class="text-xs opacity-75">Admin Panel</div>
+                        <div class="text-xs opacity-75">Admin Control Center</div>
                     </div>
                 </div>
             </div>
@@ -50,7 +51,7 @@
 
             <!-- Navigation Menu -->
             <nav class="mt-4 px-2 space-y-1 flex-1 overflow-y-auto">
-                <!-- Dashboard -->
+                <!-- Dashboard Overview -->
                 <div class="mb-6">
                     <h3 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Overview</h3>
                     <a href="/Admin" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Index" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
@@ -58,7 +59,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5v4M12 5v4M16 5v4"></path>
                         </svg>
-                        Dashboard
+                        Admin Dashboard
                     </a>
                     <a href="/Scheduler" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100">
                         <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -72,13 +73,84 @@
                         </svg>
                         Master Schedule
                     </a>
-                    <a href="/Admin/Stages" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Stages" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
+                </div>
+
+                <!-- System Administration -->
+                <div class="mb-6">
+                    <h3 class="px-3 text-xs font-semibold text-red-600 uppercase tracking-wider mb-2">System Administration</h3>
+                    <a href="/Admin/Users" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Users" ? "bg-red-100 text-red-700" : "text-red-600 hover:text-red-700 hover:bg-red-50")">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                        </svg>
+                        User Management
+                    </a>
+                    <a href="/Admin/Roles" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Roles" ? "bg-red-100 text-red-700" : "text-red-600 hover:text-red-700 hover:bg-red-50")">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                        </svg>
+                        Role Permissions
+                    </a>
+                    <a href="/Admin/Settings" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Settings" ? "bg-red-100 text-red-700" : "text-red-600 hover:text-red-700 hover:bg-red-50")">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        </svg>
+                        System Settings
+                    </a>
+                </div>
+
+                <!-- Resource Management -->
+                <div class="mb-6">
+                    <h3 class="px-3 text-xs font-semibold text-blue-600 uppercase tracking-wider mb-2">Resource Management</h3>
+                    <a href="/Admin/Machines" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Machines" ? "bg-blue-100 text-blue-700" : "text-blue-600 hover:text-blue-700 hover:bg-blue-50")">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
+                        </svg>
+                        Machine Management
+                        @if (ViewBag.MachineCount != null && ViewBag.MachineCount > 0)
+                        {
+                            <span class="ml-auto bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">@ViewBag.MachineCount</span>
+                        }
+                    </a>
+                    <a href="/Admin/Parts" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Parts" ? "bg-blue-100 text-blue-700" : "text-blue-600 hover:text-blue-700 hover:bg-blue-50")">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
+                        </svg>
+                        Parts Management
+                        @if (ViewBag.PartCount != null && ViewBag.PartCount > 0)
+                        {
+                            <span class="ml-auto bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full">@ViewBag.PartCount</span>
+                        }
+                    </a>
+                    <a href="/Admin/Jobs" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Jobs" ? "bg-blue-100 text-blue-700" : "text-blue-600 hover:text-blue-700 hover:bg-blue-50")">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                        </svg>
+                        Job Management
+                    </a>
+                    <a href="/Admin/Shifts" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Shifts" ? "bg-blue-100 text-blue-700" : "text-blue-600 hover:text-blue-700 hover:bg-blue-50")">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Operating Shifts
+                    </a>
+                </div>
+
+                <!-- Manufacturing Operations -->
+                <div class="mb-6">
+                    <h3 class="px-3 text-xs font-semibold text-indigo-600 uppercase tracking-wider mb-2">Manufacturing Operations</h3>
+                    <a href="/Admin/Stages" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Stages" ? "bg-indigo-100 text-indigo-700" : "text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50")">
                         <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 4h6m-6 4h6m-7-7h.01M9 16h.01"></path>
                         </svg>
                         Multi-Stage Jobs
                     </a>
-                    <a href="/PrintTracking" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100">
+                    <a href="/Admin/ProductionStages" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString().Contains("ProductionStages") == true ? "bg-indigo-100 text-indigo-700" : "text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50")">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
+                        </svg>
+                        Production Stages
+                    </a>
+                    <a href="/PrintTracking" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50">
                         <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2a2 2 0 002-2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
                         </svg>
@@ -86,53 +158,16 @@
                     </a>
                 </div>
 
-                <!-- Resource Management -->
-                <div class="mb-6">
-                    <h3 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Resources</h3>
-                    <a href="/Admin/Machines" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Machines" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
-                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
-                        </svg>
-                        Machines
-                        @if (ViewBag.MachineCount != null && ViewBag.MachineCount > 0)
-                        {
-                            <span class="ml-auto bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">@ViewBag.MachineCount</span>
-                        }
-                    </a>
-                    <a href="/Admin/Parts" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Parts" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
-                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
-                        </svg>
-                        Parts
-                        @if (ViewBag.PartCount != null && ViewBag.PartCount > 0)
-                        {
-                            <span class="ml-auto bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full">@ViewBag.PartCount</span>
-                        }
-                    </a>
-                    <a href="/Admin/Shifts" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Shifts" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
-                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                        Operating Shifts
-                    </a>
-                    <a href="/Admin/Stages" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Stages" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
-                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 4h6m-6 4h6m-7-7h.01M9 16h.01"></path>
-                        </svg>
-                        Multi-Stage Jobs
-                    </a>
-                </div>
-
                 <!-- Quality Management -->
                 <div class="mb-6">
-                    <h3 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Quality</h3>
-                    <a href="/Admin/Checkpoints" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Checkpoints" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
+                    <h3 class="px-3 text-xs font-semibold text-green-600 uppercase tracking-wider mb-2">Quality Management</h3>
+                    <a href="/Admin/Checkpoints" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Checkpoints" ? "bg-green-100 text-green-700" : "text-green-600 hover:text-green-700 hover:bg-green-50")">
                         <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
                         </svg>
                         Inspection Checkpoints
                     </a>
-                    <a href="/Admin/Defects" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Defects" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
+                    <a href="/Admin/Defects" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Defects" ? "bg-green-100 text-green-700" : "text-green-600 hover:text-green-700 hover:bg-green-50")">
                         <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                         </svg>
@@ -140,7 +175,7 @@
                     </a>
                 </div>
 
-                <!-- B&T Administration Section (NEW - Amber Color) -->
+                <!-- B&T Manufacturing Administration -->
                 <div class="mb-6">
                     <h3 class="px-3 text-xs font-semibold text-amber-600 uppercase tracking-wider mb-2">B&T Administration</h3>
                     <a href="/Admin/Prototypes" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString().Contains("Prototypes") == true ? "bg-amber-100 text-amber-700" : "text-amber-600 hover:text-amber-700 hover:bg-amber-50")">
@@ -149,21 +184,27 @@
                         </svg>
                         Prototype Tracking
                     </a>
-                    <a href="/Admin/ProductionStages" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString().Contains("ProductionStages") == true ? "bg-amber-100 text-amber-700" : "text-amber-600 hover:text-amber-700 hover:bg-amber-50")">
-                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
-                        </svg>
-                        Production Stages
-                    </a>
                     <a href="/Admin/BT/PartClassifications" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString().Contains("BT/PartClassifications") == true ? "bg-amber-100 text-amber-700" : "text-amber-600 hover:text-amber-700 hover:bg-amber-50")">
                         <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
                         </svg>
                         Part Classifications
                     </a>
+                    <a href="/Admin/BT/SerialNumbers" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString().Contains("BT/SerialNumbers") == true ? "bg-amber-100 text-amber-700" : "text-amber-600 hover:text-amber-700 hover:bg-amber-50")">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"></path>
+                        </svg>
+                        Serial Numbers
+                    </a>
+                    <a href="/Admin/BT/ComplianceDocuments" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString().Contains("BT/ComplianceDocuments") == true ? "bg-amber-100 text-amber-700" : "text-amber-600 hover:text-amber-700 hover:bg-amber-50")">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        Compliance Documents
+                    </a>
                 </div>
 
-                <!-- B&T Analytics Section (NEW - Amber Color) -->
+                <!-- B&T Analytics -->
                 <div class="mb-6">
                     <h3 class="px-3 text-xs font-semibold text-amber-600 uppercase tracking-wider mb-2">B&T Analytics</h3>
                     <a href="/Admin/BT/SerializationReports" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString().Contains("BT/SerializationReports") == true ? "bg-amber-100 text-amber-700" : "text-amber-600 hover:text-amber-700 hover:bg-amber-50")">
@@ -186,7 +227,7 @@
                     </a>
                 </div>
 
-                <!-- Advanced Workflows Section (NEW - Purple Color) -->
+                <!-- Advanced Workflows -->
                 <div class="mb-6">
                     <h3 class="px-3 text-xs font-semibold text-purple-600 uppercase tracking-wider mb-2">Advanced Workflows</h3>
                     <a href="/Admin/Workflows/Templates" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString().Contains("Workflows/Templates") == true ? "bg-purple-100 text-purple-700" : "text-purple-600 hover:text-purple-700 hover:bg-purple-50")">
@@ -209,28 +250,51 @@
                     </a>
                 </div>
 
+                <!-- System Tools & Monitoring -->
+                <div class="mb-6">
+                    <h3 class="px-3 text-xs font-semibold text-orange-600 uppercase tracking-wider mb-2">System Tools</h3>
+                    <a href="/Admin/Alerts" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Alerts" ? "bg-orange-100 text-orange-700" : "text-orange-600 hover:text-orange-700 hover:bg-orange-50")">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5v-5zM4.343 12.344l-.707-.707a1 1 0 010-1.414l9.9-9.9a1 1 0 011.414 0l.707.707a1 1 0 010 1.414l-9.9 9.9a1 1 0 01-1.414 0zM2 18h20"></path>
+                        </svg>
+                        Admin Alerts Panel
+                    </a>
+                    <a href="/Admin/FeatureToggles" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/FeatureToggles" ? "bg-orange-100 text-orange-700" : "text-orange-600 hover:text-orange-700 hover:bg-orange-50")">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        Feature Toggles
+                    </a>
+                    <a href="/Admin/AuditLog" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/AuditLog" ? "bg-orange-100 text-orange-700" : "text-orange-600 hover:text-orange-700 hover:bg-orange-50")">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2z"></path>
+                        </svg>
+                        Admin Audit Log
+                    </a>
+                </div>
+
                 <!-- Data Management -->
                 <div class="mb-6">
-                    <h3 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Data</h3>
-                    <a href="/Admin/BugReports" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/BugReports" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
+                    <h3 class="px-3 text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Data Management</h3>
+                    <a href="/Admin/BugReports" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/BugReports" ? "bg-gray-100 text-gray-700" : "text-gray-600 hover:text-gray-700 hover:bg-gray-50")">
                         <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-2.694-1.333-3.464 0L4.268 18.5c-.77.833.192 2.5 1.732 2.5z"></path>
                         </svg>
                         Bug Reports
                     </a>
-                    <a href="/Admin/Archive" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Archive" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
+                    <a href="/Admin/Archive" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Archive" ? "bg-gray-100 text-gray-700" : "text-gray-600 hover:text-gray-700 hover:bg-gray-50")">
                         <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
                         </svg>
-                        Job Archive
+                        Job Archive & Cleanup
                     </a>
-                    <a href="/Admin/Database" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Database" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
+                    <a href="/Admin/Database" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Database" ? "bg-gray-100 text-gray-700" : "text-gray-600 hover:text-gray-700 hover:bg-gray-50")">
                         <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path>
                         </svg>
                         Database Management
                     </a>
-                    <a href="/Admin/Logs" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Logs" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
+                    <a href="/Admin/Logs" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Logs" ? "bg-gray-100 text-gray-700" : "text-gray-600 hover:text-gray-700 hover:bg-gray-50")">
                         <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2z"></path>
                         </svg>
@@ -241,14 +305,15 @@
             
             <!-- Footer -->
             <div class="p-4 border-t border-gray-200">
-                <button onclick="window.location.href='/'" class="w-full bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg py-2 px-4 text-sm font-medium transition-colors">
+                <button onclick="window.location.href='/'" class="w-full bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg py-2 px-4 text-sm font-medium transition-colors mb-2">
                     Return to Main App
                 </button>
+                <p class="text-xs text-gray-500 text-center">OpCentrix Admin v4.0</p>
             </div>
         </div>
 
         <!-- Main Content Area -->
-        <div class="md:ml-64 flex-1 flex flex-col overflow-hidden">
+        <div class="md:ml-80 flex-1 flex flex-col overflow-hidden">
             <!-- Top Header -->
             <header class="bg-white shadow-sm border-b border-gray-200 flex-shrink-0">
                 <div class="flex justify-between items-center px-4 py-3">
@@ -259,11 +324,12 @@
                         </svg>
                     </button>
                     
-                    <!-- Page title -->
+                    <!-- Page title and breadcrumb -->
                     <div class="flex-1 min-w-0">
                         <h1 class="text-xl font-semibold text-gray-900 truncate">
                             @ViewData["Title"]
                         </h1>
+                        <p class="text-sm text-gray-500 mt-1">Comprehensive admin control for OpCentrix manufacturing system</p>
                     </div>
                     
                     <!-- User menu -->
@@ -296,6 +362,20 @@
             const sidebar = document.getElementById('sidebar');
             sidebar.classList.toggle('-translate-x-full');
         }
+        
+        // Enhanced navigation highlighting
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get current path and highlight active navigation items
+            const currentPath = window.location.pathname;
+            const navItems = document.querySelectorAll('.nav-item');
+            
+            navItems.forEach(item => {
+                const href = item.getAttribute('href');
+                if (href && (currentPath === href || currentPath.startsWith(href + '/'))) {
+                    item.classList.add('nav-item-active');
+                }
+            });
+        });
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)

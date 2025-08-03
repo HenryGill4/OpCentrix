@@ -12,16 +12,68 @@
     };
     
     var statusClass = Model.Status?.ToLower().Replace(" ", "-") ?? "";
-    var rushIndicator = Model.IsRushJob ? "??" : "";
+    var rushIndicator = Model.IsRushJob ? "?" : "";
     var statusColor = Model.GetStatusColor();
     var duration = $"{Model.DurationHours:F1}h";
     var shortPartNumber = Model.PartNumber?.Length > 10 ? Model.PartNumber.Substring(0, 10) + "..." : Model.PartNumber;
+    
+    // Option A: Stage and Cohort Enhancement
+    var hasStageInfo = !string.IsNullOrEmpty(Model.WorkflowStage);
+    var hasCohortInfo = Model.BuildCohortId.HasValue;
+    var stageProgressPercent = Model.TotalStages > 0 ? (int)((Model.StageOrder ?? 0) / (double)Model.TotalStages * 100) : 0;
+    
+    // Stage color mapping for visual consistency
+    var stageColors = new Dictionary<string, string>
+    {
+        ["SLS"] = "#3B82F6",      // Blue
+        ["CNC"] = "#10B981",      // Green  
+        ["EDM"] = "#F59E0B",      // Amber
+        ["Coating"] = "#8B5CF6",  // Purple
+        ["Assembly"] = "#06B6D4", // Cyan
+        ["QC"] = "#EF4444",       // Red
+        ["Shipping"] = "#6B7280"  // Gray
+    };
+    
+    var stageColor = hasStageInfo && stageColors.ContainsKey(Model.WorkflowStage) 
+        ? stageColors[Model.WorkflowStage] 
+        : statusColor;
 }
 
-<div class="job-block-content h-full flex flex-col justify-center p-1 @priorityClass relative overflow-hidden"
-     style="background-color: @statusColor; color: #ffffff;">
+<div class="job-block-content h-full flex flex-col justify-center p-1 @priorityClass relative overflow-hidden stage-job-block @(hasCohortInfo ? "cohort-job-block" : "")"
+     style="background-color: @statusColor; color: #ffffff;"
+     data-job-id="@Model.Id"
+     data-cohort-id="@Model.BuildCohortId"
+     data-stage="@Model.WorkflowStage"
+     data-stage-order="@Model.StageOrder"
+     data-total-stages="@Model.TotalStages">
     
-    <div class="job-block-title text-white font-bold text-xs leading-tight">
+    <!-- Stage and Cohort Indicators Overlay -->
+    @if (hasStageInfo || hasCohortInfo)
+    {
+        <div class="job-context-overlay absolute top-0 left-0 right-0 flex justify-between items-start text-xs z-10">
+            @if (hasStageInfo)
+            {
+                <div class="stage-badge bg-black bg-opacity-40 text-white px-1 py-0.5 rounded-br text-xs font-medium leading-none"
+                     style="border-left: 2px solid @stageColor;"
+                     title="Stage @Model.StageOrder of @Model.TotalStages">
+                    @Model.WorkflowStage @if (Model.TotalStages > 1) { <text>(@Model.StageOrder/@Model.TotalStages)</text> }
+                </div>
+            }
+            
+            @if (hasCohortInfo)
+            {
+                <div class="cohort-badge bg-black bg-opacity-40 text-white px-1 py-0.5 rounded-bl text-xs font-medium leading-none flex items-center"
+                     title="Build Cohort #@Model.BuildCohortId">
+                    <svg class="w-2 h-2 mr-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                    </svg>
+                    B@Model.BuildCohortId
+                </div>
+            }
+        </div>
+    }
+    
+    <div class="job-block-title text-white font-bold text-xs leading-tight @(hasStageInfo || hasCohortInfo ? "mt-4" : "")">
         @rushIndicator@shortPartNumber
     </div>
     
@@ -37,16 +89,30 @@
         }
     </div>
     
+    <!-- Multi-stage Progress Bar -->
+    @if (hasStageInfo && Model.TotalStages > 1)
+    {
+        <div class="stage-progress-bar absolute bottom-0 left-0 right-0 h-1 bg-black bg-opacity-20">
+            <div class="progress-fill h-full transition-all duration-300" 
+                 style="width: @(stageProgressPercent)%; background-color: @stageColor;"
+                 title="Stage @Model.StageOrder of @Model.TotalStages - @(stageProgressPercent)% complete">
+            </div>
+        </div>
+    }
+    
     @if (Model.Priority <= 2)
     {
-        <div class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></div>
+        <div class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full z-20"></div>
     }
     
     @if (Model.IsRushJob)
     {
-        <div class="absolute top-0 left-0 w-0 h-0 border-l-4 border-l-red-600 border-b-4 border-b-transparent"></div>
+        <div class="absolute top-0 left-0 w-0 h-0 border-l-4 border-l-red-600 border-b-4 border-b-transparent z-20"></div>
     }
     
-    <!-- Status indicator at bottom -->
-    <div class="absolute bottom-1 right-1 text-xs opacity-75">@Model.Status</div>
+    <!-- Enhanced Status indicator at bottom (only if no stage progress) -->
+    @if (!hasStageInfo || Model.TotalStages <= 1)
+    {
+        <div class="absolute bottom-1 right-1 text-xs opacity-75">@Model.Status</div>
+    }
 </div>
