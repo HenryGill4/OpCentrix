@@ -233,13 +233,17 @@ builder.Services.AddScoped<IPartStageService, PartStageService>();
 // Option A: Multi-Stage Workflow Enhancement Service
 builder.Services.AddScoped<ICohortManagementService, CohortManagementService>();
 
-// Update PrintTrackingService registration to include cohort service
+// Phase 3: Automated Stage Progression Service
+builder.Services.AddScoped<IStageProgressionService, StageProgressionService>();
+
+// Update PrintTrackingService registration to include cohort service and stage progression service
 builder.Services.AddScoped<IPrintTrackingService>(provider =>
 {
     var context = provider.GetRequiredService<SchedulerContext>();
     var logger = provider.GetRequiredService<ILogger<PrintTrackingService>>();
     var cohortService = provider.GetService<ICohortManagementService>(); // Optional
-    return new PrintTrackingService(context, logger, cohortService);
+    var stageProgressionService = provider.GetRequiredService<IStageProgressionService>(); // Required for Phase 3
+    return new PrintTrackingService(context, logger, cohortService, stageProgressionService);
 });
 
 // FIXED: Use only the Admin namespace ProductionStageSeederService to resolve ambiguity - COMPLETE FIX

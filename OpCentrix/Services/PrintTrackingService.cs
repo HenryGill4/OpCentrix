@@ -85,12 +85,14 @@ namespace OpCentrix.Services
         private readonly SchedulerContext _context;
         private readonly ILogger<PrintTrackingService> _logger;
         private readonly ICohortManagementService? _cohortManagementService;
+        private readonly IStageProgressionService _stageProgressionService;
 
-        public PrintTrackingService(SchedulerContext context, ILogger<PrintTrackingService> logger, ICohortManagementService? cohortManagementService = null)
+        public PrintTrackingService(SchedulerContext context, ILogger<PrintTrackingService> logger, ICohortManagementService? cohortManagementService = null, IStageProgressionService? stageProgressionService = null)
         {
             _context = context;
             _logger = logger;
             _cohortManagementService = cohortManagementService;
+            _stageProgressionService = stageProgressionService ?? throw new ArgumentNullException(nameof(stageProgressionService));
         }
 
         public async Task<PrintTrackingDashboardViewModel> GetDashboardDataAsync(int userId)
@@ -381,23 +383,42 @@ namespace OpCentrix.Services
                     await TryCreateCohortFromCompletedBuildAsync(buildJob);
                 }
 
-                // Advance to next stage if applicable
-                if (model.NextStageReady && model.JobStageId.HasValue)
+                // Phase 3: Trigger automated stage progression after cohort creation
+                if (buildJob.Status == "Completed" && buildJob.BuildJobParts.Any())
                 {
-                    await TryAdvanceToNextStageAsync(model.JobStageId.Value, userId);
-                }
-
-                // Option A: Try to create a cohort from the completed build
-                if (buildJob.Status == "Completed")
-                {
+                    // Try to create cohort first
                     var cohortCreated = await TryCreateCohortFromCompletedBuildAsync(buildJob);
+                    
                     if (cohortCreated)
                     {
-                        _logger.LogInformation("Cohort created successfully from build {BuildId}", buildJob.BuildId);
+                        // Find the cohort that was just created
+                        var cohort = await _context.BuildCohorts
+                            .Where(c => c.BuildNumber.Contains($"BUILD-{DateTime.UtcNow:yyyy-MM}"))
+                            .OrderByDescending(c => c.CreatedDate)
+                            .FirstOrDefaultAsync();
+                        
+                        if (cohort != null)
+                        {
+                            // Create downstream jobs automatically
+                            var downstreamJobs = await _stageProgressionService.CreateDownstreamJobsAsync(cohort.Id);
+                            
+                            if (downstreamJobs.Any())
+                            {
+                                // Update schedule to accommodate new jobs
+                                await _stageProgressionService.UpdateScheduleForNewJobsAsync(downstreamJobs);
+                                
+                                _logger.LogInformation("🚀 Phase 3: Created {JobCount} downstream jobs for cohort {CohortId} from completed build {BuildId}", 
+                                    downstreamJobs.Count, cohort.Id, buildJob.BuildId);
+                            }
+                            else
+                            {
+                                _logger.LogInformation("No downstream jobs created for cohort {CohortId} - parts may not require additional stages", cohort.Id);
+                            }
+                        }
                     }
                     else
                     {
-                        _logger.LogWarning("Cohort creation skipped for build {BuildId}", buildJob.BuildId);
+                        _logger.LogWarning("Cohort creation failed for build {BuildId} - skipping downstream job creation", buildJob.BuildId);
                     }
                 }
 
