@@ -8,8 +8,8 @@
          style="max-width: 72rem; width: 100%; max-height: 95vh; overflow-y: auto; background: white; border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); margin: 0;"
          onclick="event.stopPropagation()">
         <form hx-post="/Scheduler?handler=AddOrUpdateJob" 
-              hx-target="this"
-              hx-swap="outerHTML"
+              hx-target="#modal-container"
+              hx-swap="innerHTML"
               hx-on::before-request="showFormLoading()" 
               hx-on::after-request="handleJobFormResponse(event)"
               id="job-form"
@@ -40,7 +40,7 @@
                         onmouseover="this.style.background='#e5e7eb'; this.style.color='#374151'"
                         onmouseout="this.style.background='#f3f4f6'; this.style.color='#6b7280'"
                         aria-label="Close">
-                    <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg style="width: 20px, height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                 </button>
@@ -66,16 +66,16 @@
             }
 
             <!-- Hidden Fields -->
-            <input type="hidden" name="Job.Id" value="@Model.Job.Id" />
+            <input type="hidden" name="Id" value="@Model.Job.Id" />
             
-            <!-- ADD MISSING HIDDEN FIELDS FOR REQUIRED PROPERTIES -->
-            <input type="hidden" name="Job.CreatedDate" value="@Model.Job.CreatedDate.ToString("yyyy-MM-ddTHH:mm:ss")" />
-            <input type="hidden" name="Job.LastModifiedDate" value="@Model.Job.LastModifiedDate.ToString("yyyy-MM-ddTHH:mm:ss")" />
-            <input type="hidden" name="Job.CreatedBy" value="@(Model.Job.CreatedBy ?? "")" />
-            <input type="hidden" name="Job.LastModifiedBy" value="@(Model.Job.LastModifiedBy ?? "")" />
-            <input type="hidden" name="Job.EstimatedHours" value="@Model.Job.EstimatedHours.ToString("F2")" id="hidden-estimated-hours" />
-            <input type="hidden" name="Job.DurationHours" value="@Model.Job.DurationHours.ToString("F2")" id="hidden-duration-hours" />
-            <input type="hidden" name="Job.PartNumber" value="@(Model.Job.PartNumber ?? "")" id="hidden-part-number" />
+            <!-- Remove the old hidden fields and use clean DTO binding -->
+            <input type="hidden" name="CreatedDate" value="@Model.Job.CreatedDate.ToString("yyyy-MM-ddTHH:mm:ss")" />
+            <input type="hidden" name="LastModifiedDate" value="@Model.Job.LastModifiedDate.ToString("yyyy-MM-ddTHH:mm:ss")" />
+            <input type="hidden" name="CreatedBy" value="@(Model.Job.CreatedBy ?? "")" />
+            <input type="hidden" name="LastModifiedBy" value="@(Model.Job.LastModifiedBy ?? "")" />
+            <input type="hidden" name="EstimatedHours" value="@Model.Job.EstimatedHours.ToString("F2")" id="hidden-estimated-hours" />
+            <input type="hidden" name="DurationHours" value="@Model.Job.DurationHours.ToString("F2")" id="hidden-duration-hours" />
+            <input type="hidden" name="PartNumber" value="@(Model.Job.PartNumber ?? "")" id="hidden-part-number" />
             
             <!-- Enhanced Form Content -->
             <div style="padding: 2rem; background: white;">
@@ -98,13 +98,33 @@
                             <label for="machine-select" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
                                 Machine <span style="color: #dc2626;">*</span>
                             </label>
-                            <select name="Job.MachineId" id="machine-select" required onchange="JobForm.filterPartsByMachine()" 
+                            <select name="MachineId" id="machine-select" required onchange="JobForm.filterPartsByMachine()" 
                                     style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease; background: white;">
-                                <option value="TI1" selected="@(Model.Job.MachineId == "TI1")">TI1 - Titanium Line 1 (TruPrint 3000)</option>
-                                <option value="TI2" selected="@(Model.Job.MachineId == "TI2")">TI2 - Titanium Line 2 (TruPrint 3000)</option>
-                                <option value="INC" selected="@(Model.Job.MachineId == "INC")">INC - Inconel Line (TruPrint 5000)</option>
+                                <option value="">Select a machine...</option>
+                                @if (Model.Machines?.Any() == true)
+                                {
+                                    @foreach (var machine in Model.Machines)
+                                    {
+                                        <option value="@machine.MachineId" selected="@(Model.Job.MachineId == machine.MachineId)">
+                                            @machine.MachineId - @machine.MachineName (@machine.MachineModel)
+                                        </option>
+                                    }
+                                }
+                                else
+                                {
+                                    <option value="">No machines available</option>
+                                }
                             </select>
-                            <small style="color: #6b7280; font-size: 0.75rem; margin-top: 0.25rem; display: block;">Each machine is configured for specific materials</small>
+                            <small style="color: #6b7280; font-size: 0.75rem; margin-top: 0.25rem; display: block;">
+                                @if (Model.Machines?.Any() == true)
+                                {
+                                    <text>@Model.Machines.Count machines available</text>
+                                }
+                                else
+                                {
+                                    <text>Please configure machines in Admin panel</text>
+                                }
+                            </small>
                         </div>
 
                         <!-- Part Selection -->
@@ -112,7 +132,7 @@
                             <label for="part-select" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
                                 Part <span style="color: #dc2626;">*</span>
                             </label>
-                            <select name="Job.PartId" id="part-select" required onchange="updateJobFromPart()" 
+                            <select name="PartId" id="part-select" required onchange="updateJobFromPart()" 
                                     style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease; background: white;">
                                 <option value="">Select a part...</option>
                                 @foreach (var part in Model.Parts.OrderBy(p => p.PartNumber))
@@ -150,7 +170,16 @@
                                     </option>
                                 }
                             </select>
-                            <small style="color: #6b7280; font-size: 0.75rem; margin-top: 0.25rem; display: block;">Only parts compatible with the selected machine are shown</small>
+                            <small style="color: #6b7280; font-size: 0.75rem; margin-top: 0.25rem; display: block;">
+                                @if (Model.HasParts)
+                                {
+                                    <text>@Model.AvailablePartCount parts available</text>
+                                }
+                                else
+                                {
+                                    <text>No parts available - please create parts first</text>
+                                }
+                            </small>
                         </div>
 
                         <!-- Quantity and Priority -->
@@ -159,7 +188,7 @@
                                 <label for="quantity-input" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
                                     Quantity <span style="color: #dc2626;">*</span>
                                 </label>
-                                <input type="number" name="Job.Quantity" id="quantity-input" value="@Model.Job.Quantity" min="1" max="1000" 
+                                <input type="number" name="Quantity" id="quantity-input" value="@Model.Job.Quantity" min="1" max="1000" 
                                        required onchange="updateEndTimeFromQuantity()" 
                                        style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease;" />
                             </div>
@@ -167,7 +196,7 @@
 
                             <div class="form-group">
                                 <label for="priority-select" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Priority</label>
-                                <select name="Job.Priority" id="priority-select" 
+                                <select name="Priority" id="priority-select" 
                                         style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease; background: white;">
                                     <option value="1" selected="@(Model.Job.Priority == 1)">1 - Critical (Rush)</option>
                                     <option value="2" selected="@(Model.Job.Priority == 2)">2 - High Priority</option>
@@ -185,7 +214,7 @@
                                     Start Date & Time <span style="color: #dc2626;">*</span>
                                 </label>
                                 <div style="display: flex; gap: 0.5rem;">
-                                    <input type="datetime-local" name="Job.ScheduledStart" id="start-input"
+                                    <input type="datetime-local" name="ScheduledStart" id="start-input"
                                            value="@Model.Job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")" 
                                            required onchange="updateEndTimeFromStart()" 
                                            style="flex: 1; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease;" />
@@ -207,7 +236,7 @@
                                 <label for="end-input" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
                                     End Date & Time <span style="color: #dc2626;">*</span>
                                 </label>
-                                <input type="datetime-local" name="Job.ScheduledEnd" id="end-input"
+                                <input type="datetime-local" name="ScheduledEnd" id="end-input"
                                        value="@Model.Job.ScheduledEnd.ToString("yyyy-MM-ddTHH:mm")" 
                                        required onchange="JobForm.updateDurationDisplay(); JobForm.checkTimeSlotAvailability();" 
                                        style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease;" />
@@ -234,7 +263,7 @@
                             <label for="sls-material" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
                                 Material <span style="color: #dc2626;">*</span>
                             </label>
-                            <select name="Job.SlsMaterial" id="sls-material" required 
+                            <select name="SlsMaterial" id="sls-material" required 
                                     style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease; background: white;">
                                 <option value="Ti-6Al-4V Grade 5" selected="@(Model.Job.SlsMaterial == "Ti-6Al-4V Grade 5")">Ti-6Al-4V Grade 5 (Aerospace)</option>
                                 <option value="Ti-6Al-4V ELI Grade 23" selected="@(Model.Job.SlsMaterial == "Ti-6Al-4V ELI Grade 23")">Ti-6Al-4V ELI Grade 23 (Medical)</option>
@@ -247,27 +276,27 @@
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
                             <div class="form-group">
                                 <label for="laser-power" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Laser Power (W)</label>
-                                <input type="number" name="Job.LaserPowerWatts" id="laser-power" value="@Model.Job.LaserPowerWatts" min="50" max="400" step="1" 
+                                <input type="number" name="LaserPowerWatts" id="laser-power" value="@Model.Job.LaserPowerWatts" min="50" max="400" step="1" 
                                        style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease;" />
                             </div>
                             
                             <div class="form-group">
                                 <label for="scan-speed" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Scan Speed (mm/s)</label>
-                                <input type="number" name="Job.ScanSpeedMmPerSec" id="scan-speed" value="@Model.Job.ScanSpeedMmPerSec" min="100" max="5000" step="10" 
+                                <input type="number" name="ScanSpeedMmPerSec" id="scan-speed" value="@Model.Job.ScanSpeedMmPerSec" min="100" max="5000" step="10" 
                                        style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease;" />
                             </div>
                         </div>
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
                             <div class="form-group">
-                                <label for="layer-thickness" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Layer Thickness (?m)</label>
-                                <input type="number" name="Job.LayerThicknessMicrons" id="layer-thickness" value="@Model.Job.LayerThicknessMicrons" min="20" max="60" step="5" 
+                                <label for="layer-thickness" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Layer Thickness (µm)</label>
+                                <input type="number" name="LayerThicknessMicrons" id="layer-thickness" value="@Model.Job.LayerThicknessMicrons" min="20" max="60" step="5" 
                                        style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease;" />
                             </div>
                             
                             <div class="form-group">
-                                <label for="hatch-spacing" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Hatch Spacing (?m)</label>
-                                <input type="number" name="Job.HatchSpacingMicrons" id="hatch-spacing" value="@Model.Job.HatchSpacingMicrons" min="50" max="200" step="5" 
+                                <label for="hatch-spacing" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Hatch Spacing (µm)</label>
+                                <input type="number" name="HatchSpacingMicrons" id="hatch-spacing" value="@Model.Job.HatchSpacingMicrons" min="50" max="200" step="5" 
                                        style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease;" />
                             </div>
                         </div>
@@ -275,13 +304,13 @@
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
                             <div class="form-group">
                                 <label for="build-temperature" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Build Temperature (°C)</label>
-                                <input type="number" name="Job.BuildTemperatureCelsius" id="build-temperature" value="@Model.Job.BuildTemperatureCelsius" min="100" max="300" step="5" 
+                                <input type="number" name="BuildTemperatureCelsius" id="build-temperature" value="@Model.Job.BuildTemperatureCelsius" min="100" max="300" step="5" 
                                        style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease;" />
                             </div>
                             
                             <div class="form-group">
                                 <label for="powder-usage" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Estimated Powder (kg)</label>
-                                <input type="number" name="Job.EstimatedPowderUsageKg" id="powder-usage" value="@Model.Job.EstimatedPowderUsageKg.ToString("F2")" min="0" max="50" step="0.1" 
+                                <input type="number" name="EstimatedPowderUsageKg" id="powder-usage" value="@Model.Job.EstimatedPowderUsageKg.ToString("F2")" min="0" max="50" step="0.1" 
                                        style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease;" />
                             </div>
                         </div>
@@ -295,14 +324,14 @@
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                         <div class="form-group">
                             <label for="order-number" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Customer Order Number</label>
-                            <input type="text" name="Job.CustomerOrderNumber" id="order-number" value="@Model.Job.CustomerOrderNumber" maxlength="100" 
+                            <input type="text" name="CustomerOrderNumber" id="order-number" value="@Model.Job.CustomerOrderNumber" maxlength="100" 
                                    placeholder="CO-2024-001" 
                                    style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease;" />
                         </div>
                         
                         <div class="form-group">
                             <label for="operator-input" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Operator</label>
-                            <input type="text" name="Job.Operator" id="operator-input" value="@Model.Job.Operator" maxlength="100" 
+                            <input type="text" name="Operator" id="operator-input" value="@Model.Job.Operator" maxlength="100" 
                                    placeholder="Enter operator name" 
                                    style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease;" />
                         </div>
@@ -310,7 +339,7 @@
 
                     <div class="form-group">
                         <label for="notes-input" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Special Instructions & Notes</label>
-                        <textarea name="Job.Notes" id="notes-input" rows="3" maxlength="1000" 
+                        <textarea name="Notes" id="notes-input" rows="3" maxlength="1000" 
                                   placeholder="Enter any special instructions, quality requirements, or notes for this job..." 
                                   style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease; resize: vertical; min-height: 80px;">@Model.Job.Notes</textarea>
                     </div>
@@ -322,7 +351,7 @@
                 <div style="display: flex; align-items: center; gap: 1.5rem;">
                     <div class="form-group">
                         <label for="status-select" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Status</label>
-                        <select name="Job.Status" id="status-select" 
+                        <select name="Status" id="status-select" 
                                 style="width: 180px; padding: 0.5rem 0.75rem; border: 2px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; background: white;">
                             <option value="Scheduled" selected="@(Model.Job.Status == "Scheduled")">Scheduled</option>
                             <option value="Preheating" selected="@(Model.Job.Status == "Preheating")">Preheating</option>
@@ -337,9 +366,10 @@
                     </div>
                     
                     <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1.75rem;">
-                        <input type="checkbox" name="Job.IsRushJob" value="true" checked="@Model.Job.IsRushJob" id="rush-job" 
+                        <input type="checkbox" name="IsRushJob" value="true" checked="@Model.Job.IsRushJob" id="rush-job" 
                                style="width: 16px; height: 16px; border-radius: 4px; border: 2px solid #d1d5db;" />
                         <label for="rush-job" style="font-size: 0.875rem; color: #374151; font-weight: 500;">Rush Job (Expedited Processing)</label>
+                        <input type="hidden" name="IsRushJob" value="false" />
                     </div>
                 </div>
 
@@ -586,61 +616,82 @@ window.deleteJob = function(jobId) {
         if (submitSpinner) submitSpinner.style.display = 'none';
         
         const xhr = event.detail.xhr;
+        const responseText = xhr.responseText || '';
         
-        // Try to parse JSON response (following site pattern)
-        try {
-            const response = JSON.parse(xhr.responseText);
-            if (response.success) {
-                console.log('? [JOB-FORM] Job saved successfully:', response);
+        console.log('?? [JOB-FORM] Response status:', xhr.status);
+        console.log('?? [JOB-FORM] Response text (first 200 chars):', responseText.substring(0, 200));
+        
+        // Check if it's a JSON response (success case)
+        if (xhr.getResponseHeader('Content-Type')?.includes('application/json') || 
+            responseText.trim().startsWith('{')) {
+            
+            try {
+                const response = JSON.parse(responseText);
+                console.log('? [JOB-FORM] Parsed JSON response:', response);
                 
-                // Close modal
-                if (window.closeJobModal) {
-                    window.closeJobModal();
+                if (response.success === true) {
+                    console.log('?? [JOB-FORM] Job saved successfully!');
+                    
+                    // Close modal immediately
+                    if (window.closeJobModal) {
+                        window.closeJobModal();
+                    }
+                    
+                    // Show success notification
+                    if (window.showSuccessNotification) {
+                        window.showSuccessNotification(response.message || 'Job scheduled successfully!');
+                    }
+                    
+                    // Refresh page to show updated scheduler
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                    
+                    return;
+                } else {
+                    console.error('? [JOB-FORM] Server reported failure:', response);
+                    if (window.showErrorNotification) {
+                        window.showErrorNotification(response.message || response.error || 'Failed to save job');
+                    }
+                    return;
                 }
-                
-                // Show success notification
-                if (window.showSuccessNotification) {
-                    window.showSuccessNotification(response.message || 'Job scheduled successfully!');
-                }
-                
-                // Refresh page to show updated scheduler
-                setTimeout(() => {
-                    window.location.reload();
-                }, 500);
-                
-                return;
-            } else {
-                console.error('? [JOB-FORM] Save failed:', response.message);
-                if (window.showErrorNotification) {
-                    window.showErrorNotification(response.message || 'Failed to save job');
-                }
-                return;
+            } catch (parseError) {
+                console.error('? [JOB-FORM] Failed to parse JSON response:', parseError);
+                console.log('?? [JOB-FORM] Raw response:', responseText);
             }
-        } catch (e) {
-            // Not JSON response - check if it's validation errors
-            console.log('?? [JOB-FORM] Non-JSON response received, checking for validation errors');
         }
         
-        // Check if response contains validation errors (HTML form)
-        const responseText = xhr.responseText || '';
-        if (responseText.includes('error-container') || 
-            responseText.includes('error-list') || 
+        // Check if response contains validation errors (HTML form with errors)
+        if (responseText.includes('Please correct the following') || 
+            responseText.includes('error-container') || 
             responseText.includes('validation-summary') ||
-            responseText.includes('Please correct the following') ||
             xhr.status >= 400) {
             
-            console.log('? [JOB-FORM] Form has validation errors, keeping modal open');
+            console.log('?? [JOB-FORM] Form has validation errors, modal will show updated form');
             
             if (window.showErrorNotification) {
                 window.showErrorNotification('Please correct the form errors and try again.');
             }
             
-            // Let HTMX handle the swap to show validation errors
+            // Let HTMX handle the swap to show validation errors - form will replace modal content
             return;
         }
         
-        // If we get here, something unexpected happened
-        console.warn('?? [JOB-FORM] Unexpected response format:', xhr.status);
+        // If response looks like a complete modal (successful validation), let HTMX handle it
+        if (responseText.includes('modal-backdrop') && responseText.includes('job-form')) {
+            console.log('?? [JOB-FORM] Received updated modal form, letting HTMX handle swap');
+            return;
+        }
+        
+        // Unexpected response
+        console.warn('?? [JOB-FORM] Unexpected response format:', {
+            status: xhr.status,
+            contentType: xhr.getResponseHeader('Content-Type'),
+            hasJson: responseText.trim().startsWith('{'),
+            hasModal: responseText.includes('modal-backdrop'),
+            hasErrors: responseText.includes('error-container'),
+            responseLength: responseText.length
+        });
         
         if (window.showErrorNotification) {
             window.showErrorNotification('Unexpected response from server. Please try again.');
@@ -1172,4 +1223,3 @@ console.log('?? [DEBUG] Available functions:', Object.keys(window).filter(key =>
         console.error('? [TEST] Functions are NOT available globally - issue may persist');
     }
 })();
-</script>

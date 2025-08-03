@@ -6,485 +6,366 @@ using OpCentrix.ViewModels.Scheduler;
 using OpCentrix.ViewModels.Shared;
 using OpCentrix.Data;
 using OpCentrix.Services;
-using OpCentrix.Authorization;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using Microsoft.Extensions.Logging;
 using OpCentrix.Services.Admin;
+using OpCentrix.Authorization;
 
 namespace OpCentrix.Pages.Scheduler
 {
+    /// <summary>
+    /// Modern scheduler page using best practices and clean architecture
+    /// - Separate DTOs for different operations
+    /// - Clean validation without conflicts
+    /// - Proper separation of concerns with machine management
+    /// </summary>
     [SchedulerAccess]
     public class IndexModel : PageModel
     {
         private readonly SchedulerContext _context;
         private readonly ISchedulerService _schedulerService;
         private readonly IMachineManagementService _machineService;
-        private readonly ITimeSlotService _timeSlotService; // NEW: Time slot service
+        private readonly ITimeSlotService _timeSlotService;
         private readonly ILogger<IndexModel> _logger;
 
-        public SchedulerPageViewModel ViewModel { get; set; } = new();
-        public FooterSummaryViewModel Summary { get; set; } = new();
-
-        public IndexModel(SchedulerContext context, ISchedulerService schedulerService, IMachineManagementService machineService, ITimeSlotService timeSlotService, ILogger<IndexModel> logger)
+        public IndexModel(
+            SchedulerContext context, 
+            ISchedulerService schedulerService, 
+            IMachineManagementService machineService, 
+            ITimeSlotService timeSlotService, 
+            ILogger<IndexModel> logger)
         {
             _context = context;
             _schedulerService = schedulerService;
             _machineService = machineService;
-            _timeSlotService = timeSlotService; // NEW: Inject time slot service
+            _timeSlotService = timeSlotService;
             _logger = logger;
         }
+
+        // Display properties - Clean separation
+        public SchedulerPageViewModel ViewModel { get; set; } = new();
+        public FooterSummaryViewModel Summary { get; set; } = new();
+        public List<Machine> AvailableMachines { get; set; } = new();
+        public List<Part> AvailableParts { get; set; } = new();
+
+        // Form binding - Modern DTO approach
+        [BindProperty]
+        public CreateJobDto CreateJobRequest { get; set; } = new();
+
+        [BindProperty]
+        public EditJobDto EditJobRequest { get; set; } = new();
+
+        [BindProperty]
+        public int? EditingJobId { get; set; }
 
         public async Task OnGetAsync(string? zoom = null, DateTime? startDate = null, string? orientation = null)
         {
             var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogInformation("🎯 [SCHEDULER-{OperationId}] Starting OnGetAsync with zoom: {Zoom}, startDate: {StartDate}, orientation: {Orientation}",
-                operationId, zoom, startDate, orientation);
+            _logger.LogInformation("🎯 [SCHEDULER-{OperationId}] Loading modern scheduler", operationId);
 
             try
             {
-                // Task 10: Handle orientation preference
-                await HandleOrientationPreferenceAsync(orientation, operationId);
-
-                // Get scheduler configuration with optimized date range
-                _logger.LogDebug("🔧 [SCHEDULER-{OperationId}] Getting scheduler data from service", operationId);
+                // Load scheduler data
                 ViewModel = _schedulerService.GetSchedulerData(zoom, startDate);
-
-                // CRITICAL FIX: Load machines directly from machine management service
-                _logger.LogDebug("🔧 [SCHEDULER-{OperationId}] Loading machines from machine management service", operationId);
-                var activeMachines = await _machineService.GetActiveMachinesAsync();
-                ViewModel.Machines = activeMachines.Select(m => m.MachineId).ToList();
                 
-                _logger.LogInformation("🔧 [SCHEDULER-{OperationId}] Loaded {MachineCount} active machines: {Machines}",
-                    operationId, ViewModel.Machines.Count, string.Join(", ", ViewModel.Machines));
-
-                // PERFORMANCE OPTIMIZATION: Load only jobs within visible date range + buffer
-                _logger.LogDebug("🔧 [SCHEDULER-{OperationId}] Loading optimized job data", operationId);
-                await LoadOptimizedJobDataAsync(operationId);
-
-                // Calculate machine row heights efficiently
-                _logger.LogDebug("🔧 [SCHEDULER-{OperationId}] Calculating machine row heights", operationId);
-                CalculateMachineRowHeights(operationId);
-
-                // Generate efficient summary data
-                _logger.LogDebug("🔧 [SCHEDULER-{OperationId}] Generating optimized summary", operationId);
-                await GenerateOptimizedSummaryAsync(operationId);
-
-                // ENHANCEMENT: Handle part pre-population from Parts page
-                var prePopulate = Request.Query.ContainsKey("prePopulate") && 
-                    bool.TryParse(Request.Query["prePopulate"], out var shouldPrePopulate) && shouldPrePopulate;
+                // Load available machines from database
+                await LoadAvailableMachinesAsync(operationId);
                 
-                if (prePopulate)
-                {
-                    _logger.LogInformation("🎯 [SCHEDULER-{OperationId}] Detected part pre-population request from Parts page", operationId);
-                    
-                    // Store the request info for JavaScript to handle modal opening
-                    ViewData["PrePopulatePartId"] = Request.Query["partId"].ToString();
-                    ViewData["PrePopulatePartNumber"] = Request.Query["partNumber"].ToString();
-                    ViewData["PrePopulatePartName"] = Request.Query["partName"].ToString();
-                    ViewData["PrePopulateSource"] = "parts";
-                    ViewData["ShouldOpenModal"] = true;
-                    
-                    _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Part pre-population data stored: PartId={PartId}, PartNumber={PartNumber}", 
-                        operationId, ViewData["PrePopulatePartId"], ViewData["PrePopulatePartNumber"]);
-                }
-
-                _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Scheduler loaded successfully: {JobCount} jobs across {MachineCount} machines",
-                    operationId, ViewModel.Jobs.Count, ViewModel.Machines.Count);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Critical error loading scheduler page: {ErrorMessage}",
-                    operationId, ex.Message);
-                await HandleLoadErrorAsync(zoom, startDate, operationId, ex);
-            }
-        }
-
-        public async Task<IActionResult> OnGetEmbeddedViewAsync()
-        {
-            var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogDebug("🔧 [SCHEDULER-{OperationId}] Loading embedded scheduler view for admin panel", operationId);
-
-            try
-            {
-                // Load current jobs for today and next 2 days (mini view)
-                var startDate = DateTime.Today;
-                var endDate = startDate.AddDays(3);
-
-                _logger.LogDebug("🔧 [SCHEDULER-{OperationId}] Querying jobs from {StartDate} to {EndDate}",
-                    operationId, startDate, endDate);
-
-                var jobs = await _context.Jobs
-                    .Include(j => j.Part)
-                    .Where(j => j.ScheduledStart < endDate && j.ScheduledEnd > startDate)
-                    .OrderBy(j => j.ScheduledStart)
-                    .ThenBy(j => j.MachineId)
-                    .AsNoTracking()
-                    .Take(20) // Limit for mini view
-                    .ToListAsync();
-
-                _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Found {JobCount} jobs for embedded view", operationId, jobs.Count);
-
-                // Get available machines dynamically from machine management service
-                var machines = (await _machineService.GetActiveMachinesAsync())
-                    .Select(m => m.MachineId)
-                    .OrderBy(m => m)
-                    .ToList();
-
-                // No fallback to hardcoded machines - if no machines are configured, that's an admin issue
-                if (!machines.Any())
-                {
-                    _logger.LogWarning("🔧 [SCHEDULER-{OperationId}] No active machines found in system - admin should configure machines", operationId);
-                    machines = new List<string>(); // Empty list - admin needs to add machines
-                }
-
-                // Create proper EmbeddedSchedulerViewModel instead of anonymous object
-                var miniViewModel = new EmbeddedSchedulerViewModel
-                {
-                    Jobs = jobs ?? new List<Job>(),
-                    Machines = machines,
-                    Dates = Enumerable.Range(0, 3).Select(i => startDate.AddDays(i)).ToList(),
-                    StartDate = startDate
-                };
-
-                _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Returning embedded view with {JobCount} jobs and {MachineCount} machines",
-                    operationId, miniViewModel.Jobs.Count, miniViewModel.Machines.Count);
-
-                return Partial("_EmbeddedScheduler", miniViewModel);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error loading embedded scheduler view: {ErrorMessage}",
-                    operationId, ex.Message);
-
-                // Return a robust fallback view with error details using proper model
-                var errorViewModel = new EmbeddedSchedulerViewModel
-                {
-                    Jobs = new List<Job>(),
-                    Machines = new List<string> { "TI1", "TI2", "INC" },
-                    Dates = Enumerable.Range(0, 3).Select(i => DateTime.Today.AddDays(i)).ToList(),
-                    StartDate = DateTime.Today
-                };
-
-                return Partial("_EmbeddedScheduler", errorViewModel);
-            }
-        }
-
-        private async Task LoadOptimizedJobDataAsync(string operationId)
-        {
-            try
-            {
-                // Calculate optimal date range for loading with buffer
-                var bufferDays = 1; // Small buffer for edge cases
-                var queryStartDate = ViewModel.StartDate.AddDays(-bufferDays);
-                var queryEndDate = ViewModel.StartDate.AddDays(ViewModel.Dates.Count + bufferDays);
-
-                _logger.LogDebug("?? [SCHEDULER-{OperationId}] Querying jobs from {QueryStart} to {QueryEnd}",
-                    operationId, queryStartDate, queryEndDate);
-
-                // PERFORMANCE: Load only jobs within visible timeframe
-                var jobs = await _context.Jobs
-                    .Include(j => j.Part)
-                    .Where(j => j.ScheduledStart < queryEndDate && j.ScheduledEnd > queryStartDate)
-                    .OrderBy(j => j.ScheduledStart)
-                    .ThenBy(j => j.MachineId)
-                    .AsNoTracking() // PERFORMANCE: Read-only for display
-                    .ToListAsync();
-
-                ViewModel.Jobs = jobs;
-                _logger.LogDebug("? [SCHEDULER-{OperationId}] Loaded {JobCount} jobs within date range", operationId, jobs.Count);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "? [SCHEDULER-{OperationId}] Error loading optimized job data: {ErrorMessage}",
-                    operationId, ex.Message);
-
-                // Fallback to empty job list
-                ViewModel.Jobs = new List<Job>();
-                throw; // Re-throw to be handled by caller
-            }
-        }
-
-        private void CalculateMachineRowHeights(string operationId)
-        {
-            try
-            {
-                foreach (var machine in ViewModel.Machines)
-                {
-                    var machineJobs = ViewModel.Jobs.Where(j => j.MachineId == machine).ToList();
-                    var (_, rowHeight) = _schedulerService.CalculateMachineRowLayout(machine, machineJobs);
-                    ViewModel.MachineRowHeights[machine] = rowHeight;
-
-                    _logger.LogDebug("?? [SCHEDULER-{OperationId}] Machine {Machine}: {JobCount} jobs, height {Height}px",
-                        operationId, machine, machineJobs.Count, rowHeight);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "? [SCHEDULER-{OperationId}] Error calculating machine row heights: {ErrorMessage}",
-                    operationId, ex.Message);
-
-                // Fallback to default heights
-                foreach (var machine in ViewModel.Machines)
-                {
-                    ViewModel.MachineRowHeights[machine] = 160; // Default height
-                }
-                throw; // Re-throw to be handled by caller
-            }
-        }
-
-        private async Task GenerateOptimizedSummaryAsync(string operationId)
-        {
-            try
-            {
-                // PERFORMANCE: Calculate summary from already loaded jobs instead of new query
-                Summary = new FooterSummaryViewModel
-                {
-                    MachineHours = ViewModel.Machines.ToDictionary(
-                        m => m,
-                        m => ViewModel.Jobs.Where(j => j.MachineId == m).Sum(j => j.DurationHours)
-                    ),
-                    JobCounts = ViewModel.Machines.ToDictionary(
-                        m => m,
-                        m => ViewModel.Jobs.Count(j => j.MachineId == m)
-                    )
-                };
-
-                _logger.LogDebug("? [SCHEDULER-{OperationId}] Generated summary: {TotalJobs} total jobs, {TotalHours:F1} total hours",
-                    operationId, Summary.TotalJobs, Summary.TotalHours);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "? [SCHEDULER-{OperationId}] Error generating optimized summary: {ErrorMessage}",
-                    operationId, ex.Message);
-
-                // Fallback to empty summary
-                Summary = new FooterSummaryViewModel();
-                throw; // Re-throw to be handled by caller
-            }
-        }
-
-        private async Task HandleLoadErrorAsync(string? zoom, DateTime? startDate, string operationId, Exception originalError)
-        {
-            _logger.LogWarning("⚠️ [SCHEDULER-{OperationId}] Providing fallback data due to load error: {ErrorMessage}",
-                operationId, originalError.Message);
-
-            try
-            {
-                // Provide minimal fallback data to prevent crashes
-                ViewModel = _schedulerService.GetSchedulerData(zoom, startDate);
-                Summary = new FooterSummaryViewModel();
-
-                // CRITICAL FIX: Load machines properly in fallback scenario
-                try
-                {
-                    var activeMachines = await _machineService.GetActiveMachinesAsync();
-                    ViewModel.Machines = activeMachines.Select(m => m.MachineId).ToList();
-                    _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Loaded {MachineCount} machines for fallback",
-                        operationId, ViewModel.Machines.Count);
-                }
-                catch (Exception machineEx)
-                {
-                    _logger.LogError(machineEx, "❌ [SCHEDULER-{OperationId}] Failed to load machines in fallback, trying job-based machines: {ErrorMessage}",
-                        operationId, machineEx.Message);
-
-                    // Try to load at least basic machine data from jobs
-                    var machines = await _context.Jobs
-                        .Select(j => j.MachineId)
-                        .Distinct()
-                        .Take(10) // Limit for safety
-                        .ToListAsync();
-
-                    if (machines.Any())
-                    {
-                        ViewModel.Machines = machines;
-                        _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Loaded {MachineCount} machines from jobs for fallback",
-                            operationId, machines.Count);
-                    }
-                    else
-                    {
-                        // Absolute fallback - empty list will trigger empty state
-                        ViewModel.Machines = new List<string>();
-                        _logger.LogWarning("⚠️ [SCHEDULER-{OperationId}] No machines available - will show empty state", operationId);
-                    }
-                }
-            }
-            catch (Exception fallbackError)
-            {
-                _logger.LogError(fallbackError, "❌ [SCHEDULER-{OperationId}] Failed to load fallback data: {ErrorMessage}",
-                    operationId, fallbackError.Message);
-
-                // Last resort fallback
-                ViewModel = new SchedulerPageViewModel
-                {
-                    StartDate = startDate ?? DateTime.UtcNow.Date,
-                    Dates = new List<DateTime> { DateTime.UtcNow.Date },
-                    Machines = new List<string>(), // Empty - will trigger empty state
-                    Jobs = new List<Job>(),
-                    MachineRowHeights = new Dictionary<string, int>()
-                };
+                // Load available parts for job creation
+                await LoadAvailablePartsAsync(operationId);
                 
-                Summary = new FooterSummaryViewModel();
+                // Load jobs within date range
+                await LoadJobsAsync(operationId);
+                
+                // Calculate summary
+                await GenerateSummaryAsync(operationId);
+
+                _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Scheduler loaded: {JobCount} jobs, {MachineCount} machines", 
+                    operationId, ViewModel.Jobs.Count, AvailableMachines.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error loading scheduler", operationId);
+                await InitializeEmptyDataAsync();
+                TempData["Error"] = "Error loading scheduler data. Please try again.";
             }
         }
 
         public async Task<IActionResult> OnGetShowAddModalAsync(string machineId, string date, int? id)
         {
             var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogDebug("🎯 [SCHEDULER-{OperationId}] Opening modal for machine: {MachineId}, date: {Date}, jobId: {JobId}",
-                operationId, machineId, date, id);
+            _logger.LogInformation("🎯 [SCHEDULER-{OperationId}] Opening job modal: machine={MachineId}, id={JobId}", 
+                operationId, machineId, id);
 
             try
             {
-                // Parse and validate date
                 if (!DateTime.TryParse(date, out var parsedDate))
                 {
                     parsedDate = DateTime.UtcNow;
-                    _logger.LogWarning("⚠️ [SCHEDULER-{OperationId}] Invalid date provided: {Date}, using current time", operationId, date);
                 }
 
                 Job job;
                 if (id.HasValue)
                 {
-                    // Load existing job with related data
-                    _logger.LogDebug("🔍 [SCHEDULER-{OperationId}] Loading existing job with ID: {JobId}", operationId, id.Value);
-
+                    // Load existing job
                     job = await _context.Jobs
                         .Include(j => j.Part)
-                        .AsNoTracking()
                         .FirstOrDefaultAsync(j => j.Id == id.Value);
 
                     if (job == null)
                     {
-                        _logger.LogWarning("⚠️ [SCHEDULER-{OperationId}] Job with ID {JobId} not found", operationId, id.Value);
-                        return await CreateJobNotFoundModalAsync(machineId, parsedDate, operationId);
+                        return await CreateModalWithErrorAsync("Job not found", machineId, parsedDate, operationId);
                     }
-
-                    _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Found existing job: {PartNumber}", operationId, job.PartNumber);
                 }
                 else
                 {
-                    // Create new job with sensible defaults
-                    _logger.LogDebug("🔧 [SCHEDULER-{OperationId}] Creating new job with defaults", operationId);
-                    job = CreateNewJobWithDefaults(machineId, parsedDate, operationId);
+                    // Create new job with modern approach
+                    job = await CreateNewJobAsync(machineId, parsedDate, operationId);
                 }
 
-                // Load active parts efficiently
-                _logger.LogDebug("📦 [SCHEDULER-{OperationId}] Loading active parts for modal", operationId);
-                var parts = await _context.Parts
+                // Load available data for modal
+                await LoadAvailableMachinesAsync(operationId);
+                await LoadAvailablePartsAsync(operationId);
+
+                return Partial("_AddEditJobModal", new AddEditJobViewModel 
+                { 
+                    Job = job, 
+                    Parts = AvailableParts,
+                    Machines = AvailableMachines
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error opening job modal", operationId);
+                return await CreateModalWithErrorAsync("Error loading job form", machineId, DateTime.UtcNow, operationId);
+            }
+        }
+
+        public async Task<IActionResult> OnPostAddOrUpdateJobAsync([FromForm] CreateJobDto jobRequest)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("🔧 [SCHEDULER-{OperationId}] Processing job: Id={JobId}, MachineId={MachineId}, PartId={PartId}",
+                operationId, jobRequest.Id, jobRequest.MachineId, jobRequest.PartId);
+
+            try
+            {
+                // Modern validation approach
+                var validationResult = await ValidateJobRequestAsync(jobRequest, operationId);
+                if (!validationResult.IsValid)
+                {
+                    foreach (var error in validationResult.Errors)
+                    {
+                        ModelState.AddModelError(error.PropertyName, error.ErrorMessage);
+                    }
+                    
+                    _logger.LogWarning("⚠️ [SCHEDULER-{OperationId}] Validation failed: {ErrorCount} errors", 
+                        operationId, validationResult.Errors.Count);
+                    
+                    await LoadAvailableMachinesAsync(operationId);
+                    await LoadAvailablePartsAsync(operationId);
+                    
+                    var errorJob = await ConvertDtoToJobAsync(jobRequest);
+                    return Partial("_AddEditJobModal", new AddEditJobViewModel
+                    {
+                        Job = errorJob,
+                        Parts = AvailableParts,
+                        Machines = AvailableMachines,
+                        Errors = validationResult.Errors.Select(e => e.ErrorMessage).ToList()
+                    });
+                }
+
+                // Create or update job
+                Job savedJob;
+                if (jobRequest.Id == 0)
+                {
+                    savedJob = await CreateJobFromDtoAsync(jobRequest, operationId);
+                    _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Job created: {JobId} - {PartNumber}",
+                        operationId, savedJob.Id, savedJob.PartNumber);
+                }
+                else
+                {
+                    savedJob = await UpdateJobFromDtoAsync(jobRequest, operationId);
+                    _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Job updated: {JobId} - {PartNumber}",
+                        operationId, savedJob.Id, savedJob.PartNumber);
+                }
+
+                // CRITICAL FIX: Return JSON response for successful operations
+                var successMessage = jobRequest.Id == 0 
+                    ? $"Job scheduled successfully for {savedJob.PartNumber}" 
+                    : $"Job updated successfully for {savedJob.PartNumber}";
+
+                return new JsonResult(new 
+                { 
+                    success = true, 
+                    jobId = savedJob.Id,
+                    partNumber = savedJob.PartNumber,
+                    machineId = savedJob.MachineId,
+                    message = successMessage
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error processing job", operationId);
+                
+                // For exceptions, return JSON error response
+                return new JsonResult(new 
+                { 
+                    success = false, 
+                    error = "An error occurred while saving the job. Please try again.",
+                    details = ex.Message 
+                })
+                {
+                    StatusCode = 500
+                };
+            }
+        }
+
+        public async Task<IActionResult> OnPostDeleteJobAsync(int id)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("🗑️ [SCHEDULER-{OperationId}] Deleting job: {JobId}", operationId, id);
+
+            try
+            {
+                var job = await _context.Jobs.FindAsync(id);
+                if (job == null)
+                {
+                    return new JsonResult(new { success = false, error = "Job not found" });
+                }
+
+                _context.Jobs.Remove(job);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Job deleted: {JobId}", operationId, id);
+                return new JsonResult(new { success = true, message = "Job deleted successfully!" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error deleting job: {JobId}", operationId, id);
+                return new JsonResult(new { success = false, error = "Error deleting job" });
+            }
+        }
+
+        // Helper methods with modern architecture
+        private async Task LoadAvailableMachinesAsync(string operationId)
+        {
+            try
+            {
+                AvailableMachines = await _machineService.GetActiveMachinesAsync();
+                ViewModel.Machines = AvailableMachines.Select(m => m.MachineId).ToList();
+                
+                _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Loaded {MachineCount} machines: {Machines}",
+                    operationId, AvailableMachines.Count, string.Join(", ", AvailableMachines.Select(m => m.MachineId)));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error loading machines", operationId);
+                AvailableMachines = new List<Machine>();
+                ViewModel.Machines = new List<string>();
+            }
+        }
+
+        private async Task LoadAvailablePartsAsync(string operationId)
+        {
+            try
+            {
+                AvailableParts = await _context.Parts
                     .Where(p => p.IsActive)
                     .OrderBy(p => p.PartNumber)
                     .AsNoTracking()
                     .ToListAsync();
-
-                // ENHANCEMENT: Check for part pre-population from Parts page
-                var prePopulatePartId = Request.Query.ContainsKey("partId") ? 
-                    (int.TryParse(Request.Query["partId"], out var pId) ? pId : (int?)null) : null;
-
-                if (prePopulatePartId.HasValue && job.Id == 0) // Only for new jobs
-                {
-                    _logger.LogInformation("🎯 [SCHEDULER-{OperationId}] Pre-populating job with part ID: {PartId}", operationId, prePopulatePartId.Value);
-                    
-                    var selectedPart = parts.FirstOrDefault(p => p.Id == prePopulatePartId.Value);
-                    if (selectedPart != null)
-                    {
-                        // Pre-populate job with part data
-                        job.PartId = selectedPart.Id;
-                        job.PartNumber = selectedPart.PartNumber;
-                        
-                        // Use effective duration (respects admin overrides)
-                        var effectiveDuration = selectedPart.HasAdminOverride ? 
-                            selectedPart.AdminEstimatedHoursOverride!.Value : 
-                            selectedPart.EstimatedHours;
-                        
-                        job.EstimatedHours = effectiveDuration;
-                        job.ScheduledEnd = job.ScheduledStart.AddHours(effectiveDuration);
-                        
-                        // Pre-populate SLS parameters from part
-                        job.SlsMaterial = selectedPart.SlsMaterial ?? "Ti-6Al-4V Grade 5";
-                        job.LaserPowerWatts = selectedPart.RecommendedLaserPower;
-                        job.ScanSpeedMmPerSec = selectedPart.RecommendedScanSpeed;
-                        job.LayerThicknessMicrons = selectedPart.RecommendedLayerThickness;
-                        job.HatchSpacingMicrons = selectedPart.RecommendedHatchSpacing;
-                        job.BuildTemperatureCelsius = selectedPart.RecommendedBuildTemperature;
-                        job.ArgonPurityPercent = selectedPart.RequiredArgonPurity;
-                        job.OxygenContentPpm = selectedPart.MaxOxygenContent;
-                        job.EstimatedPowderUsageKg = selectedPart.PowderRequirementKg;
-                        job.PreheatingTimeMinutes = selectedPart.PreheatingTimeMinutes;
-                        job.CoolingTimeMinutes = selectedPart.CoolingTimeMinutes;
-                        job.PostProcessingTimeMinutes = selectedPart.PostProcessingTimeMinutes;
-                        
-                        // Set cost data from part
-                        job.MaterialCostPerKg = selectedPart.MaterialCostPerKg;
-                        job.LaborCostPerHour = selectedPart.StandardLaborCostPerHour;
-                        job.MachineOperatingCostPerHour = selectedPart.MachineOperatingCostPerHour;
-                        job.ArgonCostPerHour = selectedPart.ArgonCostPerHour;
-                        
-                        // Set machine compatibility
-                        var materialType = selectedPart.SlsMaterial?.Contains("Ti-6Al-4V") == true ? "Titanium" :
-                                          selectedPart.SlsMaterial?.Contains("Inconel") == true ? "Inconel" : "Other";
-                        
-                        // Suggest compatible machine if current one isn't suitable
-                        if ((materialType == "Titanium" && machineId == "INC") ||
-                            (materialType == "Inconel" && (machineId == "TI1" || machineId == "TI2")))
-                        {
-                            job.MachineId = materialType == "Titanium" ? "TI1" : "INC";
-                            _logger.LogInformation("🔄 [SCHEDULER-{OperationId}] Adjusted machine from {OriginalMachine} to {NewMachine} for material compatibility", 
-                                operationId, machineId, job.MachineId);
-                        }
-                        
-                        _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Job pre-populated with part: {PartNumber}, Duration: {Duration}h (Admin Override: {HasOverride})", 
-                            operationId, selectedPart.PartNumber, effectiveDuration, selectedPart.HasAdminOverride);
-                    }
-                    else
-                    {
-                        _logger.LogWarning("⚠️ [SCHEDULER-{_OPERATIONId}] Part ID {PartId} not found in active parts list", operationId, prePopulatePartId.Value);
-                    }
-                }
-
-                _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Modal data prepared: {PartCount} parts available",
-                    operationId, parts.Count);
-
-                return Partial("_AddEditJobModal", new AddEditJobViewModel { Job = job, Parts = parts });
+                
+                _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Loaded {PartCount} parts", operationId, AvailableParts.Count);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error opening add/edit modal: {ErrorMessage}",
-                    operationId, ex.Message);
-                return await CreateErrorModalAsync(machineId, DateTime.TryParse(date, out var d) ? d : DateTime.UtcNow, operationId, ex);
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error loading parts", operationId);
+                AvailableParts = new List<Part>();
             }
         }
 
-        private Job CreateNewJobWithDefaults(string machineId, DateTime startDate, string operationId)
+        private async Task LoadJobsAsync(string operationId)
         {
             try
             {
-                // Use UTC for all default date/time values
-                var now = DateTime.UtcNow;
-                
-                // ENHANCEMENT: Calculate next available time slot for the machine
-                var nextAvailableTime = Task.Run(async () => 
-                    await _timeSlotService.GetNextAvailableTimeAsync(machineId, startDate, 8.0)).Result;
-                
-                _logger.LogInformation("🎯 [SCHEDULER-{OperationId}] Next available time for {Machine}: {StartTime}", 
-                    operationId, machineId, nextAvailableTime);
+                var startDate = ViewModel.StartDate.AddDays(-1);
+                var endDate = ViewModel.StartDate.AddDays(ViewModel.Dates.Count + 1);
+
+                ViewModel.Jobs = await _context.Jobs
+                    .Include(j => j.Part)
+                    .Where(j => j.ScheduledStart < endDate && j.ScheduledEnd > startDate)
+                    .OrderBy(j => j.ScheduledStart)
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Loaded {JobCount} jobs", operationId, ViewModel.Jobs.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error loading jobs", operationId);
+                ViewModel.Jobs = new List<Job>();
+            }
+        }
+
+        private async Task GenerateSummaryAsync(string operationId)
+        {
+            try
+            {
+                Summary = new FooterSummaryViewModel
+                {
+                    MachineHours = AvailableMachines.ToDictionary(
+                        m => m.MachineId,
+                        m => ViewModel.Jobs.Where(j => j.MachineId == m.MachineId).Sum(j => j.DurationHours)
+                    ),
+                    JobCounts = AvailableMachines.ToDictionary(
+                        m => m.MachineId,
+                        m => ViewModel.Jobs.Count(j => j.MachineId == m.MachineId)
+                    )
+                };
+
+                _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Generated summary: {TotalJobs} jobs, {TotalHours:F1} hours",
+                    operationId, Summary.TotalJobs, Summary.TotalHours);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error generating summary", operationId);
+                Summary = new FooterSummaryViewModel();
+            }
+        }
+
+        private async Task InitializeEmptyDataAsync()
+        {
+            ViewModel = new SchedulerPageViewModel
+            {
+                StartDate = DateTime.UtcNow.Date,
+                Dates = new List<DateTime> { DateTime.UtcNow.Date },
+                Machines = new List<string>(),
+                Jobs = new List<Job>(),
+                MachineRowHeights = new Dictionary<string, int>()
+            };
+            
+            Summary = new FooterSummaryViewModel();
+            AvailableMachines = new List<Machine>();
+            AvailableParts = new List<Part>();
+        }
+
+        private async Task<Job> CreateNewJobAsync(string machineId, DateTime startDate, string operationId)
+        {
+            try
+            {
+                // Get next available time slot
+                var nextAvailableTime = await _timeSlotService.GetNextAvailableTimeAsync(machineId, startDate, 8.0);
                 
                 var job = new Job
                 {
                     MachineId = machineId,
-                    ScheduledStart = nextAvailableTime, // Use calculated next available time
-                    ScheduledEnd = nextAvailableTime.AddHours(8), // Default 8-hour job
-                    CreatedDate = now,
-                    LastModifiedDate = now,
+                    ScheduledStart = nextAvailableTime,
+                    ScheduledEnd = nextAvailableTime.AddHours(8),
+                    CreatedDate = DateTime.UtcNow,
+                    LastModifiedDate = DateTime.UtcNow,
                     Status = "Scheduled",
                     Priority = 3,
                     Quantity = 1,
-                    PartNumber = "00-0000", // TEMP: Valid format, will be overwritten when part is selected
-                    EstimatedHours = 8.0, // Default duration
-                    
-                    // SLS-specific defaults
+                    PartNumber = "00-0000", // Temporary, will be set when part is selected
+                    EstimatedHours = 8.0,
                     SlsMaterial = "Ti-6Al-4V Grade 5",
                     LaserPowerWatts = 200,
                     ScanSpeedMmPerSec = 1200,
@@ -497,32 +378,27 @@ namespace OpCentrix.Pages.Scheduler
                     RequiresPreheating = true,
                     RequiresPowderSieving = true,
                     DensityPercentage = 99.5,
-                    
-                    // Cost defaults
                     MaterialCostPerKg = 450.00m,
                     LaborCostPerHour = 85.00m,
                     MachineOperatingCostPerHour = 125.00m,
                     ArgonCostPerHour = 15.00m,
-                    
-                    // Process time defaults
                     PreheatingTimeMinutes = 60,
                     CoolingTimeMinutes = 240,
                     PostProcessingTimeMinutes = 45,
                     EstimatedPowderUsageKg = 0.5
                 };
 
-                _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Created new job defaults for machine {MachineId} with next available time {StartTime}",
+                _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Created new job for {MachineId} at {StartTime}",
                     operationId, machineId, nextAvailableTime);
 
                 return job;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error creating new job defaults: {ErrorMessage}",
-                    operationId, ex.Message);
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error creating new job", operationId);
                 
-                // Fallback to basic defaults if time slot service fails
-                var fallbackStart = startDate.Hour < 6 ? startDate.Date.AddHours(6) : startDate;
+                // Fallback with basic defaults
+                var fallbackStart = startDate.Hour < 6 ? startDate.Date.AddHours(8) : startDate;
                 return new Job
                 {
                     MachineId = machineId,
@@ -540,986 +416,303 @@ namespace OpCentrix.Pages.Scheduler
             }
         }
 
-        private async Task<PartialViewResult> CreateJobNotFoundModalAsync(string machineId, DateTime startDate, string operationId)
+        private async Task<JobValidationResult> ValidateJobRequestAsync(CreateJobDto request, string operationId)
         {
-            try
-            {
-                var parts = await _context.Parts.Where(p => p.IsActive).OrderBy(p => p.PartNumber).ToListAsync();
-                _logger.LogDebug("? [SCHEDULER-{OperationId}] Created job not found modal with {PartCount} parts",
-                    operationId, parts.Count);
+            var result = new JobValidationResult();
+            
+            // Required field validation
+            if (string.IsNullOrWhiteSpace(request.MachineId))
+                result.AddError(nameof(request.MachineId), "Machine must be selected");
+                
+            if (request.PartId <= 0)
+                result.AddError(nameof(request.PartId), "Part must be selected");
+                
+            if (request.ScheduledStart >= request.ScheduledEnd)
+                result.AddError(nameof(request.ScheduledEnd), "End time must be after start time");
 
-                return Partial("_AddEditJobModal", new AddEditJobViewModel
-                {
-                    Job = CreateNewJobWithDefaults(machineId, startDate, operationId),
-                    Parts = parts,
-                    Errors = new List<string> { "The requested job was not found. Creating a new job instead." }
-                });
-            }
-            catch (Exception ex)
+            // Business logic validation
+            if (!string.IsNullOrWhiteSpace(request.MachineId))
             {
-                _logger.LogError(ex, "? [SCHEDULER-{OperationId}] Error creating job not found modal: {ErrorMessage}",
-                    operationId, ex.Message);
-                throw;
+                var machine = AvailableMachines.FirstOrDefault(m => m.MachineId == request.MachineId);
+                if (machine == null)
+                {
+                    result.AddError(nameof(request.MachineId), "Selected machine is not available");
+                }
             }
+
+            // IMPROVED: More lenient operating hours validation
+            var duration = request.ScheduledEnd - request.ScheduledStart;
+            if (duration.TotalHours > 168) // Max 1 week
+            {
+                result.AddError(nameof(request.ScheduledEnd), "Job duration cannot exceed 1 week");
+            }
+
+            _logger.LogDebug("🔍 [SCHEDULER-{OperationId}] Validation result: {IsValid}, {ErrorCount} errors", 
+                operationId, result.IsValid, result.Errors.Count);
+
+            return result;
         }
 
-        private async Task<PartialViewResult> CreateErrorModalAsync(string machineId, DateTime startDate, string operationId, Exception originalError)
+        private async Task<Job> CreateJobFromDtoAsync(CreateJobDto dto, string operationId)
         {
-            try
+            var part = await _context.Parts.FindAsync(dto.PartId);
+            if (part == null)
             {
-                var parts = await _context.Parts.Where(p => p.IsActive).Take(10).ToListAsync(); // Limit for safety
-                _logger.LogDebug("? [SCHEDULER-{OperationId}] Created error modal with {PartCount} parts",
-                    operationId, parts.Count);
-
-                return Partial("_AddEditJobModal", new AddEditJobViewModel
-                {
-                    Job = CreateNewJobWithDefaults(machineId, startDate, operationId),
-                    Parts = parts,
-                    Errors = new List<string> { $"Error loading job form (ID: {operationId}): {originalError.Message}" }
-                });
+                throw new InvalidOperationException("Selected part not found");
             }
-            catch (Exception fallbackError)
+
+            var job = new Job
             {
-                _logger.LogError(fallbackError, "? [SCHEDULER-{OperationId}] Error creating error modal fallback: {ErrorMessage}",
-                    operationId, fallbackError.Message);
+                MachineId = dto.MachineId,
+                PartId = dto.PartId,
+                PartNumber = part.PartNumber,
+                ScheduledStart = dto.ScheduledStart,
+                ScheduledEnd = dto.ScheduledEnd,
+                EstimatedHours = (dto.ScheduledEnd - dto.ScheduledStart).TotalHours,
+                Quantity = dto.Quantity,
+                Priority = dto.Priority,
+                Status = dto.Status ?? "Scheduled",
+                SlsMaterial = dto.SlsMaterial ?? part.SlsMaterial ?? "Ti-6Al-4V Grade 5",
+                LaserPowerWatts = dto.LaserPowerWatts,
+                ScanSpeedMmPerSec = dto.ScanSpeedMmPerSec,
+                LayerThicknessMicrons = dto.LayerThicknessMicrons,
+                HatchSpacingMicrons = dto.HatchSpacingMicrons,
+                BuildTemperatureCelsius = dto.BuildTemperatureCelsius,
+                EstimatedPowderUsageKg = dto.EstimatedPowderUsageKg,
+                Notes = dto.Notes,
+                CustomerOrderNumber = dto.CustomerOrderNumber,
+                Operator = dto.Operator,
+                IsRushJob = dto.IsRushJob,
+                
+                // Set additional required fields with defaults since Part doesn't have these properties
+                ArgonPurityPercent = 99.9,
+                OxygenContentPpm = 50,
+                RequiresArgonPurge = true,
+                RequiresPreheating = true,
+                RequiresPowderSieving = true,
+                DensityPercentage = 99.5,
+                MaterialCostPerKg = part.MaterialCostPerKg,
+                LaborCostPerHour = part.StandardLaborCostPerHour,
+                MachineOperatingCostPerHour = part.MachineOperatingCostPerHour,
+                ArgonCostPerHour = part.ArgonCostPerHour,
+                PreheatingTimeMinutes = part.PreheatingTimeMinutes,
+                CoolingTimeMinutes = part.CoolingTimeMinutes,
+                PostProcessingTimeMinutes = part.PostProcessingTimeMinutes,
+                
+                CreatedDate = DateTime.UtcNow,
+                LastModifiedDate = DateTime.UtcNow,
+                CreatedBy = User.Identity?.Name ?? "System",
+                LastModifiedBy = User.Identity?.Name ?? "System"
+            };
 
-                // Absolute fallback
-                return Partial("_AddEditJobModal", new AddEditJobViewModel
-                {
-                    Job = CreateNewJobWithDefaults(machineId, startDate, operationId),
-                    Parts = new List<Part>(),
-                    Errors = new List<string> {
-                        $"System error (ID: {operationId}): {originalError.Message}",
-                        "Please refresh the page and try again."
-                    }
-                });
-            }
+            _context.Jobs.Add(job);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Created job: {JobId} - {PartNumber} on {MachineId}", 
+                operationId, job.Id, job.PartNumber, job.MachineId);
+
+            return job;
         }
 
-        public async Task<IActionResult> OnPostAddOrUpdateJobAsync([FromForm] Job job)
+        private async Task<Job> UpdateJobFromDtoAsync(CreateJobDto dto, string operationId)
         {
-            var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogInformation("🔧 [SCHEDULER-{OperationId}] Processing job submission: Id={JobId}, MachineId={MachineId}, PartId={PartId}",
-                operationId, job.Id, job.MachineId, job.PartId);
-
-            try
+            var job = await _context.Jobs.FindAsync(dto.Id);
+            if (job == null)
             {
-                // DEFENSIVE VALIDATION: Fix potential format/argument exceptions
-                await ValidateAndSanitizeJobDataAsync(job, operationId);
-
-                // Enhanced validation with detailed logging
-                var validationErrors = new List<string>();
-
-                if (string.IsNullOrEmpty(job.MachineId))
-                {
-                    validationErrors.Add("Machine must be selected");
-                    _logger.LogWarning("⚠️ [SCHEDULER-{OperationId}] Validation failed: Missing machine ID", operationId);
-                }
-
-                if (job.PartId <= 0)
-                {
-                    validationErrors.Add("Part must be selected");
-                    _logger.LogWarning("⚠️ [SCHEDULER-{OperationId}] Validation failed: Missing part ID (PartId: {PartId})",
-                        operationId, job.PartId);
-                }
-
-                if (job.ScheduledStart >= job.ScheduledEnd)
-                {
-                    validationErrors.Add("End time must be after start time");
-                    _logger.LogWarning("⚠️ [SCHEDULER-{OperationId}] Validation failed: Invalid time range (Start: {Start}, End: {End})",
-                        operationId, job.ScheduledStart, job.ScheduledEnd);
-                }
-
-                if (validationErrors.Any())
-                {
-                    _logger.LogWarning("❌ [SCHEDULER-{OperationId}] Job submission failed validation: {ErrorCount} errors",
-                        operationId, validationErrors.Count);
-                    return await CreateValidationErrorAsync(job, string.Join("; ", validationErrors), operationId);
-                }
-
-                // Get part information with detailed logging
-                _logger.LogDebug("🔧 [SCHEDULER-{OperationId}] Looking up part with ID: {PartId}", operationId, job.PartId);
-                var part = await _context.Parts.FindAsync(job.PartId);
-                if (part == null)
-                {
-                    _logger.LogWarning("❌ [SCHEDULER-{OperationId}] Part not found: {PartId}", operationId, job.PartId);
-                    return await CreatePartNotFoundErrorAsync(job, operationId);
-                    }
-
-                _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Found part: {PartNumber} - {Description}",
-                    operationId, part.PartNumber, part.Description);
-
-                // CRITICAL FIX: Set PartNumber from selected Part BEFORE validation
-                job.PartNumber = part.PartNumber;
-                _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Set job PartNumber to: {PartNumber}", operationId, job.PartNumber);
-
-                // Validate job timing with optimized query
-                _logger.LogDebug("🔧 [SCHEDULER-{OperationId}] Checking for scheduling conflicts...", operationId);
-                if (!await ValidateJobTimingAsync(job, operationId))
-                {
-                    _logger.LogWarning("❌ [SCHEDULER-{OperationId}] Scheduling conflict detected", operationId);
-                    return await CreateTimingConflictErrorAsync(job, operationId);
-                }
-
-                _logger.LogDebug("✅ [SCHEDULER-{OperationId}] No scheduling conflicts found", operationId);
-
-                // ENHANCED DB OPERATION: Use transaction to prevent context disposal issues
-                using var transaction = await _context.Database.BeginTransactionAsync();
-                try
-                {
-                    // Process job based on whether it's new or existing
-                    string logAction;
-                    if (job.Id == 0)
-                    {
-                        _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Creating new job...", operationId);
-                        var createResult = await CreateNewJobAsync(job, part, operationId);
-                        if (!createResult.success)
-                        {
-                            _logger.LogError("❌ [SCHEDULER-{OperationId}] Failed to create job: {Error}",
-                                operationId, "Job creation failed");
-                            await transaction.RollbackAsync();
-                            return await CreateSaveErrorAsync(job, "Job creation failed", operationId);
-                        }
-                        job = createResult.job; // Get the job with assigned ID
-                        logAction = "Created";
-                    }
-                    else
-                    {
-                        _logger.LogDebug("🔧 [SCHEDULER-{OperationId}] Updating existing job {JobId}...", operationId, job.Id);
-                        var updateResult = await UpdateExistingJobAsync(job, part, operationId);
-                        if (!updateResult.success)
-                        {
-                            _logger.LogError("❌ [SCHEDULER-{OperationId}] Failed to update job: {Error}",
-                                operationId, "Job update failed");
-                            await transaction.RollbackAsync();
-                            return await CreateSaveErrorAsync(job, "Job update failed", operationId);
-                        }
-                        job = updateResult.job; // Get the updated job
-                        logAction = "Updated";
-                    }
-
-                    // Create audit log
-                    await CreateAuditLogAsync(job, logAction, operationId);
-
-                    // Commit transaction
-                    await transaction.CommitAsync();
-
-                    _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Job {Action} successfully: {JobId} - {PartNumber}",
-                        operationId, logAction, job.Id, job.PartNumber);
-
-                    // **FIXED: Return success indicator to trigger JavaScript refresh**
-                    return new JsonResult(new { 
-                        success = true, 
-                        jobId = job.Id,
-                        action = logAction,
-                        message = $"Job {logAction.ToLower()} successfully!"
-                    });
-                }
-                catch (Exception transactionEx)
-                {
-                    await transaction.RollbackAsync();
-                    _logger.LogError(transactionEx, "🚨 [SCHEDULER-{OperationId}] Transaction error: {ErrorMessage}",
-                        operationId, transactionEx.Message);
-                    throw; // Re-throw to be handled by outer catch
-                }
+                throw new InvalidOperationException("Job not found for update");
             }
-            catch (ObjectDisposedException odEx)
-            {
-                _logger.LogError(odEx, "🚨 [SCHEDULER-{OperationId}] DbContext disposal error: {ErrorMessage}",
-                    operationId, odEx.Message);
-                return await CreateDbContextErrorAsync(job, operationId);
-            }
-            catch (FormatException fEx)
-            {
-                _logger.LogError(fEx, "🚨 [SCHEDULER-{OperationId}] Format conversion error: {ErrorMessage}",
-                    operationId, fEx.Message);
-                return await CreateFormatErrorAsync(job, operationId, fEx);
-            }
-            catch (ArgumentException aEx)
-            {
-                _logger.LogError(aEx, "🚨 [SCHEDULER-{OperationId}] Argument error: {ErrorMessage}",
-                    operationId, aEx.Message);
-                return await CreateArgumentErrorAsync(job, operationId, aEx);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "🚨 [SCHEDULER-{OperationId}] Critical error in job submission processing: {ErrorMessage}",
-                    operationId, ex.Message);
-                return await CreateGenericErrorAsync(job, operationId, ex);
-            }
-        }
 
-        private async Task<PartialViewResult> CreatePartNotFoundErrorAsync(Job job, string operationId)
-        {
-            try
+            var part = await _context.Parts.FindAsync(dto.PartId);
+            if (part == null)
             {
-                var parts = await _context.Parts.Where(p => p.IsActive).OrderBy(p => p.PartNumber).ToListAsync();
-                return Partial("_AddEditJobModal", new AddEditJobViewModel
-                {
-                    Job = job,
-                    Parts = parts,
-                    Errors = new List<string> { $"Part not found (ID: {operationId}). Please select a valid part." }
-                });
+                throw new InvalidOperationException("Selected part not found");
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "? [SCHEDULER-{OperationId}] Error creating part not found error modal: {ErrorMessage}",
-                    operationId, ex.Message);
-                throw;
-            }
-        }
 
-        private async Task<PartialViewResult> CreateTimingConflictErrorAsync(Job job, string operationId)
-        {
-            try
+            // Update job properties
+            job.MachineId = dto.MachineId;
+            job.PartId = dto.PartId;
+            job.PartNumber = part.PartNumber;
+            job.ScheduledStart = dto.ScheduledStart;
+            job.ScheduledEnd = dto.ScheduledEnd;
+            job.EstimatedHours = (dto.ScheduledEnd - dto.ScheduledStart).TotalHours;
+            job.Quantity = dto.Quantity;
+            job.Priority = dto.Priority;
+            job.Status = dto.Status ?? job.Status;
+            job.SlsMaterial = dto.SlsMaterial ?? job.SlsMaterial;
+            job.LaserPowerWatts = dto.LaserPowerWatts;
+            job.ScanSpeedMmPerSec = dto.ScanSpeedMmPerSec;
+            job.LayerThicknessMicrons = dto.LayerThicknessMicrons;
+            job.HatchSpacingMicrons = dto.HatchSpacingMicrons;
+            job.BuildTemperatureCelsius = dto.BuildTemperatureCelsius;
+            job.EstimatedPowderUsageKg = dto.EstimatedPowderUsageKg;
+            job.Notes = dto.Notes;
+            job.CustomerOrderNumber = dto.CustomerOrderNumber;
+            job.Operator = dto.Operator;
+            job.IsRushJob = dto.IsRushJob;
+            
+            // Update part-related fields if part changed - use defaults since Part model may not have these properties
+            if (job.PartId != dto.PartId)
             {
-                var parts = await _context.Parts.Where(p => p.IsActive).OrderBy(p => p.PartNumber).ToListAsync();
-                return Partial("_AddEditJobModal", new AddEditJobViewModel
-                {
-                    Job = job,
-                    Parts = parts,
-                    Errors = new List<string> { $"Scheduling conflict detected (ID: {operationId}). Please choose a different time slot." }
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "? [SCHEDULER-{OperationId}] Error creating timing conflict error modal: {ErrorMessage}",
-                    operationId, ex.Message);
-                throw;
-            }
-        }
-
-        private async Task<PartialViewResult> CreateSaveErrorAsync(Job job, string errorMessage, string operationId)
-        {
-            try
-            {
-                var parts = await _context.Parts.Where(p => p.IsActive).OrderBy(p => p.PartNumber).ToListAsync();
-                return Partial("_AddEditJobModal", new AddEditJobViewModel
-                {
-                    Job = job,
-                    Parts = parts,
-                    Errors = new List<string> { $"Save error (ID: {operationId}): {errorMessage}" }
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "? [SCHEDULER-{OperationId}] Error creating save error modal: {ErrorMessage}",
-                    operationId, ex.Message);
-                throw;
-            }
-        }
-
-        private async Task<(bool success, Job job)> CreateNewJobAsync(Job job, Part part, string operationId)
-        {
-            try
-            {
-                _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Creating new job for part: {PartNumber}",
-                    operationId, part.PartNumber);
-
-                var now = DateTime.UtcNow;
-                job.CreatedDate = now;
-                job.LastModifiedDate = now;
-                job.CreatedBy = User.Identity?.Name ?? "System";
-                job.LastModifiedBy = User.Identity?.Name ?? "System";
-
-                // CRITICAL FIX: Set part-specific data from the Part entity
-                job.PartNumber = part.PartNumber; // Fix for part number validation
-                job.EstimatedHours = part.EstimatedHours;
-                job.SlsMaterial = part.SlsMaterial;
-                job.LaserPowerWatts = part.RecommendedLaserPower;
-                job.ScanSpeedMmPerSec = part.RecommendedScanSpeed;
-                job.BuildTemperatureCelsius = part.RecommendedBuildTemperature;
-                job.LayerThicknessMicrons = part.RecommendedLayerThickness;
-                job.HatchSpacingMicrons = part.RecommendedHatchSpacing;
-                job.EstimatedPowderUsageKg = part.PowderRequirementKg;
-                job.PreheatingTimeMinutes = part.PreheatingTimeMinutes;
-                job.CoolingTimeMinutes = part.CoolingTimeMinutes;
-                job.PostProcessingTimeMinutes = part.PostProcessingTimeMinutes;
-
-                // Set cost data from part
+                job.ArgonPurityPercent = 99.9;
+                job.OxygenContentPpm = 50;
+                job.RequiresArgonPurge = true;
+                job.RequiresPreheating = true;
+                job.RequiresPowderSieving = true;
                 job.MaterialCostPerKg = part.MaterialCostPerKg;
                 job.LaborCostPerHour = part.StandardLaborCostPerHour;
                 job.MachineOperatingCostPerHour = part.MachineOperatingCostPerHour;
                 job.ArgonCostPerHour = part.ArgonCostPerHour;
-
-                _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Set job properties from part - PartNumber: {PartNumber}, Material: {Material}",
-                    operationId, job.PartNumber, job.SlsMaterial);
-
-                _context.Jobs.Add(job);
-                await _context.SaveChangesAsync();
-
-                _logger.LogInformation("✅ [SCHEDULER-{OperationId}] New job created successfully: {JobId}",
-                    operationId, job.Id);
-
-                return (true, job);
+                job.PreheatingTimeMinutes = part.PreheatingTimeMinutes;
+                job.CoolingTimeMinutes = part.CoolingTimeMinutes;
+                job.PostProcessingTimeMinutes = part.PostProcessingTimeMinutes;
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error creating new job: {ErrorMessage}",
-                    operationId, ex.Message);
-                return (false, job);
-            }
+            
+            job.LastModifiedDate = DateTime.UtcNow;
+            job.LastModifiedBy = User.Identity?.Name ?? "System";
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Updated job: {JobId} - {PartNumber} on {MachineId}", 
+                operationId, job.Id, job.PartNumber, job.MachineId);
+
+            return job;
         }
 
-        private async Task<(bool success, Job job)> UpdateExistingJobAsync(Job job, Part part, string operationId)
+        private async Task<Job> ConvertDtoToJobAsync(CreateJobDto dto)
         {
-            try
+            // Convert DTO to Job for display purposes (e.g., validation errors)
+            var job = new Job
             {
-                _logger.LogDebug("?? [SCHEDULER-{OperationId}] Updating existing job: {JobId}",
-                    operationId, job.Id);
+                Id = dto.Id,
+                MachineId = dto.MachineId,
+                PartId = dto.PartId,
+                ScheduledStart = dto.ScheduledStart,
+                ScheduledEnd = dto.ScheduledEnd,
+                Quantity = dto.Quantity,
+                Priority = dto.Priority,
+                Status = dto.Status ?? "Scheduled",
+                SlsMaterial = dto.SlsMaterial ?? "Ti-6Al-4V Grade 5",
+                LaserPowerWatts = dto.LaserPowerWatts,
+                ScanSpeedMmPerSec = dto.ScanSpeedMmPerSec,
+                LayerThicknessMicrons = dto.LayerThicknessMicrons,
+                HatchSpacingMicrons = dto.HatchSpacingMicrons,
+                BuildTemperatureCelsius = dto.BuildTemperatureCelsius,
+                EstimatedPowderUsageKg = dto.EstimatedPowderUsageKg,
+                Notes = dto.Notes,
+                CustomerOrderNumber = dto.CustomerOrderNumber,
+                Operator = dto.Operator,
+                IsRushJob = dto.IsRushJob
+            };
 
-                var existingJob = await _context.Jobs.FindAsync(job.Id);
-                if (existingJob == null)
+            // Try to get part number if PartId is provided
+            if (dto.PartId > 0)
+            {
+                var part = await _context.Parts.FindAsync(dto.PartId);
+                if (part != null)
                 {
-                    _logger.LogWarning("?? [SCHEDULER-{OperationId}] Job not found for update: {JobId}",
-                        operationId, job.Id);
-                    return (false, job);
+                    job.PartNumber = part.PartNumber;
                 }
-
-                // Update job properties
-                UpdateJobFromForm(existingJob, job);
-                existingJob.LastModifiedDate = DateTime.UtcNow;
-                existingJob.LastModifiedBy = User.Identity?.Name ?? "System";
-
-                await _context.SaveChangesAsync();
-
-                _logger.LogInformation("? [SCHEDULER-{OperationId}] Job updated successfully: {JobId}",
-                    operationId, job.Id);
-
-                return (true, existingJob);
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "? [SCHEDULER-{OperationId}] Error updating job: {ErrorMessage}",
-                    operationId, ex.Message);
-                return (false, job);
-            }
+
+            return job;
         }
 
-        private void UpdateJobFromForm(Job existingJob, Job formJob)
+        private async Task<PartialViewResult> CreateModalWithErrorAsync(string errorMessage, string machineId, DateTime startDate, string operationId)
         {
-            existingJob.MachineId = formJob.MachineId;
-            existingJob.PartId = formJob.PartId;
-            existingJob.PartNumber = formJob.PartNumber;
-            existingJob.ScheduledStart = formJob.ScheduledStart;
-            existingJob.ScheduledEnd = formJob.ScheduledEnd;
-            existingJob.EstimatedHours = formJob.EstimatedHours;
-            existingJob.Quantity = formJob.Quantity;
-            existingJob.Status = formJob.Status;
-            existingJob.Priority = formJob.Priority;
-            existingJob.SlsMaterial = formJob.SlsMaterial;
-            existingJob.LaserPowerWatts = formJob.LaserPowerWatts;
-            existingJob.ScanSpeedMmPerSec = formJob.ScanSpeedMmPerSec;
-            existingJob.LayerThicknessMicrons = formJob.LayerThicknessMicrons;
-            existingJob.HatchSpacingMicrons = formJob.HatchSpacingMicrons;
-            existingJob.BuildTemperatureCelsius = formJob.BuildTemperatureCelsius;
-            existingJob.ArgonPurityPercent = formJob.ArgonPurityPercent;
-            existingJob.OxygenContentPpm = formJob.OxygenContentPpm;
-            existingJob.RequiresArgonPurge = formJob.RequiresArgonPurge;
-            existingJob.RequiresPreheating = formJob.RequiresPreheating;
-            existingJob.RequiresPowderSieving = formJob.RequiresPowderSieving;
-            existingJob.DensityPercentage = formJob.DensityPercentage;
+            await LoadAvailableMachinesAsync(operationId);
+            await LoadAvailablePartsAsync(operationId);
+            
+            var errorJob = await CreateNewJobAsync(machineId, startDate, operationId);
+            
+            return Partial("_AddEditJobModal", new AddEditJobViewModel
+            {
+                Job = errorJob,
+                Parts = AvailableParts,
+                Machines = AvailableMachines,
+                Errors = new List<string> { errorMessage }
+            });
         }
 
-        private async Task<PartialViewResult> CreateValidationErrorAsync(Job job, string errorMessage, string operationId)
-        {
-            try
-            {
-                var parts = await _context.Parts.Where(p => p.IsActive).OrderBy(p => p.PartNumber).ToListAsync();
-                _logger.LogDebug("? [SCHEDULER-{OperationId}] Created validation error modal with {PartCount} parts",
-                    operationId, parts.Count);
-
-                return Partial("_AddEditJobModal", new AddEditJobViewModel
-                {
-                    Job = job,
-                    Parts = parts,
-                    Errors = new List<string> { $"Validation Error (ID: {operationId}): {errorMessage}" }
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "? [SCHEDULER-{OperationId}] Error creating validation error modal: {ErrorMessage}",
-                    operationId, ex.Message);
-                throw;
-            }
-        }
-
-        private async Task<bool> ValidateJobTimingAsync(Job job, string operationId)
-        {
-            try
-            {
-                // PERFORMANCE: Only check relevant jobs for conflicts
-                var conflictBuffer = TimeSpan.FromHours(24); // 24-hour buffer for overlap detection
-
-                _logger.LogDebug("?? [SCHEDULER-{OperationId}] Querying for potential conflicts on machine {Machine} from {Start} to {End}",
-                    operationId, job.MachineId, job.ScheduledStart.Subtract(conflictBuffer), job.ScheduledEnd.Add(conflictBuffer));
-
-                var existingJobs = await _context.Jobs
-                    .Where(j => j.Id != job.Id &&
-                               j.MachineId == job.MachineId &&
-                               j.ScheduledStart < job.ScheduledEnd.Add(conflictBuffer) &&
-                               j.ScheduledEnd > job.ScheduledStart.Subtract(conflictBuffer))
-                    .AsNoTracking()
-                    .ToListAsync();
-
-                _logger.LogDebug("?? [SCHEDULER-{OperationId}] Found {ConflictJobCount} potential conflicting jobs",
-                    operationId, existingJobs.Count);
-
-                var isValid = _schedulerService.ValidateJobScheduling(job, existingJobs, out var errors);
-
-                if (!isValid)
-                {
-                    _logger.LogWarning("?? [SCHEDULER-{OperationId}] Job validation failed: {ErrorCount} conflicts - {Errors}",
-                        operationId, errors.Count, string.Join("; ", errors));
-                }
-
-                return isValid;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "? [SCHEDULER-{OperationId}] Error validating job timing: {ErrorMessage}",
-                    operationId, ex.Message);
-                return false; // Fail safe - reject if validation throws
-            }
-        }
-
-        private async Task CreateAuditLogAsync(Job job, string action, string operationId)
-        {
-            try
-            {
-                _context.JobLogEntries.Add(new JobLogEntry
-                {
-                    MachineId = job.MachineId,
-                    PartNumber = job.PartNumber ?? string.Empty,
-                    Action = action,
-                    Operator = User.Identity?.Name ?? "System",
-                    Notes = $"Job {action.ToLower()} via scheduler interface (Operation ID: {operationId})",
-                    Timestamp = DateTime.UtcNow
-                });
-                await _context.SaveChangesAsync();
-
-                _logger.LogDebug("? [SCHEDULER-{OperationId}] Audit log created for {Action} action", operationId, action);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "? [SCHEDULER-{OperationId}] Failed to create audit log for job {JobId}: {ErrorMessage}",
-                    operationId, job.Id, ex.Message);
-                // Don't fail the main operation for audit log issues
-            }
-        }
-
-        private async Task ValidateAndSanitizeJobDataAsync(Job job, string operationId)
-        {
-            try
-            {
-                _logger.LogDebug("🔧 [SCHEDULER-{OperationId}] Validating and sanitizing job data", operationId);
-
-                // Ensure numeric values are within valid ranges
-                job.LaserPowerWatts = Math.Max(50, Math.Min(400, job.LaserPowerWatts));
-                job.ScanSpeedMmPerSec = Math.Max(100, Math.Min(5000, job.ScanSpeedMmPerSec));
-                job.LayerThicknessMicrons = Math.Max(20, Math.Min(60, job.LayerThicknessMicrons));
-                job.HatchSpacingMicrons = Math.Max(50, Math.Min(200, job.HatchSpacingMicrons));
-                job.BuildTemperatureCelsius = Math.Max(100, Math.Min(300, job.BuildTemperatureCelsius));
-                job.Quantity = Math.Max(1, Math.Min(1000, job.Quantity));
-                job.Priority = Math.Max(1, Math.Min(5, job.Priority));
-
-                // Ensure estimated powder usage is reasonable
-                if (job.EstimatedPowderUsageKg <= 0 || job.EstimatedPowderUsageKg > 50)
-                {
-                    job.EstimatedPowderUsageKg = 0.5; // Default value
-                }
-
-                // Ensure material selection is valid
-                var validMaterials = new[] { "Ti-6Al-4V Grade 5", "Ti-6Al-4V ELI Grade 23", "Inconel 718", "Inconel 625" };
-                if (!validMaterials.Contains(job.SlsMaterial))
-                {
-                    job.SlsMaterial = "Ti-6Al-4V Grade 5"; // Default
-                }
-
-                // Ensure machine ID is valid by checking against active machines
-                var validMachines = (await _machineService.GetActiveMachinesAsync()).Select(m => m.MachineId).ToList();
-                if (!validMachines.Contains(job.MachineId))
-                {
-                    _logger.LogWarning("⚠️ [SCHEDULER-{OperationId}] Invalid machine ID: {MachineId}, using first available machine", operationId, job.MachineId);
-                    job.MachineId = validMachines.FirstOrDefault() ?? "NONE"; // Use first available or "NONE" if no machines
-                }
-
-                // Calculate EstimatedHours from time difference
-                var timeDiff = job.ScheduledEnd - job.ScheduledStart;
-                if (timeDiff.TotalHours > 0 && timeDiff.TotalHours <= 168) // Max 1 week
-                {
-                    job.EstimatedHours = timeDiff.TotalHours;
-                }
-                else
-                {
-                    job.EstimatedHours = 8; // Default 8 hours
-                    job.ScheduledEnd = job.ScheduledStart.AddHours(8);
-                }
-
-                _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Job data validated and sanitized", operationId);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error validating job data: {ErrorMessage}", operationId, ex.Message);
-                throw;
-            }
-        }
-
-        private async Task<PartialViewResult> CreateDbContextErrorAsync(Job job, string operationId)
-        {
-            try
-            {
-                // Create new context instance if original is disposed
-                var parts = await _context.Parts.Where(p => p.IsActive).OrderBy(p => p.PartNumber).Take(10).ToListAsync();
-                return Partial("_AddEditJobModal", new AddEditJobViewModel
-                {
-                    Job = job,
-                    Parts = parts,
-                    Errors = new List<string> {
-                        $"Database connection error (ID: {operationId}). Please try again.",
-                        "If this error persists, please refresh the page."
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error creating DB context error modal: {ErrorMessage}",
-                    operationId, ex.Message);
-
-                // Absolute fallback
-                return Partial("_AddEditJobModal", new AddEditJobViewModel
-                {
-                    Job = job,
-                    Parts = new List<Part>(),
-                    Errors = new List<string> {
-                        $"Critical database error (ID: {operationId})",
-                        ">Please refresh the page and try again."
-                    }
-                });
-            }
-        }
-
-        private async Task<PartialViewResult> CreateFormatErrorAsync(Job job, string operationId, FormatException ex)
-        {
-            try
-            {
-                var parts = await _context.Parts.Where(p => p.IsActive).OrderBy(p => p.PartNumber).ToListAsync();
-                return Partial("_AddEditJobModal", new AddEditJobViewModel
-                {
-                    Job = job,
-                    Parts = parts,
-                    Errors = new List<string> {
-                        $"Data format error (ID: {operationId}): Please check numeric values.",
-                        "Ensure all numbers are entered correctly (no letters or special characters)."
-                    }
-                });
-            }
-            catch (Exception dbEx)
-            {
-                _logger.LogError(dbEx, "❌ [SCHEDULER-{OperationId}] Error creating format error modal: {ErrorMessage}",
-                    operationId, dbEx.Message);
-
-                return Partial("_AddEditJobModal", new AddEditJobViewModel
-                {
-                    Job = job,
-                    Parts = new List<Part>(),
-                    Errors = new List<string> {
-                        $"Format error (ID: {operationId}): Invalid data format",
-                        "Please check all numeric fields and try again."
-                    }
-                });
-            }
-        }
-
-        private async Task<PartialViewResult> CreateArgumentErrorAsync(Job job, string operationId, ArgumentException ex)
-        {
-            try
-            {
-                var parts = await _context.Parts.Where(p => p.IsActive).OrderBy(p => p.PartNumber).ToListAsync();
-                return Partial("_AddEditJobModal", new AddEditJobViewModel
-                {
-                    Job = job,
-                    Parts = parts,
-                    Errors = new List<string> {
-                        $"Validation error (ID: {operationId}): {ex.Message}",
-                        "Please check all fields and ensure they contain valid values."
-                    }
-                });
-            }
-            catch (Exception dbEx)
-            {
-                _logger.LogError(dbEx, "❌ [SCHEDULER-{OperationId}] Error creating argument error modal: {ErrorMessage}",
-                    operationId, dbEx.Message);
-
-                return Partial("_AddEditJobModal", new AddEditJobViewModel
-                {
-                    Job = job,
-                    Parts = new List<Part>(),
-                    Errors = new List<string> {
-                        $"Argument error (ID: {operationId}): Invalid parameter",
-                        "Please check all form fields and try again."
-                    }
-                });
-            }
-        }
-
-        private async Task<PartialViewResult> CreateGenericErrorAsync(Job job, string operationId, Exception originalError)
-        {
-            try
-            {
-                var parts = await _context.Parts.Where(p => p.IsActive).Take(10).ToListAsync();
-                return Partial("_AddEditJobModal", new AddEditJobViewModel
-                {
-                    Job = job,
-                    Parts = parts,
-                    Errors = new List<string> {
-                        $"Unexpected error (ID: {operationId}): {originalError.Message}",
-                        "Please try again or contact support if this continues."
-                    }
-                });
-            }
-            catch (Exception fallbackError)
-            {
-                _logger.LogError(fallbackError, "❌ [SCHEDULER-{OperationId}] Error creating generic error modal fallback: {ErrorMessage}",
-                    operationId, fallbackError.Message);
-
-                // Absolute fallback
-                return Partial("_AddEditJobModal", new AddEditJobViewModel
-                {
-                    Job = job,
-                    Parts = new List<Part>(),
-                    Errors = new List<string> {
-                        $"Critical system error (ID: {operationId})",
-                        "Please refresh the page and try again."
-                    }
-                });
-            }
-        }
-
-        public async Task<IActionResult> OnPostSeedDefaultMachinesAsync()
+        public async Task<IActionResult> OnGetSuggestNextTimeAsync(string machineId, double durationHours, DateTime? preferredStart = null)
         {
             var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogInformation("🌱 [SCHEDULER-{OperationId}] Request to seed default machines", operationId);
-
-            try
-            {
-                var success = await _machineService.SeedDefaultMachinesAsync();
-                
-                if (success)
-                {
-                    _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Default machines seeded successfully", operationId);
-                    
-                    // Reload the scheduler with the new machines
-                    await OnGetAsync();
-                    
-                    return Partial("_SchedulerContent", new { ViewModel, Summary });
-                }
-                else
-                {
-                    _logger.LogWarning("⚠️ [SCHEDULER-{OperationId}] Failed to seed default machines", operationId);
-                    return BadRequest("Failed to create default machines. They may already exist.");
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error seeding default machines: {ErrorMessage}",
-                    operationId, ex.Message);
-                return StatusCode(500, "An error occurred while creating default machines.");
-            }
-        }
-
-        public async Task<IActionResult> OnGetGetMachineRowAsync(string machineId)
-        {
-            var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogDebug("🔄 [SCHEDULER-{OperationId}] Refreshing machine row for: {MachineId}", operationId, machineId);
-
-            try
-            {
-                // Reload scheduler data
-                await OnGetAsync();
-                
-                // Find jobs for this specific machine
-                var machineJobs = ViewModel.Jobs.Where(j => j.MachineId == machineId).ToList();
-                
-                // Create a mini view model for just this machine
-                var machineViewModel = new SchedulerPageViewModel
-                {
-                    StartDate = ViewModel.StartDate,
-                    Dates = ViewModel.Dates,
-                    Machines = new List<string> { machineId },
-                    Jobs = machineJobs,
-                    SlotsPerDay = ViewModel.SlotsPerDay,
-                    SlotMinutes = ViewModel.SlotMinutes,
-                    MachineRowHeights = new Dictionary<string, int> 
-                    { 
-                        [machineId] = ViewModel.MachineRowHeights.GetValueOrDefault(machineId, 160) 
-                    }
-                };
-
-                _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Machine row data prepared for {MachineId}: {JobCount} jobs",
-                    operationId, machineId, machineJobs.Count);
-
-                return Partial("_MachineRow", machineViewModel);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error refreshing machine row for {MachineId}: {ErrorMessage}",
-                    operationId, machineId, ex.Message);
-                
-                // Return empty machine row as fallback
-                var fallbackViewModel = new SchedulerPageViewModel
-                {
-                    StartDate = DateTime.UtcNow.Date,
-                    Dates = new List<DateTime> { DateTime.UtcNow.Date },
-                    Machines = new List<string> { machineId },
-                    Jobs = new List<Job>(),
-                    SlotsPerDay = 1,
-                    SlotMinutes = 1440,
-                    MachineRowHeights = new Dictionary<string, int> { [machineId] = 160 }
-                };
-                
-                return Partial("_MachineRow", fallbackViewModel);
-            }
-        }
-
-        public async Task<IActionResult> OnGetGetFooterSummaryAsync()
-        {
-            var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogDebug("📊 [SCHEDULER-{OperationId}] Refreshing footer summary", operationId);
-
-            try
-            {
-                // Reload scheduler data to get latest summary
-                await OnGetAsync();
-                
-                _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Footer summary data prepared", operationId);
-                
-                return Partial("_FooterSummary", Summary);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error refreshing footer summary: {ErrorMessage}",
-                    operationId, ex.Message);
-                
-                // Return empty summary as fallback
-                return Partial("_FooterSummary", new FooterSummaryViewModel());
-            }
-        }
-
-        // Task 10: Handle orientation preference management
-        private async Task HandleOrientationPreferenceAsync(string? orientation, string operationId)
-        {
-            try
-            {
-                if (!string.IsNullOrEmpty(orientation) && (orientation == "horizontal" || orientation == "vertical"))
-                {
-                    var username = User.Identity?.Name;
-                    if (!string.IsNullOrEmpty(username))
-                    {
-                        _logger.LogDebug("🔄 [SCHEDULER-{OperationId}] Saving orientation preference '{Orientation}' for user '{Username}'",
-                            operationId, orientation, username);
-
-                        var user = await _context.Users
-                            .Include(u => u.Settings)
-                            .FirstOrDefaultAsync(u => u.Username == username);
-
-                        if (user != null)
-                        {
-                            if (user.Settings == null)
-                            {
-                                user.Settings = new UserSettings { UserId = user.Id };
-                                _context.UserSettings.Add(user.Settings);
-                            }
-
-                            user.Settings.SchedulerOrientation = orientation;
-                            user.Settings.LastModifiedDate = DateTime.UtcNow;
-
-                            await _context.SaveChangesAsync();
-
-                            _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Orientation preference '{Orientation}' saved for user '{Username}'",
-                                operationId, orientation, username);
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error handling orientation preference: {ErrorMessage}",
-                    operationId, ex.Message);
-                // Don't fail the main operation for preference save issues
-            }
-        }
-
-        // Task 10: Get user's current orientation preference
-        public async Task<string> GetUserOrientationPreferenceAsync()
-        {
-            try
-            {
-                var username = User.Identity?.Name;
-                if (string.IsNullOrEmpty(username))
-                    return "horizontal"; // Default for anonymous users
-
-                var user = await _context.Users
-                    .Include(u => u.Settings)
-                    .FirstOrDefaultAsync(u => u.Username == username);
-
-                return user?.Settings?.SchedulerOrientation ?? "horizontal";
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ Error getting user orientation preference: {ErrorMessage}", ex.Message);
-                return "horizontal"; // Safe default
-            }
-        }
-
-        public async Task<IActionResult> OnGetCheckTimeSlotAsync(string machineId, string startTime, string endTime, int? excludeJobId = null)
-        {
-            var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogDebug("🔍 [SCHEDULER-{OperationId}] Checking time slot availability for {Machine}: {Start} to {End}", 
-                operationId, machineId, startTime, endTime);
-
-            try
-            {
-                if (!DateTime.TryParse(startTime, out var start) || !DateTime.TryParse(endTime, out var end))
-                {
-                    return new JsonResult(new { available = false, error = "Invalid date format" });
-                }
-
-                var isAvailable = await _timeSlotService.IsTimeSlotAvailableAsync(machineId, start, end, excludeJobId);
-                var conflicts = await _timeSlotService.GetConflictingJobsAsync(machineId, start, end, excludeJobId);
-
-                if (isAvailable)
-                {
-                    _logger.LogDebug("✅ [SCHEDULER-{OperationId}] Time slot is available", operationId);
-                    return new JsonResult(new { 
-                        available = true, 
-                        message = "Time slot is available" 
-                    });
-                }
-                else
-                {
-                    _logger.LogDebug("❌ [SCHEDULER-{OperationId}] Time slot conflicts with {ConflictCount} existing jobs", 
-                        operationId, conflicts.Count);
-                    
-                    var conflictInfo = conflicts.Select(c => new {
-                        id = c.Id,
-                        partNumber = c.PartNumber,
-                        startTime = c.ScheduledStart.ToString("MMM d, h:mm tt"),
-                        endTime = c.ScheduledEnd.ToString("h:mm tt"),
-                        duration = c.DurationHours.ToString("F1") + "h"
-                    }).ToList();
-
-                    return new JsonResult(new { 
-                        available = false, 
-                        conflicts = conflictInfo,
-                        message = $"Conflicts with {conflicts.Count} existing job(s)"
-                    });
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error checking time slot: {ErrorMessage}", 
-                    operationId, ex.Message);
-                
-                return new JsonResult(new { 
-                    available = false, 
-                    error = "Error checking availability. Please try again." 
-                });
-            }
-        }
-
-        public async Task<IActionResult> OnGetSuggestNextTimeAsync(string machineId, double durationHours = 8.0, string? preferredStart = null)
-        {
-            var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogDebug("💡 [SCHEDULER-{OperationId}] Suggesting next available time for {Machine}, duration: {Duration}h", 
+            _logger.LogInformation("🕐 [SCHEDULER-{OperationId}] Suggesting next time for {MachineId}, duration {Duration}h",
                 operationId, machineId, durationHours);
 
             try
             {
-                DateTime? preferred = null;
-                if (!string.IsNullOrEmpty(preferredStart) && DateTime.TryParse(preferredStart, out var prefDate))
+                if (string.IsNullOrWhiteSpace(machineId))
                 {
-                    preferred = prefDate;
+                    return new JsonResult(new { success = false, error = "Machine ID is required" });
                 }
 
-                var nextAvailable = await _timeSlotService.GetNextAvailableTimeAsync(machineId, preferred, durationHours);
-                var suggestedEnd = nextAvailable.AddHours(durationHours);
+                // Use the time slot service to find next available time
+                var suggestedStart = await _timeSlotService.GetNextAvailableTimeAsync(machineId, preferredStart ?? DateTime.UtcNow, durationHours);
+                var suggestedEnd = suggestedStart.AddHours(durationHours);
 
-                _logger.LogInformation("💡 [SCHEDULER-{OperationId}] Suggested time slot: {Start} to {End}", 
-                    operationId, nextAvailable, suggestedEnd);
-
-                return new JsonResult(new {
-                    startTime = nextAvailable.ToString("yyyy-MM-ddTHH:mm"),
+                return new JsonResult(new
+                {
+                    success = true,
+                    startTime = suggestedStart.ToString("yyyy-MM-ddTHH:mm"),
                     endTime = suggestedEnd.ToString("yyyy-MM-ddTHH:mm"),
-                    displayStart = nextAvailable.ToString("MMM d, h:mm tt"),
-                    displayEnd = suggestedEnd.ToString("h:mm tt"),
-                    durationHours = durationHours,
-                    message = $"Next available: {nextAvailable:MMM d, h:mm tt}"
+                    displayStart = suggestedStart.ToString("MMM dd, yyyy 'at' h:mm tt"),
+                    displayEnd = suggestedEnd.ToString("MMM dd, yyyy 'at' h:mm tt"),
+                    message = $"Next available slot: {suggestedStart:MMM dd 'at' h:mm tt}"
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error suggesting next time: {ErrorMessage}", 
-                    operationId, ex.Message);
-                
-                // Fallback suggestion
-                var fallback = DateTime.UtcNow.Date.AddDays(1).AddHours(6); // Tomorrow at 6 AM
-                return new JsonResult(new {
-                    startTime = fallback.ToString("yyyy-MM-ddTHH:mm"),
-                    endTime = fallback.AddHours(durationHours).ToString("yyyy-MM-ddTHH:mm"),
-                    displayStart = fallback.ToString("MMM d, h:mm tt"),
-                    displayEnd = fallback.AddHours(durationHours).ToString("h:mm tt"),
-                    durationHours = durationHours,
-                    message = "Suggested fallback time (system error occurred)"
-                });
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error suggesting next time", operationId);
+                return new JsonResult(new { success = false, error = "Error finding available time slot" });
             }
         }
+    }
 
-        public async Task<IActionResult> OnPostDeleteJobAsync(int id)
+    // Modern DTOs for clean separation of concerns
+    public class CreateJobDto
+    {
+        public int Id { get; set; }
+        public string MachineId { get; set; } = string.Empty;
+        public int PartId { get; set; }
+        public DateTime ScheduledStart { get; set; } = DateTime.UtcNow.AddHours(1);
+        public DateTime ScheduledEnd { get; set; } = DateTime.UtcNow.AddHours(9);
+        public int Quantity { get; set; } = 1;
+        public int Priority { get; set; } = 3;
+        public string? Status { get; set; }
+        public string? SlsMaterial { get; set; }
+        public double LaserPowerWatts { get; set; } = 200;
+        public double ScanSpeedMmPerSec { get; set; } = 1200;
+        public double LayerThicknessMicrons { get; set; } = 30;
+        public double HatchSpacingMicrons { get; set; } = 120;
+        public double BuildTemperatureCelsius { get; set; } = 180;
+        public double EstimatedPowderUsageKg { get; set; } = 0.5;
+        public string? Notes { get; set; }
+        public string? CustomerOrderNumber { get; set; }
+        public string? Operator { get; set; }
+        public bool IsRushJob { get; set; }
+    }
+
+    public class EditJobDto : CreateJobDto
+    {
+        // Inherits all properties from CreateJobDto
+        // Can add edit-specific properties if needed
+    }
+
+    // Simple validation result class
+    public class JobValidationResult
+    {
+        public List<JobValidationError> Errors { get; } = new();
+        public bool IsValid => Errors.Count == 0;
+
+        public void AddError(string propertyName, string errorMessage)
         {
-            var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogInformation("🗑️ [SCHEDULER-{OperationId}] Request to delete job: {JobId}", operationId, id);
-
-            try
-            {
-                var job = await _context.Jobs.FindAsync(id);
-                if (job == null)
-                {
-                    _logger.LogWarning("⚠️ [SCHEDULER-{OperationId}] Job not found for deletion: {JobId}", operationId, id);
-                    return new JsonResult(new { 
-                        success = false, 
-                        error = "Job not found" 
-                    });
-                }
-
-                _logger.LogDebug("🔍 [SCHEDULER-{OperationId}] Found job to delete: {PartNumber} on {MachineId}",
-                    operationId, job.PartNumber, job.MachineId);
-
-                // Create audit log before deletion
-                await CreateAuditLogAsync(job, "Deleted", operationId);
-
-                // Remove the job
-                _context.Jobs.Remove(job);
-                await _context.SaveChangesAsync();
-
-                _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Job deleted successfully: {JobId} - {PartNumber}",
-                    operationId, id, job.PartNumber);
-
-                return new JsonResult(new { 
-                    success = true, 
-                    message = "Job deleted successfully!" 
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error deleting job {JobId}: {ErrorMessage}",
-                    operationId, id, ex.Message);
-
-                return new JsonResult(new { 
-                    success = false, 
-                    error = "Error deleting job. Please try again." 
-                });
-            }
+            Errors.Add(new JobValidationError { PropertyName = propertyName, ErrorMessage = errorMessage });
         }
+    }
+
+    public class JobValidationError
+    {
+        public string PropertyName { get; set; } = string.Empty;
+        public string ErrorMessage { get; set; } = string.Empty;
     }
 }

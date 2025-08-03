@@ -24,8 +24,8 @@
     }
     else
     {
-        // Get user's saved preference, default to horizontal
-        currentOrientation = await Model.GetUserOrientationPreferenceAsync();
+        // Default to horizontal since user preferences aren't implemented yet
+        currentOrientation = "horizontal";
     }
     
     var isVertical = currentOrientation == "vertical";
