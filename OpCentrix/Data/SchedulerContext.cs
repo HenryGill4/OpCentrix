@@ -70,6 +70,11 @@ namespace OpCentrix.Data
         public DbSet<BuildCohort> BuildCohorts { get; set; }
         public DbSet<JobStageHistory> JobStageHistories { get; set; }
 
+        // PHASE 4: Enhanced Build Time Tracking and Learning
+        public DbSet<PartCompletionLog> PartCompletionLogs { get; set; }
+        public DbSet<OperatorEstimateLog> OperatorEstimateLogs { get; set; }
+        public DbSet<BuildTimeLearningData> BuildTimeLearningData { get; set; }
+
         // Advanced Stage Management: Workflow Templates and Dependencies (ProductionStage-based)
         public DbSet<WorkflowTemplate> WorkflowTemplates { get; set; }
         public DbSet<ResourcePool> ResourcePools { get; set; }
@@ -108,6 +113,9 @@ namespace OpCentrix.Data
             
             // Configure Option A workflow entities
             ConfigureOptionAWorkflowEntities(modelBuilder);
+
+            // PHASE 4: Configure enhanced build time tracking entities
+            ConfigurePhase4TrackingEntities(modelBuilder);
 
             // Configure advanced stage management entities
             ConfigureAdvancedStageManagementEntities(modelBuilder);
@@ -1283,6 +1291,98 @@ namespace OpCentrix.Data
                 entity.HasIndex(e => e.StageOrder);
                 entity.HasIndex(e => new { e.BuildCohortId, e.StageOrder });
                 entity.HasIndex(e => new { e.WorkflowStage, e.Status });
+            });
+        }
+
+        private void ConfigurePhase4TrackingEntities(ModelBuilder modelBuilder)
+        {
+            // Configure PartCompletionLog entity
+            modelBuilder.Entity<PartCompletionLog>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.PartNumber).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Quantity).IsRequired();
+                entity.Property(e => e.GoodParts).IsRequired();
+                entity.Property(e => e.DefectiveParts).IsRequired();
+                entity.Property(e => e.ReworkParts).IsRequired();
+                entity.Property(e => e.QualityRate).HasPrecision(5, 2);
+                entity.Property(e => e.IsPrimary).HasDefaultValue(false);
+                entity.Property(e => e.InspectionNotes).HasMaxLength(500);
+                entity.Property(e => e.CompletedAt).HasDefaultValueSql("datetime('now')");
+                
+                // Foreign key relationship
+                entity.HasOne(e => e.BuildJob)
+                    .WithMany()
+                    .HasForeignKey(e => e.BuildJobId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                
+                // Indexes
+                entity.HasIndex(e => e.BuildJobId);
+                entity.HasIndex(e => e.PartNumber);
+                entity.HasIndex(e => e.IsPrimary);
+                entity.HasIndex(e => e.CompletedAt);
+                entity.HasIndex(e => new { e.BuildJobId, e.PartNumber });
+            });
+
+            // Configure OperatorEstimateLog entity
+            modelBuilder.Entity<OperatorEstimateLog>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.EstimatedHours).HasPrecision(5, 2).IsRequired();
+                entity.Property(e => e.TimeFactors).HasMaxLength(500);
+                entity.Property(e => e.OperatorNotes).HasMaxLength(500);
+                entity.Property(e => e.LoggedAt).HasDefaultValueSql("datetime('now')");
+                
+                // Foreign key relationship
+                entity.HasOne(e => e.BuildJob)
+                    .WithMany()
+                    .HasForeignKey(e => e.BuildJobId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                
+                // Indexes
+                entity.HasIndex(e => e.BuildJobId);
+                entity.HasIndex(e => e.LoggedAt);
+                entity.HasIndex(e => e.EstimatedHours);
+            });
+
+            // Configure BuildTimeLearningData entity
+            modelBuilder.Entity<BuildTimeLearningData>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.MachineId).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.BuildFileHash).HasMaxLength(32);
+                entity.Property(e => e.OperatorEstimatedHours).HasPrecision(5, 2).IsRequired();
+                entity.Property(e => e.ActualHours).HasPrecision(5, 2).IsRequired();
+                entity.Property(e => e.VariancePercent).HasPrecision(6, 2).IsRequired();
+                entity.Property(e => e.SupportComplexity).HasMaxLength(20);
+                entity.Property(e => e.TimeFactors).HasMaxLength(1000);
+                entity.Property(e => e.QualityScore).HasPrecision(5, 2).IsRequired();
+                entity.Property(e => e.DefectCount).HasDefaultValue(0);
+                entity.Property(e => e.BuildHeight).HasPrecision(6, 2);
+                entity.Property(e => e.LayerCount);
+                entity.Property(e => e.TotalParts).HasDefaultValue(1);
+                entity.Property(e => e.PartOrientations).HasMaxLength(500);
+                entity.Property(e => e.RecordedAt).HasDefaultValueSql("datetime('now')");
+                
+                // Foreign key relationship
+                entity.HasOne(e => e.BuildJob)
+                    .WithMany()
+                    .HasForeignKey(e => e.BuildJobId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                
+                // Indexes for machine learning and analytics
+                entity.HasIndex(e => e.BuildJobId);
+                entity.HasIndex(e => e.MachineId);
+                entity.HasIndex(e => e.BuildFileHash);
+                entity.HasIndex(e => e.SupportComplexity);
+                entity.HasIndex(e => e.QualityScore);
+                entity.HasIndex(e => e.RecordedAt);
+                entity.HasIndex(e => new { e.MachineId, e.BuildFileHash });
+                entity.HasIndex(e => new { e.MachineId, e.SupportComplexity });
+                entity.HasIndex(e => new { e.BuildFileHash, e.SupportComplexity });
+                
+                // Index for finding similar builds for learning
+                entity.HasIndex(e => new { e.MachineId, e.TotalParts, e.SupportComplexity });
             });
         }
 

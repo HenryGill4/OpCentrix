@@ -1,13 +1,16 @@
 @using OpCentrix.ViewModels.PrintTracking
 @model PrintStartViewModel
 
-<!-- Print Start Modal -->
+<!-- Enhanced Print Start Modal - Phase 4 with Operator Time Estimation and Prototype Addition -->
 <div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" id="start-print-modal">
-    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+    <div class="relative top-10 mx-auto p-5 border w-11/12 md:w-5/6 lg:w-4/5 max-w-6xl shadow-lg rounded-md bg-white">
         <div class="mt-3">
             <!-- Header -->
             <div class="flex items-center justify-between pb-4 border-b">
-                <h3 class="text-lg font-semibold text-gray-900">Start Print Job</h3>
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900">Start Print Job</h3>
+                    <p class="text-sm text-gray-600 mt-1">Enhanced with time estimation and prototype addition</p>
+                </div>
                 <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -25,46 +28,255 @@
                 
                 <!-- Operator Info -->
                 <div class="bg-blue-50 p-4 rounded-lg">
-                    <div class="flex items-center">
-                        <svg class="w-5 h-5 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
-                        </svg>
-                        <span class="text-sm font-medium text-blue-900">Operator: @Model.OperatorName</span>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <svg class="w-5 h-5 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
+                            </svg>
+                            <span class="text-sm font-medium text-blue-900">Operator: @Model.OperatorName</span>
+                        </div>
+                        @if (Model.IsDelayed)
+                        {
+                            <div class="flex items-center text-red-600">
+                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                                </svg>
+                                <span class="text-xs font-medium">@Model.DelayMinutes min late</span>
+                            </div>
+                        }
                     </div>
                 </div>
 
-                <!-- Printer Selection -->
-                <div>
-                    <label for="PrinterName" class="block text-sm font-medium text-gray-700 mb-2">
-                        Printer <span class="text-red-500">*</span>
-                    </label>
-                    <select name="PrinterName" id="PrinterName" required 
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                            hx-get="/PrintTracking?handler=StartPrintModal" 
-                            hx-target="#modal-container" 
-                            hx-swap="innerHTML"
-                            hx-trigger="change"
-                            hx-include="this">
-                        <option value="">Select Printer</option>
-                        @foreach (var printer in Model.AvailablePrinters)
-                        {
-                            <option value="@printer" selected="@(printer == Model.PrinterName)">@printer</option>
-                        }
-                    </select>
+                <!-- Printer Selection and Basic Info -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="PrinterName" class="block text-sm font-medium text-gray-700 mb-2">
+                            Printer <span class="text-red-500">*</span>
+                        </label>
+                        <select name="PrinterName" id="PrinterName" required 
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                hx-get="/PrintTracking?handler=StartPrintModal" 
+                                hx-target="#modal-container" 
+                                hx-swap="innerHTML"
+                                hx-trigger="change"
+                                hx-include="this">
+                            <option value="">Select Printer</option>
+                            @foreach (var printer in Model.AvailablePrinters)
+                            {
+                                <option value="@printer" selected="@(printer == Model.PrinterName)">@printer</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="ActualStartTime" class="block text-sm font-medium text-gray-700 mb-2">
+                            Actual Start Time <span class="text-red-500">*</span>
+                        </label>
+                        <input type="datetime-local" 
+                               name="ActualStartTime" 
+                               id="ActualStartTime" 
+                               value="@Model.ActualStartTime.ToString("yyyy-MM-ddTHH:mm")" 
+                               required
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <p class="mt-1 text-xs text-gray-500">Auto-filled to current time, but can be edited if needed</p>
+                    </div>
                 </div>
 
-                <!-- Actual Start Time -->
-                <div>
-                    <label for="ActualStartTime" class="block text-sm font-medium text-gray-700 mb-2">
-                        Actual Start Time <span class="text-red-500">*</span>
-                    </label>
-                    <input type="datetime-local" 
-                           name="ActualStartTime" 
-                           id="ActualStartTime" 
-                           value="@Model.ActualStartTime.ToString("yyyy-MM-ddTHH:mm")" 
-                           required
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                    <p class="mt-1 text-xs text-gray-500">Auto-filled to current time, but can be edited if needed</p>
+                <!-- PHASE 4: Enhanced Time Estimation Section -->
+                <div class="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-lg border">
+                    <h4 class="text-lg font-semibold text-green-800 mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Build Time Estimation
+                    </h4>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <!-- Estimated End Time -->
+                        <div>
+                            <label for="EstimatedEndTime" class="block text-sm font-medium text-gray-700 mb-2">
+                                Estimated End Time <span class="text-red-500">*</span>
+                            </label>
+                            <input type="datetime-local" 
+                                   name="EstimatedEndTime" 
+                                   id="EstimatedEndTime" 
+                                   value="@Model.EstimatedEndTime.ToString("yyyy-MM-ddTHH:mm")" 
+                                   required
+                                   onchange="updateCalculatedDuration()"
+                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500">
+                            <p class="mt-1 text-xs text-gray-500">When do you expect the build to complete?</p>
+                        </div>
+
+                        <!-- Calculated Duration -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Calculated Duration
+                            </label>
+                            <div id="calculatedDuration" class="mt-1 block w-full p-3 bg-green-50 rounded-md border-green-200 border">
+                                <span class="text-lg font-semibold text-green-700" id="durationHours">@Model.OperatorEstimatedHours.ToString("F2")h</span>
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500">Automatically calculated from start and end times</p>
+                        </div>
+
+                        <!-- System Estimate (if available) -->
+                        @if (Model.SystemEstimatedHours.HasValue)
+                        {
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    System Estimate (hours)
+                                </label>
+                                <div class="mt-1 block w-full p-3 bg-blue-50 rounded-md border-blue-200 border">
+                                    <span class="text-lg font-semibold text-blue-700">@Model.SystemEstimatedHours?.ToString("F2")</span>
+                                </div>
+                                <p class="mt-1 text-xs text-blue-600">Based on historical data</p>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Historical Build Data (if available) -->
+                    @if (Model.IsRepeatedBuild)
+                    {
+                        <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                            <h5 class="text-sm font-semibold text-yellow-800 mb-2 flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"></path>
+                                </svg>
+                                Repeated Build Detected
+                            </h5>
+                            <div class="grid grid-cols-3 gap-4 text-sm">
+                                <div>
+                                    <span class="text-yellow-700">Times Built:</span>
+                                    <span class="font-semibold ml-1">@Model.TimesPreviouslyBuilt</span>
+                                </div>
+                                @if (Model.LastBuildTime.HasValue)
+                                {
+                                    <div>
+                                        <span class="text-yellow-700">Last Time:</span>
+                                        <span class="font-semibold ml-1">@Model.LastBuildTime?.ToString("F2")h</span>
+                                    </div>
+                                }
+                                @if (Model.AverageBuildTime.HasValue)
+                                {
+                                    <div>
+                                        <span class="text-yellow-700">Average:</span>
+                                        <span class="font-semibold ml-1">@Model.AverageBuildTime?.ToString("F2")h</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Build File Information -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        <div>
+                            <label for="BuildFileName" class="block text-sm font-medium text-gray-700 mb-2">
+                                Build File Name (.build)
+                            </label>
+                            <input type="text" 
+                                   name="BuildFileName" 
+                                   id="BuildFileName" 
+                                   value="@Model.BuildFileName"
+                                   placeholder="e.g., 30x_Suppressor_Standard.build"
+                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+
+                        <div>
+                            <label for="SupportComplexity" class="block text-sm font-medium text-gray-700 mb-2">
+                                Support Complexity
+                            </label>
+                            <select name="SupportComplexity" id="SupportComplexity" 
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                @foreach (var complexity in Model.SupportComplexityOptions)
+                                {
+                                    <option value="@complexity" selected="@(complexity == Model.SupportComplexity)">@complexity</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Build Complexity Factors -->
+                    <div class="mt-4">
+    <label class="block text-sm font-medium text-gray-700 mb-2">
+        Factors That May Affect Build Time
+    </label>
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+        @foreach (var factor in Model.AvailableTimeFactors)
+        {
+            <label class="flex items-center">
+                <input type="checkbox" 
+                       name="TimeFactors" 
+                       value="@factor" 
+                       class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                <span class="ml-2 text-sm text-gray-700">@factor</span>
+            </label>
+        }
+    </div>
+</div>
+                </div>
+
+                <!-- PHASE 4: Prototype Addition Section -->
+                <div class="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-lg border" id="prototypeSection">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="text-lg font-semibold text-purple-800 flex items-center">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Add Prototypes to Build
+                        </h4>
+                        <label class="flex items-center">
+                            <input type="checkbox" 
+                                   name="AddPrototypes" 
+                                   id="AddPrototypes"
+                                   value="true"
+                                   onchange="togglePrototypeAddition()"
+                                   class="rounded border-gray-300 text-purple-600 shadow-sm focus:border-purple-300 focus:ring focus:ring-purple-200 focus:ring-opacity-50">
+                            <span class="ml-2 text-sm font-medium text-purple-700">Add prototypes to this build</span>
+                        </label>
+                    </div>
+
+                    <div id="prototypeDetails" class="hidden">
+                        <!-- Build Capacity Information -->
+                        <div class="bg-white p-4 rounded-lg border mb-4">
+                            <div class="grid grid-cols-3 gap-4 text-sm">
+                                <div>
+                                    <span class="text-gray-600">Current Parts:</span>
+                                    <span class="font-semibold ml-1" id="currentPartsCount">@Model.TotalPartsInBuild</span>
+                                </div>
+                                <div>
+                                    <span class="text-gray-600">Build Plate:</span>
+                                    <span class="font-semibold ml-1" id="plateUtilization">@Model.BuildPlateUtilization.ToString("F1")%</span>
+                                </div>
+                                <div>
+                                    <span class="text-gray-600">Max Capacity:</span>
+                                    <span class="font-semibold ml-1">@Model.MaxPartsCapacity</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Prototype Addition List -->
+                        <div id="prototypeList">
+                            <!-- Initial prototype entry will be added via JavaScript when needed -->
+                        </div>
+
+                        <div class="flex justify-between items-center mt-4">
+                            <button type="button" 
+                                    onclick="addPrototypeEntry()"
+                                    class="px-4 py-2 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 flex items-center"
+                                    id="addPrototypeBtn">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                </svg>
+                                Add Prototype
+                            </button>
+                            
+                            <div class="text-sm text-purple-600" id="capacityWarning" style="display: none;">
+                                <svg class="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                </svg>
+                                Build plate capacity exceeded
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Associated Scheduled Job -->
@@ -75,11 +287,12 @@
                             Link to Scheduled Job (Optional)
                         </label>
                         <select name="AssociatedScheduledJobId" id="AssociatedScheduledJobId" 
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                onchange="loadScheduledJobDetails()">
                             <option value="">No scheduled job</option>
                             @foreach (var job in Model.AvailableScheduledJobs)
                             {
-                                <option value="@job.Id">
+                                <option value="@job.Id" selected="@(job.Id == Model.AssociatedScheduledJobId)">
                                     @job.PartNumber - @job.ScheduledStart.ToString("MM/dd HH:mm") to @job.ScheduledEnd.ToString("HH:mm")
                                 </option>
                             }
@@ -121,25 +334,354 @@
 </div>
 
 <script>
-    // Handle form submission response
-    document.body.addEventListener('htmx:afterRequest', function(event) {
-        if (event.detail.xhr.responseURL.includes('StartPrint')) {
-            try {
-                const response = JSON.parse(event.detail.xhr.responseText);
-                if (response.success) {
-                    closeModal();
-                    showToast(response.message, 'success');
-                    refreshDashboard();
-                } else {
-                    showToast(response.message, 'error');
-                }
-            } catch (e) {
-                // If not JSON response, it's likely the form with validation errors
-                // Do nothing, let HTMX handle the swap
+    // PHASE 4: Enhanced JavaScript for operator interface
+    let prototypeEntryCount = 0; // Start at 0 since no default entries
+    let maxPartsCapacity = @Model.MaxPartsCapacity;
+    let currentBuildCapacity = @Model.TotalPartsInBuild;
+
+    // Handle form submission
+    document.body.addEventListener('htmx:beforeRequest', function(event) {
+        if (event.detail.requestConfig.path.includes('StartPrint')) {
+            // Clean up prototype fields if not adding prototypes
+            const addPrototypes = document.getElementById('AddPrototypes').checked;
+            if (!addPrototypes) {
+                // Remove all prototype input fields to prevent validation errors
+                const prototypeInputs = document.querySelectorAll('input[name*="PrototypeAdditions"], select[name*="PrototypeAdditions"]');
+                prototypeInputs.forEach(input => input.remove());
             }
         }
     });
 
-    // Focus on printer dropdown when modal opens
-    document.getElementById('PrinterName').focus();
+    // Handle form submission response
+    document.body.addEventListener('htmx:afterRequest', function(event) {
+        if (event.detail.requestConfig.path.includes('StartPrint')) {
+            try {
+                const response = JSON.parse(event.detail.xhr.responseText);
+                if (response.success) {
+                    // Close modal and show success message
+                    PrintTracking.closeModal();
+                    
+                    // Enhanced success message with operator estimate info
+                    let message = `Print started successfully! Build ID: ${response.buildId}`;
+                    if (response.operatorEstimateHours) {
+                        const endTime = new Date(Date.now() + (response.operatorEstimateHours * 60 * 60 * 1000));
+                        message += `\nEstimated Duration: ${response.operatorEstimateHours}h`;
+                        message += `\nExpected Completion: ${endTime.toLocaleString()}`;
+                    }
+                    
+                    if (response.scheduleUpdated) {
+                        message += `\n?? Schedule updated with your time estimate`;
+                    }
+                    
+                    PrintTracking.showToast(message, 'success');
+                    PrintTracking.refreshDashboard();
+                    
+                    // ENHANCED: Notify scheduler if schedule was updated
+                    if (response.refreshSchedulerNeeded && response.scheduleUpdated) {
+                        // Try to communicate with scheduler page if it's open
+                        try {
+                            if (window.opener && window.opener.location.pathname.includes('/Scheduler')) {
+                                window.opener.postMessage({
+                                    type: 'scheduleUpdated',
+                                    jobId: response.schedulerJobId,
+                                    machineId: response.machineId,
+                                    newEstimate: response.operatorEstimateHours,
+                                    buildId: response.buildId
+                                }, window.location.origin);
+                            }
+                            
+                            // Also try localStorage for cross-tab communication
+                            localStorage.setItem('scheduleUpdateNotification', JSON.stringify({
+                                timestamp: Date.now(),
+                                type: 'printStarted',
+                                jobId: response.schedulerJobId,
+                                machineId: response.machineId,
+                                operatorEstimate: response.operatorEstimateHours,
+                                buildId: response.buildId
+                            }));
+                        } catch (e) {
+                            console.log('Could not notify scheduler:', e);
+                        }
+                    }
+                } else {
+                    PrintTracking.showToast(response.message || 'Error starting print', 'error');
+                }
+            } catch (e) {
+                // If not JSON response, it's likely the form with validation errors
+                // The form will be swapped in by HTMX showing validation errors
+                console.log('Form validation errors detected, showing form with errors');
+            }
+        }
+    });
+
+    // Update calculated duration based on start and end times
+    function updateCalculatedDuration() {
+        const startTime = new Date(document.getElementById('ActualStartTime').value);
+        const endTime = new Date(document.getElementById('EstimatedEndTime').value);
+        
+        if (startTime && endTime && endTime > startTime) {
+            const durationMs = endTime.getTime() - startTime.getTime();
+            const durationHours = durationMs / (1000 * 60 * 60);
+            
+            document.getElementById('durationHours').textContent = durationHours.toFixed(2) + 'h';
+            
+            // Update the color based on reasonableness
+            const durationDiv = document.getElementById('calculatedDuration');
+            if (durationHours < 0.5) {
+                durationDiv.className = 'mt-1 block w-full p-3 bg-red-50 rounded-md border-red-200 border';
+                document.getElementById('durationHours').className = 'text-lg font-semibold text-red-700';
+            } else if (durationHours > 48) {
+                durationDiv.className = 'mt-1 block w-full p-3 bg-yellow-50 rounded-md border-yellow-200 border';
+                document.getElementById('durationHours').className = 'text-lg font-semibold text-yellow-700';
+            } else {
+                durationDiv.className = 'mt-1 block w-full p-3 bg-green-50 rounded-md border-green-200 border';
+                document.getElementById('durationHours').className = 'text-lg font-semibold text-green-700';
+            }
+        } else {
+            document.getElementById('durationHours').textContent = '--h';
+            document.getElementById('calculatedDuration').className = 'mt-1 block w-full p-3 bg-gray-50 rounded-md border-gray-200 border';
+            document.getElementById('durationHours').className = 'text-lg font-semibold text-gray-700';
+        }
+    }
+
+    // Update expected completion time based on operator estimate (legacy function for compatibility)
+    function updateExpectedCompletion() {
+        // This function is now handled by updateCalculatedDuration
+        updateCalculatedDuration();
+    }
+
+    // Also update duration when start time changes
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add event listener to start time input
+        const startTimeInput = document.getElementById('ActualStartTime');
+        if (startTimeInput) {
+            startTimeInput.addEventListener('change', updateCalculatedDuration);
+        }
+        
+        // Focus on printer dropdown when modal opens
+        setTimeout(() => {
+            const printerSelect = document.getElementById('PrinterName');
+            if (printerSelect) {
+                printerSelect.focus();
+            }
+        }, 100);
+        
+        // Update calculated duration on load
+        updateCalculatedDuration();
+        
+        // Update build capacity on load
+        updateBuildCapacity();
+    });
+
+    // Load scheduled job details if selected
+    function loadScheduledJobDetails() {
+        const select = document.getElementById('AssociatedScheduledJobId');
+        const jobId = select.value;
+        
+        if (jobId) {
+            console.log('Loading details for scheduled job:', jobId);
+            
+            // You can expand this function to load job details
+            // For example, populate form fields with job information
+            // or show additional job details in the UI
+            
+            // Example: Find the selected job from available jobs
+            // and update form fields accordingly
+            try {
+                // This could make an AJAX call to get job details
+                // or use data already available in the form
+                const selectedOption = select.options[select.selectedIndex];
+                if (selectedOption && selectedOption.text) {
+                    console.log('Selected job details:', selectedOption.text);
+                    // You could parse the option text to extract job details
+                    // and populate related form fields
+                }
+            } catch (error) {
+                console.warn('Error loading scheduled job details:', error);
+            }
+        } else {
+            console.log('No scheduled job selected');
+        }
+    }
+
+    // Toggle prototype addition section
+    function togglePrototypeAddition() {
+        const checkbox = document.getElementById('AddPrototypes');
+        const details = document.getElementById('prototypeDetails');
+        
+        if (checkbox.checked) {
+            details.classList.remove('hidden');
+            // Add first prototype entry if none exist
+            if (prototypeEntryCount === 0) {
+                addPrototypeEntry();
+            }
+        } else {
+            details.classList.add('hidden');
+            // Clear all prototype entries
+            document.getElementById('prototypeList').innerHTML = '';
+            prototypeEntryCount = 0;
+        }
+        updateBuildCapacity();
+    }
+
+    // Add new prototype entry
+    function addPrototypeEntry() {
+        if (prototypeEntryCount >= 10) {
+            if (typeof PrintTracking !== 'undefined' && PrintTracking.showToast) {
+                PrintTracking.showToast('Maximum 10 prototypes can be added per build', 'error');
+            } else {
+                alert('Maximum 10 prototypes can be added per build');
+            }
+            return;
+        }
+
+        const prototypeList = document.getElementById('prototypeList');
+        const newEntry = document.createElement('div');
+        newEntry.className = 'prototype-entry bg-white p-4 rounded-lg border mb-3';
+        newEntry.innerHTML = `
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Part Number <span class="text-red-500">*</span></label>
+                    <input type="text" 
+                           name="PrototypeAdditions[${prototypeEntryCount}].PartNumber" 
+                           placeholder="e.g., PRO-00${prototypeEntryCount + 1}"
+                           required
+                           class="block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                    <input type="number" 
+                           name="PrototypeAdditions[${prototypeEntryCount}].Quantity" 
+                           min="1" 
+                           max="50" 
+                           value="1"
+                           onchange="updateBuildCapacity()"
+                           class="block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                    <select name="PrototypeAdditions[${prototypeEntryCount}].Priority" 
+                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500">
+                        <option value="Low">Low</option>
+                        <option value="Normal" selected>Normal</option>
+                        <option value="High">High</option>
+                        <option value="Urgent">Urgent</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button type="button" 
+                            onclick="removePrototypeEntry(this)"
+                            class="w-full px-3 py-2 text-sm bg-red-100 text-red-700 rounded-md hover:bg-red-200">
+                        Remove
+                    </button>
+                </div>
+            </div>
+            <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Requested By</label>
+                    <input type="text" 
+                           name="PrototypeAdditions[${prototypeEntryCount}].RequestedBy" 
+                           placeholder="Engineer name"
+                           class="block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                    <input type="text" 
+                           name="PrototypeAdditions[${prototypeEntryCount}].Notes" 
+                           placeholder="Special requirements"
+                           class="block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500">
+                </div>
+            </div>
+        `;
+        
+        prototypeList.appendChild(newEntry);
+        prototypeEntryCount++;
+        updateBuildCapacity();
+    }
+
+    // Remove prototype entry
+    function removePrototypeEntry(button) {
+        const entry = button.closest('.prototype-entry');
+        entry.remove();
+        
+        // Re-index remaining entries
+        const entries = document.querySelectorAll('.prototype-entry');
+        entries.forEach((entry, index) => {
+            const inputs = entry.querySelectorAll('input, select');
+            inputs.forEach(input => {
+                const name = input.getAttribute('name');
+                if (name && name.includes('PrototypeAdditions')) {
+                    const newName = name.replace(/\[\d+\]/, `[${index}]`);
+                    input.setAttribute('name', newName);
+                }
+            });
+        });
+        prototypeEntryCount = entries.length;
+        updateBuildCapacity();
+    }
+
+    // Update build capacity calculations
+    function updateBuildCapacity() {
+        const quantities = document.querySelectorAll('input[name*="PrototypeAdditions"][name*="Quantity"]');
+        let totalPrototypeParts = 0;
+        
+        quantities.forEach(input => {
+            totalPrototypeParts += parseInt(input.value) || 0;
+        });
+        
+        const totalParts = currentBuildCapacity + totalPrototypeParts;
+        const utilization = (totalParts / maxPartsCapacity) * 100;
+        
+        const currentPartsCountEl = document.getElementById('currentPartsCount');
+        const plateUtilizationEl = document.getElementById('plateUtilization');
+        
+        if (currentPartsCountEl) {
+            currentPartsCountEl.textContent = totalParts;
+        }
+        
+        if (plateUtilizationEl) {
+            plateUtilizationEl.textContent = utilization.toFixed(1) + '%';
+        }
+        
+        const warning = document.getElementById('capacityWarning');
+        const addBtn = document.getElementById('addPrototypeBtn');
+        
+        if (utilization > 90) {
+            if (warning) warning.style.display = 'block';
+            if (addBtn) {
+                addBtn.disabled = true;
+                addBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+        } else {
+            if (warning) warning.style.display = 'none';
+            if (addBtn) {
+                addBtn.disabled = false;
+                addBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+    }
+
+    // Close modal function (ensure it exists)
+    function closeModal() {
+        // Try different methods to close the modal
+        if (typeof PrintTracking !== 'undefined' && PrintTracking.closeModal) {
+            PrintTracking.closeModal();
+        } else if (window.parent && window.parent !== window) {
+            // If in iframe, try to close parent modal
+            window.parent.postMessage({ action: 'closeModal' }, '*');
+        } else {
+            // Fallback: hide the modal element
+            const modal = document.getElementById('start-print-modal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+            
+            // Also try to hide any modal containers
+            const modalContainer = document.getElementById('modal-container');
+            if (modalContainer) {
+                modalContainer.style.display = 'none';
+                modalContainer.classList.add('hidden');
+            }
+        }
+    }
 </script>

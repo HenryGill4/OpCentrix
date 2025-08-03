@@ -1,13 +1,16 @@
 @using OpCentrix.ViewModels.PrintTracking
 @model PostPrintViewModel
 
-<!-- Post-Print Log Modal -->
+<!-- Enhanced Post-Print Log Modal - Phase 4 with Operator Time Logging and Performance Assessment -->
 <div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" id="post-print-modal">
-    <div class="relative top-10 mx-auto p-5 border w-11/12 md:w-4/5 lg:w-3/4 xl:w-2/3 shadow-lg rounded-md bg-white max-h-screen overflow-y-auto">
+    <div class="relative top-5 mx-auto p-5 border w-11/12 md:w-5/6 lg:w-4/5 max-w-7xl shadow-lg rounded-md bg-white max-h-screen overflow-y-auto">
         <div class="mt-3">
             <!-- Header -->
             <div class="flex items-center justify-between pb-4 border-b">
-                <h3 class="text-lg font-semibold text-gray-900">Complete Print Job</h3>
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900">Complete Print Job</h3>
+                    <p class="text-sm text-gray-600 mt-1">Enhanced with performance assessment and quality tracking</p>
+                </div>
                 <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -28,19 +31,55 @@
                     <input type="hidden" name="BuildId" value="@Model.BuildId" />
                 }
 
-                <!-- Operator Info -->
+                <!-- Operator Info with Performance Alert -->
                 <div class="bg-blue-50 p-4 rounded-lg">
-                    <div class="flex items-center">
-                        <svg class="w-5 h-5 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
-                        </svg>
-                        <span class="text-sm font-medium text-blue-900">Operator: @Model.OperatorName</span>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <svg class="w-5 h-5 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
+                            </svg>
+                            <span class="text-sm font-medium text-blue-900">Operator: @Model.OperatorName</span>
+                        </div>
+                        @if (Model.IsSignificantVariance)
+                        {
+                            <div class="flex items-center @Model.PerformanceColor">
+                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                                </svg>
+                                <span class="text-xs font-medium">@Model.TimeVariancePercent.ToString("F1")% time variance</span>
+                            </div>
+                        }
                     </div>
                 </div>
 
                 <!-- Basic Information Section -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Printer -->
+                    <!-- Running Job Selection -->
+                    <div class="md:col-span-2">
+                        <label for="SelectedJobId" class="block text-sm font-medium text-gray-700 mb-2">
+                            Select Running Job <span class="text-red-500">*</span>
+                        </label>
+                        <select name="SelectedJobId" id="SelectedJobId" 
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                onchange="loadJobDetails()"
+                                required>
+                            <option value="">Select a running job to complete</option>
+                            @foreach (var job in Model.AvailableRunningJobs)
+                            {
+                                <option value="@job.Id" 
+                                        data-part-number="@job.PartNumber"
+                                        data-machine-id="@job.MachineId"
+                                        data-material="@job.SlsMaterial"
+                                        data-quantity="@job.Quantity"
+                                        selected="@(job.Id == Model.JobId)">
+                                    [@job.MachineId] @job.PartNumber - @job.Quantity pcs (@job.SlsMaterial) - Started: @job.ActualStart?.ToString("MM/dd HH:mm")
+                                </option>
+                            }
+                        </select>
+                        <p class="mt-1 text-xs text-gray-500">This will auto-populate the form with job details</p>
+                    </div>
+
+                    <!-- Printer (Auto-populated) -->
                     <div>
                         <label for="PrinterName" class="block text-sm font-medium text-gray-700 mb-2">
                             Printer <span class="text-red-500">*</span>
@@ -52,6 +91,7 @@
                                 <option value="@printer" selected="@(printer == Model.PrinterName)">@printer</option>
                             }
                         </select>
+                        <p class="mt-1 text-xs text-gray-500">Auto-populated from selected job</p>
                     </div>
 
                     <!-- Reason for End -->
@@ -60,6 +100,7 @@
                             Reason for End <span class="text-red-500">*</span>
                         </label>
                         <select name="ReasonForEnd" id="ReasonForEnd" required 
+                                onchange="handleReasonChange()"
                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                             <option value="">Select reason</option>
                             @foreach (var reason in Model.EndReasons)
@@ -69,7 +110,7 @@
                         </select>
                     </div>
 
-                    <!-- Actual Start Time -->
+                    <!-- Actual Start Time (Auto-populated) -->
                     <div>
                         <label for="ActualStartTime" class="block text-sm font-medium text-gray-700 mb-2">
                             Actual Start Time <span class="text-red-500">*</span>
@@ -79,8 +120,9 @@
                                id="ActualStartTime" 
                                value="@Model.ActualStartTime.ToString("yyyy-MM-ddTHH:mm")" 
                                required
+                               onchange="calculateActualTime()"
                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                        <p class="mt-1 text-xs text-gray-500">Enter time from printer display</p>
+                        <p class="mt-1 text-xs text-gray-500">Auto-populated from job start time</p>
                     </div>
 
                     <!-- Actual End Time -->
@@ -93,8 +135,366 @@
                                id="ActualEndTime" 
                                value="@Model.ActualEndTime.ToString("yyyy-MM-ddTHH:mm")" 
                                required
+                               onchange="calculateActualTime()"
                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                        <p class="mt-1 text-xs text-gray-500">Enter time from printer display</p>
+                        <p class="mt-1 text-xs text-gray-500">When did the build actually complete?</p>
+                    </div>
+                </div>
+
+                <!-- PHASE 4: Enhanced Time Logging and Performance Assessment -->
+                <div class="bg-gradient-to-r from-orange-50 to-yellow-50 p-6 rounded-lg border">
+                    <h4 class="text-lg font-semibold text-orange-800 mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 00-2-2z"></path>
+                        </svg>
+                        Build Performance Assessment
+                    </h4>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <!-- Actual Time -->
+                        <div>
+                            <label for="OperatorActualHours" class="block text-sm font-medium text-gray-700 mb-2">
+                                Actual Build Time (hours) <span class="text-red-500">*</span>
+                            </label>
+                            <input type="number" 
+                                   name="OperatorActualHours" 
+                                   id="OperatorActualHours" 
+                                   step="0.25" 
+                                   min="0.25" 
+                                   max="72" 
+                                   value="@Model.OperatorActualHours"
+                                   required
+                                   onchange="updatePerformanceCalculations()"
+                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">
+                            <p class="mt-1 text-xs text-orange-600">From operator observation/printer display</p>
+                        </div>
+
+                        <!-- Original Estimate (if available) -->
+                        @if (Model.OperatorEstimatedHours.HasValue)
+                        {
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Your Original Estimate
+                                </label>
+                                <div class="mt-1 block w-full p-3 bg-blue-50 rounded-md border-blue-200 border">
+                                    <span class="text-lg font-semibold text-blue-700">@Model.OperatorEstimatedHours?.ToString("F2")h</span>
+                                </div>
+                                <p class="mt-1 text-xs text-blue-600">From print start</p>
+                            </div>
+                        }
+
+                        <!-- Time Variance Display -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Performance Variance
+                            </label>
+                            <div id="performanceVariance" class="mt-1 block w-full p-3 bg-gray-50 rounded-md border-gray-200 border">
+                                <span class="text-lg font-semibold @Model.PerformanceColor" id="variancePercent">@Model.TimeVariancePercent.ToString("F1")%</span>
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500" id="varianceDescription">Performance indicator</p>
+                        </div>
+                    </div>
+
+                    <!-- Performance Assessment -->
+                    <div class="mb-4">
+                        <label for="OperatorBuildAssessment" class="block text-sm font-medium text-gray-700 mb-2">
+                            How did this build perform compared to your expectations? <span class="text-red-500">*</span>
+                        </label>
+                        <select name="OperatorBuildAssessment" id="OperatorBuildAssessment" required 
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">
+                            <option value="">Select performance assessment</option>
+                            @foreach (var assessment in Model.BuildAssessmentOptions)
+                            {
+                                <option value="@assessment" selected="@(assessment == Model.OperatorBuildAssessment)">@assessment</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Factors Affecting Time -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            What factors affected the build time? (Select all that apply)
+                        </label>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+                            @foreach (var factor in Model.AvailableTimeFactors)
+                            {
+                                <label class="flex items-center">
+                                    <input type="checkbox" 
+                                           name="TimeFactors" 
+                                           value="@factor" 
+                                           class="rounded border-gray-300 text-orange-600 shadow-sm focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50">
+                                    <span class="ml-2 text-sm text-gray-700">@factor</span>
+                                </label>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Machine Performance Notes -->
+                    <div>
+                        <label for="MachinePerformanceNotes" class="block text-sm font-medium text-gray-700 mb-2">
+                            Machine Performance Notes (Optional)
+                        </label>
+                        <textarea name="MachinePerformanceNotes" 
+                                  id="MachinePerformanceNotes" 
+                                  rows="2" 
+                                  placeholder="How did TI1/TI2/INC perform? Any issues or observations..."
+                                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">@Model.MachinePerformanceNotes</textarea>
+                    </div>
+                </div>
+
+                <!-- PHASE 4: Enhanced Time Logging and Performance Assessment -->
+                <div class="bg-gradient-to-r from-orange-50 to-yellow-50 p-6 rounded-lg border">
+                    <h4 class="text-lg font-semibold text-orange-800 mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 00-2-2z"></path>
+                        </svg>
+                        Build Performance Assessment
+                    </h4>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <!-- Actual Time -->
+                        <div>
+                            <label for="OperatorActualHours" class="block text-sm font-medium text-gray-700 mb-2">
+                                Actual Build Time (hours) <span class="text-red-500">*</span>
+                            </label>
+                            <input type="number" 
+                                   name="OperatorActualHours" 
+                                   id="OperatorActualHours" 
+                                   step="0.25" 
+                                   min="0.25" 
+                                   max="72" 
+                                   value="@Model.OperatorActualHours"
+                                   required
+                                   onchange="updatePerformanceCalculations()"
+                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">
+                            <p class="mt-1 text-xs text-orange-600">From operator observation/printer display</p>
+                        </div>
+
+                        <!-- Original Estimate (if available) -->
+                        @if (Model.OperatorEstimatedHours.HasValue)
+                        {
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Your Original Estimate
+                                </label>
+                                <div class="mt-1 block w-full p-3 bg-blue-50 rounded-md border-blue-200 border">
+                                    <span class="text-lg font-semibold text-blue-700">@Model.OperatorEstimatedHours?.ToString("F2")h</span>
+                                </div>
+                                <p class="mt-1 text-xs text-blue-600">From print start</p>
+                            </div>
+                        }
+
+                        <!-- Time Variance Display -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Performance Variance
+                            </label>
+                            <div id="performanceVariance" class="mt-1 block w-full p-3 bg-gray-50 rounded-md border-gray-200 border">
+                                <span class="text-lg font-semibold @Model.PerformanceColor" id="variancePercent">@Model.TimeVariancePercent.ToString("F1")%</span>
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500" id="varianceDescription">Performance indicator</p>
+                        </div>
+                    </div>
+
+                    <!-- Performance Assessment -->
+                    <div class="mb-4">
+                        <label for="OperatorBuildAssessment" class="block text-sm font-medium text-gray-700 mb-2">
+                            How did this build perform compared to your expectations? <span class="text-red-500">*</span>
+                        </label>
+                        <select name="OperatorBuildAssessment" id="OperatorBuildAssessment" required 
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">
+                            <option value="">Select performance assessment</option>
+                            @foreach (var assessment in Model.BuildAssessmentOptions)
+                            {
+                                <option value="@assessment" selected="@(assessment == Model.OperatorBuildAssessment)">@assessment</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Factors Affecting Time -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            What factors affected the build time? (Select all that apply)
+                        </label>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+                            @foreach (var factor in Model.AvailableTimeFactors)
+                            {
+                                <label class="flex items-center">
+                                    <input type="checkbox" 
+                                           name="TimeFactors" 
+                                           value="@factor" 
+                                           class="rounded border-gray-300 text-orange-600 shadow-sm focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50">
+                                    <span class="ml-2 text-sm text-gray-700">@factor</span>
+                                </label>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Machine Performance Notes -->
+                    <div>
+                        <label for="MachinePerformanceNotes" class="block text-sm font-medium text-gray-700 mb-2">
+                            Machine Performance Notes (Optional)
+                        </label>
+                        <textarea name="MachinePerformanceNotes" 
+                                  id="MachinePerformanceNotes" 
+                                  rows="2" 
+                                  placeholder="How did TI1/TI2/INC perform? Any issues or observations..."
+                                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">@Model.MachinePerformanceNotes</textarea>
+                    </div>
+                </div>
+
+                <!-- PHASE 4: Enhanced Time Logging and Performance Assessment -->
+                <div class="bg-gradient-to-r from-orange-50 to-yellow-50 p-6 rounded-lg border">
+                    <h4 class="text-lg font-semibold text-orange-800 mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 00-2-2z"></path>
+                        </svg>
+                        Build Performance Assessment
+                    </h4>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <!-- Actual Time -->
+                        <div>
+                            <label for="OperatorActualHours" class="block text-sm font-medium text-gray-700 mb-2">
+                                Actual Build Time (hours) <span class="text-red-500">*</span>
+                            </label>
+                            <input type="number" 
+                                   name="OperatorActualHours" 
+                                   id="OperatorActualHours" 
+                                   step="0.25" 
+                                   min="0.25" 
+                                   max="72" 
+                                   value="@Model.OperatorActualHours"
+                                   required
+                                   onchange="updatePerformanceCalculations()"
+                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">
+                            <p class="mt-1 text-xs text-orange-600">From operator observation/printer display</p>
+                        </div>
+
+                        <!-- Original Estimate (if available) -->
+                        @if (Model.OperatorEstimatedHours.HasValue)
+                        {
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Your Original Estimate
+                                </label>
+                                <div class="mt-1 block w-full p-3 bg-blue-50 rounded-md border-blue-200 border">
+                                    <span class="text-lg font-semibold text-blue-700">@Model.OperatorEstimatedHours?.ToString("F2")h</span>
+                                </div>
+                                <p class="mt-1 text-xs text-blue-600">From print start</p>
+                            </div>
+                        }
+
+                        <!-- Time Variance Display -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Performance Variance
+                            </label>
+                            <div id="performanceVariance" class="mt-1 block w-full p-3 bg-gray-50 rounded-md border-gray-200 border">
+                                <span class="text-lg font-semibold @Model.PerformanceColor" id="variancePercent">@Model.TimeVariancePercent.ToString("F1")%</span>
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500" id="varianceDescription">Performance indicator</p>
+                        </div>
+                    </div>
+
+                    <!-- Performance Assessment -->
+                    <div class="mb-4">
+                        <label for="OperatorBuildAssessment" class="block text-sm font-medium text-gray-700 mb-2">
+                            How did this build perform compared to your expectations? <span class="text-red-500">*</span>
+                        </label>
+                        <select name="OperatorBuildAssessment" id="OperatorBuildAssessment" required 
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">
+                            <option value="">Select performance assessment</option>
+                            @foreach (var assessment in Model.BuildAssessmentOptions)
+                            {
+                                <option value="@assessment" selected="@(assessment == Model.OperatorBuildAssessment)">@assessment</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Factors Affecting Time -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            What factors affected the build time? (Select all that apply)
+                        </label>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+                            @foreach (var factor in Model.AvailableTimeFactors)
+                            {
+                                <label class="flex items-center">
+                                    <input type="checkbox" 
+                                           name="TimeFactors" 
+                                           value="@factor" 
+                                           class="rounded border-gray-300 text-orange-600 shadow-sm focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50">
+                                    <span class="ml-2 text-sm text-gray-700">@factor</span>
+                                </label>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Machine Performance Notes -->
+                    <div>
+                        <label for="MachinePerformanceNotes" class="block text-sm font-medium text-gray-700 mb-2">
+                            Machine Performance Notes (Optional)
+                        </label>
+                        <textarea name="MachinePerformanceNotes" 
+                                  id="MachinePerformanceNotes" 
+                                  rows="2" 
+                                  placeholder="How did TI1/TI2/INC perform? Any issues or observations..."
+                                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">@Model.MachinePerformanceNotes</textarea>
+                    </div>
+                </div>
+
+                <!-- PHASE 4: Quality Assessment Section -->
+                <div class="bg-gradient-to-r from-green-50 to-teal-50 p-6 rounded-lg border">
+                    <h4 class="text-lg font-semibold text-green-800 mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Quality Assessment
+                    </h4>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <!-- Overall Quality -->
+                        <div>
+                            <label for="QualityAssessment" class="block text-sm font-medium text-gray-700 mb-2">
+                                Overall Quality <span class="text-red-500">*</span>
+                            </label>
+                            <select name="QualityAssessment" id="QualityAssessment" required 
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500">
+                                <option value="">Select quality level</option>
+                                @foreach (var quality in Model.QualityAssessmentOptions)
+                                {
+                                    <option value="@quality" selected="@(quality == Model.QualityAssessment)">@quality</option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Defect Count -->
+                        <div>
+                            <label for="DefectCount" class="block text-sm font-medium text-gray-700 mb-2">
+                                Defective Parts Count
+                            </label>
+                            <input type="number" 
+                                   name="DefectCount" 
+                                   id="DefectCount" 
+                                   min="0" 
+                                   max="1000" 
+                                   value="@Model.DefectCount"
+                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500">
+                            <p class="mt-1 text-xs text-green-600">Parts that don't meet requirements</p>
+                        </div>
+                    </div>
+
+                    <!-- Quality Notes -->
+                    <div>
+                        <label for="QualityNotes" class="block text-sm font-medium text-gray-700 mb-2">
+                            Quality Notes (Optional)
+                        </label>
+                        <textarea name="QualityNotes" 
+                                  id="QualityNotes" 
+                                  rows="2" 
+                                  placeholder="Details about quality issues, surface finish, dimensional accuracy..."
+                                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500">@Model.QualityNotes</textarea>
                     </div>
                 </div>
 
@@ -114,7 +514,7 @@
                         @for (int i = 0; i < Model.Parts.Count; i++)
                         {
                             <div class="part-entry border border-gray-200 rounded-lg p-4 bg-gray-50">
-                                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                                <div class="grid grid-cols-1 md:grid-cols-5 gap-3 items-center">
                                     <div class="md:col-span-2">
                                         <label class="block text-xs font-medium text-gray-700 mb-1">Part Number</label>
                                         <input type="text" 
@@ -126,13 +526,23 @@
                                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
                                     </div>
                                     <div>
-                                        <label class="block text-xs font-medium text-gray-700 mb-1">Quantity</label>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">Total Quantity</label>
                                         <input type="number" 
                                                name="Parts[@i].Quantity" 
                                                value="@Model.Parts[i].Quantity"
                                                min="1" 
                                                required
+                                               onchange="updatePartQuality(@i)"
                                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">Good Parts</label>
+                                        <input type="number" 
+                                               name="Parts[@i].GoodParts" 
+                                               value="@Model.Parts[i].GoodParts"
+                                               min="0" 
+                                               onchange="updatePartQuality(@i)"
+                                               class="block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 text-sm">
                                     </div>
                                     <div class="flex items-center justify-between">
                                         <label class="flex items-center">
@@ -154,6 +564,9 @@
                                         }
                                     </div>
                                 </div>
+                                <div class="mt-2 text-xs text-gray-600" id="qualityRate_@i">
+                                    Quality Rate: @Model.Parts[i].QualityRate.ToString("F1")%
+                                </div>
                             </div>
                         }
                     </div>
@@ -165,6 +578,54 @@
                             <option value="@part.PartNumber">@part.Description</option>
                         }
                     </datalist>
+                </div>
+
+                <!-- PHASE 4: Lessons Learned and Schedule Impact -->
+                <div class="bg-gradient-to-r from-purple-50 to-indigo-50 p-6 rounded-lg border">
+                    <h4 class="text-lg font-semibold text-purple-800 mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                        </svg>
+                        Future Improvements
+                    </h4>
+                    
+                    <div class="space-y-4">
+                        <!-- Lessons Learned -->
+                        <div>
+                            <label for="LessonsLearned" class="block text-sm font-medium text-gray-700 mb-2">
+                                Lessons Learned (Optional)
+                            </label>
+                            <textarea name="LessonsLearned" 
+                                      id="LessonsLearned" 
+                                      rows="3" 
+                                      placeholder="What would you do differently next time? Any tips for future operators?"
+                                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500">@Model.LessonsLearned</textarea>
+                        </div>
+
+                        <!-- Schedule Impact Assessment -->
+                        @if (Model.IsSignificantVariance)
+                        {
+                            <div class="bg-white p-4 rounded-lg border border-purple-200">
+                                <div class="flex items-center mb-2">
+                                    <input type="checkbox" 
+                                           name="WillDelayAffectSchedule" 
+                                           id="WillDelayAffectSchedule"
+                                           value="true"
+                                           @(Model.WillDelayAffectSchedule ? "checked" : "")
+                                           class="rounded border-gray-300 text-purple-600 shadow-sm focus:border-purple-300 focus:ring focus:ring-purple-200 focus:ring-opacity-50">
+                                    <label for="WillDelayAffectSchedule" class="ml-2 text-sm font-medium text-purple-700">
+                                        This time variance may affect scheduled jobs
+                                    </label>
+                                </div>
+                                
+                                <textarea name="ScheduleImpactNotes" 
+                                          id="ScheduleImpactNotes" 
+                                          rows="2" 
+                                          placeholder="How might this impact other jobs or departments?"
+                                          class="mt-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500">@Model.ScheduleImpactNotes</textarea>
+                            </div>
+                        }
+                    </div>
                 </div>
 
                 <!-- Delay Information (if applicable) -->
@@ -209,12 +670,12 @@
                     </div>
                 }
 
-                <!-- Optional Details (Collapsible) -->
+                <!-- Optional Technical Details (Collapsible) -->
                 <div class="border border-gray-200 rounded-lg">
                     <button type="button" 
                             onclick="toggleOptionalDetails()" 
                             class="w-full flex justify-between items-center p-4 text-left hover:bg-gray-50">
-                        <span class="text-sm font-medium text-gray-700">Optional Details (from printer summary)</span>
+                        <span class="text-sm font-medium text-gray-700">Optional Technical Details (from printer summary)</span>
                         <svg id="optional-chevron" class="w-5 h-5 text-gray-400 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                         </svg>
@@ -263,12 +724,12 @@
                         
                         <div class="mt-4">
                             <label for="Notes" class="block text-sm font-medium text-gray-700 mb-2">
-                                Notes
+                                Additional Technical Notes
                             </label>
                             <textarea name="Notes" 
                                       id="Notes" 
                                       rows="3" 
-                                      placeholder="Any additional notes about the print job..."
+                                      placeholder="Any additional technical details about the print job..."
                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">@Model.Notes</textarea>
                         </div>
                     </div>
@@ -295,89 +756,252 @@
 </div>
 
 <script>
+    // PHASE 4: Enhanced JavaScript for performance tracking
     let partIndex = @Model.Parts.Count;
 
-    function addPartEntry() {
+    // Load job details when job is selected from dropdown
+    async function loadJobDetails() {
+        const select = document.getElementById('SelectedJobId');
+        const jobId = select.value;
+        
+        if (!jobId) {
+            clearJobDetails();
+            return;
+        }
+
+        try {
+            // Show loading state
+            select.disabled = true;
+            
+            // Get job details from server
+            const response = await fetch(`/PrintTracking?handler=JobDetails&jobId=${jobId}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                // Auto-populate form fields
+                populateFormFromJob(data);
+                
+                // Show success message
+                showJobLoadedMessage(data.partNumber, data.machineId);
+            } else {
+                console.error('Error loading job details:', data.error);
+                showToast('Error loading job details', 'error');
+            }
+        } catch (error) {
+            console.error('Error loading job details:', error);
+            showToast('Error loading job details', 'error');
+        } finally {
+            select.disabled = false;
+        }
+    }
+
+    // Populate form fields from job data
+    function populateFormFromJob(jobData) {
+        // Basic job information
+        document.getElementById('PrinterName').value = jobData.machineId || '';
+        
+        // Times
+        if (jobData.actualStart) {
+            document.getElementById('ActualStartTime').value = jobData.actualStart;
+        }
+        
+        // Hidden fields for job context
+        const jobIdInput = document.querySelector('input[name="JobId"]') || createHiddenInput('JobId');
+        jobIdInput.value = jobData.jobId;
+        
+        const partIdInput = document.querySelector('input[name="PartId"]') || createHiddenInput('PartId');
+        partIdInput.value = jobData.partId || '';
+        
+        const partNumberInput = document.querySelector('input[name="PartNumber"]') || createHiddenInput('PartNumber');
+        partNumberInput.value = jobData.partNumber || '';
+        
+        const partDescriptionInput = document.querySelector('input[name="PartDescription"]') || createHiddenInput('PartDescription');
+        partDescriptionInput.value = jobData.partDescription || '';
+        
+        // Build ID if available
+        if (jobData.buildId) {
+            const buildIdInput = document.querySelector('input[name="BuildId"]') || createHiddenInput('BuildId');
+            buildIdInput.value = jobData.buildId;
+        }
+        
+        // Operator estimates if available
+        if (jobData.operatorEstimatedHours) {
+            const estimatedHoursInput = document.querySelector('input[name="OperatorEstimatedHours"]') || createHiddenInput('OperatorEstimatedHours');
+            estimatedHoursInput.value = jobData.operatorEstimatedHours;
+        }
+
+        // Auto-populate parts list
+        populatePartsFromJob(jobData);
+        
+        // Recalculate times
+        calculateActualTime();
+        updatePerformanceCalculations();
+    }
+
+    // Populate parts list from job data
+    function populatePartsFromJob(jobData) {
+        // Clear existing parts except the first one
+        const container = document.getElementById('parts-container');
+        const firstEntry = container.querySelector('.part-entry');
+        
+        // Clear all parts
+        container.innerHTML = '';
+        partIndex = 0;
+        
+        // Add the main job part
+        addPartEntryWithData({
+            partNumber: jobData.partNumber || '',
+            quantity: jobData.quantity || 1,
+            goodParts: jobData.quantity || 1,
+            description: jobData.partDescription || '',
+            material: jobData.material || '',
+            isPrimary: true
+        });
+    }
+    
+    // Add part entry with pre-populated data
+    function addPartEntryWithData(partData) {
         const container = document.getElementById('parts-container');
         const newEntry = document.createElement('div');
         newEntry.className = 'part-entry border border-gray-200 rounded-lg p-4 bg-gray-50';
         newEntry.innerHTML = `
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-3 items-center">
                 <div class="md:col-span-2">
                     <label class="block text-xs font-medium text-gray-700 mb-1">Part Number</label>
                     <input type="text" 
                            name="Parts[${partIndex}].PartNumber" 
+                           value="${partData.partNumber || ''}"
                            list="available-parts"
                            required
                            placeholder="Enter or select part number"
                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-gray-700 mb-1">Quantity</label>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Total Quantity</label>
                     <input type="number" 
                            name="Parts[${partIndex}].Quantity" 
-                           value="1"
+                           value="${partData.quantity || 1}"
                            min="1" 
                            required
+                           onchange="updatePartQuality(${partIndex})"
                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Good Parts</label>
+                    <input type="number" 
+                           name="Parts[${partIndex}].GoodParts" 
+                           value="${partData.goodParts || partData.quantity || 1}"
+                           min="0" 
+                           onchange="updatePartQuality(${partIndex})"
+                           class="block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 text-sm">
                 </div>
                 <div class="flex items-center justify-between">
                     <label class="flex items-center">
                         <input type="checkbox" 
                                name="Parts[${partIndex}].IsPrimary" 
                                value="true"
+                               ${partData.isPrimary ? 'checked' : ''}
                                class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
                         <span class="ml-2 text-xs text-gray-700">Primary</span>
                     </label>
+                    ${partIndex > 0 ? `
                     <button type="button" onclick="removePartEntry(this)" 
                             class="text-red-600 hover:text-red-800">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                         </svg>
                     </button>
+                    ` : ''}
                 </div>
             </div>
+            <div class="mt-2 text-xs text-gray-600" id="qualityRate_${partIndex}">
+                Quality Rate: ${partData.quantity > 0 ? ((partData.goodParts || partData.quantity) / partData.quantity * 100).toFixed(1) : 100.0}%
+            </div>
+            ${partData.description ? `
+            <input type="hidden" name="Parts[${partIndex}].Description" value="${partData.description}">
+            ` : ''}
+            ${partData.material ? `
+            <input type="hidden" name="Parts[${partIndex}].Material" value="${partData.material}">
+            ` : ''}
         `;
+        
         container.appendChild(newEntry);
         partIndex++;
-    }
-
-    function removePartEntry(button) {
-        button.closest('.part-entry').remove();
-    }
-
-    function toggleOptionalDetails() {
-        const details = document.getElementById('optional-details');
-        const chevron = document.getElementById('optional-chevron');
         
-        if (details.classList.contains('hidden')) {
-            details.classList.remove('hidden');
-            chevron.classList.add('rotate-180');
-        } else {
-            details.classList.add('hidden');
-            chevron.classList.remove('rotate-180');
+        // Update quality rate
+        updatePartQuality(partIndex - 1);
+    }
+
+    // Clear job details when no job selected
+    function clearJobDetails() {
+        // Clear form fields
+        document.getElementById('PrinterName').value = '';
+        document.getElementById('ActualStartTime').value = '';
+        
+        // Clear hidden inputs
+        removeHiddenInput('JobId');
+        removeHiddenInput('PartId');
+        removeHiddenInput('PartNumber');
+        removeHiddenInput('PartDescription');
+        removeHiddenInput('BuildId');
+        removeHiddenInput('OperatorEstimatedHours');
+        
+        // Reset parts to default single entry
+        const container = document.getElementById('parts-container');
+        container.innerHTML = '';
+        partIndex = 0;
+        addPartEntry();
+    }
+
+    // Helper function to create hidden input
+    function createHiddenInput(name) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        document.querySelector('form').appendChild(input);
+        return input;
+    }
+
+    // Helper function to remove hidden input
+    function removeHiddenInput(name) {
+        const input = document.querySelector(`input[name="${name}"]`);
+        if (input && input.type === 'hidden') {
+            input.remove();
         }
     }
 
-    // Handle form submission response
-    document.body.addEventListener('htmx:afterRequest', function(event) {
-        if (event.detail.xhr.responseURL.includes('CompletePrint')) {
-            try {
-                const response = JSON.parse(event.detail.xhr.responseText);
-                if (response.success) {
-                    closeModal();
-                    showToast(response.message, 'success');
-                    refreshDashboard();
-                } else {
-                    showToast(response.message, 'error');
-                }
-            } catch (e) {
-                // If not JSON response, it's likely the form with validation errors
-                // Do nothing, let HTMX handle the swap
-            }
+    // Show job loaded success message
+    function showJobLoadedMessage(partNumber, machineId) {
+        const message = `? Job loaded: ${partNumber} on ${machineId}`;
+        if (typeof showToast === 'function') {
+            showToast(message, 'success');
+        } else {
+            // Fallback notification
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded z-50';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
         }
-    });
+    }
 
-    // Focus on printer dropdown when modal opens
-    document.getElementById('PrinterName').focus();
+    // Toast notification fallback
+    function showToast(message, type = 'info') {
+        if (typeof PrintTracking !== 'undefined' && PrintTracking.showToast) {
+            PrintTracking.showToast(message, type);
+        } else {
+            // Simple fallback
+            const colors = {
+                success: 'bg-green-100 border-green-400 text-green-700',
+                error: 'bg-red-100 border-red-400 text-red-700',
+                info: 'bg-blue-100 border-blue-400 text-blue-700'
+            };
+            
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 ${colors[type] || colors.info} px-4 py-3 rounded border z-50`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
+        }
+    }
 </script>

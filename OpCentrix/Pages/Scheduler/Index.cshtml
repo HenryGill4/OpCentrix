@@ -687,7 +687,61 @@
             this.setupOrientationToggle();
             this.setupAddJobButton();
             this.handlePartPrePopulation(); // NEW: Handle automatic modal opening
+            this.setupScheduleUpdateListener(); // NEW: Listen for schedule updates from Print Tracking
             this.logDebugInfo();
+        },
+        
+        // NEW: Setup listener for schedule updates from Print Tracking
+        setupScheduleUpdateListener() {
+            // Listen for cross-tab communication via localStorage
+            window.addEventListener('storage', (e) => {
+                if (e.key === 'scheduleUpdateNotification' && e.newValue) {
+                    try {
+                        const notification = JSON.parse(e.newValue);
+                        if (notification.type === 'printStarted' && notification.timestamp > Date.now() - 10000) { // Only process recent notifications
+                            this.handleScheduleUpdate(notification);
+                        }
+                    } catch (error) {
+                        console.log('Error processing schedule update notification:', error);
+                    }
+                }
+            });
+
+            // Listen for direct window messages (same tab communication)
+            window.addEventListener('message', (e) => {
+                if (e.origin === window.location.origin && e.data.type === 'scheduleUpdated') {
+                    this.handleScheduleUpdate(e.data);
+                }
+            });
+
+            console.log('? [INIT] Schedule update listener setup complete');
+        },
+
+        // NEW: Handle schedule updates from Print Tracking
+        handleScheduleUpdate(data) {
+            console.log('?? [SCHEDULE] Received schedule update notification:', data);
+            
+            // Show notification to user
+            const message = `?? Schedule Updated: Job ${data.jobId} on ${data.machineId} started with ${data.operatorEstimate}h estimate`;
+            this.showSuccessNotification(message);
+            
+            // Check if the updated job is visible in current schedule view
+            const jobElement = document.querySelector(`[data-job-id="${data.jobId}"]`);
+            if (jobElement) {
+                // Refresh the scheduler to show updated times
+                setTimeout(() => {
+                    this.showLoadingIndicator('Refreshing schedule with updated estimate...');
+                    this.refreshScheduler();
+                }, 2000); // Give user time to see the notification
+            } else {
+                // Job not currently visible, just show notification
+                console.log('?? [SCHEDULE] Updated job not visible in current view, showing notification only');
+            }
+            
+            // Clear the localStorage notification to prevent duplicate handling
+            if (localStorage.getItem('scheduleUpdateNotification')) {
+                localStorage.removeItem('scheduleUpdateNotification');
+            }
         },
         
         // ENHANCEMENT: Handle automatic modal opening from Parts page

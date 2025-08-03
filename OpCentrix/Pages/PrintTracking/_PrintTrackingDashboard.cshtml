@@ -83,7 +83,7 @@
         <div class="px-4 py-5 sm:p-6">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg leading-6 font-medium text-gray-900">Today's Schedule Overview</h3>
-                <button onclick="toggleScheduleView()" 
+                <button data-action="toggle-schedule" 
                         class="text-sm text-blue-600 hover:text-blue-500">
                     <span id="schedule-toggle-text">Show Details</span>
                     <svg id="schedule-chevron" class="w-4 h-4 inline ml-1 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -95,7 +95,7 @@
             <!-- Embedded Schedule View -->
             <div id="schedule-overview" class="hidden">
                 <div class="border rounded-lg overflow-hidden">
-                    <div hx-get="/Scheduler?handler=EmbeddedView" 
+                    <div hx-get="/PrintTracking?handler=EmbeddedView" 
                          hx-trigger="revealed, every 5m"
                          hx-target="this"
                          hx-swap="innerHTML">
@@ -137,13 +137,13 @@
                             }
                         </div>
                         <div class="mt-3 flex space-x-2">
-                            <button onclick="openStartPrintModal('@printer')" 
+                            <button data-action="start-print" data-printer="@printer" 
                                     class="flex-1 text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700">
                                 Start Print
                             </button>
                             @if (activeCount > 0)
                             {
-                                <button onclick="openPostPrintModal(null, '@printer')" 
+                                <button data-action="complete-print" data-printer="@printer" 
                                         class="flex-1 text-xs px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700">
                                     Complete
                                 </button>
@@ -183,7 +183,7 @@
                                     <span class="text-sm text-gray-500">
                                         @((DateTime.Now - build.ActualStartTime).TotalHours.ToString("F1"))h
                                     </span>
-                                    <button onclick="openPostPrintModal(@build.BuildId)" 
+                                    <button data-action="complete-print" data-build-id="@build.BuildId" 
                                             class="inline-flex items-center px-3 py-1 border border-transparent text-xs leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700">
                                         Complete
                                     </button>
@@ -262,22 +262,59 @@
 </div>
 
 <script>
-    function toggleScheduleView() {
-        const overview = document.getElementById('schedule-overview');
-        const summary = document.getElementById('schedule-summary');
-        const toggleText = document.getElementById('schedule-toggle-text');
-        const chevron = document.getElementById('schedule-chevron');
+    // Dashboard-specific JavaScript that runs when this partial loads
+    (function() {
+        console.log('?? [DASHBOARD] Dashboard partial loaded, binding events...');
         
-        if (overview.classList.contains('hidden')) {
-            overview.classList.remove('hidden');
-            summary.classList.add('hidden');
-            toggleText.textContent = 'Show Summary';
-            chevron.classList.add('rotate-180');
-        } else {
-            overview.classList.add('hidden');
-            summary.classList.remove('hidden');
-            toggleText.textContent = 'Show Details';
-            chevron.classList.remove('rotate-180');
+        // Ensure PrintTracking namespace exists
+        if (typeof window.PrintTracking === 'undefined') {
+            console.warn('?? [DASHBOARD] PrintTracking namespace not found, deferring event binding');
+            return;
         }
-    }
+        
+        // Bind schedule toggle
+        const toggleBtn = document.querySelector('[data-action="toggle-schedule"]');
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', function() {
+                const overview = document.getElementById('schedule-overview');
+                const summary = document.getElementById('schedule-summary');
+                const toggleText = document.getElementById('schedule-toggle-text');
+                const chevron = document.getElementById('schedule-chevron');
+                
+                if (overview.classList.contains('hidden')) {
+                    overview.classList.remove('hidden');
+                    summary.classList.add('hidden');
+                    toggleText.textContent = 'Show Summary';
+                    chevron.classList.add('rotate-180');
+                } else {
+                    overview.classList.add('hidden');
+                    summary.classList.remove('hidden');
+                    toggleText.textContent = 'Show Details';
+                    chevron.classList.remove('rotate-180');
+                }
+            });
+        }
+        
+        // Bind all start print buttons
+        document.querySelectorAll('[data-action="start-print"]').forEach(btn => {
+            const printer = btn.dataset.printer;
+            btn.addEventListener('click', () => {
+                console.log('?? [DASHBOARD] Start print clicked for printer:', printer);
+                window.PrintTracking.openStartPrintModal(printer);
+            });
+        });
+        
+        // Bind all complete print buttons  
+        document.querySelectorAll('[data-action="complete-print"]').forEach(btn => {
+            const buildId = btn.dataset.buildId ? parseInt(btn.dataset.buildId) : null;
+            const printer = btn.dataset.printer;
+            
+            btn.addEventListener('click', () => {
+                console.log('?? [DASHBOARD] Complete print clicked:', { buildId, printer });
+                window.PrintTracking.openPostPrintModal(buildId, printer);
+            });
+        });
+        
+        console.log('? [DASHBOARD] Dashboard events bound successfully');
+    })();
 </script>

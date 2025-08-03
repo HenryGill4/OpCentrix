@@ -20,7 +20,7 @@
                             <p class="text-sm font-medium text-gray-900">@Model.Dashboard.OperatorName</p>
                             <p class="text-xs text-gray-500">Operator</p>
                         </div>
-                        <button onclick="refreshDashboard()" 
+                        <button id="refresh-dashboard-btn" 
                                 class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
@@ -40,14 +40,14 @@
 
     <!-- Quick Action Buttons (Fixed Position) -->
     <div class="fixed bottom-6 right-6 space-y-3">
-        <button onclick="openStartPrintModal()" 
+        <button id="start-print-btn" 
                 class="bg-green-600 hover:bg-green-700 text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-200"
                 title="Start New Print">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
             </svg>
         </button>
-        <button onclick="openPostPrintModal()" 
+        <button id="complete-print-btn" 
                 class="bg-red-600 hover:bg-red-700 text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-200"
                 title="Complete Print">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -78,16 +78,23 @@
 
 @section Scripts {
     <script>
-        // Global state management
-        let autoRefreshInterval = null;
-        let isModalOpen = false;
-        
-        // Enhanced modal management with better error handling
-        function openStartPrintModal(printerName = null) {
-            isModalOpen = true;
-            pauseAutoRefresh(); // Stop auto-refresh when modal opens
+        // ===============================
+        // PRINT TRACKING GLOBAL NAMESPACE
+        // ===============================
+        window.PrintTracking = window.PrintTracking || {
+            initialized: false,
+            autoRefreshInterval: null,
+            isModalOpen: false
+        };
+
+        // Core modal management functions
+        window.PrintTracking.openStartPrintModal = function(printerName = null) {
+            console.log('?? [PRINT-TRACKING] Opening start print modal', { printerName });
             
-            showLoadingIndicator();
+            PrintTracking.isModalOpen = true;
+            PrintTracking.pauseAutoRefresh();
+            
+            PrintTracking.showLoadingIndicator();
             const url = printerName 
                 ? `/PrintTracking?handler=StartPrintModal&printerName=${encodeURIComponent(printerName)}`
                 : '/PrintTracking?handler=StartPrintModal';
@@ -96,18 +103,20 @@
                 target: '#modal-container',
                 swap: 'innerHTML'
             }).then(() => {
-                hideLoadingIndicator();
+                PrintTracking.hideLoadingIndicator();
             }).catch((error) => {
-                hideLoadingIndicator();
-                handleModalError('Failed to load start print form', error);
+                PrintTracking.hideLoadingIndicator();
+                PrintTracking.handleModalError('Failed to load start print form', error);
             });
-        }
+        };
 
-        function openPostPrintModal(buildId = null, printerName = null) {
-            isModalOpen = true;
-            pauseAutoRefresh(); // Stop auto-refresh when modal opens
+        window.PrintTracking.openPostPrintModal = function(buildId = null, printerName = null) {
+            console.log('?? [PRINT-TRACKING] Opening post print modal', { buildId, printerName });
             
-            showLoadingIndicator();
+            PrintTracking.isModalOpen = true;
+            PrintTracking.pauseAutoRefresh();
+            
+            PrintTracking.showLoadingIndicator();
             let url = '/PrintTracking?handler=PostPrintModal';
             const params = [];
             if (buildId) params.push(`buildId=${buildId}`);
@@ -118,94 +127,97 @@
                 target: '#modal-container',
                 swap: 'innerHTML'
             }).then(() => {
-                hideLoadingIndicator();
+                PrintTracking.hideLoadingIndicator();
             }).catch((error) => {
-                hideLoadingIndicator();
-                handleModalError('Failed to load complete print form', error);
+                PrintTracking.hideLoadingIndicator();
+                PrintTracking.handleModalError('Failed to load complete print form', error);
             });
-        }
+        };
 
-        function closeModal() {
+        window.PrintTracking.closeModal = function() {
             const modalContainer = document.getElementById('modal-container');
             if (modalContainer) {
                 modalContainer.innerHTML = '';
             }
-            hideLoadingIndicator();
-            isModalOpen = false;
-            resumeAutoRefresh(); // Resume auto-refresh when modal closes
-        }
+            PrintTracking.hideLoadingIndicator();
+            PrintTracking.isModalOpen = false;
+            PrintTracking.resumeAutoRefresh();
+        };
 
-        function refreshDashboard() {
-            showLoadingIndicator();
+        window.PrintTracking.refreshDashboard = function() {
+            console.log('?? [PRINT-TRACKING] Manual dashboard refresh');
+            PrintTracking.showLoadingIndicator();
+            
             htmx.ajax('GET', '/PrintTracking?handler=RefreshDashboard', {
                 target: '#dashboard-content',
                 swap: 'innerHTML'
             }).then(() => {
-                hideLoadingIndicator();
-                showToast('Dashboard refreshed successfully', 'success');
+                PrintTracking.hideLoadingIndicator();
+                PrintTracking.showToast('Dashboard refreshed successfully', 'success');
+                // Re-bind event listeners after content update
+                PrintTracking.bindDashboardEvents();
             }).catch((error) => {
-                hideLoadingIndicator();
-                showToast('Failed to refresh dashboard', 'error');
+                PrintTracking.hideLoadingIndicator();
+                PrintTracking.showToast('Failed to refresh dashboard', 'error');
                 console.error('Dashboard refresh error:', error);
             });
-        }
+        };
 
-        // Auto-refresh management - FIXED: Proper modal checking and reasonable intervals
-        function startAutoRefresh() {
-            // Stop any existing interval
-            if (autoRefreshInterval) {
-                clearInterval(autoRefreshInterval);
+        // Auto-refresh management
+        window.PrintTracking.startAutoRefresh = function() {
+            if (PrintTracking.autoRefreshInterval) {
+                clearInterval(PrintTracking.autoRefreshInterval);
             }
             
-            // Set reasonable 5-minute interval instead of aggressive 30-second
-            autoRefreshInterval = setInterval(() => {
-                // Only refresh if no modal is open and user is not actively interacting
-                if (!isModalOpen && !document.getElementById('modal-container').innerHTML) {
-                    console.log('?? [PRINT-TRACKING] Auto-refreshing dashboard...');
+            PrintTracking.autoRefreshInterval = setInterval(() => {
+                if (!PrintTracking.isModalOpen && !document.getElementById('modal-container').innerHTML) {
+                    console.log('? [PRINT-TRACKING] Auto-refreshing dashboard...');
                     
                     htmx.ajax('GET', '/PrintTracking?handler=RefreshDashboard', {
                         target: '#dashboard-content',
                         swap: 'innerHTML'
+                    }).then(() => {
+                        // Re-bind events after auto-refresh
+                        PrintTracking.bindDashboardEvents();
                     }).catch((error) => {
                         console.warn('Auto-refresh failed (this is normal):', error);
-                        // Don't show toast for auto-refresh failures to avoid spam
                     });
                 }
-            }, 300000); // 5 minutes (300,000ms) instead of 30 seconds
+            }, 300000); // 5 minutes
             
             console.log('? [PRINT-TRACKING] Auto-refresh started (5-minute interval)');
-        }
+        };
         
-        function pauseAutoRefresh() {
-            if (autoRefreshInterval) {
-                clearInterval(autoRefreshInterval);
-                autoRefreshInterval = null;
+        window.PrintTracking.pauseAutoRefresh = function() {
+            if (PrintTracking.autoRefreshInterval) {
+                clearInterval(PrintTracking.autoRefreshInterval);
+                PrintTracking.autoRefreshInterval = null;
                 console.log('?? [PRINT-TRACKING] Auto-refresh paused');
             }
-        }
+        };
         
-        function resumeAutoRefresh() {
+        window.PrintTracking.resumeAutoRefresh = function() {
             console.log('?? [PRINT-TRACKING] Auto-refresh resumed');
-            startAutoRefresh();
-        }
+            PrintTracking.startAutoRefresh();
+        };
 
         // Loading indicator management
-        function showLoadingIndicator() {
+        window.PrintTracking.showLoadingIndicator = function() {
             const indicator = document.getElementById('loading-indicator');
             if (indicator) {
                 indicator.classList.remove('hidden');
             }
-        }
+        };
 
-        function hideLoadingIndicator() {
+        window.PrintTracking.hideLoadingIndicator = function() {
             const indicator = document.getElementById('loading-indicator');
             if (indicator) {
                 indicator.classList.add('hidden');
             }
-        }
+        };
 
-        // Enhanced error handling
-        function handleModalError(message, error) {
+        // Error handling
+        window.PrintTracking.handleModalError = function(message, error) {
             console.error('Modal error:', error);
             const errorHtml = `
                 <div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
@@ -226,7 +238,7 @@
                                         class="px-4 py-2 bg-blue-600 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-700">
                                     Refresh Page
                                 </button>
-                                <button onclick="closeModal()" 
+                                <button onclick="PrintTracking.closeModal()" 
                                         class="px-4 py-2 bg-gray-300 text-gray-700 text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-400">
                                     Close
                                 </button>
@@ -236,10 +248,10 @@
                 </div>
             `;
             document.getElementById('modal-container').innerHTML = errorHtml;
-        }
+        };
 
-        // Enhanced toast notifications
-        function showToast(message, type = 'success') {
+        // Toast notifications
+        window.PrintTracking.showToast = function(message, type = 'success') {
             const toast = document.createElement('div');
             toast.className = `
                 transform transition-all duration-300 translate-x-full
@@ -270,7 +282,7 @@
                 <div class="flex border-l border-gray-200">
                     <button onclick="this.parentElement.parentElement.remove()" 
                             class="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-gray-600 hover:text-gray-500">
-                        ×
+                        ?
                     </button>
                 </div>
             `;
@@ -287,71 +299,118 @@
                 toast.classList.add('translate-x-full');
                 setTimeout(() => toast.remove(), 300);
             }, 5000);
-        }
+        };
+
+        // Event binding for dashboard elements (called after HTMX updates)
+        window.PrintTracking.bindDashboardEvents = function() {
+            // Bind events to dynamically loaded dashboard content
+            document.querySelectorAll('[onclick*="openStartPrintModal"]').forEach(btn => {
+                const onclick = btn.getAttribute('onclick');
+                const match = onclick.match(/openStartPrintModal\('?([^']*)'?\)/);
+                const printerName = match ? match[1] : null;
+                
+                btn.removeAttribute('onclick');
+                btn.addEventListener('click', () => PrintTracking.openStartPrintModal(printerName));
+            });
+
+            document.querySelectorAll('[onclick*="openPostPrintModal"]').forEach(btn => {
+                const onclick = btn.getAttribute('onclick');
+                const buildIdMatch = onclick.match(/openPostPrintModal\((\d+)\)/);
+                const printerMatch = onclick.match(/openPostPrintModal\(null, '([^']*)'\)/);
+                
+                const buildId = buildIdMatch ? parseInt(buildIdMatch[1]) : null;
+                const printerName = printerMatch ? printerMatch[1] : null;
+                
+                btn.removeAttribute('onclick');
+                btn.addEventListener('click', () => PrintTracking.openPostPrintModal(buildId, printerName));
+            });
+
+            console.log('?? [PRINT-TRACKING] Dashboard events rebound');
+        };
+
+        // Global function aliases for backward compatibility
+        window.openStartPrintModal = window.PrintTracking.openStartPrintModal;
+        window.openPostPrintModal = window.PrintTracking.openPostPrintModal;
+        window.closeModal = window.PrintTracking.closeModal;
+        window.refreshDashboard = window.PrintTracking.refreshDashboard;
 
         // Enhanced HTMX event handling
         document.body.addEventListener('htmx:beforeRequest', function(event) {
-            // Show loading for modal requests
             if (event.detail.requestConfig.headers['HX-Target'] === '#modal-container') {
-                showLoadingIndicator();
+                PrintTracking.showLoadingIndicator();
             }
         });
 
         document.body.addEventListener('htmx:afterRequest', function(event) {
-            hideLoadingIndicator();
+            PrintTracking.hideLoadingIndicator();
+            
+            // Re-bind events if dashboard was updated
+            if (event.detail.requestConfig.path?.includes('RefreshDashboard') || 
+                event.detail.target?.id === 'dashboard-content') {
+                PrintTracking.bindDashboardEvents();
+            }
             
             // Handle network errors
             if (event.detail.xhr.status >= 400) {
                 const isModal = event.detail.requestConfig.headers['HX-Target'] === '#modal-container';
                 if (isModal) {
-                    handleModalError(`Server error (${event.detail.xhr.status})`, event.detail.xhr);
+                    PrintTracking.handleModalError(`Server error (${event.detail.xhr.status})`, event.detail.xhr);
                 } else {
-                    showToast(`Request failed (${event.detail.xhr.status})`, 'error');
+                    PrintTracking.showToast(`Request failed (${event.detail.xhr.status})`, 'error');
                 }
             }
         });
 
         document.body.addEventListener('htmx:responseError', function(event) {
-            hideLoadingIndicator();
-            showToast('Network error. Please check your connection.', 'error');
+            PrintTracking.hideLoadingIndicator();
+            PrintTracking.showToast('Network error. Please check your connection.', 'error');
             console.error('HTMX Response Error:', event.detail);
         });
 
         document.body.addEventListener('htmx:timeout', function(event) {
-            hideLoadingIndicator();
-            showToast('Request timed out. Please try again.', 'error');
+            PrintTracking.hideLoadingIndicator();
+            PrintTracking.showToast('Request timed out. Please try again.', 'error');
         });
 
         // Keyboard shortcuts
         document.addEventListener('keydown', function(event) {
-            // Escape key closes modals
             if (event.key === 'Escape') {
-                closeModal();
+                PrintTracking.closeModal();
             }
-            // Ctrl+R refreshes dashboard
             if (event.ctrlKey && event.key === 'r') {
                 event.preventDefault();
-                refreshDashboard();
+                PrintTracking.refreshDashboard();
             }
         });
 
-        // Initialize page
+        // Initialize page - using event delegation for persistent buttons
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('Print Tracking Dashboard initialized');
+            console.log('?? [PRINT-TRACKING] Print Tracking Dashboard initializing...');
             
-            // Start auto-refresh with reasonable interval
-            startAutoRefresh();
+            // Bind main action buttons using event delegation (these persist across page loads)
+            document.getElementById('refresh-dashboard-btn')?.addEventListener('click', PrintTracking.refreshDashboard);
+            document.getElementById('start-print-btn')?.addEventListener('click', () => PrintTracking.openStartPrintModal());
+            document.getElementById('complete-print-btn')?.addEventListener('click', () => PrintTracking.openPostPrintModal());
             
-            // Check for any initial errors
+            // Bind dashboard-specific events
+            PrintTracking.bindDashboardEvents();
+            
+            // Start auto-refresh
+            PrintTracking.startAutoRefresh();
+            
+            // Check for initial errors
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('error')) {
-                showToast(urlParams.get('error'), 'error');
+                PrintTracking.showToast(urlParams.get('error'), 'error');
             }
+            
+            PrintTracking.initialized = true;
+            console.log('? [PRINT-TRACKING] Print Tracking Dashboard initialized successfully');
         });
 
         // Cleanup on page unload
         window.addEventListener('beforeunload', function() {
-            pauseAutoRefresh();
+            PrintTracking.pauseAutoRefresh();
         });
     </script>
 }

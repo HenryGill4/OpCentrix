@@ -7,7 +7,7 @@ using OpCentrix.Models.JobStaging;
 namespace OpCentrix.ViewModels.PrintTracking
 {
     /// <summary>
-    /// View model for the Print Start Form - Enhanced for new database schema and master schedule integration
+    /// View model for the Print Start Form - Enhanced for Phase 4 with operator time estimation, prototype addition, and build file tracking
     /// </summary>
     public class PrintStartViewModel
     {
@@ -28,6 +28,71 @@ namespace OpCentrix.ViewModels.PrintTracking
         [Display(Name = "Setup Notes")]
         [StringLength(1000, ErrorMessage = "Setup notes cannot exceed 1000 characters")]
         public string? SetupNotes { get; set; }
+
+        // PHASE 4: Enhanced Build Time Estimation
+        [Required(ErrorMessage = "Estimated end time is required")]
+        [Display(Name = "Estimated End Time")]
+        public DateTime EstimatedEndTime { get; set; } = DateTime.Now.AddHours(4);
+
+        [Display(Name = "Calculated Duration (hours)")]
+        public decimal OperatorEstimatedHours 
+        { 
+            get 
+            {
+                if (EstimatedEndTime > ActualStartTime)
+                {
+                    return (decimal)(EstimatedEndTime - ActualStartTime).TotalHours;
+                }
+                return 0;
+            }
+            set
+            {
+                if (value > 0)
+                {
+                    EstimatedEndTime = ActualStartTime.AddHours((double)value);
+                }
+            }
+        }
+
+        [Display(Name = "System Estimated Time (hours)")]
+        public decimal? SystemEstimatedHours { get; set; }
+
+        [Display(Name = "Expected Completion Time")]
+        public DateTime? ExpectedCompletionTime { get; set; }
+
+        [Display(Name = "Build File (.build)")]
+        public string? BuildFileName { get; set; }
+
+        [Display(Name = "Build File Hash")]
+        public string? BuildFileHash { get; set; }
+
+        [Display(Name = "Repeated Build")]
+        public bool IsRepeatedBuild { get; set; }
+
+        [Display(Name = "Last Build Time (hours)")]
+        public decimal? LastBuildTime { get; set; }
+
+        [Display(Name = "Average Build Time (hours)")]
+        public decimal? AverageBuildTime { get; set; }
+
+        [Display(Name = "Times Built Before")]
+        public int TimesPreviouslyBuilt { get; set; }
+
+        // PHASE 4: Prototype Addition Interface
+        [Display(Name = "Add Prototypes")]
+        public bool AddPrototypes { get; set; }
+
+        [Display(Name = "Additional Prototypes")]
+        public List<PrototypeAddition> PrototypeAdditions { get; set; } = new();
+
+        [Display(Name = "Total Parts in Build")]
+        public int TotalPartsInBuild { get; set; } = 1;
+
+        [Display(Name = "Build Plate Utilization (%)")]
+        public decimal BuildPlateUtilization { get; set; }
+
+        [Display(Name = "Maximum Parts Capacity")]
+        public int MaxPartsCapacity { get; set; } = 50;
 
         // Multi-stage job support
         [Display(Name = "Job Stage")]
@@ -65,6 +130,92 @@ namespace OpCentrix.ViewModels.PrintTracking
         public string? StageType { get; set; }
         public string? Department { get; set; }
         public int? StageExecutionOrder { get; set; }
+
+        // PHASE 4: Machine Performance Context
+        public string? MachinePerformanceNotes { get; set; }
+        public decimal? MachineEfficiencyFactor { get; set; } = 1.0m;
+        public DateTime? LastMaintenanceDate { get; set; }
+
+        // PHASE 4: Build Complexity Assessment
+        [Display(Name = "Support Complexity")]
+        public string SupportComplexity { get; set; } = "Medium";
+
+        [Display(Name = "Part Orientations")]
+        public string? PartOrientations { get; set; }
+
+        [Display(Name = "Build Height (mm)")]
+        [Range(1, 300, ErrorMessage = "Build height must be between 1 and 300mm")]
+        public decimal? BuildHeight { get; set; }
+
+        [Display(Name = "Layer Count")]
+        [Range(10, 5000, ErrorMessage = "Layer count must be between 10 and 5000")]
+        public int? LayerCount { get; set; }
+
+        public List<string> SupportComplexityOptions { get; set; } = new() 
+        { 
+            "None", "Low", "Medium", "High", "Extreme" 
+        };
+
+        // PHASE 4: Time Factor Assessment
+        [Display(Name = "Factors Affecting Time")]
+        public List<string> TimeFactors { get; set; } = new();
+
+        public List<string> AvailableTimeFactors { get; set; } = new()
+        {
+            "Complex geometry",
+            "Fine details", 
+            "Thick supports",
+            "Multiple orientations",
+            "New material",
+            "Tight tolerances", 
+            "First-time build",
+            "Rush job",
+            "Holiday/weekend",
+            "Machine maintenance needed"
+        };
+
+        // Validation
+        public bool CanAddMorePrototypes => TotalPartsInBuild < MaxPartsCapacity;
+        public bool HasSpaceForPrototypes => BuildPlateUtilization < 90m;
+        public bool IsWithinScheduleTolerance => !IsDelayed || DelayMinutes <= 15;
+    }
+
+    /// <summary>
+    /// PHASE 4: Prototype addition during print start
+    /// </summary>
+    public class PrototypeAddition
+    {
+        [Required(ErrorMessage = "Part number is required")]
+        [Display(Name = "Part Number")]
+        public string PartNumber { get; set; } = string.Empty;
+
+        [Range(1, 50, ErrorMessage = "Quantity must be between 1 and 50")]
+        [Display(Name = "Quantity")]  
+        public int Quantity { get; set; } = 1;
+
+        [Display(Name = "Description")]
+        public string? Description { get; set; }
+
+        [Display(Name = "Requested By")]
+        public string? RequestedBy { get; set; }
+
+        [Display(Name = "Priority")]
+        public string Priority { get; set; } = "Normal";
+
+        [Display(Name = "Fits on Build Plate")]
+        public bool FitsOnBuildPlate { get; set; } = true;
+
+        [Display(Name = "Estimated Volume (cm³)")]
+        public decimal? EstimatedVolume { get; set; }
+
+        [Display(Name = "Notes")]
+        [StringLength(500, ErrorMessage = "Notes cannot exceed 500 characters")]
+        public string? Notes { get; set; }
+
+        public List<string> PriorityOptions { get; set; } = new() 
+        { 
+            "Low", "Normal", "High", "Urgent" 
+        };
     }
 
     /// <summary>
@@ -79,7 +230,7 @@ namespace OpCentrix.ViewModels.PrintTracking
     }
 
     /// <summary>
-    /// View model for the Post-Print Log Form - Enhanced for multi-stage manufacturing and compliance
+    /// View model for the Post-Print Log Form - Enhanced for PHASE 4 with operator time logging and performance assessment
     /// </summary>
     public class PostPrintViewModel
     {
@@ -101,6 +252,83 @@ namespace OpCentrix.ViewModels.PrintTracking
         [Required(ErrorMessage = "Reason for end is required")]
         [Display(Name = "Reason for End")]
         public string ReasonForEnd { get; set; } = string.Empty;
+
+        // PHASE 4: Enhanced Operator Time Logging
+        [Required(ErrorMessage = "Actual build time is required")]
+        [Display(Name = "Actual Build Time (hours)")]
+        [Range(0.1, 72.0, ErrorMessage = "Actual hours must be between 0.1 and 72")]
+        public decimal OperatorActualHours { get; set; }
+
+        [Display(Name = "Original Estimate (hours)")]
+        public decimal? OperatorEstimatedHours { get; set; }
+
+        [Display(Name = "System Estimate (hours)")]
+        public decimal? SystemEstimatedHours { get; set; }
+
+        [Required(ErrorMessage = "Performance assessment is required")]
+        [Display(Name = "How did the build perform?")]
+        public string OperatorBuildAssessment { get; set; } = string.Empty;
+
+        [Display(Name = "Machine Performance Notes")]
+        [StringLength(500, ErrorMessage = "Machine performance notes cannot exceed 500 characters")]
+        public string? MachinePerformanceNotes { get; set; }
+
+        // PHASE 4: Performance Assessment Options  
+        public List<string> BuildAssessmentOptions { get; set; } = new()
+        {
+            "Much faster than expected (25%+ time savings)",
+            "Faster than expected (10-25% time savings)", 
+            "As expected (within 10% of estimate)",
+            "Slower than expected (10-25% longer)",
+            "Much slower than expected (25%+ longer)",
+            "Failed/Aborted - estimate not applicable"
+        };
+
+        // PHASE 4: Quality Assessment
+        [Required(ErrorMessage = "Quality assessment is required")]
+        [Display(Name = "Overall Quality")]
+        public string QualityAssessment { get; set; } = string.Empty;
+
+        [Display(Name = "Defect Count")]
+        [Range(0, 1000, ErrorMessage = "Defect count must be between 0 and 1000")]
+        public int? DefectCount { get; set; } = 0;
+
+        [Display(Name = "Quality Notes")]
+        [StringLength(500, ErrorMessage = "Quality notes cannot exceed 500 characters")]
+        public string? QualityNotes { get; set; }
+
+        public List<string> QualityAssessmentOptions { get; set; } = new()
+        {
+            "Excellent - exceeds requirements",
+            "Good - meets all requirements", 
+            "Acceptable - minor issues",
+            "Poor - significant issues",
+            "Failed - does not meet requirements"
+        };
+
+        // PHASE 4: Factors Affecting Time Assessment
+        [Display(Name = "What factors affected build time?")]
+        public List<string> TimeFactors { get; set; } = new();
+
+        [Display(Name = "Lessons Learned")]
+        [StringLength(1000, ErrorMessage = "Lessons learned cannot exceed 1000 characters")]
+        public string? LessonsLearned { get; set; }
+
+        public List<string> AvailableTimeFactors { get; set; } = new()
+        {
+            "Machine ran faster than usual",
+            "Machine ran slower than usual", 
+            "Supports more complex than expected",
+            "Supports simpler than expected",
+            "Material issues/inconsistency",
+            "Power fluctuations/outages",
+            "Operator interrupted build",
+            "Emergency stop required",
+            "Software/file issues",
+            "First time building this file", 
+            "Familiar/repeated build",
+            "Post-processing requirements changed"
+        };
 
         // Part information
         public int? PartId { get; set; }
@@ -177,10 +405,6 @@ namespace OpCentrix.ViewModels.PrintTracking
         [Display(Name = "Quality Check Passed")]
         public bool? QualityCheckPassed { get; set; }
 
-        [Display(Name = "Quality Notes")]
-        [StringLength(500, ErrorMessage = "Quality notes cannot exceed 500 characters")]
-        public string? QualityNotes { get; set; }
-
         [Display(Name = "Next Stage Ready")]
         public bool NextStageReady { get; set; } = true;
 
@@ -203,6 +427,9 @@ namespace OpCentrix.ViewModels.PrintTracking
             "Rework Required"
         };
         public List<Part> AvailableParts { get; set; } = new();
+        
+        // ENHANCED: Available running jobs for dropdown selection
+        public List<Job> AvailableRunningJobs { get; set; } = new();
 
         // For operator info
         public string OperatorName { get; set; } = string.Empty;
@@ -226,6 +453,32 @@ namespace OpCentrix.ViewModels.PrintTracking
         public bool RequiresATFCompliance { get; set; }
         public bool RequiresITARCompliance { get; set; }
         public string? ComplianceNotes { get; set; }
+
+        // PHASE 4: Schedule Impact Assessment
+        [Display(Name = "Will this delay affect other jobs?")]
+        public bool WillDelayAffectSchedule { get; set; }
+
+        [Display(Name = "Schedule Impact Notes")]
+        [StringLength(500, ErrorMessage = "Schedule impact notes cannot exceed 500 characters")]
+        public string? ScheduleImpactNotes { get; set; }
+
+        [Display(Name = "Notify Affected Departments")]
+        public bool NotifyAffectedDepartments { get; set; } = true;
+
+        // Performance calculations
+        public decimal TimeVariancePercent => OperatorEstimatedHours.HasValue && OperatorEstimatedHours > 0 
+            ? ((OperatorActualHours - OperatorEstimatedHours.Value) / OperatorEstimatedHours.Value) * 100 
+            : 0;
+
+        public bool IsSignificantVariance => Math.Abs(TimeVariancePercent) > 15;
+        public string PerformanceColor => TimeVariancePercent switch
+        {
+            < -15 => "text-green-600", // Much faster
+            < -5 => "text-green-500",  // Faster  
+            <= 5 => "text-blue-600",   // As expected
+            <= 15 => "text-yellow-600", // Slower
+            _ => "text-red-600"        // Much slower
+        };
     }
 
     /// <summary>

@@ -236,6 +236,9 @@ builder.Services.AddScoped<ICohortManagementService, CohortManagementService>();
 // Phase 3: Automated Stage Progression Service
 builder.Services.AddScoped<IStageProgressionService, StageProgressionService>();
 
+// Phase 5: Build Time Analytics Service (Machine Learning and Performance Analytics)
+builder.Services.AddScoped<IBuildTimeAnalyticsService, BuildTimeAnalyticsService>();
+
 // Update PrintTrackingService registration to include cohort service and stage progression service
 builder.Services.AddScoped<IPrintTrackingService>(provider =>
 {

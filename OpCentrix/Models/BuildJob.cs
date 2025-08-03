@@ -204,9 +204,9 @@ namespace OpCentrix.Models
         }
 
         /// <summary>
-        /// Abort the build job
+        /// Abort the build job with a reason
         /// </summary>
-        public void Abort(string reason = "Aborted")
+        public void Abort(string reason)
         {
             Status = "Aborted";
             ReasonForEnd = reason;
@@ -214,31 +214,137 @@ namespace OpCentrix.Models
             CompletedAt = DateTime.UtcNow;
         }
 
-        /// <summary>
-        /// Get build efficiency percentage
-        /// </summary>
-        public double GetEfficiencyPercent()
-        {
-            if (!ScheduledStartTime.HasValue || !ScheduledEndTime.HasValue || !ActualEndTime.HasValue)
-                return 0;
-
-            var scheduledDuration = ScheduledEndTime.Value - ScheduledStartTime.Value;
-            var actualDuration = ActualEndTime.Value - ActualStartTime;
-
-            if (actualDuration.TotalMinutes <= 0)
-                return 0;
-
-            return Math.Min(100, (scheduledDuration.TotalMinutes / actualDuration.TotalMinutes) * 100);
-        }
-
-        /// <summary>
-        /// Get cost estimate based on actual time
-        /// </summary>
-        public decimal GetEstimatedCost(decimal hourlyRate = 125m)
-        {
-            return (decimal)PrintHours * hourlyRate;
-        }
-
         #endregion
+    }
+
+    /// <summary>
+    /// PHASE 4: Tracks completion data for individual parts within a build job
+    /// </summary>
+    public class PartCompletionLog
+    {
+        [Key]
+        public int Id { get; set; }
+        
+        [Required]
+        public int BuildJobId { get; set; }
+        
+        [Required]
+        [StringLength(100)]
+        public string PartNumber { get; set; } = string.Empty;
+        
+        [Required]
+        [Range(1, 1000)]
+        public int Quantity { get; set; }
+        
+        [Required]
+        [Range(0, 1000)]
+        public int GoodParts { get; set; }
+        
+        [Required]
+        [Range(0, 1000)]
+        public int DefectiveParts { get; set; }
+        
+        [Required]
+        [Range(0, 1000)]
+        public int ReworkParts { get; set; }
+        
+        [Range(0, 100)]
+        public decimal QualityRate { get; set; }
+        
+        public bool IsPrimary { get; set; }
+        
+        [StringLength(500)]
+        public string? InspectionNotes { get; set; }
+        
+        public DateTime CompletedAt { get; set; }
+        
+        // Navigation property
+        public virtual BuildJob BuildJob { get; set; } = null!;
+    }
+
+    /// <summary>
+    /// PHASE 4: Tracks operator time estimates at the start of builds for learning
+    /// </summary>
+    public class OperatorEstimateLog
+    {
+        [Key]
+        public int Id { get; set; }
+        
+        [Required]
+        public int BuildJobId { get; set; }
+        
+        [Required]
+        [Range(0.1, 100)]
+        public decimal EstimatedHours { get; set; }
+        
+        [StringLength(500)]
+        public string? TimeFactors { get; set; }
+        
+        [StringLength(500)]
+        public string? OperatorNotes { get; set; }
+        
+        public DateTime LoggedAt { get; set; }
+        
+        // Navigation property
+        public virtual BuildJob BuildJob { get; set; } = null!;
+    }
+
+    /// <summary>
+    /// PHASE 4: Machine learning data for build time estimation and optimization
+    /// </summary>
+    public class BuildTimeLearningData
+    {
+        [Key]
+        public int Id { get; set; }
+        
+        [Required]
+        public int BuildJobId { get; set; }
+        
+        [Required]
+        [StringLength(50)]
+        public string MachineId { get; set; } = string.Empty;
+        
+        [StringLength(32)]
+        public string? BuildFileHash { get; set; }
+        
+        [Required]
+        [Range(0.1, 100)]
+        public decimal OperatorEstimatedHours { get; set; }
+        
+        [Required]
+        [Range(0.1, 100)]
+        public decimal ActualHours { get; set; }
+        
+        [Required]
+        [Range(-1000, 1000)]
+        public decimal VariancePercent { get; set; }
+        
+        [StringLength(20)]
+        public string? SupportComplexity { get; set; }
+        
+        [StringLength(1000)]
+        public string? TimeFactors { get; set; }
+        
+        [Required]
+        [Range(0, 100)]
+        public decimal QualityScore { get; set; }
+        
+        public int DefectCount { get; set; } = 0;
+        
+        [Range(0, 300)]
+        public decimal? BuildHeight { get; set; }
+        
+        [Range(10, 5000)]
+        public int? LayerCount { get; set; }
+        
+        public int TotalParts { get; set; } = 1;
+        
+        [StringLength(500)]
+        public string? PartOrientations { get; set; }
+        
+        public DateTime RecordedAt { get; set; }
+        
+        // Navigation property
+        public virtual BuildJob BuildJob { get; set; } = null!;
     }
 }

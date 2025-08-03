@@ -1,0 +1,695 @@
+@page
+@model OpCentrix.Pages.Analytics.BuildTimeAnalyticsModel
+@{
+    ViewData["Title"] = "Build Time Analytics";
+}
+
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">?? Build Time Analytics & Machine Learning</h1>
+            <p class="text-muted">Advanced analytics with predictive intelligence for manufacturing optimization</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#predictiveToolsModal">
+                ?? Predictive Tools
+            </button>
+            <form method="post" asp-page-handler="UpdateLearningModel" class="d-inline">
+                <button type="submit" class="btn btn-outline-success">
+                    ?? Update ML Model
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Filters and Controls -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="StartDate" class="form-label">Start Date</label>
+                    <input type="date" class="form-control" asp-for="StartDate" />
+                </div>
+                <div class="col-md-3">
+                    <label for="EndDate" class="form-label">End Date</label>
+                    <input type="date" class="form-control" asp-for="EndDate" />
+                </div>
+                <div class="col-md-2">
+                    <label for="SelectedOperator" class="form-label">Operator</label>
+                    <select class="form-select" asp-for="SelectedOperator" asp-items="@(new SelectList(Model.AvailableOperators))">
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="SelectedMachine" class="form-label">Machine</label>
+                    <select class="form-select" asp-for="SelectedMachine" asp-items="@(new SelectList(Model.AvailableMachines))">
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">Filter</button>
+                    <form method="post" asp-page-handler="Refresh" class="d-inline">
+                        <button type="submit" class="btn btn-outline-secondary">Refresh</button>
+                    </form>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Learning Model Status -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">?? Machine Learning Model Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-database me-2"></i>
+                                <div>
+                                    <div class="fw-bold">@Model.ModelInsights.TotalDataPoints</div>
+                                    <small class="text-muted">Total Data Points</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-graph-up me-2"></i>
+                                <div>
+                                    <div class="fw-bold">@Model.ModelInsights.AccuracyDisplay</div>
+                                    <small class="text-muted">Model Accuracy</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-check-circle me-2"></i>
+                                <div>
+                                    <span class="badge @Model.ModelInsights.DataQualityBadgeClass">@Model.ModelInsights.DataQuality</span>
+                                    <small class="text-muted d-block">Data Quality</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-clock me-2"></i>
+                                <div>
+                                    <div class="fw-bold">@Model.ModelInsights.LastUpdatedDisplay</div>
+                                    <small class="text-muted">Last Updated</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    @if (Model.ModelInsights.RecommendedActions.Any())
+                    {
+                        <div class="mt-3">
+                            <strong>Recommended Actions:</strong>
+                            <ul class="mb-0 mt-1">
+                                @foreach (var action in Model.ModelInsights.RecommendedActions)
+                                {
+                                    <li>@action</li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Key Metrics Row -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center border-primary">
+                <div class="card-body">
+                    <div class="display-6 text-primary">@Model.Analytics.TotalBuilds</div>
+                    <div class="fw-bold">Total Builds</div>
+                    <small class="text-muted">Analyzed in period</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-success">
+                <div class="card-body">
+                    <div class="display-6 text-success">@Model.Analytics.AverageEstimateAccuracy.ToString("F1")%</div>
+                    <div class="fw-bold">Estimate Accuracy</div>
+                    <small class="text-muted">Average across all builds</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-info">
+                <div class="card-body">
+                    <div class="display-6 text-info">@Model.MachineComparison.TopPerformingMachine</div>
+                    <div class="fw-bold">Top Machine</div>
+                    <small class="text-muted">Best overall performance</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-warning">
+                <div class="card-body">
+                    <div class="display-6 text-warning">@Model.MachineComparison.BestQualityMachine</div>
+                    <div class="fw-bold">Quality Leader</div>
+                    <small class="text-muted">Highest quality scores</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">?? Build Time Accuracy Trends</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="accuracyTrendChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">?? Quality Trends</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="qualityTrendChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Machine Performance Comparison -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">?? Machine Performance Comparison</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Machine</th>
+                                    <th>Total Builds</th>
+                                    <th>Accuracy</th>
+                                    <th>Quality Score</th>
+                                    <th>Utilization</th>
+                                    <th>Performance Rating</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var machine in Model.MachineComparison.MachinePerformanceData)
+                                {
+                                    <tr>
+                                        <td><strong>@machine.MachineId</strong></td>
+                                        <td>@machine.TotalBuilds</td>
+                                        <td>
+                                            <span class="badge @Model.GetAccuracyBadgeClass((decimal)machine.AverageAccuracy)">
+                                                @machine.AccuracyDisplay
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge @Model.GetQualityBadgeClass((decimal)machine.AverageQualityScore)">
+                                                @machine.QualityDisplay
+                                            </span>
+                                        </td>
+                                        <td>@machine.UtilizationDisplay</td>
+                                        <td>
+                                            <span class="badge @((machine.AverageAccuracy + machine.AverageQualityScore) / 2 >= 90 ? "badge-success" : (machine.AverageAccuracy + machine.AverageQualityScore) / 2 >= 80 ? "badge-primary" : "badge-warning")">
+                                                @machine.PerformanceRating
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Operator Performance (if selected) -->
+    @if (Model.SelectedOperator != "All" && !string.IsNullOrEmpty(Model.SelectedOperator))
+    {
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">?? Operator Performance: @Model.OperatorPerformance.OperatorName</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <div class="display-6">@Model.OperatorPerformance.TotalBuilds</div>
+                                    <div class="fw-bold">Total Builds</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <div class="display-6">@Model.OperatorPerformance.AccuracyDisplay</div>
+                                    <div class="fw-bold">Average Accuracy</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <div class="display-6">@Model.OperatorPerformance.QualityDisplay</div>
+                                    <div class="fw-bold">Quality Score</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <div class="display-6">@Model.GetTrendIcon(Model.OperatorPerformance.AccuracyTrend)</div>
+                                    <div class="fw-bold">@Model.OperatorPerformance.AccuracyTrend</div>
+                                </div>
+                            </div>
+                        </div>
+                        @if (Model.OperatorPerformance.ImprovementSuggestions.Any())
+                        {
+                            <div class="mt-3">
+                                <strong>Improvement Suggestions:</strong>
+                                <ul class="mb-0 mt-1">
+                                    @foreach (var suggestion in Model.OperatorPerformance.ImprovementSuggestions)
+                                    {
+                                        <li>@suggestion</li>
+                                    }
+                                </ul>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Optimization Suggestions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">?? AI-Powered Optimization Suggestions</h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.Analytics.OptimizationSuggestions.Any())
+                    {
+                        <div class="row">
+                            @foreach (var suggestion in Model.Analytics.OptimizationSuggestions.Take(6))
+                            {
+                                <div class="col-md-4 mb-3">
+                                    <div class="card h-100 border-left-primary">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <span class="me-2">@Model.GetCategoryIcon(suggestion.Category)</span>
+                                                <span class="badge @Model.GetPriorityBadgeClass(suggestion.Priority)">@suggestion.Priority</span>
+                                            </div>
+                                            <h6 class="card-title">@suggestion.Category</h6>
+                                            <p class="card-text">@suggestion.Suggestion</p>
+                                            <small class="text-muted">
+                                                <strong>Impact:</strong> @suggestion.PotentialImpact<br />
+                                                <strong>Savings:</strong> @suggestion.EstimatedSavings
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center text-muted py-4">
+                            <i class="bi bi-lightbulb fs-1"></i>
+                            <p>No optimization suggestions available. More data needed for AI analysis.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top and Problem Builds -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">?? Top Performing Builds</h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.Analytics.TopPerformingBuilds.Any())
+                    {
+                        <div class="list-group">
+                            @foreach (var build in Model.Analytics.TopPerformingBuilds)
+                            {
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>Build #@build.BuildJobId</strong> - @build.MachineId
+                                            <br />
+                                            <small class="text-muted">@build.DateDisplay</small>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="badge badge-success">@build.OverallScore</div>
+                                            <br />
+                                            <small>Q: @build.QualityDisplay | A: @build.AccuracyDisplay</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted text-center py-3">No top performing builds in this period.</p>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-warning text-white">
+                    <h5 class="mb-0">?? Builds Needing Attention</h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.Analytics.ProblemBuilds.Any())
+                    {
+                        <div class="list-group">
+                            @foreach (var build in Model.Analytics.ProblemBuilds)
+                            {
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>Build #@build.BuildJobId</strong> - @build.MachineId
+                                            <br />
+                                            <small class="text-muted">@build.DateDisplay</small>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="badge badge-warning">@build.OverallScore</div>
+                                            <br />
+                                            <small>Q: @build.QualityDisplay | A: @build.AccuracyDisplay</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted text-center py-3">No problem builds identified in this period.</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Predictive Tools Modal -->
+<div class="modal fade" id="predictiveToolsModal" tabindex="-1" aria-labelledby="predictiveToolsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="predictiveToolsModalLabel">?? Predictive Analytics Tools</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Build Time Prediction -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0">? Build Time Prediction</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Part Number</label>
+                                <input type="text" class="form-control" id="predictPartNumber" placeholder="Enter part number">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Machine</label>
+                                <select class="form-select" id="predictMachineId">
+                                    <option value="">Select machine</option>
+                                    <option value="TI1">TI1</option>
+                                    <option value="TI2">TI2</option>
+                                    <option value="TI3">TI3</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Build File Hash (Optional)</label>
+                                <input type="text" class="form-control" id="predictBuildFileHash" placeholder="Enter hash">
+                            </div>
+                            <div class="col-12">
+                                <button type="button" class="btn btn-primary" onclick="predictBuildTime()">
+                                    Predict Build Time
+                                </button>
+                            </div>
+                        </div>
+                        <div id="buildTimePredictionResult" class="mt-3" style="display: none;"></div>
+                    </div>
+                </div>
+
+                <!-- Quality Prediction -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">?? Quality Outcome Prediction</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Part Number</label>
+                                <input type="text" class="form-control" id="qualityPartNumber" placeholder="Part number">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Machine</label>
+                                <select class="form-select" id="qualityMachineId">
+                                    <option value="">Select machine</option>
+                                    <option value="TI1">TI1</option>
+                                    <option value="TI2">TI2</option>
+                                    <option value="TI3">TI3</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Support Complexity</label>
+                                <select class="form-select" id="qualitySupportComplexity">
+                                    <option value="Low">Low</option>
+                                    <option value="Medium" selected>Medium</option>
+                                    <option value="High">High</option>
+                                    <option value="None">None</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Total Parts</label>
+                                <input type="number" class="form-control" id="qualityTotalParts" value="1" min="1">
+                            </div>
+                            <div class="col-12">
+                                <button type="button" class="btn btn-success" onclick="predictQuality()">
+                                    Predict Quality Outcome
+                                </button>
+                            </div>
+                        </div>
+                        <div id="qualityPredictionResult" class="mt-3" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Initialize charts
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCharts();
+        });
+
+        function initializeCharts() {
+            // Build Time Accuracy Trend Chart
+            const accuracyCtx = document.getElementById('accuracyTrendChart').getContext('2d');
+            new Chart(accuracyCtx, {
+                type: 'line',
+                data: {
+                    labels: [@Html.Raw(Json.Serialize(Model.TimeTrends.Select(t => t.DateDisplay)))],
+                    datasets: [{
+                        label: 'Accuracy %',
+                        data: [@Html.Raw(Json.Serialize(Model.TimeTrends.Select(t => t.AverageAccuracy)))],
+                        borderColor: '#007bff',
+                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+
+            // Quality Trend Chart
+            const qualityCtx = document.getElementById('qualityTrendChart').getContext('2d');
+            new Chart(qualityCtx, {
+                type: 'line',
+                data: {
+                    labels: [@Html.Raw(Json.Serialize(Model.QualityTrends.Select(q => q.DateDisplay)))],
+                    datasets: [{
+                        label: 'Quality Rate %',
+                        data: [@Html.Raw(Json.Serialize(Model.QualityTrends.Select(q => q.QualityRate)))],
+                        borderColor: '#28a745',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: 'Defect Rate %',
+                        data: [@Html.Raw(Json.Serialize(Model.QualityTrends.Select(q => q.DefectRate)))],
+                        borderColor: '#dc3545',
+                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Predictive functions
+        async function predictBuildTime() {
+            const partNumber = document.getElementById('predictPartNumber').value;
+            const machineId = document.getElementById('predictMachineId').value;
+            const buildFileHash = document.getElementById('predictBuildFileHash').value;
+
+            if (!partNumber || !machineId) {
+                alert('Part number and machine are required.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`?handler=PredictBuildTime&partNumber=${encodeURIComponent(partNumber)}&machineId=${encodeURIComponent(machineId)}&buildFileHash=${encodeURIComponent(buildFileHash)}`);
+                const prediction = await response.json();
+
+                displayBuildTimePrediction(prediction);
+            } catch (error) {
+                console.error('Error predicting build time:', error);
+                alert('Error generating prediction. Please try again.');
+            }
+        }
+
+        async function predictQuality() {
+            const partNumber = document.getElementById('qualityPartNumber').value;
+            const machineId = document.getElementById('qualityMachineId').value;
+            const supportComplexity = document.getElementById('qualitySupportComplexity').value;
+            const totalParts = document.getElementById('qualityTotalParts').value;
+
+            if (!partNumber || !machineId) {
+                alert('Part number and machine are required.');
+                return;
+            }
+
+            try {
+                const params = new URLSearchParams({
+                    'parameters.PartNumber': partNumber,
+                    'parameters.MachineId': machineId,
+                    'parameters.SupportComplexity': supportComplexity,
+                    'parameters.TotalParts': totalParts
+                });
+
+                const response = await fetch(`?handler=QualityPrediction&${params}`);
+                const prediction = await response.json();
+
+                displayQualityPrediction(prediction);
+            } catch (error) {
+                console.error('Error predicting quality:', error);
+                alert('Error generating quality prediction. Please try again.');
+            }
+        }
+
+        function displayBuildTimePrediction(prediction) {
+            const resultDiv = document.getElementById('buildTimePredictionResult');
+            resultDiv.innerHTML = `
+                <div class="alert alert-info">
+                    <h6>?? Build Time Prediction</h6>
+                    <p><strong>Estimated Time:</strong> ${prediction.estimateDisplay}</p>
+                    <p><strong>Confidence:</strong> <span class="badge ${prediction.confidenceBadgeClass}">${prediction.confidenceDisplay}</span></p>
+                    <p><strong>Recommended Machine:</strong> ${prediction.recommendedMachine}</p>
+                    <p><strong>Data Quality:</strong> ${prediction.dataQuality}</p>
+                    <div><strong>Factors Considered:</strong></div>
+                    <ul>
+                        ${prediction.factorsConsidered.map(factor => `<li>${factor}</li>`).join('')}
+                    </ul>
+                    ${prediction.optimizations.length > 0 ? `
+                        <div><strong>Optimizations:</strong></div>
+                        <ul>
+                            ${prediction.optimizations.map(opt => `<li><strong>${opt.type}:</strong> ${opt.suggestion} (${opt.estimatedImpact})</li>`).join('')}
+                        </ul>
+                    ` : ''}
+                </div>
+            `;
+            resultDiv.style.display = 'block';
+        }
+
+        function displayQualityPrediction(prediction) {
+            const resultDiv = document.getElementById('qualityPredictionResult');
+            resultDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <h6>?? Quality Prediction</h6>
+                    <p><strong>Predicted Quality Rate:</strong> <span class="badge ${prediction.qualityBadgeClass}">${prediction.qualityDisplay}</span></p>
+                    <p><strong>Confidence:</strong> ${prediction.confidenceLevel}%</p>
+                    ${prediction.riskFactors.length > 0 ? `
+                        <div><strong>Risk Factors:</strong></div>
+                        <ul>
+                            ${prediction.riskFactors.map(rf => `<li><span class="badge ${rf.impactBadgeClass}">${rf.impact}</span> ${rf.factor}</li>`).join('')}
+                        </ul>
+                    ` : ''}
+                    ${prediction.recommendations.length > 0 ? `
+                        <div><strong>Recommendations:</strong></div>
+                        <ul>
+                            ${prediction.recommendations.map(rec => `<li><span class="badge ${rec.priorityBadgeClass}">${rec.priority}</span> ${rec.suggestion}</li>`).join('')}
+                        </ul>
+                    ` : ''}
+                </div>
+            `;
+            resultDiv.style.display = 'block';
+        }
+    </script>
+}
+
+<style>
+    .card.border-left-primary {
+        border-left: 4px solid #007bff;
+    }
+    
+    .badge-success {
+        background-color: #28a745;
+    }
+    
+    .badge-primary {
+        background-color: #007bff;
+    }
+    
+    .badge-warning {
+        background-color: #ffc107;
+        color: #212529;
+    }
+    
+    .badge-danger {
+        background-color: #dc3545;
+    }
+    
+    .badge-info {
+        background-color: #17a2b8;
+    }
+    
+    .badge-secondary {
+        background-color: #6c757d;
+    }
+</style>
