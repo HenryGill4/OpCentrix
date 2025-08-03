@@ -230,6 +230,9 @@ else
 // Register the new PartStageService
 builder.Services.AddScoped<IPartStageService, PartStageService>();
 
+// Option A: Multi-Stage Workflow Enhancement Service
+builder.Services.AddScoped<ICohortManagementService, CohortManagementService>();
+
 // FIXED: Use only the Admin namespace ProductionStageSeederService to resolve ambiguity - COMPLETE FIX
 builder.Services.AddScoped<OpCentrix.Services.Admin.IProductionStageSeederService, OpCentrix.Services.Admin.ProductionStageSeederService>();
 

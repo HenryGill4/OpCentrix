@@ -65,6 +65,10 @@ namespace OpCentrix.Data
         public DbSet<PrototypeTimeLog> PrototypeTimeLogs { get; set; }
         public DbSet<PartStageRequirement> PartStageRequirements { get; set; } = null!;
 
+        // Option A: Multi-Stage Workflow Enhancement
+        public DbSet<BuildCohort> BuildCohorts { get; set; }
+        public DbSet<JobStageHistory> JobStageHistories { get; set; }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             if (!optionsBuilder.IsConfigured)
@@ -95,6 +99,9 @@ namespace OpCentrix.Data
 
             // Configure prototype tracking entities  
             ConfigurePrototypeTrackingEntities(modelBuilder);
+            
+            // Configure Option A workflow entities
+            ConfigureOptionAWorkflowEntities(modelBuilder);
         }
 
         private void ConfigureCoreEntities(ModelBuilder modelBuilder)
@@ -755,7 +762,7 @@ namespace OpCentrix.Data
                 entity.Property(e => e.ComponentCategory).IsRequired().HasMaxLength(50);
                 entity.Property(e => e.SuppressorType).HasMaxLength(50);
                 entity.Property(e => e.BafflePosition).HasMaxLength(50);
-                entity.Property(e => e.FirearmType).HasMaxLength(50);
+                entity.Property(e => e.FirearmType).HasMaxLength(50).HasDefaultValue("");
                 entity.Property(e => e.RecommendedMaterial).IsRequired().HasMaxLength(100).HasDefaultValue("Ti-6Al-4V Grade 5");
                 entity.Property(e => e.AlternativeMaterials).HasMaxLength(200).HasDefaultValue("");
                 entity.Property(e => e.MaterialGrade).HasMaxLength(50).HasDefaultValue("Aerospace");
@@ -1180,6 +1187,90 @@ namespace OpCentrix.Data
                 entity.HasIndex(e => e.Employee);
                 entity.HasIndex(e => e.LogDate);
                 entity.HasIndex(e => e.StartTime);
+            });
+        }
+        
+        private void ConfigureOptionAWorkflowEntities(ModelBuilder modelBuilder)
+        {
+            // Configure BuildCohort entity
+            modelBuilder.Entity<BuildCohort>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.BuildNumber).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Material).IsRequired().HasMaxLength(100).HasDefaultValue("Ti-6Al-4V Grade 5");
+                entity.Property(e => e.Status).IsRequired().HasMaxLength(50).HasDefaultValue("InProgress");
+                entity.Property(e => e.CreatedBy).IsRequired().HasMaxLength(100).HasDefaultValue("System");
+                entity.Property(e => e.Notes).HasMaxLength(1000);
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
+                
+                // Foreign key relationships
+                entity.HasOne(e => e.BuildJob)
+                    .WithMany()
+                    .HasForeignKey(e => e.BuildJobId)
+                    .OnDelete(DeleteBehavior.SetNull);
+                
+                // Indexes
+                entity.HasIndex(e => e.BuildNumber).IsUnique();
+                entity.HasIndex(e => e.BuildJobId);
+                entity.HasIndex(e => e.Material);
+                entity.HasIndex(e => e.Status);
+                entity.HasIndex(e => e.CreatedDate);
+                entity.HasIndex(e => e.CompletedDate);
+            });
+
+            // Configure JobStageHistory entity
+            modelBuilder.Entity<JobStageHistory>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Action).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.StageName).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Operator).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Timestamp).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.Notes).HasMaxLength(1000);
+                entity.Property(e => e.MachineId).HasMaxLength(50);
+                entity.Property(e => e.QualityResult).HasMaxLength(20);
+                
+                // Foreign key relationships
+                entity.HasOne(e => e.Job)
+                    .WithMany()
+                    .HasForeignKey(e => e.JobId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                    
+                entity.HasOne(e => e.ProductionStage)
+                    .WithMany()
+                    .HasForeignKey(e => e.ProductionStageId)
+                    .OnDelete(DeleteBehavior.SetNull);
+                
+                // Indexes
+                entity.HasIndex(e => e.JobId);
+                entity.HasIndex(e => e.ProductionStageId);
+                entity.HasIndex(e => e.Action);
+                entity.HasIndex(e => e.StageName);
+                entity.HasIndex(e => e.Operator);
+                entity.HasIndex(e => e.Timestamp);
+                entity.HasIndex(e => e.MachineId);
+                entity.HasIndex(e => new { e.JobId, e.Timestamp });
+            });
+            
+            // Update Job entity configuration for Option A fields
+            modelBuilder.Entity<Job>(entity =>
+            {
+                // Option A workflow fields
+                entity.Property(e => e.WorkflowStage).HasMaxLength(50);
+                
+                // Foreign key to BuildCohort
+                entity.HasOne<BuildCohort>()
+                    .WithMany(bc => bc.Jobs)
+                    .HasForeignKey(e => e.BuildCohortId)
+                    .OnDelete(DeleteBehavior.SetNull);
+                
+                // Indexes for new workflow fields
+                entity.HasIndex(e => e.BuildCohortId);
+                entity.HasIndex(e => e.WorkflowStage);
+                entity.HasIndex(e => e.StageOrder);
+                entity.HasIndex(e => new { e.BuildCohortId, e.StageOrder });
+                entity.HasIndex(e => new { e.WorkflowStage, e.Status });
             });
         }
         

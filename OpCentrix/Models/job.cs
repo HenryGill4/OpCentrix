@@ -43,6 +43,31 @@ namespace OpCentrix.Models
 
         #endregion
 
+        #region Option A: Multi-Stage Workflow Enhancement (4 NEW FIELDS)
+        
+        /// <summary>
+        /// Links to SLS build cohort for parts tracking (20-130 parts per build)
+        /// </summary>
+        public int? BuildCohortId { get; set; }
+        
+        /// <summary>
+        /// Current workflow stage: "SLS", "CNC", "EDM", "Assembly", "QC"
+        /// </summary>
+        [StringLength(50)]
+        public string? WorkflowStage { get; set; }
+        
+        /// <summary>
+        /// Execution order within workflow: 1, 2, 3, etc.
+        /// </summary>
+        public int? StageOrder { get; set; }
+        
+        /// <summary>
+        /// Total stages in this job's workflow: 5 total stages typical
+        /// </summary>
+        public int? TotalStages { get; set; }
+
+        #endregion
+
         #region Part and Production Data
 
         // Linked part information
