@@ -137,6 +137,7 @@ public class AdminJobService : IAdminJobService
 
     public async Task<List<Machine>> GetAvailableMachinesAsync()
     {
+        // FIXED: Use Machine instead of SlsMachine
         return await _context.Machines
             .Where(m => m.IsActive)
             .OrderBy(m => m.MachineId)

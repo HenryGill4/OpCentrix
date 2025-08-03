@@ -385,19 +385,19 @@
                         
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Machine ID*</label>
-                            <input type="text" name="MachineInput.MachineId" id="machineId" required minlength="2" maxlength="50" 
+                            <input type="text" name="CreateMachineRequest.MachineId" id="machineId" required minlength="2" maxlength="50" 
                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                         </div>
                         
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Machine Name*</label>
-                            <input type="text" name="MachineInput.MachineName" id="machineName" required minlength="3" maxlength="100" 
+                            <input type="text" name="CreateMachineRequest.MachineName" id="machineName" required minlength="3" maxlength="100" 
                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                         </div>
                         
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Machine Type*</label>
-                            <select name="MachineInput.MachineModel" id="machineModel" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                            <select name="CreateMachineRequest.MachineModel" id="machineModel" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                                 <option value="TruPrint 3000">TruPrint 3000 (SLS)</option>
                                 <option value="TruPrint 1000">TruPrint 1000 (SLS)</option>
                                 <option value="Sodick AP1L">Sodick AP1L (EDM)</option>
@@ -410,13 +410,13 @@
                         
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Serial Number</label>
-                            <input type="text" name="MachineInput.SerialNumber" id="serialNumber" maxlength="50" 
+                            <input type="text" name="CreateMachineRequest.SerialNumber" id="serialNumber" maxlength="50" 
                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                         </div>
                         
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Location</label>
-                            <input type="text" name="MachineInput.Location" id="location" maxlength="100" 
+                            <input type="text" name="CreateMachineRequest.Location" id="location" maxlength="100" 
                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                         </div>
                     </div>
@@ -446,7 +446,7 @@
                                     }
                                 </div>
                                 <!-- Hidden input for form submission -->
-                                <textarea name="MachineInput.SupportedMaterials" id="supportedMaterials" required maxlength="500" rows="2" 
+                                <textarea name="CreateMachineRequest.SupportedMaterials" id="supportedMaterials" required maxlength="500" rows="2" 
                                           placeholder="Selected materials will appear here..."
                                           class="mt-2 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
                                           readonly></textarea>
@@ -456,7 +456,7 @@
                         
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Current Material</label>
-                            <select name="MachineInput.CurrentMaterial" id="currentMaterial" 
+                            <select name="CreateMachineRequest.CurrentMaterial" id="currentMaterial" 
                                     class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                                 <option value="">No material loaded</option>
                                 @foreach (var material in Model.AvailableMaterials)
@@ -472,7 +472,7 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Status*</label>
-                                <select name="MachineInput.Status" id="status" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <select name="CreateMachineRequest.Status" id="status" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                                     <option value="Idle">Idle</option>
                                     <option value="Building">Building</option>
                                     <option value="Maintenance">Maintenance</option>
@@ -483,7 +483,7 @@
                             
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Priority</label>
-                                <select name="MachineInput.Priority" id="priority" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <select name="CreateMachineRequest.Priority" id="priority" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                                     <option value="1">1 (Highest)</option>
                                     <option value="2">2 (High)</option>
                                     <option value="3" selected>3 (Normal)</option>
@@ -501,19 +501,19 @@
                         <div class="grid grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Length</label>
-                                <input type="number" name="MachineInput.BuildLengthMm" id="buildLengthMm" min="50" max="500" value="250" 
+                                <input type="number" name="CreateMachineRequest.BuildLengthMm" id="buildLengthMm" min="50" max="500" value="250" 
                                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                             </div>
                             
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Width</label>
-                                <input type="number" name="MachineInput.BuildWidthMm" id="buildWidthMm" min="50" max="500" value="250" 
+                                <input type="number" name="CreateMachineRequest.BuildWidthMm" id="buildWidthMm" min="50" max="500" value="250" 
                                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                             </div>
                             
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Height</label>
-                                <input type="number" name="MachineInput.BuildHeightMm" id="buildHeightMm" min="50" max="500" value="300" 
+                                <input type="number" name="CreateMachineRequest.BuildHeightMm" id="buildHeightMm" min="50" max="500" value="300" 
                                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                             </div>
                         </div>
@@ -526,13 +526,13 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Max Laser Power (W)</label>
-                                <input type="number" name="MachineInput.MaxLaserPowerWatts" id="maxLaserPowerWatts" min="100" max="1000" value="400" 
+                                <input type="number" name="CreateMachineRequest.MaxLaserPowerWatts" id="maxLaserPowerWatts" min="100" max="1000" value="400" 
                                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                             </div>
                             
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Max Scan Speed (mm/s)</label>
-                                <input type="number" name="MachineInput.MaxScanSpeedMmPerSec" id="maxScanSpeedMmPerSec" min="1000" max="10000" value="7000" 
+                                <input type="number" name="CreateMachineRequest.MaxScanSpeedMmPerSec" id="maxScanSpeedMmPerSec" min="1000" max="10000" value="7000" 
                                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                             </div>
                         </div>
@@ -540,42 +540,42 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Min Layer Thickness (µm)</label>
-                                <input type="number" name="MachineInput.MinLayerThicknessMicrons" id="minLayerThicknessMicrons" min="10" max="100" value="20" 
+                                <input type="number" name="CreateMachineRequest.MinLayerThicknessMicrons" id="minLayerThicknessMicrons" min="10" max="100" value="20" 
                                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                             </div>
                             
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Max Layer Thickness (µm)</label>
-                                <input type="number" name="MachineInput.MaxLayerThicknessMicrons" id="maxLayerThicknessMicrons" min="10" max="100" value="60" 
+                                <input type="number" name="CreateMachineRequest.MaxLayerThicknessMicrons" id="maxLayerThicknessMicrons" min="10" max="100" value="60" 
                                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                             </div>
                         </div>
                         
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Maintenance Interval (hours)</label>
-                            <input type="number" name="MachineInput.MaintenanceIntervalHours" id="maintenanceIntervalHours" min="100" max="2000" value="500" 
+                            <input type="number" name="CreateMachineRequest.MaintenanceIntervalHours" id="maintenanceIntervalHours" min="100" max="2000" value="500" 
                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                         </div>
                     </div>
 
                     <!-- OPC UA Configuration -->
                     <div class="space-y-4 md:col-span-2">
-                        <h4 class="font-medium text-gray-900">OPC UA Configuration</h4>
+                        <h4 class="font-medium text-gray-900">OPC UA Configuration (Optional)</h4>
                         
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700">OPC UA Endpoint URL</label>
-                                <input type="url" name="MachineInput.OpcUaEndpointUrl" id="opcUaEndpointUrl" maxlength="200" 
+                                <label class="block text-sm font-medium text-gray-700">OPC UA Endpoint URL <span class="text-gray-500">(Optional)</span></label>
+                                <input type="url" name="CreateMachineRequest.OpcUaEndpointUrl" id="opcUaEndpointUrl" maxlength="200" 
                                        placeholder="opc.tcp://192.168.1.100:4840"
                                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                             </div>
                             
                             <div class="flex items-center space-x-6">
                                 <div class="flex items-center">
-                                    <input type="checkbox" name="MachineInput.OpcUaEnabled" id="opcUaEnabled" value="true" 
+                                    <input type="checkbox" name="CreateMachineRequest.OpcUaEnabled" id="opcUaEnabled" value="true" 
                                            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                                     <label for="opcUaEnabled" class="ml-2 block text-sm text-gray-900">OPC UA Enabled</label>
-                                    <input type="hidden" name="MachineInput.OpcUaEnabled" value="false" />
+                                    <input type="hidden" name="CreateMachineRequest.OpcUaEnabled" value="false" />
                                 </div>
                             </div>
                         </div>
@@ -587,17 +587,17 @@
                         
                         <div class="flex items-center space-x-6">
                             <div class="flex items-center">
-                                <input type="checkbox" name="MachineInput.IsActive" id="isActive" value="true" checked 
+                                <input type="checkbox" name="CreateMachineRequest.IsActive" id="isActive" value="true" checked 
                                        class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                                 <label for="isActive" class="ml-2 block text-sm text-gray-900">Active</label>
-                                <input type="hidden" name="MachineInput.IsActive" value="false" />
+                                <input type="hidden" name="CreateMachineRequest.IsActive" value="false" />
                             </div>
                             
                             <div class="flex items-center">
-                                <input type="checkbox" name="MachineInput.IsAvailableForScheduling" id="isAvailableForScheduling" value="true" checked 
+                                <input type="checkbox" name="CreateMachineRequest.IsAvailableForScheduling" id="isAvailableForScheduling" value="true" checked 
                                        class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                                 <label for="isAvailableForScheduling" class="ml-2 block text-sm text-gray-900">Available for Scheduling</label>
-                                <input type="hidden" name="MachineInput.IsAvailableForScheduling" value="false" />
+                                <input type="hidden" name="CreateMachineRequest.IsAvailableForScheduling" value="false" />
                             </div>
                         </div>
                     </div>
@@ -628,7 +628,7 @@
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Machine ID*</label>
-                        <select name="CapabilityInput.MachineId" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        <select name="CreateCapabilityRequest.MachineId" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                             <option value="">Select Machine</option>
                             @foreach (var machine in Model.Machines)
                             {
@@ -639,13 +639,13 @@
                     
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Capability Name*</label>
-                        <input type="text" name="CapabilityInput.CapabilityName" required maxlength="100" 
+                        <input type="text" name="CreateCapabilityRequest.CapabilityName" required maxlength="100" 
                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                     </div>
                     
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Capability Type*</label>
-                        <select name="CapabilityInput.CapabilityType" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        <select name="CreateCapabilityRequest.CapabilityType" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                             <option value="">Select Type</option>
                             <option value="Process Parameter">Process Parameter</option>
                             <option value="Material Property">Material Property</option>
@@ -657,7 +657,7 @@
                     
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Value Type*</label>
-                        <select name="CapabilityInput.ValueType" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        <select name="CreateCapabilityRequest.ValueType" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                             <option value="Number">Number</option>
                             <option value="Text">Text</option>
                             <option value="Boolean">Boolean</option>
@@ -667,13 +667,13 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Min Value</label>
-                            <input type="number" name="CapabilityInput.MinValue" step="0.01" 
+                            <input type="number" name="CreateCapabilityRequest.MinValue" step="0.01" 
                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                         </div>
                         
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Max Value</label>
-                            <input type="number" name="CapabilityInput.MaxValue" step="0.01" 
+                            <input type="number" name="CreateCapabilityRequest.MaxValue" step="0.01" 
                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                         </div>
                     </div>
@@ -681,28 +681,28 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Default Value</label>
-                            <input type="number" name="CapabilityInput.DefaultValue" step="0.01" 
+                            <input type="number" name="CreateCapabilityRequest.DefaultValue" step="0.01" 
                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                         </div>
                         
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Unit</label>
-                            <input type="text" name="CapabilityInput.Unit" maxlength="20" 
+                            <input type="text" name="CreateCapabilityRequest.Unit" maxlength="20" 
                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                         </div>
                     </div>
                     
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Description</label>
-                        <textarea name="CapabilityInput.Description" maxlength="500" rows="3" 
+                        <textarea name="CreateCapabilityRequest.Description" maxlength="500" rows="3" 
                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
                     </div>
                     
                     <div class="flex items-center">
-                        <input type="checkbox" name="CapabilityInput.IsRequired" value="true" 
+                        <input type="checkbox" name="CreateCapabilityRequest.IsRequired" value="true" 
                                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                         <label class="ml-2 block text-sm text-gray-900">Required</label>
-                        <input type="hidden" name="CapabilityInput.IsRequired" value="false" />
+                        <input type="hidden" name="CreateCapabilityRequest.IsRequired" value="false" />
                     </div>
                 </div>
                 

@@ -387,8 +387,10 @@ public class MachineManagementService : IMachineManagementService
     {
         try
         {
+            // FIXED: Use proper integer primary key foreign key reference
             return await _context.MachineCapabilities
-                .Where(c => c.MachineId == machineId && c.IsAvailable)
+                .Where(c => c.MachineId == machineId && c.IsAvailable) // Uses machine.Id (int)
+                .Include(c => c.Machine) // Include machine for navigation
                 .OrderBy(c => c.Priority)
                 .ThenBy(c => c.CapabilityType)
                 .ToListAsync();

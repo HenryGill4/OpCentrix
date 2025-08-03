@@ -6,7 +6,7 @@ namespace OpCentrix.Models;
 /// <summary>
 /// Represents machine capabilities and configurations for any machine type
 /// Links machines to their supported materials, processes, and operational parameters
-/// Task 6: Machine Status and Dynamic Machine Management - REDESIGNED
+/// Task 6: Machine Status and Dynamic Machine Management - FIXED FOREIGN KEY
 /// </summary>
 public class MachineCapability
 {
@@ -15,12 +15,14 @@ public class MachineCapability
 
     /// <summary>
     /// Reference to the machine (uses Machine.Id integer primary key)
+    /// FIXED: Properly references Machine.Id (int) not Machine.MachineId (string)
     /// </summary>
     [Required]
     public int MachineId { get; set; }
 
     /// <summary>
     /// Navigation property to Machine
+    /// FIXED: Properly configured to use integer foreign key
     /// </summary>
     public virtual Machine Machine { get; set; } = null!;
 
