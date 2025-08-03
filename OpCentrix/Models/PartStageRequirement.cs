@@ -27,6 +27,11 @@ namespace OpCentrix.Models
         /// </summary>
         [Required]
         public int ProductionStageId { get; set; }
+
+        /// <summary>
+        /// Optional workflow template this requirement belongs to
+        /// </summary>
+        public int? WorkflowTemplateId { get; set; }
         
         #endregion
         

@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OpCentrix.Models;
+using OpCentrix.Models.JobStaging;
 
 namespace OpCentrix.Data
 {
@@ -21,9 +22,9 @@ namespace OpCentrix.Data
         // Task 9: Enhanced scheduler features
         public DbSet<JobNote> JobNotes { get; set; }
 
-        // Task 11: Multi-stage manufacturing entities
+        // Task 11: Multi-stage manufacturing entities (JobStage-based)
         public DbSet<JobStage> JobStages { get; set; }
-        public DbSet<StageDependency> StageDependencies { get; set; }
+        public DbSet<JobStageDependency> StageDependencies { get; set; }
         public DbSet<StageNote> StageNotes { get; set; }
 
         // Enhanced admin entities from Task 2
@@ -69,6 +70,11 @@ namespace OpCentrix.Data
         public DbSet<BuildCohort> BuildCohorts { get; set; }
         public DbSet<JobStageHistory> JobStageHistories { get; set; }
 
+        // Advanced Stage Management: Workflow Templates and Dependencies (ProductionStage-based)
+        public DbSet<WorkflowTemplate> WorkflowTemplates { get; set; }
+        public DbSet<ResourcePool> ResourcePools { get; set; }
+        public DbSet<OpCentrix.Models.StageDependency> ProductionStageDependencies { get; set; }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             if (!optionsBuilder.IsConfigured)
@@ -102,6 +108,9 @@ namespace OpCentrix.Data
             
             // Configure Option A workflow entities
             ConfigureOptionAWorkflowEntities(modelBuilder);
+
+            // Configure advanced stage management entities
+            ConfigureAdvancedStageManagementEntities(modelBuilder);
         }
 
         private void ConfigureCoreEntities(ModelBuilder modelBuilder)
@@ -353,8 +362,8 @@ namespace OpCentrix.Data
                 entity.HasIndex(e => new { e.JobId, e.ExecutionOrder });
             });
 
-            // Task 11: Configure StageDependency entity
-            modelBuilder.Entity<StageDependency>(entity =>
+            // Task 11: Configure StageDependency entity (JobStage-based)
+            modelBuilder.Entity<JobStageDependency>(entity =>
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.DependencyType).IsRequired().HasMaxLength(50).HasDefaultValue("FinishToStart");
@@ -378,7 +387,7 @@ namespace OpCentrix.Data
                 entity.HasIndex(e => e.DependencyType);
                 
                 // Prevent circular dependencies
-                entity.ToTable(t => t.HasCheckConstraint("CK_StageDependency_NoSelfReference", 
+                entity.ToTable(t => t.HasCheckConstraint("CK_JobStageDependency_NoSelfReference", 
                     "DependentStageId != RequiredStageId"));
             });
 
@@ -418,7 +427,7 @@ namespace OpCentrix.Data
             modelBuilder.Entity<Material>().HasKey(e => e.Id);
             modelBuilder.Entity<JobNote>().HasKey(e => e.Id);
             modelBuilder.Entity<JobStage>().HasKey(e => e.Id);
-            modelBuilder.Entity<StageDependency>().HasKey(e => e.Id);
+            modelBuilder.Entity<JobStageDependency>().HasKey(e => e.Id);
             modelBuilder.Entity<StageNote>().HasKey(e => e.Id);
             modelBuilder.Entity<User>().HasKey(e => e.Id);
             modelBuilder.Entity<UserSettings>().HasKey(e => e.Id);
@@ -658,7 +667,7 @@ namespace OpCentrix.Data
             modelBuilder.Entity<Material>().HasKey(e => e.Id);
             modelBuilder.Entity<JobNote>().HasKey(e => e.Id);
             modelBuilder.Entity<JobStage>().HasKey(e => e.Id);
-            modelBuilder.Entity<StageDependency>().HasKey(e => e.Id);
+            modelBuilder.Entity<JobStageDependency>().HasKey(e => e.Id);
             modelBuilder.Entity<StageNote>().HasKey(e => e.Id);
             modelBuilder.Entity<User>().HasKey(e => e.Id);
             modelBuilder.Entity<UserSettings>().HasKey(e => e.Id);
@@ -1064,7 +1073,7 @@ namespace OpCentrix.Data
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
                 entity.Property(e => e.IsActive).HasDefaultValue(true);
                 
-                // NEW: Configure additional columns that exist in database
+                // Configure additional columns that exist in database
                 entity.Property(e => e.CustomFieldsConfig).HasMaxLength(2000).HasDefaultValue("[]");
                 entity.Property(e => e.AssignedMachineIds).HasMaxLength(500);
                 entity.Property(e => e.RequiresMachineAssignment).HasDefaultValue(false);
@@ -1273,7 +1282,125 @@ namespace OpCentrix.Data
                 entity.HasIndex(e => new { e.WorkflowStage, e.Status });
             });
         }
-        
+
+        private void ConfigureAdvancedStageManagementEntities(ModelBuilder modelBuilder)
+        {
+            // Configure WorkflowTemplate entity
+            modelBuilder.Entity<WorkflowTemplate>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Description).HasMaxLength(500);
+                entity.Property(e => e.Category).HasMaxLength(50);
+                entity.Property(e => e.Complexity).IsRequired().HasMaxLength(50).HasDefaultValue("Medium");
+                entity.Property(e => e.EstimatedDurationHours).HasDefaultValue(8.0);
+                entity.Property(e => e.EstimatedCost).HasPrecision(12, 2).HasDefaultValue(0.00m);
+                entity.Property(e => e.StageConfiguration).IsRequired().HasMaxLength(4000).HasDefaultValue("[]");
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.CreatedBy).IsRequired().HasMaxLength(100).HasDefaultValue("System");
+                entity.Property(e => e.LastModifiedBy).IsRequired().HasMaxLength(100).HasDefaultValue("System");
+                entity.Property(e => e.IsActive).HasDefaultValue(true);
+
+                // Indexes
+                entity.HasIndex(e => e.Name);
+                entity.HasIndex(e => e.Category);
+                entity.HasIndex(e => e.Complexity);
+                entity.HasIndex(e => e.IsActive);
+                entity.HasIndex(e => new { e.Category, e.IsActive });
+            });
+
+            // Configure ResourcePool entity
+            modelBuilder.Entity<ResourcePool>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Description).HasMaxLength(500);
+                entity.Property(e => e.ResourceType).IsRequired().HasMaxLength(50).HasDefaultValue("Machine");
+                entity.Property(e => e.ResourceConfiguration).IsRequired().HasMaxLength(4000).HasDefaultValue("[]");
+                entity.Property(e => e.MaxConcurrentAllocations).HasDefaultValue(1);
+                entity.Property(e => e.AutoAssign).HasDefaultValue(false);
+                entity.Property(e => e.AssignmentCriteria).HasMaxLength(2000);
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.CreatedBy).IsRequired().HasMaxLength(100).HasDefaultValue("System");
+                entity.Property(e => e.LastModifiedBy).IsRequired().HasMaxLength(100).HasDefaultValue("System");
+                entity.Property(e => e.IsActive).HasDefaultValue(true);
+
+                // Indexes
+                entity.HasIndex(e => e.Name);
+                entity.HasIndex(e => e.ResourceType);
+                entity.HasIndex(e => e.AutoAssign);
+                entity.HasIndex(e => e.IsActive);
+                entity.HasIndex(e => new { e.ResourceType, e.IsActive });
+            });
+
+            // Configure the ProductionStage-based StageDependency entity (different from JobStage-based one)
+            // Use a different table name to avoid conflicts
+            modelBuilder.Entity<OpCentrix.Models.StageDependency>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.DependencyType).IsRequired().HasMaxLength(50).HasDefaultValue("FinishToStart");
+                entity.Property(e => e.DelayHours).HasDefaultValue(0);
+                entity.Property(e => e.IsOptional).HasDefaultValue(false);
+                entity.Property(e => e.Condition).HasMaxLength(1000);
+                entity.Property(e => e.Notes).HasMaxLength(500);
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.CreatedBy).IsRequired().HasMaxLength(100).HasDefaultValue("System");
+                entity.Property(e => e.LastModifiedBy).IsRequired().HasMaxLength(100).HasDefaultValue("System");
+                entity.Property(e => e.IsActive).HasDefaultValue(true);
+
+                // Configure relationships to ProductionStage instead of JobStage
+                entity.HasOne(e => e.DependentStage)
+                    .WithMany()
+                    .HasForeignKey(e => e.DependentStageId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                    
+                entity.HasOne(e => e.PrerequisiteStage)
+                    .WithMany()
+                    .HasForeignKey(e => e.PrerequisiteStageId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // Indexes
+                entity.HasIndex(e => e.DependentStageId);
+                entity.HasIndex(e => e.PrerequisiteStageId);
+                entity.HasIndex(e => e.DependencyType);
+                entity.HasIndex(e => e.IsActive);
+                entity.HasIndex(e => new { e.DependentStageId, e.PrerequisiteStageId }).IsUnique();
+                
+                // Use a different table name to avoid conflicts with JobStage StageDependency
+                entity.ToTable("ProductionStageDependencies");
+                
+                // Prevent circular dependencies
+                entity.ToTable("ProductionStageDependencies", t => t.HasCheckConstraint("CK_ProductionStageDependency_NoSelfReference", 
+                    "DependentStageId != PrerequisiteStageId"));
+            });
+
+            // Add WorkflowTemplateId to PartStageRequirement for template tracking
+            modelBuilder.Entity<PartStageRequirement>(entity =>
+            {
+                entity.Property(e => e.WorkflowTemplateId).IsRequired(false);
+                
+                entity.HasOne<WorkflowTemplate>()
+                    .WithMany()
+                    .HasForeignKey(e => e.WorkflowTemplateId)
+                    .OnDelete(DeleteBehavior.SetNull);
+                    
+                entity.HasIndex(e => e.WorkflowTemplateId);
+            });
+
+            // Add WorkflowTemplateId to ProductionStageExecution for tracking
+            modelBuilder.Entity<ProductionStageExecution>(entity =>
+            {
+                entity.Property(e => e.WorkflowTemplateId).IsRequired(false);
+                
+                entity.HasOne<WorkflowTemplate>()
+                    .WithMany()
+                    .HasForeignKey(e => e.WorkflowTemplateId)
+                    .OnDelete(DeleteBehavior.SetNull);
+                    
+                entity.HasIndex(e => e.WorkflowTemplateId);
+            });
+        }
+
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             UpdateAuditFields();

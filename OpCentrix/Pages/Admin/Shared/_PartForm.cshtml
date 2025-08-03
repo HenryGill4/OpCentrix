@@ -406,14 +406,14 @@
                     </div>
                     
                     <div class="col-md-3">
-    <div class="card bg-success text-white">
-        <div class="card-body text-center">
-            <i class="fas fa-dollar-sign fa-2x mb-2"></i>
-            <h4 class="mb-0" id="summary-total-cost">$0.00</h4>
-            <small>Estimated Cost</small>
-        </div>
-    </div>
-</div>
+                        <div class="card bg-success text-white">
+                            <div class="card-body text-center">
+                                <i class="fas fa-dollar-sign fa-2x mb-2"></i>
+                                <h4 class="mb-0" id="summary-total-cost">$0.00</h4>
+                                <small>Estimated Cost</small>
+                            </div>
+                        </div>
+                    </div>
                     
                     <div class="col-md-3">
                         <div class="card bg-warning text-white">
@@ -492,6 +492,7 @@
                                     </div>
                                 </div>
                                 
+
                                 <div class="mb-3">
                                     <label class="form-label">Calculated Cost</label>
                                     <div class="form-control-plaintext bg-light border rounded p-2" id="calculated-cost">
@@ -636,325 +637,334 @@
         });
     }
     
-    // Update dynamic stage tabs based on selected stages
-    function updateDynamicStageTabs(stagesData) {
-        const tabsList = document.getElementById('partFormTabs');
-        const tabsContent = document.getElementById('partFormTabsContent');
-        
-        if (!tabsList || !tabsContent) return;
-        
-        // Remove existing dynamic stage tabs
-        const existingDynamicTabs = tabsList.querySelectorAll('.dynamic-stage-tab');
-        existingDynamicTabs.forEach(tab => tab.remove());
-        
-        const existingDynamicPanes = tabsContent.querySelectorAll('.dynamic-stage-pane');
-        existingDynamicPanes.forEach(pane => pane.remove());
-        
-        if (!stagesData || stagesData.size === 0) return;
-        
-        // Sort stages by execution order
-        const sortedStages = Array.from(stagesData.entries())
-            .sort(([, a], [, b]) => a.executionOrder - b.executionOrder);
-        
-        // Find insertion point (after stages tab, before material tab)
-        const stagesTab = document.getElementById('stages-tab').parentElement;
-        const materialTab = document.getElementById('material-tab').parentElement;
-        
-        // Create tabs and panes for each selected stage
-        sortedStages.forEach(([stageId, stageData], index) => {
-            const stage = window.availableStages?.find(s => s.id === parseInt(stageId));
-            if (!stage) return;
+    // Update totals summary in the Summary tab
+    function updateTotalsSummary(stagesData) {
+        try {
+            const totalStagesEl = document.getElementById('summary-total-stages');
+            const totalDurationEl = document.getElementById('summary-total-duration');
+            const totalCostEl = document.getElementById('summary-total-cost');
+            const complexityEl = document.getElementById('summary-complexity');
             
-            // Create tab
-            const tabId = `stage-${stageId}-tab`;
-            const paneId = `stage-${stageId}-pane`;
-            
-            const tabElement = document.createElement('li');
-            tabElement.className = 'nav-item dynamic-stage-tab';
-            tabElement.setAttribute('role', 'presentation');
-            tabElement.innerHTML = `
-                <button class="nav-link" id="${tabId}" type="button" 
-                        data-bs-toggle="tab" data-bs-target="#${paneId}" role="tab">
-                    <i class="${stage.stageIcon || 'fas fa-cogs'} me-1" style="color: ${stage.stageColor || '#007bff'};"></i>
-                    <span class="d-none d-md-inline">${stageData.name}</span>
-                    <span class="d-md-none">#${stageData.executionOrder}</span>
-                </button>
-            `;
-            
-            // Insert tab after stages tab
-            tabsList.insertBefore(tabElement, materialTab);
-            
-            // Create pane with custom fields
-            const customFields = stage.customFields || [];
-            const customFieldsHtml = customFields.length > 0 ? 
-                generateStageCustomFieldsForm(stageId, customFields, stageData.customFieldValues || {}) : 
-                '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>No custom fields configured for this stage.</div>';
-            
-            const paneElement = document.createElement('div');
-            paneElement.className = 'tab-pane fade dynamic-stage-pane';
-            paneElement.id = paneId;
-            paneElement.setAttribute('role', 'tabpanel');
-            paneElement.innerHTML = `
-                <div class="row g-3">
-                    <div class="col-12">
-                        <div class="d-flex align-items-center mb-3">
-                            <i class="${stage.stageIcon || 'fas fa-cogs'} fa-2x me-3" style="color: ${stage.stageColor || '#007bff'};"></i>
-                            <div>
-                                <h5 class="mb-1" style="color: ${stage.stageColor || '#007bff'};">${stageData.name}</h5>
-                                <p class="text-muted mb-0">Stage ${stageData.executionOrder} - ${stage.department || 'Manufacturing'}</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Stage Configuration Summary -->
-                    <div class="col-12">
-                        <div class="card border-primary">
-                            <div class="card-header bg-primary text-white">
-                                <h6 class="mb-0">
-                                    <i class="fas fa-cog me-2"></i>Stage Configuration
-                                </h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-3">
-                                        <label class="form-label">Duration (hours)</label>
-                                        <input type="number" step="0.1" min="0.1" class="form-control stage-duration-input" 
-                                               value="${stageData.estimatedHours}" data-stage-id="${stageId}"
-                                               onchange="updateStageParameter(${stageId}, 'estimatedHours', this.value)">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label">Setup Time (minutes)</label>
-                                        <input type="number" min="0" class="form-control stage-setup-input" 
-                                               value="${stageData.setupTimeMinutes}" data-stage-id="${stageId}"
-                                               onchange="updateStageParameter(${stageId}, 'setupTimeMinutes', this.value)">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label">Hourly Rate ($)</label>
-                                        <input type="number" step="0.01" min="0" class="form-control stage-rate-input" 
-                                               value="${stageData.hourlyRateOverride || stage.defaultHourlyRate || 85}" data-stage-id="${stageId}"
-                                               onchange="updateStageParameter(${stageId}, 'hourlyRateOverride', this.value)">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label">Material Cost ($)</label>
-                                        <input type="number" step="0.01" min="0" class="form-control stage-material-input" 
-                                               value="${stageData.materialCost || 0}" data-stage-id="${stageId}"
-                                               onchange="updateStageParameter(${stageId}, 'materialCost', this.value)">
-                                    </div>
-                                </div>
-                                
-                                ${stage.requiresMachineAssignment ? `
-                                    <div class="row mt-3">
-                                        <div class="col-md-6">
-                                            <label class="form-label">Assigned Machine</label>
-                                            <select class="form-select stage-machine-select" data-stage-id="${stageId}"
-                                                    onchange="updateStageParameter(${stageId}, 'assignedMachineId', this.value)">
-                                                <option value="">Select Machine</option>
-                                                ${(window.availableMachines || []).map(machine => `
-                                                    <option value="${machine.machineId}" ${stageData.assignedMachineId === machine.machineId ? 'selected' : ''}>
-                                                        ${machine.machineId} - ${machine.name}
-                                                    </option>
-                                                `).join('')}
-                                            </select>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-check mt-4">
-                                                <input type="checkbox" class="form-check-input" 
-                                                       ${stageData.allowParallelExecution ? 'checked' : ''} data-stage-id="${stageId}"
-                                                       onchange="updateStageParameter(${stageId}, 'allowParallelExecution', this.checked)">
-                                                <label class="form-check-label">Allow parallel execution</label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ` : ''}
-                                
-                                <div class="row mt-3">
-                                    <div class="col-12">
-                                        <label class="form-label">Special Instructions</label>
-                                        <textarea class="form-control stage-instructions-input" rows="2" data-stage-id="${stageId}"
-                                                  placeholder="Any special instructions for this stage..."
-                                                  onchange="updateStageParameter(${stageId}, 'specialInstructions', this.value)">${stageData.specialInstructions || ''}</textarea>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Custom Fields Section -->
-                    <div class="col-12">
-                        <div class="card border-info">
-                            <div class="card-header bg-info text-white">
-                                <h6 class="mb-0">
-                                    <i class="fas fa-wrench me-2"></i>Stage-Specific Fields
-                                </h6>
-                            </div>
-                            <div class="card-body">
-                                ${customFieldsHtml}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            // Insert pane after stages pane
-            const stagesPane = document.getElementById('stages');
-            tabsContent.insertBefore(paneElement, stagesPane.nextElementSibling);
-        });
-        
-        console.log(`?? [PART-FORM] Created ${sortedStages.length} dynamic stage tabs`);
-    }
-    
-    // Generate custom fields form for a stage
-    function generateStageCustomFieldsForm(stageId, customFields, currentValues) {
-        if (!customFields || customFields.length === 0) {
-            return '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>No custom fields configured for this stage.</div>';
-        }
-        
-        return customFields.map(field => {
-            const fieldId = `stage-${stageId}-field-${field.Name}`;
-            const currentValue = currentValues[field.Name] || field.DefaultValue || '';
-            
-            let inputHtml = '';
-            
-            switch (field.Type) {
-                case 'number':
-                    inputHtml = `
-                        <input type="number" class="form-control stage-custom-field" 
-                               id="${fieldId}" data-stage-id="${stageId}" data-field-name="${field.Name}"
-                               value="${currentValue}" ${field.Required ? 'required' : ''}
-                               ${field.MinValue !== null ? `min="${field.MinValue}"` : ''}
-                               ${field.MaxValue !== null ? `max="${field.MaxValue}"` : ''}
-                               placeholder="${field.PlaceholderText || ''}"
-                               onchange="updateStageCustomField(${stageId}, '${field.Name}', this.value)">
-                        ${field.Unit ? `<div class="form-text">Unit: ${field.Unit}</div>` : ''}
-                    `;
-                    break;
-                    
-                case 'dropdown':
-                    inputHtml = `
-                        <select class="form-select stage-custom-field" 
-                                id="${fieldId}" data-stage-id="${stageId}" data-field-name="${field.Name}"
-                                ${field.Required ? 'required' : ''}
-                                onchange="updateStageCustomField(${stageId}, '${field.Name}', this.value)">
-                            <option value="">Select ${field.Label}</option>
-                            ${(field.Options || []).map(option => `
-                                <option value="${option}" ${currentValue === option ? 'selected' : ''}>${option}</option>
-                            `).join('')}
-                        </select>
-                    `;
-                    break;
-                    
-                case 'checkbox':
-                    inputHtml = `
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input stage-custom-field" 
-                                   id="${fieldId}" data-stage-id="${stageId}" data-field-name="${field.Name}"
-                                   ${currentValue === 'true' || currentValue === true ? 'checked' : ''}
-                                   onchange="updateStageCustomField(${stageId}, '${field.Name}', this.checked)">
-                            <label class="form-check-label" for="${fieldId}">${field.Label}</label>
-                        </div>
-                    `;
-                    break;
-                    
-                case 'textarea':
-                    inputHtml = `
-                        <textarea class="form-control stage-custom-field" 
-                                  id="${fieldId}" data-stage-id="${stageId}" data-field-name="${field.Name}"
-                                  rows="3" ${field.Required ? 'required' : ''}
-                                  placeholder="${field.PlaceholderText || ''}"
-                                  onchange="updateStageCustomField(${stageId}, '${field.Name}', this.value)">${currentValue}</textarea>
-                    `;
-                    break;
-                    
-                case 'date':
-                    inputHtml = `
-                        <input type="date" class="form-control stage-custom-field" 
-                               id="${fieldId}" data-stage-id="${stageId}" data-field-name="${field.Name}"
-                               value="${currentValue}" ${field.Required ? 'required' : ''}
-                               onchange="updateStageCustomField(${stageId}, '${field.Name}', this.value)">
-                    `;
-                    break;
-                    
-                default: // text
-                    inputHtml = `
-                        <input type="text" class="form-control stage-custom-field" 
-                               id="${fieldId}" data-stage-id="${stageId}" data-field-name="${field.Name}"
-                               value="${currentValue}" ${field.Required ? 'required' : ''}
-                               placeholder="${field.PlaceholderText || ''}"
-                               onchange="updateStageCustomField(${stageId}, '${field.Name}', this.value)">
-                    `;
-                    break;
+            if (!stagesData || stagesData.size === 0) {
+                if (totalStagesEl) totalStagesEl.textContent = '0';
+                if (totalDurationEl) totalDurationEl.textContent = '0.0h';
+                if (totalCostEl) totalCostEl.textContent = '$0.00';
+                if (complexityEl) complexityEl.textContent = 'Simple';
+                
+                updateStageBreakdownTable([]);
+                return;
             }
             
-            if (field.Type !== 'checkbox') {
-                return `
-                    <div class="mb-3">
-                        <label class="form-label" for="${fieldId}">
-                            ${field.Label} ${field.Required ? '<span class="text-danger">*</span>' : ''}
-                        </label>
-                        ${inputHtml}
-                        ${field.Description ? `<div class="form-text">${field.Description}</div>` : ''}
+            // Get calculated values from window global data
+            const stageData = window.selectedStageData;
+            if (stageData) {
+                if (totalStagesEl) totalStagesEl.textContent = stageData.stages.size;
+                if (totalDurationEl) totalDurationEl.textContent = `${stageData.totalDuration.toFixed(1)}h`;
+                if (totalCostEl) totalCostEl.textContent = `$${stageData.totalCost.toFixed(2)}`;
+                if (complexityEl) {
+                    complexityEl.textContent = stageData.complexityLevel;
+                    complexityEl.className = complexityEl.className.replace(/bg-\w+/, getComplexityColorClass(stageData.complexityLevel));
+                }
+                
+                // Update breakdown table
+                const sortedStages = Array.from(stageData.stages.entries())
+                    .sort(([, a], [, b]) => a.executionOrder - b.executionOrder);
+                updateStageBreakdownTable(sortedStages);
+            }
+            
+            console.log('? [PART-FORM] Updated totals summary');
+        } catch (error) {
+            console.error('? [PART-FORM] Error updating totals summary:', error);
+        }
+    }
+
+    // Update admin override calculated values
+    function updateAdminCalculatedValues(stagesData) {
+        try {
+            const calculatedDurationEl = document.getElementById('calculated-duration');
+            const calculatedCostEl = document.getElementById('calculated-cost');
+            const stageConfigurationEl = document.getElementById('stage-configuration');
+            
+            const stageData = window.selectedStageData;
+            if (stageData && stagesData.size > 0) {
+                if (calculatedDurationEl) {
+                    calculatedDurationEl.textContent = `${stageData.totalDuration.toFixed(1)} hours`;
+                }
+                if (calculatedCostEl) {
+                    calculatedCostEl.textContent = `$${stageData.totalCost.toFixed(2)}`;
+                }
+                if (stageConfigurationEl) {
+                    const stageNames = Array.from(stageData.stages.values()).map(s => s.name).join(', ');
+                    stageConfigurationEl.textContent = `${stageData.stages.size} stages: ${stageNames}`;
+                }
+            } else {
+                if (calculatedDurationEl) calculatedDurationEl.textContent = '0.0 hours';
+                if (calculatedCostEl) calculatedCostEl.textContent = '$0.00';
+                if (stageConfigurationEl) stageConfigurationEl.textContent = 'No stages configured';
+            }
+            
+            console.log('? [PART-FORM] Updated admin calculated values');
+        } catch (error) {
+            console.error('? [PART-FORM] Error updating admin values:', error);
+        }
+    }
+
+    // Update stage breakdown table
+    function updateStageBreakdownTable(sortedStages) {
+        try {
+            const tableContainer = document.getElementById('stage-breakdown-table');
+            if (!tableContainer) return;
+            
+            if (sortedStages.length === 0) {
+                tableContainer.innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-info-circle fa-2x mb-2"></i>
+                        <p>No stages selected yet.</p>
+                        <p class="small">Go to the Manufacturing Stages tab to configure stages for this part.</p>
                     </div>
                 `;
-            } else {
-                return `<div class="mb-3">${inputHtml}</div>`;
+                return;
             }
-        }).join('');
+            
+            const availableStages = window.availableStages || [];
+            
+            const tableHtml = `
+                <table class="table table-sm">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="60">Order</th>
+                            <th>Stage</th>
+                            <th width="100">Duration</th>
+                            <th width="100">Setup</th>
+                            <th width="120">Est. Cost</th>
+                            <th width="120">Machine</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${sortedStages.map(([stageId, stageData]) => {
+                            const stage = availableStages.find(s => s.id === parseInt(stageId));
+                            const hourlyRate = stageData.hourlyRateOverride || stage?.defaultHourlyRate || 85;
+                            const setupCost = (stageData.setupTimeMinutes / 60) * hourlyRate;
+                            const laborCost = stageData.estimatedHours * hourlyRate;
+                            const totalStageCost = setupCost + laborCost + stageData.materialCost;
+                            
+                            return `
+                                <tr>
+                                    <td>
+                                        <span class="badge" style="background-color: ${stage?.stageColor || '#007bff'};">
+                                            ${stageData.executionOrder}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <i class="${stage?.stageIcon || 'fas fa-cogs'} me-2" style="color: ${stage?.stageColor || '#007bff'};"></i>
+                                            <strong>${stageData.name}</strong>
+                                        </div>
+                                        ${stage?.department ? `<div class="small text-muted">${stage.department}</div>` : ''}
+                                    </td>
+                                    <td class="text-center">
+                                        <strong>${stageData.estimatedHours}h</strong>
+                                    </td>
+                                    <td class="text-center">
+                                        ${stageData.setupTimeMinutes} min
+                                    </td>
+                                    <td class="text-end">
+                                        <strong>$${totalStageCost.toFixed(2)}</strong>
+                                        <div class="small text-muted">$${hourlyRate.toFixed(2)}/hr</div>
+                                    </td>
+                                    <td>
+                                        ${stageData.assignedMachineId ? 
+                                            `<span class="text-success">${stageData.assignedMachineId}</span>` :
+                                            '<span class="text-muted">Any</span>'
+                                        }
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            tableContainer.innerHTML = tableHtml;
+            console.log('? [PART-FORM] Updated stage breakdown table');
+        } catch (error) {
+            console.error('? [PART-FORM] Error updating breakdown table:', error);
+        }
     }
-    
-    // Update stage parameter
-    window.updateStageParameter = function(stageId, parameterName, value) {
-        // This function will be called when stage parameters change
-        // Trigger stage configuration change event
-        const event = new CustomEvent('stageParameterChanged', {
-            detail: { stageId, parameterName, value }
-        });
-        document.dispatchEvent(event);
-    };
-    
-    // Update stage custom field
-    window.updateStageCustomField = function(stageId, fieldName, value) {
-        // This function will be called when custom fields change
-        const event = new CustomEvent('stageCustomFieldChanged', {
-            detail: { stageId, fieldName, value }
-        });
-        document.dispatchEvent(event);
-    };
-    
-    // Listen for stage parameter and custom field changes
-    document.addEventListener('stageParameterChanged', function(event) {
-        const { stageId, parameterName, value } = event.detail;
-        
-        // Update the selectedStages data
-        if (window.selectedStageData && window.selectedStageData.stages && window.selectedStageData.stages.has(stageId)) {
-            const stageData = window.selectedStageData.stages.get(stageId);
-            stageData[parameterName] = value;
-            
-            // Trigger update of totals and dynamic tabs
-            const updateEvent = new CustomEvent('stageConfigurationChanged', {
-                detail: window.selectedStageData.stages
-            });
-            document.dispatchEvent(updateEvent);
+
+    // Get complexity color class
+    function getComplexityColorClass(complexityLevel) {
+        switch (complexityLevel) {
+            case 'Simple': return 'bg-success';
+            case 'Medium': return 'bg-info';
+            case 'Complex': return 'bg-warning';
+            case 'Very Complex': return 'bg-danger';
+            default: return 'bg-secondary';
         }
-    });
-    
-    document.addEventListener('stageCustomFieldChanged', function(event) {
-        const { stageId, fieldName, value } = event.detail;
+    }
+
+    // Initialize material auto-fill
+    function setupMaterialAutoFill() {
+        const materialSelect = document.getElementById('materialSelect');
+        if (materialSelect) {
+            materialSelect.addEventListener('change', function() {
+                window.updateSlsMaterial && window.updateSlsMaterial();
+            });
+        }
+    }
+
+    // Setup volume calculation
+    function setupVolumeCalculation() {
+        const lengthInput = document.querySelector('input[name="LengthMm"]');
+        const widthInput = document.querySelector('input[name="WidthMm"]');
+        const heightInput = document.querySelector('input[name="HeightMm"]');
         
-        // Update the selectedStages data
-        if (window.selectedStageData && window.selectedStageData.stages && window.selectedStageData.stages.has(stageId)) {
-            const stageData = window.selectedStageData.stages.get(stageId);
-            if (!stageData.customFieldValues) {
-                stageData.customFieldValues = {};
+        if (lengthInput && widthInput && heightInput) {
+            [lengthInput, widthInput, heightInput].forEach(input => {
+                input.addEventListener('change', window.calculateVolume);
+            });
+        }
+    }
+
+    // Setup admin override validation
+    function setupAdminOverrideValidation() {
+        const overrideInput = document.getElementById('adminOverrideInput');
+        const reasonTextarea = document.getElementById('overrideReasonText');
+        
+        if (overrideInput && reasonTextarea) {
+            overrideInput.addEventListener('input', function() {
+                const hasOverride = parseFloat(this.value) > 0;
+                reasonTextarea.required = hasOverride;
+                
+                if (hasOverride) {
+                    reasonTextarea.closest('.mb-3').classList.add('required');
+                } else {
+                    reasonTextarea.closest('.mb-3').classList.remove('required');
+                }
+            });
+        }
+    }
+
+    // Material auto-update function (enhanced)
+    window.updateSlsMaterial = function() {
+        const materialSelect = document.getElementById('materialSelect');
+        const slsMaterialInput = document.getElementById('slsMaterialInput');
+        
+        if (materialSelect && slsMaterialInput) {
+            slsMaterialInput.value = materialSelect.value;
+            updateMaterialDefaults(materialSelect.value);
+        }
+    };
+
+    // Enhanced material defaults
+    window.updateMaterialDefaults = function(materialType) {
+        const materialDefaults = {
+            'Inconel 718': { 
+                laserPower: 285, 
+                materialCost: 750.00, 
+                estimatedHours: 12.0,
+                scanSpeed: 960,
+                buildTemperature: 80
+            },
+            'Ti-6Al-4V Grade 5': { 
+                laserPower: 200, 
+                materialCost: 450.00, 
+                estimatedHours: 8.0,
+                scanSpeed: 1200,
+                buildTemperature: 180
+            },
+            'Ti-6Al-4V ELI Grade 23': {
+                laserPower: 180,
+                materialCost: 520.00,
+                estimatedHours: 10.0,
+                scanSpeed: 1100,
+                buildTemperature: 170
+            },
+            '316L Stainless Steel': {
+                laserPower: 190,
+                materialCost: 85.00,
+                estimatedHours: 6.0,
+                scanSpeed: 1300,
+                buildTemperature: 80
+            },
+            'AlSi10Mg': {
+                laserPower: 170,
+                materialCost: 120.00,
+                estimatedHours: 5.0,
+                scanSpeed: 1400,
+                buildTemperature: 180
             }
-            stageData.customFieldValues[fieldName] = value;
+        };
+        
+        const defaults = materialDefaults[materialType];
+        if (defaults) {
+            // Update form fields with material-specific defaults
+            const laserPowerInput = document.querySelector('input[name="RecommendedLaserPower"]');
+            const materialCostInput = document.querySelector('input[name="MaterialCostPerKg"]');
+            const estimatedHoursInput = document.querySelector('input[name="EstimatedHours"]');
+            const scanSpeedInput = document.querySelector('input[name="RecommendedScanSpeed"]');
+            const buildTempInput = document.querySelector('input[name="RecommendedBuildTemperature"]');
             
-            // Trigger update to save the changes
-            const updateEvent = new CustomEvent('stageCustomFieldUpdated', {
-                detail: { stageId, fieldName, value }
-            });
-            document.dispatchEvent(updateEvent);
+            if (laserPowerInput) laserPowerInput.value = defaults.laserPower;
+            if (materialCostInput) materialCostInput.value = defaults.materialCost.toFixed(2);
+            if (estimatedHoursInput) {
+                estimatedHoursInput.value = defaults.estimatedHours.toFixed(1);
+                // Trigger duration display update
+                window.updateDurationDisplay && window.updateDurationDisplay();
+            }
+            if (scanSpeedInput) scanSpeedInput.value = defaults.scanSpeed;
+            if (buildTempInput) buildTempInput.value = defaults.buildTemperature;
+            
+            console.log(`? [MATERIAL] Updated defaults for ${materialType}`);
         }
-    });
+    };
+
+    // Volume calculation function
+    window.calculateVolume = function() {
+        const lengthInput = document.querySelector('input[name="LengthMm"]');
+        const widthInput = document.querySelector('input[name="WidthMm"]');
+        const heightInput = document.querySelector('input[name="HeightMm"]');
+        const volumeInput = document.getElementById('volumeInput');
+        const dimensionsInput = document.getElementById('dimensionsInput');
+        
+        if (lengthInput && widthInput && heightInput && volumeInput && dimensionsInput) {
+            const length = parseFloat(lengthInput.value) || 0;
+            const width = parseFloat(widthInput.value) || 0;
+            const height = parseFloat(heightInput.value) || 0;
+            
+            if (length > 0 && width > 0 && height > 0) {
+                const volume = length * width * height;
+                volumeInput.value = Math.round(volume);
+                dimensionsInput.value = `${length} × ${width} × ${height} mm`;
+            } else {
+                volumeInput.value = '';
+                dimensionsInput.value = '';
+            }
+        }
+    };
+
+    // Duration display update
+    window.updateDurationDisplay = function() {
+        const hoursInput = document.querySelector('input[name="EstimatedHours"]');
+        const overrideInput = document.getElementById('adminOverrideInput');
+        const durationDisplay = document.getElementById('durationDisplay');
+        const durationDays = document.getElementById('durationDays');
+        
+        const hours = parseFloat(overrideInput?.value || hoursInput?.value) || 0;
+        
+        if (hours > 0 && durationDisplay) {
+            const days = Math.floor(hours / 24);
+            const remainingHours = hours % 24;
+            
+            durationDisplay.value = days > 0 ? 
+                `${days}d ${remainingHours.toFixed(1)}h` : 
+                `${hours.toFixed(1)}h`;
+        }
+        
+        if (durationDays) {
+            durationDays.value = Math.ceil(hours / 8); // Work days
+        }
+    };
 </script>
 
 <style>

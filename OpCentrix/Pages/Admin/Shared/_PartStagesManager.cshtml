@@ -45,7 +45,7 @@
                                         data-stage-icon="@stage.StageIcon"
                                         data-stage-department="@stage.Department"
                                         data-requires-machine="@stage.RequiresMachineAssignment.ToString().ToLower()"
-                                        onclick="toggleStageSelection(@stage.Id, '@Html.Raw(stage.Name.Replace("'", "\\'"))')"
+                                        onclick="toggleStageSelection(@stage.Id, '@(Html.Raw(stage.Name.Replace("'", "\\'")))')"
                                         title="@stage.Description">
                                     <div class="d-flex align-items-center justify-content-center">
                                         <i class="@stage.StageIcon me-2" style="color: @(isSelected ? "#fff" : stage.StageColor);"></i>
@@ -353,7 +353,7 @@
                                 <div class="small text-muted mb-1">Duration & Cost</div>
                                 <div>
                                     <strong class="text-info">${stageData.estimatedHours}h</strong>
-                                    <span class="text-muted">@ $${(stageData.hourlyRateOverride || stage?.defaultHourlyRate || 85).toFixed(2)}/hr</span>
+                                    <span class="text-muted">$${(stageData.hourlyRateOverride || stage?.defaultHourlyRate || 85).toFixed(2)}/hr</span>
                                 </div>
                                 <div class="small text-muted">
                                     Setup: ${stageData.setupTimeMinutes} min
@@ -559,7 +559,7 @@
                         <label class="form-label">Hourly Rate Override ($)</label>
                         <input type="number" class="form-control" id="config-hourlyRateOverride" 
                                step="0.01" value="${stageData.hourlyRateOverride || ''}" 
-                               placeholder="Leave blank to use stage default ($${stage.defaultHourlyRate})">
+                               placeholder="Leave blank to use stage default">
                     </div>
                     
                     <div class="mb-3">

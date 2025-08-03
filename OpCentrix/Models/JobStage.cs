@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace OpCentrix.Models;
+namespace OpCentrix.Models.JobStaging;
 
 /// <summary>
 /// Represents a manufacturing stage in the multi-stage production process
@@ -209,12 +209,12 @@ public class JobStage
     /// <summary>
     /// Collection of dependencies for this stage
     /// </summary>
-    public virtual ICollection<StageDependency> Dependencies { get; set; } = new List<StageDependency>();
+    public virtual ICollection<JobStageDependency> Dependencies { get; set; } = new List<JobStageDependency>();
 
     /// <summary>
     /// Collection of stages that depend on this one
     /// </summary>
-    public virtual ICollection<StageDependency> Dependents { get; set; } = new List<StageDependency>();
+    public virtual ICollection<JobStageDependency> Dependents { get; set; } = new List<JobStageDependency>();
 
     /// <summary>
     /// Collection of stage notes and updates
@@ -361,9 +361,9 @@ public class JobStage
 }
 
 /// <summary>
-/// Represents dependencies between job stages
+/// Represents dependencies between job stages (JobStage-based, different from ProductionStage-based)
 /// </summary>
-public class StageDependency
+public class JobStageDependency
 {
     [Key]
     public int Id { get; set; }

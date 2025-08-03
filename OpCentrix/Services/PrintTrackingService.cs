@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OpCentrix.Data;
 using OpCentrix.Models;
+using OpCentrix.Models.JobStaging;
 using OpCentrix.ViewModels.PrintTracking;
 
 namespace OpCentrix.Services
@@ -1289,7 +1290,7 @@ namespace OpCentrix.Services
             return reasonForEnd?.ToLower() switch
             {
                 "completed successfully" => "Completed",
-                "completed with issues" => "Completed with Issues",
+                "completed with issues" => "Completed",
                 _ => "Completed"
             };
         }

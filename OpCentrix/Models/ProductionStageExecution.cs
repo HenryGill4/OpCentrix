@@ -19,6 +19,11 @@ namespace OpCentrix.Models
         [Required]
         public int ProductionStageId { get; set; }
 
+        /// <summary>
+        /// Optional workflow template this execution belongs to
+        /// </summary>
+        public int? WorkflowTemplateId { get; set; }
+
         // Execution Status
         [Required]
         [StringLength(50)]

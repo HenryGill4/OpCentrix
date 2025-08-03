@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using OpCentrix.Authorization;
 using OpCentrix.Data;
 using OpCentrix.Models;
+using OpCentrix.Models.JobStaging;
 using OpCentrix.Services;
 
 namespace OpCentrix.Pages.Coating
