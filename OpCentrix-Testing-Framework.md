@@ -123,7 +123,7 @@ Jobs ?? JobStageHistories (1:Many) ? NOW ACTIVE
 Parts ?? PartStageRequirements (1:Many)
 ProductionStages ?? PartStageRequirements (1:Many)
 BuildCohorts ?? Jobs (1:Many) ? NOW ACTIVE
-```
+``` 
 
 **?? OPTION A WORKFLOW FEATURES NOW AVAILABLE:**
 - ? **BuildCohort Management** - Track 20-130 parts per SLS build

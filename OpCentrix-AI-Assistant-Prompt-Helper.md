@@ -1,4 +1,4 @@
-# ?? **OpCentrix AI Assistant Prompt Helper**
+﻿# 🤖 **OpCentrix AI Assistant Prompt Helper**
 
 **Version**: 2.0  
 **Date**: January 30, 2025  
@@ -7,9 +7,9 @@
 
 ---
 
-## ?? **CRITICAL MANDATORY INSTRUCTIONS**
+## 🔥 **CRITICAL MANDATORY INSTRUCTIONS**
 
-### ?? **ALWAYS START WITH RESEARCH**
+### 🚨 **ALWAYS START WITH RESEARCH**
 ```markdown
 **REQUIRED BEFORE ANY MODIFICATIONS:**
 - Use `text_search` tool before making changes to understand context
@@ -18,7 +18,7 @@
 - Understand the existing implementation before adding new features
 ```
 
-### ?? **MANDATORY DATABASE BACKUP PROTOCOL**
+### 🚨 **MANDATORY DATABASE BACKUP PROTOCOL**
 ```powershell
 # ALWAYS backup database before ANY database changes
 New-Item -ItemType Directory -Path "../backup/database" -Force
@@ -29,21 +29,21 @@ Test-Path "../backup/database/scheduler_backup_$timestamp.db"
 # Verify backup was created successfully before proceeding
 ```
 
-### ?? **POWERSHELL-ONLY COMMANDS (CRITICAL)**
+### 🚨 **POWERSHELL-ONLY COMMANDS (CRITICAL)**
 ```powershell
-# ? CORRECT: Use individual PowerShell commands
+# ✅ CORRECT: Use individual PowerShell commands
 dotnet clean
 dotnet restore
 dotnet build OpCentrix/OpCentrix.csproj
 dotnet test OpCentrix.Tests/OpCentrix.Tests.csproj --verbosity normal
 
-# ? NEVER USE: && operators in PowerShell (WILL FAIL)
+# ❌ NEVER USE: && operators in PowerShell (WILL FAIL)
 # dotnet clean && dotnet restore  # This WILL FAIL
 
-# ?? NEVER USE: dotnet run (freezes AI assistant)
+# ⚠️ NEVER USE: dotnet run (freezes AI assistant)
 ```
 
-### ?? **VALIDATION PROTOCOL AFTER CHANGES**
+### 🚨 **VALIDATION PROTOCOL AFTER CHANGES**
 ```powershell
 # Test after each change/phase completion
 dotnet clean
@@ -56,19 +56,19 @@ sqlite3 scheduler.db "PRAGMA foreign_key_check;"
 
 # Only run tests if build succeeds
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "? Build successful - ready for tests"
+    Write-Host "✅ Build successful - ready for tests"
     dotnet test OpCentrix.Tests/OpCentrix.Tests.csproj --verbosity normal
 } else {
-    Write-Host "? Build failed - fix errors before proceeding"
+    Write-Host "❌ Build failed - fix errors before proceeding"
     exit 1
 }
 ```
 
 ---
 
-## ?? **DEVELOPMENT WORKFLOW PROTOCOL**
+## 📋 **DEVELOPMENT WORKFLOW PROTOCOL**
 
-### ?? **Pre-Implementation Research**
+### 🔍 **Pre-Implementation Research**
 ```markdown
 For ANY feature implementation:
 
@@ -88,7 +88,7 @@ For ANY feature implementation:
    - Understand current data model
 ```
 
-### ?? **File Modification Protocol**
+### 📝 **File Modification Protocol**
 ```markdown
 When editing files:
 
@@ -100,9 +100,9 @@ When editing files:
 6. **Never show code blocks** - use edit_file tool instead
 ```
 
-### ?? **Edit File Best Practices**
+### 🎯 **Edit File Best Practices**
 ```csharp
-// ? CORRECT: Use comments for existing code sections
+// ✅ CORRECT: Use comments for existing code sections
 public class ExampleService
 {
     // ...existing code...
@@ -125,9 +125,9 @@ public class ExampleService
 
 ---
 
-## ??? **DATABASE MODIFICATION PROTOCOLS**
+## 🗄️ **DATABASE MODIFICATION PROTOCOLS**
 
-### ?? **CRITICAL: Database Update Approach**
+### 🚨 **CRITICAL: Database Update Approach**
 ```markdown
 **NEVER use EF Core migrations for existing production databases**
 
@@ -139,7 +139,7 @@ public class ExampleService
 5. Test database integrity after changes
 ```
 
-### ?? **Database Update Template**
+### 📋 **Database Update Template**
 ```sql
 -- Phase X Database Update - Execute in DB Browser
 -- Enable foreign key constraints
@@ -159,7 +159,7 @@ PRAGMA foreign_key_check;
 PRAGMA integrity_check;
 ```
 
-### ?? **Individual SQLite Commands Protocol**
+### 🔧 **Individual SQLite Commands Protocol**
 ```powershell
 # Check table structure before changes
 sqlite3 scheduler.db "PRAGMA table_info(TableName);"
@@ -174,9 +174,9 @@ sqlite3 scheduler.db "PRAGMA integrity_check;"
 
 ---
 
-## ?? **TESTING & VALIDATION PROTOCOLS**
+## 🧪 **TESTING & VALIDATION PROTOCOLS**
 
-### ? **Build Validation Sequence**
+### ✅ **Build Validation Sequence**
 ```powershell
 # Required sequence for every change
 cd OpCentrix  # Navigate to correct directory first
@@ -186,13 +186,13 @@ dotnet build OpCentrix.csproj
 
 # Check for compilation errors
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "? Build Success"
+    Write-Host "✅ Build Success"
 } else {
-    Write-Host "? Build Failed - Review errors"
+    Write-Host "❌ Build Failed - Review errors"
 }
 ```
 
-### ?? **Database Integrity Checks**
+### 🔍 **Database Integrity Checks**
 ```powershell
 # After any database modification
 sqlite3 scheduler.db "PRAGMA integrity_check;"
@@ -203,7 +203,7 @@ sqlite3 scheduler.db "PRAGMA table_info(TableName);"
 sqlite3 scheduler.db "SELECT COUNT(*) FROM TableName;"
 ```
 
-### ?? **Service Integration Testing**
+### 📊 **Service Integration Testing**
 ```powershell
 # Verify service registration
 Get-Content "OpCentrix/Program.cs" | Select-String "ServiceName"
@@ -214,27 +214,27 @@ Get-Content "OpCentrix/Services/ServiceName.cs" | Select-String "constructor\|DI
 
 ---
 
-## ?? **CRITICAL "NEVER DO" LIST**
+## 🚫 **CRITICAL "NEVER DO" LIST**
 
-### ? **PowerShell Don'ts**
+### ❌ **PowerShell Don'ts**
 - **NEVER use `&&` operators** in PowerShell commands
 - **NEVER use `dotnet run`** for testing (freezes AI)
 - **NEVER chain commands** with semicolons in single line
 - **NEVER assume PowerShell = Bash** syntax
 
-### ? **Database Don'ts**
+### ❌ **Database Don'ts**
 - **NEVER use EF migrations** on existing production databases
 - **NEVER modify database** without backup first
 - **NEVER skip integrity checks** after database changes
 - **NEVER use multi-line SQL** in PowerShell commands
 
-### ? **File Editing Don'ts**
+### ❌ **File Editing Don'ts**
 - **NEVER edit files** without reading them first with get_file
 - **NEVER show code blocks** instead of using edit_file tool
 - **NEVER make assumptions** about file contents
 - **NEVER skip error validation** after file changes
 
-### ? **Implementation Don'ts**
+### ❌ **Implementation Don'ts**
 - **NEVER break existing functionality** - extend, don't replace
 - **NEVER skip research phase** before implementing
 - **NEVER proceed to next phase** without completing current phase
@@ -242,27 +242,27 @@ Get-Content "OpCentrix/Services/ServiceName.cs" | Select-String "constructor\|DI
 
 ---
 
-## ? **CRITICAL "ALWAYS DO" LIST**
+## ✅ **CRITICAL "ALWAYS DO" LIST**
 
-### ? **Research & Planning Always**
+### ✅ **Research & Planning Always**
 - **ALWAYS use text_search** before implementing features
 - **ALWAYS read existing files** with get_file before editing
 - **ALWAYS understand current architecture** before changes
 - **ALWAYS check for existing similar functionality**
 
-### ? **Database Always**
+### ✅ **Database Always**
 - **ALWAYS backup database** before any schema changes
 - **ALWAYS use individual SQLite commands** for modifications
 - **ALWAYS verify database integrity** after changes
 - **ALWAYS include verification queries** in SQL scripts
 
-### ? **Development Always**
+### ✅ **Development Always**
 - **ALWAYS validate with dotnet build** after changes
 - **ALWAYS use get_errors tool** to check compilation
 - **ALWAYS preserve existing functionality** when extending
 - **ALWAYS document deviations** from original plan
 
-### ? **Documentation Always**
+### ✅ **Documentation Always**
 - **ALWAYS update progress** in master plan documents
 - **ALWAYS create phase completion documentation**
 - **ALWAYS document lessons learned** for future reference
@@ -270,14 +270,14 @@ Get-Content "OpCentrix/Services/ServiceName.cs" | Select-String "constructor\|DI
 
 ---
 
-## ?? **PHASE COMPLETION PROTOCOL**
+## 🎯 **PHASE COMPLETION PROTOCOL**
 
-### ?? **After Completing Each Phase**
+### 📋 **After Completing Each Phase**
 ```markdown
 **MANDATORY STEPS:**
 
 1. **Update Master Plan Document**:
-   - Mark phase as ? COMPLETED with date
+   - Mark phase as ✅ COMPLETED with date
    - Document actual duration vs estimated
    - Note any deviations from original plan
    - Update all success criteria checkboxes
@@ -301,20 +301,20 @@ Get-Content "OpCentrix/Services/ServiceName.cs" | Select-String "constructor\|DI
    - Best practices for future implementations
 ```
 
-### ?? **Never Proceed Without Progress Update**
+### 🔄 **Never Proceed Without Progress Update**
 ```markdown
 **CRITICAL: NEVER proceed to next phase without:**
-- ? Updating master plan with completion status
-- ? Creating phase-specific documentation
-- ? Marking all success criteria
-- ? Providing explicit phase completion confirmation
+- ✅ Updating master plan with completion status
+- ✅ Creating phase-specific documentation
+- ✅ Marking all success criteria
+- ✅ Providing explicit phase completion confirmation
 ```
 
 ---
 
-## ??? **ARCHITECTURE AWARENESS**
+## 🏗️ **ARCHITECTURE AWARENESS**
 
-### ?? **Current System Knowledge**
+### 📊 **Current System Knowledge**
 ```markdown
 **OpCentrix is a Razor Pages .NET 8 MES with:**
 - SQLite database with 30+ tables
@@ -338,7 +338,7 @@ Get-Content "OpCentrix/Services/ServiceName.cs" | Select-String "constructor\|DI
 - Optimized with indexes and foreign key constraints
 ```
 
-### ??? **UI Framework Knowledge**
+### 🎛️ **UI Framework Knowledge**
 ```markdown
 **Frontend Stack:**
 - Bootstrap 5 for styling
@@ -356,9 +356,9 @@ Get-Content "OpCentrix/Services/ServiceName.cs" | Select-String "constructor\|DI
 
 ---
 
-## ?? **TROUBLESHOOTING QUICK REFERENCE**
+## 🔧 **TROUBLESHOOTING QUICK REFERENCE**
 
-### ?? **Common Issues & Solutions**
+### 🚨 **Common Issues & Solutions**
 
 #### **Build Failures**
 ```powershell
@@ -407,9 +407,9 @@ Get-Content "Services/ServiceName.cs" | Select-String "constructor"
 
 ---
 
-## ?? **PROMPT TEMPLATES FOR COMMON TASKS**
+## 🎯 **PROMPT TEMPLATES FOR COMMON TASKS**
 
-### ?? **Research Phase Prompt**
+### 🔍 **Research Phase Prompt**
 ```markdown
 "I need to understand the current implementation of [FEATURE] in the OpCentrix MES system. Please:
 1. Search for existing [FEATURE] functionality using text_search
@@ -419,7 +419,7 @@ Get-Content "Services/ServiceName.cs" | Select-String "constructor"
 5. Identify gaps or issues that need to be addressed"
 ```
 
-### ??? **Database Modification Prompt**
+### 🗄️ **Database Modification Prompt**
 ```markdown
 "I need to modify the database schema for OpCentrix. Please:
 1. First backup the database using the mandatory backup protocol
@@ -430,7 +430,7 @@ Get-Content "Services/ServiceName.cs" | Select-String "constructor"
 6. Document the changes in the appropriate reference files"
 ```
 
-### ??? **Service Implementation Prompt**
+### 🛠️ **Service Implementation Prompt**
 ```markdown
 "I need to implement/modify a service in OpCentrix. Please:
 1. Research existing service patterns and architecture
@@ -441,7 +441,7 @@ Get-Content "Services/ServiceName.cs" | Select-String "constructor"
 6. Test integration with dotnet build validation"
 ```
 
-### ?? **UI Enhancement Prompt**
+### 🎨 **UI Enhancement Prompt**
 ```markdown
 "I need to enhance the UI for [FEATURE] in OpCentrix. Please:
 1. Research current UI patterns and modal implementations
@@ -454,9 +454,9 @@ Get-Content "Services/ServiceName.cs" | Select-String "constructor"
 
 ---
 
-## ?? **REFERENCE QUICK LINKS**
+## 📚 **REFERENCE QUICK LINKS**
 
-### ?? **Key File Locations**
+### 📁 **Key File Locations**
 - **Models**: `OpCentrix/Models/`
 - **Services**: `OpCentrix/Services/`
 - **Pages**: `OpCentrix/Pages/`
@@ -464,7 +464,7 @@ Get-Content "Services/ServiceName.cs" | Select-String "constructor"
 - **Context**: `OpCentrix/Data/SchedulerContext.cs`
 - **Startup**: `OpCentrix/Program.cs`
 
-### ?? **Essential Commands**
+### 🔧 **Essential Commands**
 ```powershell
 # Project navigation
 cd OpCentrix
@@ -479,7 +479,7 @@ sqlite3 scheduler.db "PRAGMA integrity_check;"
 Get-Content "Program.cs" | Select-String "ServiceName"
 ```
 
-### ?? **Documentation Structure**
+### 📖 **Documentation Structure**
 - **Implementation Plans**: Root level markdown files
 - **Feature Docs**: `OpCentrix/Documentation/03-Feature-Implementation/`
 - **Architecture**: `OpCentrix/Documentation/02-System-Architecture/`
@@ -487,9 +487,9 @@ Get-Content "Program.cs" | Select-String "ServiceName"
 
 ---
 
-## ??? **SUCCESS INDICATORS**
+## 🎖️ **SUCCESS INDICATORS**
 
-### ? **Phase Completion Criteria**
+### ✅ **Phase Completion Criteria**
 - All success criteria checkboxes marked complete
 - dotnet build succeeds with no errors
 - Database integrity checks pass
@@ -497,19 +497,19 @@ Get-Content "Program.cs" | Select-String "ServiceName"
 - Phase-specific documentation created
 - Master plan document updated
 
-### ?? **Quality Benchmarks**
+### 🎯 **Quality Benchmarks**
 - Zero breaking changes to existing functionality
 - Consistent coding patterns followed
 - Proper error handling and logging implemented
 - Responsive UI with proper loading indicators
-- Database relationships and constraints maintained
+- Database relationships and constraints maintained 
 
 ---
 
-**?? Remember: This is a production system with users. Always preserve existing functionality while extending capabilities. When in doubt, research first, implement carefully, and validate thoroughly.**
+**🤖 Remember: This is a production system with users. Always preserve existing functionality while extending capabilities. When in doubt, research first, implement carefully, and validate thoroughly.**
 
 ---
 
 *Last Updated: January 30, 2025*  
 *Version: 2.0 - Comprehensive AI Assistant Instructions*  
-*Status: ? Ready for Implementation Use*
+*Status: ✅ Ready for Implementation Use*

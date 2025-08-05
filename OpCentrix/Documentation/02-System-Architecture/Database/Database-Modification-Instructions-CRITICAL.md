@@ -528,4 +528,4 @@ sqlite3 scheduler.db "PRAGMA table_info([TableName]);"
 sqlite3 scheduler.db "PRAGMA foreign_key_check;"
 
 # Check referenced table exists
-sqlite3 scheduler.db ".schema [ReferencedTable]"
+sqlite3 scheduler.db ".schema [ReferencedTable]" 
