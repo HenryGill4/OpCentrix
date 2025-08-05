@@ -9,6 +9,7 @@ using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Events;
 using System.Reflection;
+using Microsoft.AspNetCore.Localization;
 
 // Configure Serilog for global logging (Task 2.5)
 Log.Logger = new LoggerConfiguration()
@@ -27,6 +28,14 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure culture for proper decimal parsing
+builder.Services.Configure<RequestLocalizationOptions>(options =>
+{
+    options.DefaultRequestCulture = new Microsoft.AspNetCore.Localization.RequestCulture("en-US");
+    options.SupportedCultures = new List<System.Globalization.CultureInfo> { new System.Globalization.CultureInfo("en-US") };
+    options.SupportedUICultures = new List<System.Globalization.CultureInfo> { new System.Globalization.CultureInfo("en-US") };
+});
 
 // Use Serilog as the logging provider
 builder.Host.UseSerilog();
@@ -277,6 +286,9 @@ else
 
 // Add comprehensive error logging middleware for click-through testing
 app.UseMiddleware<ErrorLoggingMiddleware>();
+
+// CRITICAL FIX: Use request localization for consistent decimal parsing
+app.UseRequestLocalization();
 
 app.UseStaticFiles();
 

@@ -159,14 +159,17 @@
                             <input type="number" 
                                    name="OperatorActualHours" 
                                    id="OperatorActualHours" 
-                                   step="0.25" 
-                                   min="0.25" 
-                                   max="72" 
-                                   value="@Model.OperatorActualHours"
+                                   step="0.01" 
+                                   min="0.01" 
+                                   max="72.00" 
+                                   value="@Model.OperatorActualHours.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)"
                                    required
+                                   lang="en"
+                                   inputmode="decimal"
+                                   pattern="[0-9]+(\.[0-9]{1,2})?"
                                    onchange="PostPrintModal.updatePerformanceCalculations()"
                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">
-                            <p class="mt-1 text-xs text-orange-600">From operator observation/printer display</p>
+                            <p class="mt-1 text-xs text-orange-600">From operator observation/printer display (use decimal point, e.g., 4.25)</p>
                         </div>
 
                         <!-- Original Estimate (if available) -->
@@ -564,10 +567,38 @@
     };
 
     // CRITICAL FIX: Ensure modal closes properly after successful submission
+    // CRITICAL FIX: Enhanced form submission validation
     function handleFormSubmission() {
         // Listen for successful form submissions
         const form = document.querySelector('form[hx-post*="CompletePrint"]');
         if (form) {
+            // Add form submission validation
+            form.addEventListener('submit', function(event) {
+                console.log('?? [POST-PRINT] Form submission started');
+                
+                // Validate OperatorActualHours before submission
+                const actualHoursInput = document.getElementById('OperatorActualHours');
+                if (actualHoursInput) {
+                    const value = actualHoursInput.value;
+                    const numericValue = parseFloat(value);
+                    
+                    console.log('?? [POST-PRINT] OperatorActualHours value:', value, 'parsed:', numericValue);
+                    
+                    if (isNaN(numericValue) || numericValue <= 0 || numericValue > 72) {
+                        event.preventDefault();
+                        alert('Please enter a valid build time between 0.01 and 72 hours using decimal point notation (e.g., 4.25)');
+                        actualHoursInput.focus();
+                        return false;
+                    }
+                    
+                    // Ensure proper decimal formatting (dot notation)
+                    actualHoursInput.value = numericValue.toFixed(2);
+                    console.log('? [POST-PRINT] OperatorActualHours normalized to:', actualHoursInput.value);
+                }
+                
+                return true;
+            });
+            
             // Override the HTMX response handling for this specific form
             form.addEventListener('htmx:afterRequest', function(event) {
                 console.log('?? [POST-PRINT] Form response received:', event.detail.xhr.status);
@@ -599,10 +630,21 @@
                                     window.PrintTracking.refreshDashboard();
                                 }, 500);
                             }
+                        } else {
+                            console.error('? [POST-PRINT] Server returned error:', response.message);
+                            if (typeof window.PrintTracking !== 'undefined' && typeof window.PrintTracking.showToast === 'function') {
+                                window.PrintTracking.showToast(response.message || 'Error completing print', 'error');
+                            }
                         }
+                    } else if (contentType.includes('text/html')) {
+                        console.log('?? [POST-PRINT] Received HTML response - likely validation errors');
+                        // The form content should be updated by HTMX automatically with validation errors
                     }
                 } catch (error) {
                     console.error('? [POST-PRINT] Error handling form response:', error);
+                    if (typeof window.PrintTracking !== 'undefined' && typeof window.PrintTracking.showToast === 'function') {
+                        window.PrintTracking.showToast('Error processing response', 'error');
+                    }
                 }
             });
         }
@@ -885,7 +927,9 @@
             const diffHours = diffMs / (1000 * 60 * 60);
             
             if (diffHours > 0) {
+                // CRITICAL FIX: Format decimal properly with dot notation
                 actualHoursInput.value = diffHours.toFixed(2);
+                console.log('?? [POST-PRINT] Calculated time difference:', diffHours.toFixed(2), 'hours');
                 PostPrintModal.updatePerformanceCalculations();
             }
         }

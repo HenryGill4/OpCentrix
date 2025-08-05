@@ -174,10 +174,27 @@ namespace OpCentrix.Pages.PrintTracking
         {
             try
             {
+                _logger.LogInformation("CompletePrint request received - BuildId: {BuildId}, OperatorActualHours: {ActualHours}", 
+                    model.BuildId, model.OperatorActualHours);
+
                 if (!ModelState.IsValid)
                 {
                     var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
                     model.Errors = errors.ToList();
+                    
+                    // CRITICAL: Log validation errors for debugging
+                    _logger.LogWarning("CompletePrint validation failed. Errors: {Errors}", string.Join(", ", errors));
+                    
+                    // CRITICAL: Log specific field validation errors
+                    foreach (var kvp in ModelState)
+                    {
+                        if (kvp.Value.Errors.Any())
+                        {
+                            _logger.LogWarning("Field '{FieldName}' has errors: {FieldErrors}", 
+                                kvp.Key, string.Join(", ", kvp.Value.Errors.Select(e => e.ErrorMessage)));
+                        }
+                    }
+
                     await PopulatePostPrintViewModelAsync(model);
                     return Partial("_PostPrintModal", model);
                 }
@@ -187,13 +204,14 @@ namespace OpCentrix.Pages.PrintTracking
 
                 if (success)
                 {
-                    _logger.LogInformation("Print completed successfully: BuildId {BuildId}, User {UserId}",
-                        model.BuildId, userId);
+                    _logger.LogInformation("Print completed successfully: BuildId {BuildId}, User {UserId}, ActualHours {ActualHours}",
+                        model.BuildId, userId, model.OperatorActualHours);
 
                     return new JsonResult(new { success = true, message = "Print completed successfully" });
                 }
                 else
                 {
+                    _logger.LogWarning("CompletePrint failed - Build job not found for BuildId {BuildId}", model.BuildId);
                     model.Errors = new List<string> { "Error completing print job. Build job not found." };
                     await PopulatePostPrintViewModelAsync(model);
                     return Partial("_PostPrintModal", model);
@@ -201,7 +219,7 @@ namespace OpCentrix.Pages.PrintTracking
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error completing print job for buildId {BuildId}", model.BuildId);
+                _logger.LogError(ex, "Error completing print job for buildId {BuildId}. Model: {@Model}", model.BuildId, model);
 
                 model.Errors = new List<string> { "Error completing print job. Please try again." };
                 await PopulatePostPrintViewModelAsync(model);

@@ -430,5 +430,348 @@ namespace OpCentrix.Pages.Admin
                 ");
             }
         }
+
+        public async Task<IActionResult> OnPostCreatePrintTrackingTestJobsAsync()
+        {
+            try
+            {
+                _logger.LogInformation("Creating comprehensive print tracking test jobs...");
+
+                // First ensure we have basic SLS machines in the database
+                await EnsureSlsMachinesExistAsync();
+
+                // Clear existing jobs and build jobs to start fresh
+                var existingJobs = await _context.Jobs.ToListAsync();
+                var existingBuildJobs = await _context.BuildJobs.ToListAsync();
+                var existingJobLogs = await _context.JobLogEntries.ToListAsync();
+
+                _context.Jobs.RemoveRange(existingJobs);
+                _context.BuildJobs.RemoveRange(existingBuildJobs);
+                _context.JobLogEntries.RemoveRange(existingJobLogs);
+
+                await _context.SaveChangesAsync();
+
+                // Create test parts if they don't exist
+                await EnsureTestPartsExistAsync();
+
+                var now = DateTime.Now;
+                var testJobs = new List<Job>();
+
+                // Get available machines and parts
+                var machines = await _context.Machines
+                    .Where(m => m.IsActive && m.MachineType.ToUpper() == "SLS")
+                    .ToListAsync();
+
+                var parts = await _context.Parts.Take(10).ToListAsync();
+
+                if (!machines.Any())
+                {
+                    throw new InvalidOperationException("No SLS machines found in database");
+                }
+
+                if (!parts.Any())
+                {
+                    throw new InvalidOperationException("No parts found in database");
+                }
+
+                // Create a variety of jobs for testing different scenarios
+                var jobScenarios = new[]
+                {
+                    // Jobs ready to start printing (Scheduled -> In Progress)
+                    new { Status = "Scheduled", Hours = 2.5, StartOffset = -0.5, Description = "Ready to start - slightly delayed" },
+                    new { Status = "Scheduled", Hours = 4.0, StartOffset = 0.0, Description = "Ready to start - on time" },
+                    new { Status = "Scheduled", Hours = 6.25, StartOffset = 0.5, Description = "Ready to start - early" },
+
+                    // Jobs currently in progress (can be completed)
+                    new { Status = "In Progress", Hours = 3.5, StartOffset = -3.0, Description = "Currently printing - almost done" },
+                    new { Status = "In Progress", Hours = 8.0, StartOffset = -4.0, Description = "Long job - halfway through" },
+                    new { Status = "Building", Hours = 2.75, StartOffset = -1.5, Description = "Quick job - nearly finished" },
+
+                    // Future jobs (scheduled for later)
+                    new { Status = "Scheduled", Hours = 5.0, StartOffset = 4.0, Description = "Future job - tomorrow morning" },
+                    new { Status = "Scheduled", Hours = 12.0, StartOffset = 8.0, Description = "Big job - scheduled for later" },
+
+                    // Recently completed jobs (for testing historical data)
+                    new { Status = "Completed", Hours = 3.0, StartOffset = -8.0, Description = "Recently completed job" },
+                    new { Status = "Completed", Hours = 6.5, StartOffset = -12.0, Description = "Yesterday's job" },
+                };
+
+                foreach (var scenario in jobScenarios)
+                {
+                    var machine = machines[(testJobs.Count) % machines.Count];
+                    var part = parts[(testJobs.Count) % parts.Count];
+                    
+                    var scheduledStart = now.AddHours(scenario.StartOffset);
+                    var scheduledEnd = scheduledStart.AddHours(scenario.Hours);
+
+                    var job = new Job
+                    {
+                        PartId = part.Id,
+                        PartNumber = part.PartNumber,
+                        MachineId = machine.MachineId,
+                        Quantity = new Random().Next(1, 10),
+                        Priority = testJobs.Count <= 3 ? 2 : 3, // 2 = High, 3 = Normal
+                        Status = scenario.Status,
+                        ScheduledStart = scheduledStart,
+                        ScheduledEnd = scheduledEnd,
+                        EstimatedHours = scenario.Hours,
+                        CustomerOrderNumber = $"TEST-{1000 + testJobs.Count + 1}",
+                        Notes = $"Test job {testJobs.Count + 1}: {scenario.Description}",
+                        Operator = "Test Operator",
+                        CreatedDate = now.AddDays(-1),
+                        LastModifiedDate = now,
+                        CreatedBy = "Admin Test Setup",
+                        LastModifiedBy = "Admin Test Setup",
+                        SlsMaterial = part.SlsMaterial ?? "SS316L"
+                    };
+
+                    // Set actual start/end times for jobs that are in progress or completed
+                    if (scenario.Status == "In Progress" || scenario.Status == "Building")
+                    {
+                        job.ActualStart = scheduledStart;
+                    }
+                    else if (scenario.Status == "Completed")
+                    {
+                        job.ActualStart = scheduledStart;
+                        job.ActualEnd = scheduledEnd.AddMinutes(new Random().Next(-30, 30)); // Some variance
+                    }
+
+                    testJobs.Add(job);
+                }
+
+                _context.Jobs.AddRange(testJobs);
+                await _context.SaveChangesAsync();
+
+                // Create corresponding build jobs for jobs that are in progress or completed
+                var buildJobs = new List<BuildJob>();
+
+                foreach (var job in testJobs.Where(j => j.Status == "In Progress" || j.Status == "Building" || j.Status == "Completed"))
+                {
+                    var buildJob = new BuildJob
+                    {
+                        // The Job.Id will be auto-assigned by the database after SaveChanges
+                        // We'll need to link this after the jobs are saved
+                        PrinterName = job.MachineId,
+                        PartId = job.PartId,
+                        Status = job.Status == "Completed" ? "Completed" : "In Progress",
+                        ActualStartTime = job.ActualStart ?? DateTime.Now.AddHours(-2),
+                        ActualEndTime = job.Status == "Completed" ? job.ActualEnd : null,
+                        OperatorEstimatedHours = (decimal)job.EstimatedHours,
+                        OperatorActualHours = job.Status == "Completed" ? (decimal)(job.EstimatedHours + (new Random().NextDouble() - 0.5)) : null,
+                        TotalPartsInBuild = job.Quantity,
+                        Notes = $"Build job for test job",
+                        UserId = 1, // Default test user
+                        CreatedAt = job.CreatedDate
+                    };
+
+                    buildJobs.Add(buildJob);
+                }
+
+                _context.BuildJobs.AddRange(buildJobs);
+                await _context.SaveChangesAsync();
+
+                // Now link the BuildJobs to the saved Jobs using their generated IDs
+                var savedJobs = await _context.Jobs.OrderBy(j => j.Id).ToListAsync();
+                var savedBuildJobs = await _context.BuildJobs.OrderBy(bj => bj.BuildId).ToListAsync();
+                
+                for (int i = 0; i < Math.Min(savedJobs.Count, savedBuildJobs.Count); i++)
+                {
+                    var job = savedJobs.Where(j => j.Status == "In Progress" || j.Status == "Building" || j.Status == "Completed").Skip(i).FirstOrDefault();
+                    if (job != null && i < savedBuildJobs.Count)
+                    {
+                        savedBuildJobs[i].AssociatedScheduledJobId = job.Id;
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Successfully created {JobCount} test jobs and {BuildJobCount} build jobs for print tracking", 
+                    testJobs.Count, buildJobs.Count);
+
+                return Content($@"
+                    <div class='bg-green-50 border border-green-200 rounded-lg p-4'>
+                        <div class='flex items-center mb-3'>
+                            <svg class='w-5 h-5 text-green-500 mr-2' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                                <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M5 13l4 4L19 7'></path>
+                            </svg>
+                            <span class='text-green-800 font-medium'>? Print Tracking Test Jobs Created!</span>
+                        </div>
+                        <div class='text-green-700 space-y-1'>
+                            <p><strong>Created {testJobs.Count} test jobs:</strong></p>
+                            <ul class='list-disc list-inside text-sm ml-4'>
+                                <li>?? 3 jobs ready to start (use Start Print button)</li>
+                                <li>?? 3 jobs currently in progress (use Complete Print button)</li>
+                                <li>? 2 jobs scheduled for future</li>
+                                <li>? 2 jobs already completed (for historical data)</li>
+                            </ul>
+                            <p class='mt-3 font-medium'>?? <strong>Testing Instructions:</strong></p>
+                            <ol class='list-decimal list-inside text-sm ml-4 space-y-1'>
+                                <li>Go to <a href='/PrintTracking' class='underline font-medium'>Print Tracking</a> page</li>
+                                <li>For yellow jobs: Click ""Start Print"" to begin printing</li>
+                                <li>For blue jobs: Click ""Complete Print"" to finish and test the decimal input</li>
+                                <li>Test the modal forms and validation</li>
+                            </ol>
+                            <div class='mt-3 p-2 bg-green-100 rounded border-l-4 border-green-400'>
+                                <p class='text-sm'>?? <strong>Perfect for testing:</strong> Decimal validation, modal functionality, job state transitions, and print tracking workflow!</p>
+                            </div>
+                        </div>
+                    </div>
+                ");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating print tracking test jobs");
+                return Content($@"
+                    <div class='bg-red-50 border border-red-200 rounded-lg p-4'>
+                        <div class='flex items-center'>
+                            <svg class='w-5 h-5 text-red-500 mr-2' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                                <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 18L18 6M6 6l12 12'></path>
+                            </svg>
+                            <span class='text-red-800 font-medium'>Error Creating Test Jobs</span>
+                        </div>
+                        <p class='text-red-700 mt-1'>Failed to create test jobs: {ex.Message}</p>
+                        <details class='mt-2'>
+                            <summary class='text-red-600 cursor-pointer'>Show details</summary>
+                            <pre class='text-xs text-red-600 mt-1 whitespace-pre-wrap'>{ex.StackTrace}</pre>
+                        </details>
+                    </div>
+                ");
+            }
+        }
+
+        private async Task EnsureSlsMachinesExistAsync()
+        {
+            var existingMachines = await _context.Machines
+                .Where(m => m.MachineType.ToUpper() == "SLS")
+                .CountAsync();
+
+            if (existingMachines == 0)
+            {
+                var machines = new[]
+                {
+                    new Machine 
+                    { 
+                        MachineId = "TI1", 
+                        MachineName = "TruPrint 3000 #1", 
+                        MachineType = "SLS", 
+                        Status = "Idle", 
+                        IsActive = true, 
+                        IsAvailableForScheduling = true, 
+                        Priority = 1,
+                        Location = "Print Floor",
+                        Department = "Printing",
+                        CurrentMaterial = "SS316L",
+                        SupportedMaterials = "SS316L,Inconel 625,AlSi10Mg",
+                        BuildLengthMm = 250,
+                        BuildWidthMm = 250,
+                        BuildHeightMm = 325
+                    },
+                    new Machine 
+                    { 
+                        MachineId = "TI2", 
+                        MachineName = "TruPrint 3000 #2", 
+                        MachineType = "SLS", 
+                        Status = "Idle", 
+                        IsActive = true, 
+                        IsAvailableForScheduling = true, 
+                        Priority = 2,
+                        Location = "Print Floor",
+                        Department = "Printing",
+                        CurrentMaterial = "SS316L",
+                        SupportedMaterials = "SS316L,Inconel 625,AlSi10Mg",
+                        BuildLengthMm = 250,
+                        BuildWidthMm = 250,
+                        BuildHeightMm = 325
+                    },
+                    new Machine 
+                    { 
+                        MachineId = "INC", 
+                        MachineName = "Inconel Printer", 
+                        MachineType = "SLS", 
+                        Status = "Idle", 
+                        IsActive = true, 
+                        IsAvailableForScheduling = true, 
+                        Priority = 3,
+                        Location = "Print Floor",
+                        Department = "Printing",
+                        CurrentMaterial = "Inconel 625",
+                        SupportedMaterials = "Inconel 625,SS316L",
+                        BuildLengthMm = 200,
+                        BuildWidthMm = 200,
+                        BuildHeightMm = 280
+                    }
+                };
+
+                _context.Machines.AddRange(machines);
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Created {MachineCount} SLS machines for testing", machines.Length);
+            }
+        }
+
+        private async Task EnsureTestPartsExistAsync()
+        {
+            var existingParts = await _context.Parts.CountAsync();
+
+            if (existingParts < 5)
+            {
+                var testParts = new[]
+                {
+                    new Part 
+                    { 
+                        PartNumber = "TEST-001", 
+                        Description = "Test Bracket - Small", 
+                        SlsMaterial = "SS316L", 
+                        IsActive = true,
+                        Industry = "Testing",
+                        CreatedDate = DateTime.Now,
+                        CreatedBy = "Admin Test Setup"
+                    },
+                    new Part 
+                    { 
+                        PartNumber = "TEST-002", 
+                        Description = "Test Housing - Medium", 
+                        SlsMaterial = "SS316L", 
+                        IsActive = true,
+                        Industry = "Testing",
+                        CreatedDate = DateTime.Now,
+                        CreatedBy = "Admin Test Setup"
+                    },
+                    new Part 
+                    { 
+                        PartNumber = "TEST-003", 
+                        Description = "Test Component - Large", 
+                        SlsMaterial = "Inconel 625", 
+                        IsActive = true,
+                        Industry = "Testing",
+                        CreatedDate = DateTime.Now,
+                        CreatedBy = "Admin Test Setup"
+                    },
+                    new Part 
+                    { 
+                        PartNumber = "TEST-004", 
+                        Description = "Test Fixture - Complex", 
+                        SlsMaterial = "AlSi10Mg", 
+                        IsActive = true,
+                        Industry = "Testing",
+                        CreatedDate = DateTime.Now,
+                        CreatedBy = "Admin Test Setup"
+                    },
+                    new Part 
+                    { 
+                        PartNumber = "TEST-005", 
+                        Description = "Test Prototype - Experimental", 
+                        SlsMaterial = "SS316L", 
+                        IsActive = true,
+                        Industry = "Testing",
+                        CreatedDate = DateTime.Now,
+                        CreatedBy = "Admin Test Setup"
+                    }
+                };
+
+                _context.Parts.AddRange(testParts);
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Created {PartCount} test parts for testing", testParts.Length);
+            }
+        }
     }
 }
