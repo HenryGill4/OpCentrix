@@ -99,7 +99,7 @@
                             <label for="machine-select" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
                                 Machine <span style="color: #dc2626;">*</span>
                             </label>
-                            <select name="MachineId" id="machine-select" required onchange="JobForm.filterPartsByMachine()" 
+                            <select name="MachineId" id="machine-select" required onchange="filterPartsByMachine()" 
                                     style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease; background: white;">
                                 <option value="">Select a machine...</option>
                                 @if (Model.Machines?.Any() == true)
@@ -220,7 +220,7 @@
                                            required onchange="updateEndTimeFromStart()" 
                                            style="flex: 1; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease;" />
                                     <button type="button" 
-                                            onclick="JobForm.suggestNextAvailableTime()"
+                                            onclick="suggestNextAvailableTime()"
                                             style="padding: 0.75rem; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center;"
                                             onmouseover="this.style.background='#2563eb'"
                                             onmouseout="this.style.background='#3b82f6'"
@@ -239,7 +239,7 @@
                                 </label>
                                 <input type="datetime-local" name="ScheduledEnd" id="end-input"
                                        value="@Model.Job.ScheduledEnd.ToString("yyyy-MM-ddTHH:mm")" 
-                                       required onchange="JobForm.updateDurationDisplay(); JobForm.checkTimeSlotAvailability();" 
+                                       required onchange="updateDurationDisplay(); checkTimeSlotAvailability(); handleDurationChange();" 
                                        style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease;" />
                                 <small style="color: #6b7280; font-size: 0.75rem; margin-top: 0.25rem; display: block;">
                                     Duration: <span id="duration-display">@((Model.Job.ScheduledEnd - Model.Job.ScheduledStart).TotalHours.ToString("F1")) hours</span>
@@ -526,756 +526,97 @@ window.handleFormResponse = function(event) {
     }
 };
 
-// CRITICAL FIX: Add error handler for HTMX response errors
-window.handleJobFormError = function(event) {
-    console.error('? [JOB-FORM] HTMX response error:', event.detail);
-    
-    // Hide loading state
-    const submitBtn = document.getElementById('submit-job-btn');
-    const submitText = document.getElementById('submit-text');
-    const submitSpinner = document.getElementById('submit-spinner');
-    
-    if (submitBtn) submitBtn.disabled = false;
-    if (submitText) submitText.textContent = '@(Model.Job.Id == 0 ? "Schedule Job" : "Update Job")';
-    if (submitSpinner) submitSpinner.style.display = 'none';
-    
-    // Show error notification
-    if (window.showErrorNotification) {
-        window.showErrorNotification('Server error occurred. Please check your input and try again.');
+// CRITICAL FIX: Add missing global functions for inline event handlers
+window.filterPartsByMachine = function() {
+    if (typeof window.JobForm !== 'undefined' && window.JobForm.filterPartsByMachine) {
+        return window.JobForm.filterPartsByMachine();
     } else {
-        alert('Server error occurred. Please check your input and try again.');
+        console.warn('?? [GLOBAL] JobForm not ready for filterPartsByMachine');
     }
-    
-    // Prevent HTMX from inserting error page content
-    event.preventDefault();
 };
 
-// Delete job function - Available globally
-window.deleteJob = function(jobId) {
-    if (!jobId) {
-        console.error('? [DELETE] No job ID provided for deletion');
-        return;
+window.updateDurationDisplay = function() {
+    if (typeof window.JobForm !== 'undefined' && window.JobForm.updateDurationDisplay) {
+        return window.JobForm.updateDurationDisplay();
+    } else {
+        console.warn('?? [GLOBAL] JobForm not ready for updateDurationDisplay');
     }
-    
-    if (!confirm('Are you sure you want to delete this job? This action cannot be undone.')) {
-        return;
-    }
-    
-    console.log('??? [DELETE] Deleting job:', jobId);
-    
-    // Show loading state
-    if (window.showLoadingIndicator) {
-        window.showLoadingIndicator('Deleting job...');
-    }
-    
-    // Get CSRF token
-    const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
-    const token = tokenInput ? tokenInput.value : '';
-    
-    // Send delete request
-    fetch(`/Scheduler?handler=DeleteJob&id=${jobId}`, {
-        method: 'POST',
-        headers:
-        {
-            'Content-Type': 'application/json',
-            'RequestVerificationToken': token
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (window.hideLoadingIndicator) {
-            window.hideLoadingIndicator();
-        }
-        
-        if (data.success) {
-            console.log('? [DELETE] Job deleted successfully');
-            
-            // Close modal
-            if (window.closeJobModal) {
-                window.closeJobModal();
-            }
-            
-            // Show success notification
-            if (window.showSuccessNotification) {
-                window.showSuccessNotification(data.message || 'Job deleted successfully!');
-            }
-            
-            // Refresh page to show updated scheduler
-            setTimeout(() => {
-                window.location.reload();
-            }, 500);
-        } else {
-            console.error('? [DELETE] Delete failed:', data.error);
-            if (window.showErrorNotification) {
-                window.showErrorNotification(data.error || 'Error deleting job');
-            }
-        }
-    })
-    .catch(error => {
-        if (window.hideLoadingIndicator) {
-            window.hideLoadingIndicator();
-        }
-        
-        console.error('? [DELETE] Delete request failed:', error);
-        if (window.showErrorNotification) {
-            window.showErrorNotification('Error deleting job. Please try again.');
-        }
-    });
 };
 
-// Now define the JobForm object
-(function() {
-    'use strict';
-    
-    // CRITICAL: Add proper form response handler that follows site patterns
-    window.handleJobFormResponse = function(event) {
-        console.log('?? [JOB-FORM] Handling job form response:', event.detail);
+window.checkTimeSlotAvailability = function() {
+    if (typeof window.JobForm !== 'undefined' && window.JobForm.checkTimeSlotAvailability) {
+        return window.JobForm.checkTimeSlotAvailability();
+    } else {
+        console.warn('?? [GLOBAL] JobForm not ready for checkTimeSlotAvailability');
+    }
+};
+
+window.handleDurationChange = function() {
+    if (typeof window.JobForm !== 'undefined' && window.JobForm.handleDurationChange) {
+        return window.JobForm.handleDurationChange();
+    } else {
+        console.warn('?? [GLOBAL] JobForm not ready for handleDurationChange');
+    }
+};
+
+window.suggestNextAvailableTime = function() {
+    if (typeof window.JobForm !== 'undefined' && window.JobForm.suggestNextAvailableTime) {
+        return window.JobForm.suggestNextAvailableTime();
+    } else {
+        console.warn('?? [GLOBAL] JobForm not ready for suggestNextAvailableTime');
+    }
+};
+
+// CRITICAL FIX: Expose JobForm globally so inline event handlers can access it
+window.JobForm = JobForm;
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('?? [JOB-FORM] DOM loaded, initializing form');
+        JobForm.updateDurationDisplay();
         
-        // Hide loading state first
-        const submitBtn = document.getElementById('submit-job-btn');
-        const submitText = document.getElementById('submit-text');
-        const submitSpinner = document.getElementById('submit-spinner');
-        
-        if (submitBtn) submitBtn.disabled = false;
-        if (submitText) submitText.textContent = '@(Model.Job.Id == 0 ? "Schedule Job" : "Update Job")';
-        if (submitSpinner) submitSpinner.style.display = 'none';
-        
-        const xhr = event.detail.xhr;
-        const responseText = xhr.responseText || '';
-        
-        console.log('?? [JOB-FORM] Response status:', xhr.status);
-        console.log('?? [JOB-FORM] Response text (first 200 chars):', responseText.substring(0, 200));
-        
-        // CRITICAL FIX: Handle different response scenarios properly
-        if (xhr.status >= 400) {
-            console.error('? [JOB-FORM] Server returned error status:', xhr.status);
-            
-            if (window.showErrorNotification) {
-                window.showErrorNotification(`Server error (${xhr.status}). Please check your input and try again.`);
-            }
-            
-            // Prevent HTMX from inserting error page
-            event.preventDefault();
-            return;
-        }
-        
-        // Check if it's a JSON response (success case)
-        if (xhr.getResponseHeader('Content-Type')?.includes('application/json') || 
-            responseText.trim().startsWith('{')) {
-            
-            try {
-                const response = JSON.parse(responseText);
-                console.log('? [JOB-FORM] Parsed JSON response:', response);
-                
-                if (response.success === true) {
-                    console.log('?? [JOB-FORM] Job saved successfully!');
-                    
-                    // Close modal immediately
-                    if (window.closeJobModal) {
-                        window.closeJobModal();
-                    }
-                    
-                    // Show success notification
-                    if (window.showSuccessNotification) {
-                        window.showSuccessNotification(response.message || 'Job scheduled successfully!');
-                    }
-                    
-                    // Refresh page to show updated scheduler
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
-                    
-                    return;
-                } else {
-                    console.error('? [JOB-FORM] Server reported failure:', response);
-                    if (window.showErrorNotification) {
-                        window.showErrorNotification(response.error || response.message || 'Failed to save job');
-                    }
-                    return;
-                }
-            } catch (parseError) {
-                console.error('? [JOB-FORM] Failed to parse JSON response:', parseError);
-                console.log('?? [JOB-FORM] Raw response:', responseText);
-            }
-        }
-        
-        // Check if response contains validation errors (HTML form with errors)
-        if (responseText.includes('Please correct the following') || 
-            responseText.includes('error-container') || 
-            responseText.includes('validation-summary')) {
-            
-            console.log('?? [JOB-FORM] Form has validation errors, modal will show updated form');
-            
-            if (window.showErrorNotification) {
-                window.showErrorNotification('Please correct the form errors and try again.');
-            }
-            
-            // Let HTMX handle the swap to show validation errors - form will replace modal content
-            return;
-        }
-        
-        // If response looks like a complete modal (successful validation), let HTMX handle it
-        if (responseText.includes('modal-backdrop') && responseText.includes('job-form')) {
-            console.log('?? [JOB-FORM] Received updated modal form, letting HTMX handle swap');
-            return;
-        }
-        
-        // Unexpected response
-        console.warn('?? [JOB-FORM] Unexpected response format:', {
-            status: xhr.status,
-            contentType: xhr.getResponseHeader('Content-Type'),
-            hasJson: responseText.trim().startsWith('{'),
-            hasModal: responseText.includes('modal-backdrop'),
-            hasErrors: responseText.includes('error-container'),
-            responseLength: responseText.length
-        });
-        
-        if (window.showErrorNotification) {
-            window.showErrorNotification('Unexpected response from server. Please try again.');
-        }
-    };
-    
-    // Enhanced error handler for HTMX form responses
-    window.handleJobFormError = function(event) {
-        console.error('? [JOB-FORM] HTMX request error:', event.detail);
-        
-        // Hide loading state
-        const submitBtn = document.getElementById('submit-job-btn');
-        const submitText = document.getElementById('submit-text');
-        const submitSpinner = document.getElementById('submit-spinner');
-        
-        if (submitBtn) submitBtn.disabled = false;
-        if (submitText) submitText.textContent = '@(Model.Job.Id == 0 ? "Schedule Job" : "Update Job")';
-        if (submitSpinner) submitSpinner.style.display = 'none';
-        
-        // Show generic error message
-        if (window.showErrorNotification) {
-            window.showErrorNotification('An error occurred while processing your request. Please try again.');
-        }
-    };
-    
-    // Global form loading function
-    window.showFormLoading = function() {
-        const submitBtn = document.getElementById('submit-job-btn');
-        const submitText = document.getElementById('submit-text');
-        const submitSpinner = document.getElementById('submit-spinner');
-        
-        if (submitBtn) submitBtn.disabled = true;
-        if (submitText) submitText.textContent = 'Processing...';
-        if (submitSpinner) submitSpinner.style.display = 'inline-block';
-        
-        console.log('? [JOB-FORM] Form loading state enabled');
-    };
-    
-    // Form utilities and calculations
-    const JobForm = {
-        // Timeout for debounced operations
-        conflictCheckTimeout: null,
-        
-        // Updated duration display function
-        updateDurationDisplay() {
-            const startInput = document.getElementById('start-input');
-            const endInput = document.getElementById('end-input');
-            const durationDisplay = document.getElementById('duration-display');
-            const hiddenDurationHours = document.getElementById('hidden-duration-hours');
-            
-            if (!startInput?.value || !endInput?.value || !durationDisplay) {
-                return;
-            }
-            
-            try {
-                const startDate = new Date(startInput.value);
-                const endDate = new Date(endInput.value);
-                
-                if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-                    return;
-                }
-                
-                const durationMs = endDate.getTime() - startDate.getTime();
-                const durationHours = durationMs / (1000 * 60 * 60);
-                
-                if (durationHours >= 0) {
-                    durationDisplay.textContent = `${durationHours.toFixed(1)} hours`;
-                    
-                    // Update hidden field for backend
-                    if (hiddenDurationHours) {
-                        hiddenDurationHours.value = durationHours.toString();
-                    }
-                } else {
-                    durationDisplay.textContent = 'Invalid duration';
-                    durationDisplay.style.color = '#dc2626';
-                }
-            } catch (error) {
-                console.warn('Error updating duration display:', error);
-            }
-        },
-        
-        // MACHINE COMPATIBILITY FILTERING
-        filterPartsByMachine() {
-            const machineSelect = document.getElementById('machine-select');
-            const partSelect = document.getElementById('part-select');
-            
-            if (!machineSelect || !partSelect) return;
-            
-            const selectedMachine = machineSelect.value;
-            const allOptions = Array.from(partSelect.options);
-            
-            console.log('?? [JOB-FORM] Filtering parts for machine:', selectedMachine);
-            
-            // Define machine material compatibility
-            const machineCompatibility = {
-                'TI1': ['Titanium'], // Titanium Line 1
-                'TI2': ['Titanium'], // Titanium Line 2
-                'INC': ['Inconel']   // Inconel Line
-            };
-            
-            const compatibleMaterials = machineCompatibility[selectedMachine] || [];
-            console.log('?? [JOB-FORM] Compatible materials:', compatibleMaterials);
-            
-            // Filter options based on compatibility
-            allOptions.forEach((option, index) => {
-                if (index === 0) return; // Skip the "Select a part..." option
-                
-                const materialType = option.dataset.materialType;
-                const isCompatible = compatibleMaterials.includes(materialType);
-                
-                if (isCompatible) {
-                    option.style.display = '';
-                    option.disabled = false;
-                } else {
-                    option.style.display = 'none';
-                    option.disabled = true;
-                    
-                    // If this part is currently selected but incompatible, clear selection
-                    if (option.selected) {
-                        partSelect.value = '';
-                        console.log('?? [JOB-FORM] Cleared incompatible part selection');
-                    }
-                }
-            });
-            
-            // Count compatible parts
-            const compatibleCount = allOptions.filter((opt, idx) => 
-                idx > 0 && compatibleMaterials.includes(opt.dataset.materialType)
-            ).length;
-            
-            console.log(`? [JOB-FORM] Filtered to ${compatibleCount} compatible parts`);
-            
-            // Update the placeholder text
-            const placeholder = partSelect.options[0];
-            if (compatibleCount === 0) {
-                placeholder.textContent = `No compatible parts for ${selectedMachine}`;
-                placeholder.style.color = '#ef4444';
-            } else {
-                placeholder.textContent = `Select a part... (${compatibleCount} available)`;
-                placeholder.style.color = '';
-            }
-        },
-        
-        // Update job parameters based on selected part
-        updateJobFromPart() {
-            const partSelect = document.getElementById('part-select');
-            const selectedOption = partSelect?.options[partSelect.selectedIndex];
-            
-            if (!selectedOption || !selectedOption.value) {
-                return;
-            }
-            
-            console.log('?? [JOB-FORM] Updating job from selected part:', selectedOption.text);
-            
-            // Get effective estimated hours (respects admin overrides)
-            const effectiveHours = parseFloat(selectedOption.dataset.estimatedHours) || 8;
-            const hasAdminOverride = selectedOption.dataset.hasAdminOverride === 'true';
-            const standardHours = parseFloat(selectedOption.dataset.standardHours) || 8;
-            const overrideHours = selectedOption.dataset.overrideHours ? parseFloat(selectedOption.dataset.overrideHours) : null;
-            const overrideReason = selectedOption.dataset.overrideReason || '';
-            
-            console.log('?? [JOB-FORM] Duration info:', {
-                effectiveHours,
-                hasAdminOverride,
-                standardHours,
-                overrideHours,
-                overrideReason
-            });
-            
-            // Update end time with effective duration
-            this.updateEndTimeFromHours(effectiveHours);
-            
-            // Update SLS material
-            const slsMaterial = selectedOption.dataset.slsMaterial || 'Ti-6Al-4V Grade 5';
-            this.updateSelectValue('sls-material', slsMaterial);
-            
-            // Update process parameters with validation
-            this.updateInputValue('laser-power', selectedOption.dataset.laserPower, 200);
-            this.updateInputValue('scan-speed', selectedOption.dataset.scanSpeed, 1200);
-            this.updateInputValue('layer-thickness', selectedOption.dataset.layerThickness, 30);
-            this.updateInputValue('hatch-spacing', selectedOption.dataset.hatchSpacing, 120);
-            this.updateInputValue('build-temperature', selectedOption.dataset.buildTemperature, 180);
-            this.updateInputValue('powder-usage', selectedOption.dataset.powderUsage, 0.5);
-            
-            // Update hidden fields with part data
-            const partNumber = selectedOption.dataset.partNumber;
-            if (partNumber) {
-                console.log('? [JOB-FORM] Part selected:', partNumber);
-                
-                // Update hidden fields
-                const hiddenPartNumber = document.getElementById('hidden-part-number');
-                const hiddenEstimatedHours = document.getElementById('hidden-estimated-hours');
-                
-                if (hiddenPartNumber) hiddenPartNumber.value = partNumber;
-                if (hiddenEstimatedHours) hiddenEstimatedHours.value = effectiveHours.toString();
-                
-                // Show admin override notification if applicable
-                if (hasAdminOverride && overrideHours && overrideReason) {
-                    console.log('?? [JOB-FORM] Using admin override duration:', overrideHours, 'hours. Reason:', overrideReason);
-                    
-                    // Show a subtle notification about the override
-                    if (window.showSuccessNotification) {
-                        window.showSuccessNotification(`Using admin override duration: ${overrideHours}h (was ${standardHours}h)`);
-                    }
-                }
-            }
-            
-            this.updateDurationDisplay();
-        },
-        
-        // Update input value with fallback
-        updateInputValue(elementId, value, defaultValue) {
-            const element = document.getElementById(elementId);
-            if (element) {
-                const numValue = parseFloat(value) || defaultValue;
-                element.value = numValue;
-            }
-        },
-        
-        // Update select value
-        updateSelectValue(elementId, value) {
-            const element = document.getElementById(elementId);
-            if (element) {
-                element.value = value;
-                console.log('? [JOB-FORM] Updated', elementId, 'to:', value);
-            } else {
-                console.warn('?? [JOB-FORM] Element not found:', elementId);
-            }
-        },
-        
-        // Update end time when start changes
-        updateEndTimeFromStart() {
-            console.log('?? [JOB-FORM] updateEndTimeFromStart called');
-            const partSelect = document.getElementById('part-select');
-            const selectedOption = partSelect?.options[partSelect.selectedIndex];
-            
-            if (selectedOption?.value) {
-                const estimatedHours = parseFloat(selectedOption.dataset.estimatedHours) || 8;
-                console.log('?? [JOB-FORM] Using estimated hours:', estimatedHours);
-                this.updateEndTimeFromHours(estimatedHours);
-            }
-            
-            this.updateDurationDisplay();
-        },
-        
-        // Update end time when quantity changes
-        updateEndTimeFromQuantity() {
-            console.log('?? [JOB-FORM] updateEndTimeFromQuantity called');
-            const partSelect = document.getElementById('part-select');
-            const quantityInput = document.getElementById('quantity-input');
-            const selectedOption = partSelect?.options[partSelect.selectedIndex];
-            
-            if (selectedOption?.value && quantityInput?.value) {
-                const baseHours = parseFloat(selectedOption.dataset.estimatedHours) || 8;
-                const quantity = parseInt(quantityInput.value) || 1;
-                
-                console.log('?? [JOB-FORM] Calculating for:', { baseHours, quantity });
-                
-                // Calculate total hours (with some efficiency scaling for multiple parts)
-                let totalHours = baseHours * quantity;
-                if (quantity > 1) {
-                    // Apply efficiency factor for multiple parts (economies of scale)
-                    const efficiencyFactor = Math.max(0.8, 1 - (quantity - 1) * 0.05);
-                    totalHours = baseHours + (baseHours * (quantity - 1) * efficiencyFactor);
-                }
-                
-                console.log('?? [JOB-FORM] Total hours calculated:', totalHours);
-                this.updateEndTimeFromHours(totalHours);
-            }
-            
-            this.updateDurationDisplay();
-        },
-        
-        // Calculate and set end time from hours
-        updateEndTimeFromHours(hours) {
-            const startInput = document.getElementById('start-input');
-            const endInput = document.getElementById('end-input');
-            
-            if (!startInput?.value || !endInput || !hours) {
-                return;
-            }
-            
-            try {
-                const startDate = new Date(startInput.value);
-                if (isNaN(startDate.getTime())) {
-                    return;
-                }
-                
-                // Add hours to start time
-                const endDate = new Date(startDate.getTime() + (hours * 60 * 60 * 1000));
-                
-                // Format for datetime-local input
-                const year = endDate.getFullYear();
-                const month = String(endDate.getMonth() + 1).padStart(2, '0');
-                const day = String(endDate.getDate()).padStart(2, '0');
-                const hour = String(endDate.getHours()).padStart(2, '0');
-                const minute = String(endDate.getMinutes()).padStart(2, '0');
-                
-                endInput.value = `${year}-${month}-${day}T${hour}:${minute}`;
-                
-                // Check for conflicts in real-time
-                this.checkTimeSlotAvailability();
-                
-            } catch (error) {
-                console.warn('Error calculating end time:', error);
-            }
-        },
-        
-        // Suggest next available time
-        suggestNextAvailableTime() {
-            const machineSelect = document.getElementById('machine-select');
-            const partSelect = document.getElementById('part-select');
-            const startInput = document.getElementById('start-input');
-            
-            if (!machineSelect?.value) {
-                console.warn('No machine selected for time suggestion');
-                return;
-            }
-            
-            // Get duration from selected part or use default
-            const selectedOption = partSelect?.options[partSelect.selectedIndex];
-            const durationHours = selectedOption?.dataset?.estimatedHours ? 
-                parseFloat(selectedOption.dataset.estimatedHours) : 8.0;
-                
-            const preferredStart = startInput?.value || undefined;
-            
-            const params = new URLSearchParams({
-                machineId: machineSelect.value,
-                durationHours: durationHours.toString()
-            });
-            
-            if (preferredStart) {
-                params.append('preferredStart', preferredStart);
-            }
-            
-            console.log('?? [JOB-FORM] Requesting next available time suggestion...');
-            
-            fetch(`/Scheduler?handler=SuggestNextTime&${params.toString()}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.startTime && data.endTime) {
-                        // Update form fields
-                        if (startInput) startInput.value = data.startTime;
-                        const endInput = document.getElementById('end-input');
-                        if (endInput) endInput.value = data.endTime;
-                        
-                        // Update duration display
-                        this.updateDurationDisplay();
-                        
-                        // Show success message
-                        console.log('? [JOB-FORM] Next available time:', data.displayStart);
-                        if (window.showSuccessNotification) {
-                            window.showSuccessNotification(data.message);
-                        }
-                        
-                        // Check the new time slot
-                        setTimeout(() => this.checkTimeSlotAvailability(), 500);
-                    } else {
-                        console.error('Invalid time suggestion response:', data);
-                        if (window.showErrorNotification) {
-                            window.showErrorNotification('Error getting time suggestion');
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.error('Error getting time suggestion:', error);
-                    if (window.showErrorNotification) {
-                        window.showErrorNotification('Error getting time suggestion');
-                    }
-                });
-        },
-        
-        // Real-time conflict detection (placeholder)
-        checkTimeSlotAvailability() {
-            // Implementation for checking time slot conflicts
-            console.log('?? [JOB-FORM] Checking time slot availability...');
-        },
-        
-        // CRITICAL: Handle HTMX form response with proper success/error detection
-        handleFormResponse(event) {
-            console.log('?? [JOB-FORM] Handling form response:', event.detail);
-            
-            this.hideFormLoading();
-            
-            const xhr = event.detail.xhr;
-            let responseData = {};
-            
-            try {
-                // Try to parse JSON response
-                const responseText = xhr.responseText || '';
-                if (responseText.trim().startsWith('{')) {
-                    responseData = JSON.parse(responseText);
-                }
-            } catch (parseError) {
-                console.warn('?? [JOB-FORM] Could not parse JSON response, checking for HTML errors');
-            }
-            
-            // Check for success response
-            if (responseData.success === true) {
-                console.log('? [JOB-FORM] Job saved successfully:', responseData);
-                
-                // Close the modal immediately
-                if (window.closeJobModal) {
-                    window.closeJobModal();
-                }
-                
-                // Show success notification
-                if (window.showSuccessNotification) {
-                    window.showSuccessNotification(responseData.message || 'Job saved successfully!');
-                }
-                
-                // Refresh the entire page to show updated scheduler
-                setTimeout(() => {
-                    window.location.reload();
-                }, 500);
-                
-                return;
-            }
-            
-            // Check if response contains HTML errors (validation failures)
-            const responseText = xhr.responseText || '';
-            const hasErrors = responseText.includes('error-container') || 
-                             responseText.includes('error-list') || 
-                             responseText.includes('Please correct the following') ||
-                             xhr.status >= 400;
-            
-            if (hasErrors) {
-                console.log('? [JOB-FORM] Form has validation errors, keeping modal open');
-                
-                if (window.showErrorNotification) {
-                    window.showErrorNotification('Please correct the form errors and try again.');
-                }
-                
-                return;
-            }
-            
-            // If we get here, something unexpected happened
-            console.warn('?? [JOB-FORM] Unexpected response format:', xhr.status, responseText);
-            
-            if (window.showErrorNotification) {
-                window.showErrorNotification('Unexpected response from server. Please try again.');
-            }
-        }
-    };
-    
-    // CRITICAL: Expose JobForm object globally for HTML access
-    window.JobForm = JobForm;
-    
-    // Now update the global function references to use the JobForm methods
-    window.updateJobFromPart = () => JobForm.updateJobFromPart();
-    window.updateEndTimeFromStart = () => JobForm.updateEndTimeFromStart();
-    window.updateEndTimeFromQuantity = () => JobForm.updateEndTimeFromQuantity();
-    window.showFormLoading = () => JobForm.showFormLoading();
-    window.hideFormLoading = () => JobForm.hideFormLoading();
-    window.handleFormResponse = (event) => JobForm.handleFormResponse(event);
-    
-    // Initialize form when modal content loads
-    function initializeJobForm() {
-        console.log('?? [JOB-FORM] Initializing enhanced form...');
-        
-        try {
-            // Initialize machine filtering first
-            JobForm.filterPartsByMachine();
-            
-            // Set up initial state if part is pre-selected
-            const partSelect = document.getElementById('part-select');
-            if (partSelect?.value) {
+        // Set up event listeners
+        const partSelect = document.getElementById('part-select');
+        if (partSelect) {
+            partSelect.addEventListener('change', function() {
+                console.log('?? [JOB-FORM] Part selection changed');
                 JobForm.updateJobFromPart();
-            }
-            
-            // Update duration display
-            JobForm.updateDurationDisplay();
-            
-            // Set up real-time conflict detection
-            const startInput = document.getElementById('start-input');
-            const endInput = document.getElementById('end-input');
-            const machineSelect = document.getElementById('machine-select');
-            
-            if (startInput) {
-                startInput.addEventListener('change', () => {
-                    JobForm.updateDurationDisplay();
-                    clearTimeout(JobForm.conflictCheckTimeout);
-                    JobForm.conflictCheckTimeout = setTimeout(() => {
-                        JobForm.checkTimeSlotAvailability();
-                    }, 500);
-                });
-            }
-            
-            if (endInput) {
-                endInput.addEventListener('change', () => {
-                    JobForm.updateDurationDisplay();
-                    clearTimeout(JobForm.conflictCheckTimeout);
-                    JobForm.conflictCheckTimeout = setTimeout(() => {
-                        JobForm.checkTimeSlotAvailability();
-                    }, 500);
-                });
-            }
-            
-            if (machineSelect) {
-                machineSelect.addEventListener('change', () => {
-                    JobForm.filterPartsByMachine();
-                    // Clear part selection when machine changes for compatibility
-                    const partSelect = document.getElementById('part-select');
-                    if (partSelect) {
-                        partSelect.value = '';
-                    }
-                    // Check new machine availability
-                    setTimeout(() => JobForm.checkTimeSlotAvailability(), 300);
-                });
-            }
-            
-            console.log('? [JOB-FORM] Enhanced form initialization complete');
-            
-        } catch (error) {
-            console.error('? [JOB-FORM] Error during initialization:', error);
+            });
         }
-    }
-    
-    // Initialize immediately if DOM is ready, or wait for it
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initializeJobForm);
-    } else {
-        // Wait a moment for the modal content to be fully inserted
-        setTimeout(initializeJobForm, 100);
-    }
+        
+        const quantityInput = document.getElementById('quantity-input');
+        if (quantityInput) {
+            quantityInput.addEventListener('change', function() {
+                console.log('?? [JOB-FORM] Quantity changed');
+                JobForm.updateEndTimeFromQuantity();
+            });
+        }
+        
+        const startInput = document.getElementById('start-input');
+        if (startInput) {
+            startInput.addEventListener('change', function() {
+                console.log('?? [JOB-FORM] Start time changed');
+                JobForm.updateEndTimeFromStart();
+            });
+        }
+        
+        const endInput = document.getElementById('end-input');
+        if (endInput) {
+            endInput.addEventListener('change', function() {
+                console.log('?? [JOB-FORM] End time changed');
+                JobForm.updateDurationDisplay();
+                JobForm.checkTimeSlotAvailability();
+                JobForm.handleDurationChange();
+            });
+        }
+        
+        console.log('? [JOB-FORM] Initialization complete - JobForm available globally');
+    });
+} else {
+    console.log('?? [JOB-FORM] DOM already loaded, initializing immediately');
+    JobForm.updateDurationDisplay();
+    window.JobForm = JobForm;
+}
 })();
-
-console.log('? [GLOBAL] All job form functions are now available globally');
-console.log('?? [DEBUG] Available functions:', Object.keys(window).filter(key => 
-    key.includes('updateJobFromPart') || 
-    key.includes('updateEndTime') || 
-    key.includes('deleteJob') ||
-    key.includes('JobForm')
-));
-
-// CRITICAL TEST: Verify function availability immediately
-(function() {
-    console.log('?? [TEST] Testing global function availability...');
-    console.log('?? [TEST] updateJobFromPart available:', typeof window.updateJobFromPart === 'function');
-    console.log('?? [TEST] updateEndTimeFromStart available:', typeof window.updateEndTimeFromStart === 'function');
-    console.log('?? [TEST] updateEndTimeFromQuantity available:', typeof window.updateEndTimeFromQuantity === 'function');
-    console.log('?? [TEST] deleteJob available:', typeof window.deleteJob === 'function');
-    console.log('?? [TEST] JobForm available:', typeof window.JobForm === 'object');
-    
-    if (typeof window.updateJobFromPart === 'function') {
-        console.log('? [TEST] All critical functions are available globally - ReferenceError should be fixed!');
-    } else {
-        console.error('? [TEST] Functions are NOT available globally - issue may persist');
-    }
-})();
+</script>

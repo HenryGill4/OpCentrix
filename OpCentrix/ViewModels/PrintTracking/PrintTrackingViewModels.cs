@@ -8,6 +8,7 @@ namespace OpCentrix.ViewModels.PrintTracking
 {
     /// <summary>
     /// View model for the Print Start Form - Enhanced for Phase 4 with operator time estimation, prototype addition, and build file tracking
+    /// REFACTORED: Removed all duplicates and enhanced with machine compatibility
     /// </summary>
     public class PrintStartViewModel
     {
@@ -101,8 +102,8 @@ namespace OpCentrix.ViewModels.PrintTracking
         [Display(Name = "Prototype Job")]
         public int? PrototypeJobId { get; set; }
 
-        // Available options for dropdowns
-        public List<string> AvailablePrinters { get; set; } = new() { "TI1", "TI2", "INC" };
+        // Available options for dropdowns (populated dynamically)
+        public List<string> AvailablePrinters { get; set; } = new();
         public List<Job> AvailableScheduledJobs { get; set; } = new();
         public List<Part> AvailableParts { get; set; } = new();
         public List<JobStage> AvailableJobStages { get; set; } = new();
@@ -174,6 +175,10 @@ namespace OpCentrix.ViewModels.PrintTracking
             "Machine maintenance needed"
         };
 
+        // Error handling
+        public List<string> Errors { get; set; } = new();
+        public List<string> Warnings { get; set; } = new();
+
         // Validation
         public bool CanAddMorePrototypes => TotalPartsInBuild < MaxPartsCapacity;
         public bool HasSpaceForPrototypes => BuildPlateUtilization < 90m;
@@ -231,6 +236,7 @@ namespace OpCentrix.ViewModels.PrintTracking
 
     /// <summary>
     /// View model for the Post-Print Log Form - Enhanced for PHASE 4 with operator time logging and performance assessment
+    /// REFACTORED: Removed duplicates and enhanced with machine compatibility
     /// </summary>
     public class PostPrintViewModel
     {
@@ -412,8 +418,8 @@ namespace OpCentrix.ViewModels.PrintTracking
         public bool HasDelay { get; set; }
         public DelayInfo? DelayInfo { get; set; }
 
-        // Available options
-        public List<string> AvailablePrinters { get; set; } = new() { "TI1", "TI2", "INC" };
+        // Available options (populated dynamically)
+        public List<string> AvailablePrinters { get; set; } = new();
         public List<string> EndReasons { get; set; } = new() 
         { 
             "Completed Successfully", 
@@ -464,6 +470,10 @@ namespace OpCentrix.ViewModels.PrintTracking
 
         [Display(Name = "Notify Affected Departments")]
         public bool NotifyAffectedDepartments { get; set; } = true;
+
+        // Error handling
+        public List<string> Errors { get; set; } = new();
+        public List<string> Warnings { get; set; } = new();
 
         // Performance calculations
         public decimal TimeVariancePercent => OperatorEstimatedHours.HasValue && OperatorEstimatedHours > 0 
@@ -624,6 +634,7 @@ namespace OpCentrix.ViewModels.PrintTracking
 
     /// <summary>
     /// Enhanced dashboard view model with multi-stage job support and master schedule integration
+    /// REFACTORED: Complete rewrite with dynamic machine support and best practices implementation
     /// </summary>
     public class PrintTrackingDashboardViewModel
     {
@@ -661,6 +672,9 @@ namespace OpCentrix.ViewModels.PrintTracking
         public Dictionary<string, int> QueueDepth { get; set; } = new();
         public List<MaintenanceAlert> MaintenanceAlerts { get; set; } = new();
 
+        // ENHANCEMENT: Dynamic machine data from database
+        public List<MachineInfo> AvailableMachines { get; set; } = new();
+
         // Current user info
         public string OperatorName { get; set; } = string.Empty;
         public int UserId { get; set; }
@@ -673,6 +687,93 @@ namespace OpCentrix.ViewModels.PrintTracking
         public bool ShowAlerts { get; set; } = true;
         public bool ShowMetrics { get; set; } = true;
         public bool ShowQueues { get; set; } = true;
+
+        // Error handling
+        public List<string> Errors { get; set; } = new();
+        public List<string> Warnings { get; set; } = new();
+        public List<string> InfoMessages { get; set; } = new();
+    }
+
+    /// <summary>
+    /// Enhanced machine information for dashboard display
+    /// NEW: Comprehensive machine data structure for dynamic population
+    /// </summary>
+    public class MachineInfo
+    {
+        public string MachineId { get; set; } = string.Empty;
+        public string MachineName { get; set; } = string.Empty;
+        public string MachineType { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
+        public bool IsAvailableForScheduling { get; set; }
+        public int Priority { get; set; }
+        
+        // Material information
+        public List<string> SupportedMaterials { get; set; } = new();
+        public string CurrentMaterial { get; set; } = string.Empty;
+        
+        // Location and organization
+        public string Location { get; set; } = string.Empty;
+        public string Department { get; set; } = string.Empty;
+        
+        // Technical specifications
+        public string BuildVolumeInfo { get; set; } = string.Empty;
+        public Dictionary<string, object> TechnicalSpecs { get; set; } = new();
+        
+        // Maintenance information
+        public string MaintenanceStatus { get; set; } = string.Empty;
+        public DateTime? LastMaintenanceDate { get; set; }
+        public DateTime? NextMaintenanceDate { get; set; }
+        public double HoursSinceLastMaintenance { get; set; }
+        public double MaintenanceIntervalHours { get; set; }
+        
+        // Performance metrics
+        public double UtilizationPercent { get; set; }
+        public int ActiveJobs { get; set; }
+        public int QueuedJobs { get; set; }
+        public double AverageJobTime { get; set; }
+        public double HoursToday { get; set; }
+        
+        // Communication settings
+        public string OpcUaEndpointUrl { get; set; } = string.Empty;
+        public bool OpcUaEnabled { get; set; }
+        public Dictionary<string, object> CommunicationSettings { get; set; } = new();
+
+        // Computed properties
+        public bool RequiresMaintenance => MaintenanceStatus == "Due";
+        public bool MaintenanceSoon => MaintenanceStatus == "Soon";
+        public bool IsHighPriority => Priority <= 2;
+        public bool CanAcceptJobs => IsActive && IsAvailableForScheduling && Status != "Maintenance" && Status != "Error";
+        
+        // UI helper properties
+        public string StatusColor => Status?.ToLower() switch
+        {
+            "idle" => "green",
+            "running" or "building" or "machining" => "orange",
+            "maintenance" => "gray",
+            "error" or "offline" => "red",
+            "setup" => "blue",
+            _ => "gray"
+        };
+
+        public string PriorityText => Priority switch
+        {
+            1 => "Critical",
+            2 => "High",
+            3 => "Elevated",
+            4 => "Normal",
+            5 => "Normal",
+            _ => "Low"
+        };
+
+        public string UtilizationLevel => UtilizationPercent switch
+        {
+            >= 90 => "Very High",
+            >= 70 => "High", 
+            >= 50 => "Medium",
+            >= 20 => "Low",
+            _ => "Very Low"
+        };
     }
 
     /// <summary>

@@ -774,6 +774,86 @@ namespace OpCentrix.Pages.Scheduler
                 return new JsonResult(new { success = false, error = "Error finding available time slot" });
             }
         }
+
+        // NEW: Method to handle duration updates and save to part info
+        public async Task<IActionResult> OnPostUpdateJobDurationAsync(int jobId, double newDurationHours)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("🕐 [SCHEDULER-{OperationId}] Updating job {JobId} duration to {Duration}h",
+                operationId, jobId, newDurationHours);
+
+            try
+            {
+                var job = await _context.Jobs.Include(j => j.Part).FirstOrDefaultAsync(j => j.Id == jobId);
+                if (job == null)
+                {
+                    return new JsonResult(new { success = false, error = "Job not found" });
+                }
+
+                var oldDuration = job.EstimatedHours;
+                var newEndTime = job.ScheduledStart.AddHours(newDurationHours);
+
+                // Update the job
+                job.EstimatedHours = newDurationHours;
+                job.ScheduledEnd = newEndTime;
+                job.LastModifiedDate = DateTime.UtcNow;
+                job.LastModifiedBy = User.Identity?.Name ?? "System";
+
+                // NEW: Calculate per-part time and update the Part record for future scheduling
+                if (job.Quantity > 0 && job.Part != null)
+                {
+                    var timePerPart = newDurationHours / job.Quantity;
+                    var oldTimePerPart = job.Part.EstimatedHours;
+                    
+                    // Update the part's estimated hours
+                    job.Part.EstimatedHours = timePerPart;
+                    job.Part.LastModifiedDate = DateTime.UtcNow;
+                    
+                    _logger.LogInformation("Updated Part {PartNumber} duration from {OldHours}h to {NewHours}h per part based on schedule adjustment for Job {JobId}",
+                        job.Part.PartNumber, oldTimePerPart, timePerPart, jobId);
+                }
+
+                // Save changes
+                await _context.SaveChangesAsync();
+
+                // Also notify print tracking service if it's a print job
+                if (job.MachineId?.Contains("TI") == true || job.MachineId?.Contains("INC") == true)
+                {
+                    try
+                    {
+                        // Get print tracking service from DI
+                        var printTrackingService = HttpContext.RequestServices.GetService<IPrintTrackingService>();
+                        if (printTrackingService != null)
+                        {
+                            await printTrackingService.UpdatePartDurationFromScheduleAsync(jobId, newDurationHours);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to update print tracking service for job duration change");
+                        // Don't fail the main operation if print tracking update fails
+                    }
+                }
+
+                _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Updated job {JobId} duration from {OldDuration}h to {NewDuration}h", 
+                    operationId, jobId, oldDuration, newDurationHours);
+
+                return new JsonResult(new 
+                { 
+                    success = true, 
+                    message = $"Job duration updated from {oldDuration:F1}h to {newDurationHours:F1}h",
+                    oldDuration = oldDuration,
+                    newDuration = newDurationHours,
+                    newEndTime = newEndTime.ToString("yyyy-MM-ddTHH:mm"),
+                    partDurationUpdated = job.Part != null && job.Quantity > 0
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error updating job duration", operationId);
+                return new JsonResult(new { success = false, error = "Error updating job duration" });
+            }
+        }
     }
 
     // Modern DTOs for clean separation of concerns
