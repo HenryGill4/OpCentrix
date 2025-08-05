@@ -515,7 +515,7 @@
 (function() {
     'use strict';
     
-    // CRITICAL FIX: Define openJobModal function immediately
+    // CRITICAL FIX: Define openJobModal function immediately with enhanced error handling
     window.openJobModal = function(machineId, date, jobId = null) {
         console.log('?? [MODAL] Opening job modal for:', { machineId, date, jobId });
         
@@ -527,141 +527,173 @@
             return false;
         }
         
-        // Build URL for modal content
-        const params = new URLSearchParams({
-            handler: 'ShowAddModal',
-            machineId: machineId,
-            date: date
-        });
-        
-        if (jobId) {
-            params.append('id', jobId);
-        }
-        
-        // ENHANCEMENT: Include part pre-population parameters if available
-        const prePopulatePartId = '@ViewData["PrePopulatePartId"]';
-        if (prePopulatePartId && prePopulatePartId !== '' && !jobId) {
-            params.append('partId', prePopulatePartId);
-            console.log('?? [MODAL] Adding part pre-population:', prePopulatePartId);
-        }
-        
-        const url = `/Scheduler?${params.toString()}`;
-        
-        console.log('?? [MODAL] Fetching modal content from:', url);
-        
-        // Show loading indicator
-        if (window.showLoadingIndicator) {
-            window.showLoadingIndicator('Opening job form...');
-        }
-        
-        // Use HTMX to load modal content
-        if (typeof htmx !== 'undefined') {
-            htmx.ajax('GET', url, {
-                target: '#modal-container',
-                swap: 'innerHTML'
-            }).then(() => {
-                showModalContainer();
-                if (window.hideLoadingIndicator) {
-                    window.hideLoadingIndicator();
-                }
-                console.log('? [MODAL] Modal opened successfully');
-            }).catch((error) => {
-                if (window.hideLoadingIndicator) {
-                    window.hideLoadingIndicator();
-                }
-                console.error('? [MODAL] Error loading modal:', error);
-                if (window.showErrorNotification) {
-                    window.showErrorNotification('Error opening job form. Please try again.');
-                }
+        try {
+            // Build URL for modal content
+            const params = new URLSearchParams({
+                handler: 'ShowAddModal',
+                machineId: machineId,
+                date: date
             });
-        } else {
-            // Fallback if HTMX is not available
-            console.error('? [MODAL] HTMX not available');
+            
+            if (jobId) {
+                params.append('id', jobId);
+            }
+            
+            // ENHANCEMENT: Include part pre-population parameters if available
+            const prePopulatePartId = '@ViewData["PrePopulatePartId"]';
+            if (prePopulatePartId && prePopulatePartId !== '' && !jobId) {
+                params.append('partId', prePopulatePartId);
+                console.log('?? [MODAL] Adding part pre-population:', prePopulatePartId);
+            }
+            
+            const url = `/Scheduler?${params.toString()}`;
+            
+            console.log('?? [MODAL] Fetching modal content from:', url);
+            
+            // Show loading indicator
+            if (window.showLoadingIndicator) {
+                window.showLoadingIndicator('Opening job form...');
+            }
+            
+            // Use HTMX to load modal content
+            if (typeof htmx !== 'undefined') {
+                htmx.ajax('GET', url, {
+                    target: '#modal-container',
+                    swap: 'innerHTML'
+                }).then(() => {
+                    showModalContainer();
+                    if (window.hideLoadingIndicator) {
+                        window.hideLoadingIndicator();
+                    }
+                    console.log('? [MODAL] Modal opened successfully');
+                }).catch((error) => {
+                    if (window.hideLoadingIndicator) {
+                        window.hideLoadingIndicator();
+                    }
+                    console.error('? [MODAL] Error loading modal:', error);
+                    if (window.showErrorNotification) {
+                        window.showErrorNotification('Error opening job form. Please try again.');
+                    }
+                });
+            } else {
+                // Fallback if HTMX is not available
+                console.error('? [MODAL] HTMX not available');
+                if (window.hideLoadingIndicator) {
+                    window.hideLoadingIndicator();
+                }
+                if (window.showErrorNotification) {
+                    window.showErrorNotification('System error: HTMX not loaded. Please refresh the page.');
+                }
+            }
+            
+            return true;
+            
+        } catch (error) {
+            console.error('? [MODAL] Error in openJobModal:', error);
             if (window.hideLoadingIndicator) {
                 window.hideLoadingIndicator();
             }
             if (window.showErrorNotification) {
-                window.showErrorNotification('System error: HTMX not loaded. Please refresh the page.');
+                window.showErrorNotification('Error opening job modal');
             }
+            return false;
         }
-        
-        return true;
     };
     
-    // Show modal container
+    // Show modal container with enhanced error handling
     function showModalContainer() {
-        const modalContainer = document.getElementById('modal-container');
-        if (modalContainer) {
-            modalContainer.style.display = 'flex';
-            modalContainer.classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
-            
-            // Focus management for accessibility
-            setTimeout(() => {
-                const firstInput = modalContainer.querySelector('input:not([type="hidden"]), select, textarea');
-                if (firstInput) {
-                    firstInput.focus();
-                }
-            }, 150);
+        try {
+            const modalContainer = document.getElementById('modal-container');
+            if (modalContainer) {
+                modalContainer.style.display = 'flex';
+                modalContainer.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+                
+                // Focus management for accessibility
+                setTimeout(() => {
+                    const firstInput = modalContainer.querySelector('input:not([type="hidden"]), select, textarea');
+                    if (firstInput) {
+                        firstInput.focus();
+                    }
+                }, 150);
+            }
+        } catch (error) {
+            console.error('? [MODAL] Error showing modal container:', error);
         }
     }
     
-    // Close modal function
+    // Enhanced close modal function
     window.closeJobModal = function() {
         console.log('?? [MODAL] Closing job modal');
         
-        const modalContainer = document.getElementById('modal-container');
-        if (modalContainer) {
-            modalContainer.style.display = 'none';
-            modalContainer.classList.add('hidden');
-            document.body.style.overflow = '';
-            
-            // Clear modal content after animation
-            setTimeout(() => {
-                modalContainer.innerHTML = '';
-            }, 300);
-            
-            console.log('? [MODAL] Modal closed successfully');
+        try {
+            const modalContainer = document.getElementById('modal-container');
+            if (modalContainer) {
+                modalContainer.style.display = 'none';
+                modalContainer.classList.add('hidden');
+                document.body.style.overflow = '';
+                
+                // Clear modal content after animation
+                setTimeout(() => {
+                    modalContainer.innerHTML = '';
+                }, 300);
+                
+                console.log('? [MODAL] Modal closed successfully');
+            }
+        } catch (error) {
+            console.error('? [MODAL] Error closing modal:', error);
         }
     };
     
-    // Quick start with demo machines function
+    // Quick start with demo machines function with enhanced error handling
     window.seedDefaultMachines = function() {
-        if (window.showLoadingIndicator) {
-            window.showLoadingIndicator('Setting up demo machines...');
-        }
+        console.log('?? [SEED] Starting demo machine creation');
         
-        // Use HTMX to seed default machines
-        if (typeof htmx !== 'undefined') {
-            htmx.ajax('POST', '/Scheduler?handler=SeedDefaultMachines', {
-                target: '#scheduler-main-content',
-                swap: 'outerHTML'
-            }).then(() => {
+        try {
+            if (window.showLoadingIndicator) {
+                window.showLoadingIndicator('Setting up demo machines...');
+            }
+            
+            // Use HTMX to seed default machines
+            if (typeof htmx !== 'undefined') {
+                htmx.ajax('POST', '/Scheduler?handler=SeedDefaultMachines', {
+                    target: '#scheduler-main-content',
+                    swap: 'outerHTML'
+                }).then(() => {
+                    if (window.hideLoadingIndicator) {
+                        window.hideLoadingIndicator();
+                    }
+                    if (window.showSuccessNotification) {
+                        window.showSuccessNotification('Demo machines created successfully! You can now add jobs and explore the scheduler.');
+                    }
+                    // Refresh the page to show the new state
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                }).catch((error) => {
+                    if (window.hideLoadingIndicator) {
+                        window.hideLoadingIndicator();
+                    }
+                    console.error('? [SEED] Error seeding default machines:', error);
+                    if (window.showErrorNotification) {
+                        window.showErrorNotification('Error creating demo machines. Please try again or contact support.');
+                    }
+                });
+            } else {
                 if (window.hideLoadingIndicator) {
                     window.hideLoadingIndicator();
                 }
-                if (window.showSuccessNotification) {
-                    window.showSuccessNotification('Demo machines created successfully! You can now add jobs and explore the scheduler.');
-                }
-                // Refresh the page to show the new state
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
-            }).catch((error) => {
-                if (window.hideLoadingIndicator) {
-                    window.hideLoadingIndicator();
-                }
-                console.error('? [SEED] Error seeding default machines:', error);
                 if (window.showErrorNotification) {
-                    window.showErrorNotification('Error creating demo machines. Please try again or contact support.');
+                    window.showErrorNotification('System error: HTMX not loaded. Please refresh the page.');
                 }
-            });
-        } else {
+            }
+        } catch (error) {
+            console.error('? [SEED] Error in seedDefaultMachines:', error);
             if (window.hideLoadingIndicator) {
                 window.hideLoadingIndicator();
             }
             if (window.showErrorNotification) {
-                window.showErrorNotification('System error: HTMX not loaded. Please refresh the page.');
+                window.showErrorNotification('Error setting up demo machines');
             }
         }
     };

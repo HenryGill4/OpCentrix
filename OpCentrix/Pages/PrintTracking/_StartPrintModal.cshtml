@@ -11,7 +11,7 @@
                     <h3 class="text-lg font-semibold text-gray-900">Start Print Job</h3>
                     <p class="text-sm text-gray-600 mt-1">Enhanced with time estimation and prototype addition</p>
                 </div>
-                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+                <button onclick="closeModalSafely()" class="text-gray-400 hover:text-gray-600">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
@@ -316,7 +316,7 @@
                 <!-- Form Actions -->
                 <div class="flex justify-end space-x-3 pt-6 border-t">
                     <button type="button" 
-                            onclick="closeModal()" 
+                            onclick="closeModalSafely()" 
                             class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
                         Cancel
                     </button>
@@ -334,32 +334,117 @@
 </div>
 
 <script>
+    // CRITICAL FIX: Enhanced modal close function with multiple fallback methods
+    function closeModalSafely() {
+        console.log('?? [MODAL] closeModalSafely called - trying multiple methods');
+        
+        try {
+            // Method 1: Try PrintTracking namespace
+            if (typeof window.PrintTracking !== 'undefined' && typeof window.PrintTracking.closeModal === 'function') {
+                console.log('? [MODAL] Using PrintTracking.closeModal');
+                window.PrintTracking.closeModal();
+                return true;
+            }
+            
+            // Method 2: Try global closeModal
+            if (typeof window.closeModal === 'function') {
+                console.log('? [MODAL] Using window.closeModal');
+                window.closeModal();
+                return true;
+            }
+            
+            // Method 3: Try scheduler closeJobModal
+            if (typeof window.closeJobModal === 'function') {
+                console.log('? [MODAL] Using window.closeJobModal');
+                window.closeJobModal();
+                return true;
+            }
+            
+            // Method 4: Direct DOM manipulation fallback
+            console.log('?? [MODAL] Using fallback DOM manipulation');
+            const modal = document.getElementById('start-print-modal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+            
+            const modalContainer = document.getElementById('modal-container');
+            if (modalContainer) {
+                modalContainer.style.display = 'none';
+                modalContainer.classList.add('hidden');
+                modalContainer.innerHTML = '';
+            }
+            
+            // Method 5: Try parent window communication
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({ action: 'closeModal' }, '*');
+            }
+            
+            // Method 6: Try window.opener communication
+            if (window.opener && window.opener !== window) {
+                try {
+                    if (typeof window.opener.closeJobModal === 'function') {
+                        window.opener.closeJobModal();
+                    }
+                } catch (e) {
+                    console.log('Cannot access opener:', e);
+                }
+            }
+            
+            // Reset body overflow
+            document.body.style.overflow = '';
+            
+            console.log('? [MODAL] Modal closed using fallback methods');
+            return true;
+            
+        } catch (error) {
+            console.error('? [MODAL] Error closing modal:', error);
+            
+            // Last resort: reload the page
+            if (window.opener && window.opener !== window) {
+                window.close();
+            } else {
+                window.location.href = '/PrintTracking';
+            }
+            return false;
+        }
+    }
+
+    // Backward compatibility - expose closeModal as alias
+    window.closeModal = closeModalSafely;
+
     // PHASE 4: Enhanced JavaScript for operator interface
     let prototypeEntryCount = 0; // Start at 0 since no default entries
     let maxPartsCapacity = @Model.MaxPartsCapacity;
     let currentBuildCapacity = @Model.TotalPartsInBuild;
 
-    // Handle form submission
+    // Enhanced form submission handling
     document.body.addEventListener('htmx:beforeRequest', function(event) {
         if (event.detail.requestConfig.path.includes('StartPrint')) {
+            console.log('?? [FORM] Starting print form submission');
+            
             // Clean up prototype fields if not adding prototypes
-            const addPrototypes = document.getElementById('AddPrototypes').checked;
+            const addPrototypes = document.getElementById('AddPrototypes')?.checked;
             if (!addPrototypes) {
                 // Remove all prototype input fields to prevent validation errors
                 const prototypeInputs = document.querySelectorAll('input[name*="PrototypeAdditions"], select[name*="PrototypeAdditions"]');
                 prototypeInputs.forEach(input => input.remove());
+                console.log('?? [FORM] Cleaned up prototype fields');
             }
         }
     });
 
-    // Handle form submission response
+    // Enhanced form submission response handling
     document.body.addEventListener('htmx:afterRequest', function(event) {
         if (event.detail.requestConfig.path.includes('StartPrint')) {
+            console.log('?? [FORM] Received response:', event.detail.xhr.status);
+            
             try {
                 const response = JSON.parse(event.detail.xhr.responseText);
                 if (response.success) {
+                    console.log('? [FORM] Print started successfully');
+                    
                     // Close modal and show success message
-                    PrintTracking.closeModal();
+                    closeModalSafely();
                     
                     // Enhanced success message with operator estimate info
                     let message = `Print started successfully! Build ID: ${response.buildId}`;
@@ -373,85 +458,147 @@
                         message += `\n?? Schedule updated with your time estimate`;
                     }
                     
-                    PrintTracking.showToast(message, 'success');
-                    PrintTracking.refreshDashboard();
+                    // Try multiple notification methods
+                    if (typeof window.PrintTracking !== 'undefined' && typeof window.PrintTracking.showToast === 'function') {
+                        window.PrintTracking.showToast(message, 'success');
+                    } else if (typeof window.showSuccessNotification === 'function') {
+                        window.showSuccessNotification(message);
+                    } else {
+                        alert(message);
+                    }
+                    
+                    // Refresh dashboard
+                    if (typeof window.PrintTracking !== 'undefined' && typeof window.PrintTracking.refreshDashboard === 'function') {
+                        window.PrintTracking.refreshDashboard();
+                    }
                     
                     // ENHANCED: Notify scheduler if schedule was updated
                     if (response.refreshSchedulerNeeded && response.scheduleUpdated) {
-                        // Try to communicate with scheduler page if it's open
-                        try {
-                            if (window.opener && window.opener.location.pathname.includes('/Scheduler')) {
-                                window.opener.postMessage({
-                                    type: 'scheduleUpdated',
-                                    jobId: response.schedulerJobId,
-                                    machineId: response.machineId,
-                                    newEstimate: response.operatorEstimateHours,
-                                    buildId: response.buildId
-                                }, window.location.origin);
-                            }
-                            
-                            // Also try localStorage for cross-tab communication
-                            localStorage.setItem('scheduleUpdateNotification', JSON.stringify({
-                                timestamp: Date.now(),
-                                type: 'printStarted',
-                                jobId: response.schedulerJobId,
-                                machineId: response.machineId,
-                                operatorEstimate: response.operatorEstimateHours,
-                                buildId: response.buildId
-                            }));
-                        } catch (e) {
-                            console.log('Could not notify scheduler:', e);
-                        }
+                        notifySchedulerOfUpdate(response);
                     }
                 } else {
-                    PrintTracking.showToast(response.message || 'Error starting print', 'error');
+                    console.error('? [FORM] Print start failed:', response.message);
+                    const errorMessage = response.message || 'Error starting print';
+                    
+                    if (typeof window.PrintTracking !== 'undefined' && typeof window.PrintTracking.showToast === 'function') {
+                        window.PrintTracking.showToast(errorMessage, 'error');
+                    } else if (typeof window.showErrorNotification === 'function') {
+                        window.showErrorNotification(errorMessage);
+                    } else {
+                        alert(errorMessage);
+                    }
                 }
             } catch (e) {
                 // If not JSON response, it's likely the form with validation errors
-                // The form will be swapped in by HTMX showing validation errors
-                console.log('Form validation errors detected, showing form with errors');
+                console.log('?? [FORM] Form validation errors detected, showing form with errors');
             }
         }
     });
 
+    // Enhanced scheduler notification function
+    function notifySchedulerOfUpdate(response) {
+        console.log('?? [NOTIFICATION] Notifying scheduler of update:', response);
+        
+        try {
+            // Method 1: Direct window communication if same tab
+            if (window.opener && window.opener.location.pathname.includes('/Scheduler')) {
+                window.opener.postMessage({
+                    type: 'scheduleUpdated',
+                    jobId: response.schedulerJobId,
+                    machineId: response.machineId,
+                    newEstimate: response.operatorEstimateHours,
+                    buildId: response.buildId
+                }, window.location.origin);
+                console.log('? [NOTIFICATION] Sent message to opener window');
+            }
+            
+            // Method 2: localStorage for cross-tab communication
+            localStorage.setItem('scheduleUpdateNotification', JSON.stringify({
+                timestamp: Date.now(),
+                type: 'printStarted',
+                jobId: response.schedulerJobId,
+                machineId: response.machineId,
+                operatorEstimate: response.operatorEstimateHours,
+                buildId: response.buildId
+            }));
+            console.log('? [NOTIFICATION] Saved notification to localStorage');
+            
+            // Method 3: Try to find scheduler in parent frames
+            let frame = window.parent;
+            let attempts = 0;
+            while (frame && frame !== window && attempts < 5) {
+                try {
+                    if (frame.location.pathname.includes('/Scheduler') && typeof frame.SchedulerApp !== 'undefined') {
+                        frame.SchedulerApp.handleScheduleUpdate({
+                            type: 'scheduleUpdated',
+                            jobId: response.schedulerJobId,
+                            machineId: response.machineId,
+                            operatorEstimate: response.operatorEstimateHours,
+                            buildId: response.buildId
+                        });
+                        console.log('? [NOTIFICATION] Notified scheduler in parent frame');
+                        break;
+                    }
+                } catch (e) {
+                    // Cross-origin access denied, continue
+                }
+                frame = frame.parent;
+                attempts++;
+            }
+            
+        } catch (e) {
+            console.log('?? [NOTIFICATION] Could not notify scheduler:', e);
+        }
+    }
+
     // Update calculated duration based on start and end times
     function updateCalculatedDuration() {
-        const startTime = new Date(document.getElementById('ActualStartTime').value);
-        const endTime = new Date(document.getElementById('EstimatedEndTime').value);
+        const startTime = new Date(document.getElementById('ActualStartTime')?.value);
+        const endTime = new Date(document.getElementById('EstimatedEndTime')?.value);
         
         if (startTime && endTime && endTime > startTime) {
             const durationMs = endTime.getTime() - startTime.getTime();
             const durationHours = durationMs / (1000 * 60 * 60);
             
-            document.getElementById('durationHours').textContent = durationHours.toFixed(2) + 'h';
+            const durationElement = document.getElementById('durationHours');
+            if (durationElement) {
+                durationElement.textContent = durationHours.toFixed(2) + 'h';
+            }
             
             // Update the color based on reasonableness
             const durationDiv = document.getElementById('calculatedDuration');
-            if (durationHours < 0.5) {
-                durationDiv.className = 'mt-1 block w-full p-3 bg-red-50 rounded-md border-red-200 border';
-                document.getElementById('durationHours').className = 'text-lg font-semibold text-red-700';
-            } else if (durationHours > 48) {
-                durationDiv.className = 'mt-1 block w-full p-3 bg-yellow-50 rounded-md border-yellow-200 border';
-                document.getElementById('durationHours').className = 'text-lg font-semibold text-yellow-700';
-            } else {
-                durationDiv.className = 'mt-1 block w-full p-3 bg-green-50 rounded-md border-green-200 border';
-                document.getElementById('durationHours').className = 'text-lg font-semibold text-green-700';
+            if (durationDiv && durationElement) {
+                if (durationHours < 0.5) {
+                    durationDiv.className = 'mt-1 block w-full p-3 bg-red-50 rounded-md border-red-200 border';
+                    durationElement.className = 'text-lg font-semibold text-red-700';
+                } else if (durationHours > 48) {
+                    durationDiv.className = 'mt-1 block w-full p-3 bg-yellow-50 rounded-md border-yellow-200 border';
+                    durationElement.className = 'text-lg font-semibold text-yellow-700';
+                } else {
+                    durationDiv.className = 'mt-1 block w-full p-3 bg-green-50 rounded-md border-green-200 border';
+                    durationElement.className = 'text-lg font-semibold text-green-700';
+                }
             }
         } else {
-            document.getElementById('durationHours').textContent = '--h';
-            document.getElementById('calculatedDuration').className = 'mt-1 block w-full p-3 bg-gray-50 rounded-md border-gray-200 border';
-            document.getElementById('durationHours').className = 'text-lg font-semibold text-gray-700';
+            const durationElement = document.getElementById('durationHours');
+            const durationDiv = document.getElementById('calculatedDuration');
+            if (durationElement && durationDiv) {
+                durationElement.textContent = '--h';
+                durationDiv.className = 'mt-1 block w-full p-3 bg-gray-50 rounded-md border-gray-200 border';
+                durationElement.className = 'text-lg font-semibold text-gray-700';
+            }
         }
     }
 
     // Update expected completion time based on operator estimate (legacy function for compatibility)
     function updateExpectedCompletion() {
-        // This function is now handled by updateCalculatedDuration
         updateCalculatedDuration();
     }
 
-    // Also update duration when start time changes
+    // Enhanced DOM ready handling
     document.addEventListener('DOMContentLoaded', function() {
+        console.log('?? [MODAL] Start Print Modal DOM ready');
+        
         // Add event listener to start time input
         const startTimeInput = document.getElementById('ActualStartTime');
         if (startTimeInput) {
@@ -471,36 +618,26 @@
         
         // Update build capacity on load
         updateBuildCapacity();
+        
+        console.log('? [MODAL] Start Print Modal initialized successfully');
     });
 
     // Load scheduled job details if selected
     function loadScheduledJobDetails() {
         const select = document.getElementById('AssociatedScheduledJobId');
-        const jobId = select.value;
+        const jobId = select?.value;
         
         if (jobId) {
             console.log('Loading details for scheduled job:', jobId);
             
-            // You can expand this function to load job details
-            // For example, populate form fields with job information
-            // or show additional job details in the UI
-            
-            // Example: Find the selected job from available jobs
-            // and update form fields accordingly
             try {
-                // This could make an AJAX call to get job details
-                // or use data already available in the form
                 const selectedOption = select.options[select.selectedIndex];
                 if (selectedOption && selectedOption.text) {
                     console.log('Selected job details:', selectedOption.text);
-                    // You could parse the option text to extract job details
-                    // and populate related form fields
                 }
             } catch (error) {
                 console.warn('Error loading scheduled job details:', error);
             }
-        } else {
-            console.log('No scheduled job selected');
         }
     }
 
@@ -509,33 +646,41 @@
         const checkbox = document.getElementById('AddPrototypes');
         const details = document.getElementById('prototypeDetails');
         
-        if (checkbox.checked) {
-            details.classList.remove('hidden');
-            // Add first prototype entry if none exist
-            if (prototypeEntryCount === 0) {
-                addPrototypeEntry();
+        if (checkbox && details) {
+            if (checkbox.checked) {
+                details.classList.remove('hidden');
+                // Add first prototype entry if none exist
+                if (prototypeEntryCount === 0) {
+                    addPrototypeEntry();
+                }
+            } else {
+                details.classList.add('hidden');
+                // Clear all prototype entries
+                const prototypeList = document.getElementById('prototypeList');
+                if (prototypeList) {
+                    prototypeList.innerHTML = '';
+                }
+                prototypeEntryCount = 0;
             }
-        } else {
-            details.classList.add('hidden');
-            // Clear all prototype entries
-            document.getElementById('prototypeList').innerHTML = '';
-            prototypeEntryCount = 0;
+            updateBuildCapacity();
         }
-        updateBuildCapacity();
     }
 
     // Add new prototype entry
     function addPrototypeEntry() {
         if (prototypeEntryCount >= 10) {
-            if (typeof PrintTracking !== 'undefined' && PrintTracking.showToast) {
-                PrintTracking.showToast('Maximum 10 prototypes can be added per build', 'error');
+            const message = 'Maximum 10 prototypes can be added per build';
+            if (typeof window.PrintTracking !== 'undefined' && typeof window.PrintTracking.showToast === 'function') {
+                window.PrintTracking.showToast(message, 'error');
             } else {
-                alert('Maximum 10 prototypes can be added per build');
+                alert(message);
             }
             return;
         }
 
         const prototypeList = document.getElementById('prototypeList');
+        if (!prototypeList) return;
+        
         const newEntry = document.createElement('div');
         newEntry.className = 'prototype-entry bg-white p-4 rounded-lg border mb-3';
         newEntry.innerHTML = `
@@ -602,22 +747,24 @@
     // Remove prototype entry
     function removePrototypeEntry(button) {
         const entry = button.closest('.prototype-entry');
-        entry.remove();
-        
-        // Re-index remaining entries
-        const entries = document.querySelectorAll('.prototype-entry');
-        entries.forEach((entry, index) => {
-            const inputs = entry.querySelectorAll('input, select');
-            inputs.forEach(input => {
-                const name = input.getAttribute('name');
-                if (name && name.includes('PrototypeAdditions')) {
-                    const newName = name.replace(/\[\d+\]/, `[${index}]`);
-                    input.setAttribute('name', newName);
-                }
+        if (entry) {
+            entry.remove();
+            
+            // Re-index remaining entries
+            const entries = document.querySelectorAll('.prototype-entry');
+            entries.forEach((entry, index) => {
+                const inputs = entry.querySelectorAll('input, select');
+                inputs.forEach(input => {
+                    const name = input.getAttribute('name');
+                    if (name && name.includes('PrototypeAdditions')) {
+                        const newName = name.replace(/\[\d+\]/, `[${index}]`);
+                        input.setAttribute('name', newName);
+                    }
+                });
             });
-        });
-        prototypeEntryCount = entries.length;
-        updateBuildCapacity();
+            prototypeEntryCount = entries.length;
+            updateBuildCapacity();
+        }
     }
 
     // Update build capacity calculations
@@ -661,27 +808,12 @@
         }
     }
 
-    // Close modal function (ensure it exists)
-    function closeModal() {
-        // Try different methods to close the modal
-        if (typeof PrintTracking !== 'undefined' && PrintTracking.closeModal) {
-            PrintTracking.closeModal();
-        } else if (window.parent && window.parent !== window) {
-            // If in iframe, try to close parent modal
-            window.parent.postMessage({ action: 'closeModal' }, '*');
-        } else {
-            // Fallback: hide the modal element
-            const modal = document.getElementById('start-print-modal');
-            if (modal) {
-                modal.style.display = 'none';
-            }
-            
-            // Also try to hide any modal containers
-            const modalContainer = document.getElementById('modal-container');
-            if (modalContainer) {
-                modalContainer.style.display = 'none';
-                modalContainer.classList.add('hidden');
-            }
+    // Handle ESC key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeModalSafely();
         }
-    }
+    });
+
+    console.log('? [MODAL] Start Print Modal script loaded successfully');
 </script>
