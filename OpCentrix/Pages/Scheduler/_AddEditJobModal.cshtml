@@ -239,7 +239,7 @@
                                 </label>
                                 <input type="datetime-local" name="ScheduledEnd" id="end-input"
                                        value="@Model.Job.ScheduledEnd.ToString("yyyy-MM-ddTHH:mm")" 
-                                       required onchange="JobForm.updateDurationDisplay(); JobForm.checkTimeSlotAvailability();" 
+                                       required onchange="JobForm.updateDurationDisplay(); JobForm.checkTimeSlotAvailability(); JobForm.handleDurationChange();" 
                                        style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease;" />
                                 <small style="color: #6b7280; font-size: 0.75rem; margin-top: 0.25rem; display: block;">
                                     Duration: <span id="duration-display">@((Model.Job.ScheduledEnd - Model.Job.ScheduledStart).TotalHours.ToString("F1")) hours</span>
@@ -629,112 +629,70 @@ window.deleteJob = function(jobId) {
     
     // CRITICAL: Add proper form response handler that follows site patterns
     window.handleJobFormResponse = function(event) {
-        console.log('?? [JOB-FORM] Handling job form response:', event.detail);
+        console.log('?? [JOB-FORM] Handling form response:', event.detail);
         
-        // Hide loading state first
-        const submitBtn = document.getElementById('submit-job-btn');
-        const submitText = document.getElementById('submit-text');
-        const submitSpinner = document.getElementById('submit-spinner');
-        
-        if (submitBtn) submitBtn.disabled = false;
-        if (submitText) submitText.textContent = '@(Model.Job.Id == 0 ? "Schedule Job" : "Update Job")';
-        if (submitSpinner) submitSpinner.style.display = 'none';
+        this.hideFormLoading();
         
         const xhr = event.detail.xhr;
-        const responseText = xhr.responseText || '';
+        let responseData = {};
         
-        console.log('?? [JOB-FORM] Response status:', xhr.status);
-        console.log('?? [JOB-FORM] Response text (first 200 chars):', responseText.substring(0, 200));
+        try {
+            // Try to parse JSON response
+            const responseText = xhr.responseText || '';
+            if (responseText.trim().startsWith('{')) {
+                responseData = JSON.parse(responseText);
+            }
+        } catch (parseError) {
+            console.warn('?? [JOB-FORM] Could not parse JSON response, checking for HTML errors');
+        }
         
-        // CRITICAL FIX: Handle different response scenarios properly
-        if (xhr.status >= 400) {
-            console.error('? [JOB-FORM] Server returned error status:', xhr.status);
+        // Check for success response
+        if (responseData.success === true) {
+            console.log('? [JOB-FORM] Job saved successfully:', responseData);
             
-            if (window.showErrorNotification) {
-                window.showErrorNotification(`Server error (${xhr.status}). Please check your input and try again.`);
+            // Close the modal immediately
+            if (window.closeJobModal) {
+                window.closeJobModal();
             }
             
-            // Prevent HTMX from inserting error page
-            event.preventDefault();
+            // Show success notification
+            if (window.showSuccessNotification) {
+                window.showSuccessNotification(responseData.message || 'Job saved successfully!');
+            }
+            
+            // Refresh the entire page to show updated scheduler
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+            
             return;
         }
         
-        // Check if it's a JSON response (success case)
-        if (xhr.getResponseHeader('Content-Type')?.includes('application/json') || 
-            responseText.trim().startsWith('{')) {
-            
-            try {
-                const response = JSON.parse(responseText);
-                console.log('? [JOB-FORM] Parsed JSON response:', response);
-                
-                if (response.success === true) {
-                    console.log('?? [JOB-FORM] Job saved successfully!');
-                    
-                    // Close modal immediately
-                    if (window.closeJobModal) {
-                        window.closeJobModal();
-                    }
-                    
-                    // Show success notification
-                    if (window.showSuccessNotification) {
-                        window.showSuccessNotification(response.message || 'Job scheduled successfully!');
-                    }
-                    
-                    // Refresh page to show updated scheduler
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
-                    
-                    return;
-                } else {
-                    console.error('? [JOB-FORM] Server reported failure:', response);
-                    if (window.showErrorNotification) {
-                        window.showErrorNotification(response.error || response.message || 'Failed to save job');
-                    }
-                    return;
-                }
-            } catch (parseError) {
-                console.error('? [JOB-FORM] Failed to parse JSON response:', parseError);
-                console.log('?? [JOB-FORM] Raw response:', responseText);
-            }
-        }
+        // Check if response contains HTML errors (validation failures)
+        const responseText = xhr.responseText || '';
+        const hasErrors = responseText.includes('error-container') || 
+                         responseText.includes('error-list') || 
+                         responseText.includes('Please correct the following') ||
+                         xhr.status >= 400;
         
-        // Check if response contains validation errors (HTML form with errors)
-        if (responseText.includes('Please correct the following') || 
-            responseText.includes('error-container') || 
-            responseText.includes('validation-summary')) {
-            
-            console.log('?? [JOB-FORM] Form has validation errors, modal will show updated form');
+        if (hasErrors) {
+            console.log('?? [JOB-FORM] Form has validation errors, keeping modal open');
             
             if (window.showErrorNotification) {
                 window.showErrorNotification('Please correct the form errors and try again.');
             }
             
-            // Let HTMX handle the swap to show validation errors - form will replace modal content
             return;
         }
         
-        // If response looks like a complete modal (successful validation), let HTMX handle it
-        if (responseText.includes('modal-backdrop') && responseText.includes('job-form')) {
-            console.log('?? [JOB-FORM] Received updated modal form, letting HTMX handle swap');
-            return;
-        }
-        
-        // Unexpected response
-        console.warn('?? [JOB-FORM] Unexpected response format:', {
-            status: xhr.status,
-            contentType: xhr.getResponseHeader('Content-Type'),
-            hasJson: responseText.trim().startsWith('{'),
-            hasModal: responseText.includes('modal-backdrop'),
-            hasErrors: responseText.includes('error-container'),
-            responseLength: responseText.length
-        });
+        // If we get here, something unexpected happened
+        console.warn('?? [JOB-FORM] Unexpected response format:', xhr.status, responseText);
         
         if (window.showErrorNotification) {
             window.showErrorNotification('Unexpected response from server. Please try again.');
         }
     };
-    
+
     // Enhanced error handler for HTMX form responses
     window.handleJobFormError = function(event) {
         console.error('? [JOB-FORM] HTMX request error:', event.detail);
@@ -764,13 +722,14 @@ window.deleteJob = function(jobId) {
         if (submitText) submitText.textContent = 'Processing...';
         if (submitSpinner) submitSpinner.style.display = 'inline-block';
         
-        console.log('? [JOB-FORM] Form loading state enabled');
+        console.log('?? [JOB-FORM] Form loading state enabled');
     };
     
     // Form utilities and calculations
     const JobForm = {
         // Timeout for debounced operations
         conflictCheckTimeout: null,
+        durationUpdateTimeout: null, // NEW: For debouncing duration updates
         
         // Updated duration display function
         updateDurationDisplay() {
@@ -987,16 +946,43 @@ window.deleteJob = function(jobId) {
                 
                 console.log('?? [JOB-FORM] Calculating for:', { baseHours, quantity });
                 
-                // Calculate total hours (with some efficiency scaling for multiple parts)
-                let totalHours = baseHours * quantity;
-                if (quantity > 1) {
-                    // Apply efficiency factor for multiple parts (economies of scale)
-                    const efficiencyFactor = Math.max(0.8, 1 - (quantity - 1) * 0.05);
-                    totalHours = baseHours + (baseHours * (quantity - 1) * efficiencyFactor);
+                // NEW: For print jobs, calculate individual time properly
+                const machineSelect = document.getElementById('machine-select');
+                const isSlsMachine = machineSelect?.value?.includes('TI') || machineSelect?.value?.includes('INC');
+                
+                let totalHours;
+                if (isSlsMachine) {
+                    // For SLS print jobs, use per-part time multiplied by quantity
+                    // This represents the actual build time for multiple parts
+                    totalHours = baseHours * quantity;
+                    
+                    // Apply build efficiency factor for large quantities
+                    if (quantity > 10) {
+                        // Parts printed together are more efficient than individual builds
+                        const efficiencyFactor = Math.max(0.7, 1 - (quantity - 10) * 0.02); // Efficiency improves with quantity
+                        totalHours = baseHours + (baseHours * (quantity - 1) * efficiencyFactor);
+                    }
+                    
+                    console.log('??? [JOB-FORM] SLS print job - calculated total hours:', totalHours);
+                } else {
+                    // For other machines, use the original logic
+                    totalHours = baseHours * quantity;
+                    if (quantity > 1) {
+                        // Apply efficiency factor for multiple parts
+                        const efficiencyFactor = Math.max(0.8, 1 - (quantity - 1) * 0.05);
+                        totalHours = baseHours + (baseHours * (quantity - 1) * efficiencyFactor);
+                    }
+                    
+                    console.log('?? [JOB-FORM] Other machine - calculated total hours:', totalHours);
                 }
                 
-                console.log('?? [JOB-FORM] Total hours calculated:', totalHours);
                 this.updateEndTimeFromHours(totalHours);
+                
+                // Update hidden fields for backend
+                const hiddenEstimatedHours = document.getElementById('hidden-estimated-hours');
+                const hiddenDurationHours = document.getElementById('hidden-duration-hours');
+                if (hiddenEstimatedHours) hiddenEstimatedHours.value = totalHours.toString();
+                if (hiddenDurationHours) hiddenDurationHours.value = totalHours.toString();
             }
             
             this.updateDurationDisplay();
@@ -1156,7 +1142,7 @@ window.deleteJob = function(jobId) {
                              xhr.status >= 400;
             
             if (hasErrors) {
-                console.log('? [JOB-FORM] Form has validation errors, keeping modal open');
+                console.log('?? [JOB-FORM] Form has validation errors, keeping modal open');
                 
                 if (window.showErrorNotification) {
                     window.showErrorNotification('Please correct the form errors and try again.');
@@ -1171,111 +1157,46 @@ window.deleteJob = function(jobId) {
             if (window.showErrorNotification) {
                 window.showErrorNotification('Unexpected response from server. Please try again.');
             }
-        }
-    };
-    
-    // CRITICAL: Expose JobForm object globally for HTML access
-    window.JobForm = JobForm;
-    
-    // Now update the global function references to use the JobForm methods
-    window.updateJobFromPart = () => JobForm.updateJobFromPart();
-    window.updateEndTimeFromStart = () => JobForm.updateEndTimeFromStart();
-    window.updateEndTimeFromQuantity = () => JobForm.updateEndTimeFromQuantity();
-    window.showFormLoading = () => JobForm.showFormLoading();
-    window.hideFormLoading = () => JobForm.hideFormLoading();
-    window.handleFormResponse = (event) => JobForm.handleFormResponse(event);
-    
-    // Initialize form when modal content loads
-    function initializeJobForm() {
-        console.log('?? [JOB-FORM] Initializing enhanced form...');
-        
-        try {
-            // Initialize machine filtering first
-            JobForm.filterPartsByMachine();
-            
-            // Set up initial state if part is pre-selected
-            const partSelect = document.getElementById('part-select');
-            if (partSelect?.value) {
-                JobForm.updateJobFromPart();
-            }
-            
-            // Update duration display
-            JobForm.updateDurationDisplay();
-            
-            // Set up real-time conflict detection
+        },
+
+        // NEW: Handle duration changes and save to part info for print jobs
+        handleDurationChange() {
+            const jobIdInput = document.querySelector('input[name="Id"]');
             const startInput = document.getElementById('start-input');
             const endInput = document.getElementById('end-input');
-            const machineSelect = document.getElementById('machine-select');
             
-            if (startInput) {
-                startInput.addEventListener('change', () => {
-                    JobForm.updateDurationDisplay();
-                    clearTimeout(JobForm.conflictCheckTimeout);
-                    JobForm.conflictCheckTimeout = setTimeout(() => {
-                        JobForm.checkTimeSlotAvailability();
-                    }, 500);
-                });
+            if (!jobIdInput || !startInput || !endInput) {
+                return;
             }
             
-            if (endInput) {
-                endInput.addEventListener('change', () => {
-                    JobForm.updateDurationDisplay();
-                    clearTimeout(JobForm.conflictCheckTimeout);
-                    JobForm.conflictCheckTimeout = setTimeout(() => {
-                        JobForm.checkTimeSlotAvailability();
-                    }, 500);
-                });
-            }
+            const jobId = parseInt(jobIdInput.value);
             
-            if (machineSelect) {
-                machineSelect.addEventListener('change', () => {
-                    JobForm.filterPartsByMachine();
-                    // Clear part selection when machine changes for compatibility
-                    const partSelect = document.getElementById('part-select');
-                    if (partSelect) {
-                        partSelect.value = '';
+            // Only update existing jobs (not new jobs being created)
+            if (jobId > 0) {
+                try {
+                    const startDate = new Date(startInput.value);
+                    const endDate = new Date(endInput.value);
+                    
+                    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                        return;
                     }
-                    // Check new machine availability
-                    setTimeout(() => JobForm.checkTimeSlotAvailability(), 300);
-                });
+                    
+                    const durationHours = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
+                    
+                    if (durationHours >= 0) {
+                        console.log('?? [JOB-FORM] Saving duration change:', durationHours);
+                        
+                        // Immediate update for duration changes
+                        const hiddenDurationHours = document.getElementById('hidden-duration-hours');
+                        if (hiddenDurationHours) {
+                            hiddenDurationHours.value = durationHours.toString();
+                        }
+                    }
+                } catch (error) {
+                    console.warn('Error handling duration change:', error);
+                }
             }
-            
-            console.log('? [JOB-FORM] Enhanced form initialization complete');
-            
-        } catch (error) {
-            console.error('? [JOB-FORM] Error during initialization:', error);
         }
-    }
-    
-    // Initialize immediately if DOM is ready, or wait for it
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initializeJobForm);
-    } else {
-        // Wait a moment for the modal content to be fully inserted
-        setTimeout(initializeJobForm, 100);
-    }
+    };
 })();
-
-console.log('? [GLOBAL] All job form functions are now available globally');
-console.log('?? [DEBUG] Available functions:', Object.keys(window).filter(key => 
-    key.includes('updateJobFromPart') || 
-    key.includes('updateEndTime') || 
-    key.includes('deleteJob') ||
-    key.includes('JobForm')
-));
-
-// CRITICAL TEST: Verify function availability immediately
-(function() {
-    console.log('?? [TEST] Testing global function availability...');
-    console.log('?? [TEST] updateJobFromPart available:', typeof window.updateJobFromPart === 'function');
-    console.log('?? [TEST] updateEndTimeFromStart available:', typeof window.updateEndTimeFromStart === 'function');
-    console.log('?? [TEST] updateEndTimeFromQuantity available:', typeof window.updateEndTimeFromQuantity === 'function');
-    console.log('?? [TEST] deleteJob available:', typeof window.deleteJob === 'function');
-    console.log('?? [TEST] JobForm available:', typeof window.JobForm === 'object');
-    
-    if (typeof window.updateJobFromPart === 'function') {
-        console.log('? [TEST] All critical functions are available globally - ReferenceError should be fixed!');
-    } else {
-        console.error('? [TEST] Functions are NOT available globally - issue may persist');
-    }
-})();
+</script>

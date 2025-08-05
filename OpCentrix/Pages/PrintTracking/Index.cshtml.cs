@@ -12,7 +12,11 @@ using System.Security.Claims;
 
 namespace OpCentrix.Pages.PrintTracking
 {
-    [PrintTrackingAccess] // Use specific Print Tracking access attribute
+    /// <summary>
+    /// Print Tracking page with enhanced operator interface and scheduler integration
+    /// FIXED: Cleaned up duplicated code and compilation errors
+    /// </summary>
+    [PrintTrackingAccess]
     public class IndexModel : PageModel
     {
         private readonly IPrintTrackingService _printTrackingService;
@@ -578,7 +582,7 @@ namespace OpCentrix.Pages.PrintTracking
                     CanComplete = j.Status == "Building" || j.Status == "In Progress"
                 }).ToList();
 
-                // Create a proper view model for the mini scheduler - FIXED: Use fully qualified namespace
+                // Create a proper view model for the mini scheduler
                 var miniViewModel = new OpCentrix.ViewModels.PrintTracking.EmbeddedSchedulerViewModel
                 {
                     Jobs = jobs,

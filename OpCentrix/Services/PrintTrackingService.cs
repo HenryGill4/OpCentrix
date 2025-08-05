@@ -78,6 +78,9 @@ namespace OpCentrix.Services
         // Machine Learning Data Collection
         Task<List<BuildPerformanceData>> GetHistoricalBuildDataAsync(string partNumber);
         Task UpdateBuildTimeLearningAsync(int buildId, BuildCompletionData data);
+
+        // NEW: Schedule Integration
+        Task UpdatePartDurationFromScheduleAsync(int jobId, double newDurationHours);
     }
 
     public class PrintTrackingService : IPrintTrackingService
@@ -286,8 +289,9 @@ namespace OpCentrix.Services
                     var scheduledJob = await _context.Jobs.FindAsync(model.AssociatedScheduledJobId.Value);
                     if (scheduledJob != null)
                     {
+                        // FIXED: Update BOTH ActualStart and Status
                         scheduledJob.Status = "In Progress";
-                        scheduledJob.ActualStart = model.ActualStartTime;
+                        scheduledJob.ActualStart = model.ActualStartTime; // This was already correct
                         
                         // ENHANCED: Update the job duration based on operator estimate
                         var operatorEstimateHours = (double)model.OperatorEstimatedHours;
@@ -300,12 +304,29 @@ namespace OpCentrix.Services
                         scheduledJob.EstimatedHours = operatorEstimateHours;
                         scheduledJob.ScheduledEnd = newEndTime;
                         
+                        // NEW: Update the Part's EstimatedHours for this specific quantity
+                        // Calculate per-part time and update the Part record for future scheduling
+                        if (model.Quantity.HasValue && model.Quantity > 0)
+                        {
+                            var timePerPart = operatorEstimateHours / model.Quantity.Value;
+                            var part = await _context.Parts.FindAsync(scheduledJob.PartId);
+                            if (part != null)
+                            {
+                                // Update the part's estimated hours with the actual operator experience
+                                part.EstimatedHours = timePerPart; // timePerPart is already double
+                                part.LastProduced = DateTime.UtcNow;
+                                
+                                _logger.LogInformation("Updated Part {PartNumber} EstimatedHours from {OldHours}h to {NewHours}h per part based on operator estimate",
+                                    part.PartNumber, part.EstimatedHours, timePerPart);
+                            }
+                        }
+                        
                         // Store original schedule for comparison
                         buildJob.ScheduledStartTime = scheduledJob.ScheduledStart;
                         buildJob.ScheduledEndTime = scheduledJob.ScheduledEnd;
                         
-                        _logger.LogInformation("Updated scheduled job {JobId}: operator estimate {OperatorHours}h vs original {OriginalHours}h, new end time: {NewEndTime}",
-                            scheduledJob.Id, operatorEstimateHours, scheduledJob.EstimatedHours, newEndTime);
+                        _logger.LogInformation("Updated scheduled job {JobId}: ActualStart={ActualStart}, operator estimate {OperatorHours}h, new end time: {NewEndTime}",
+                            scheduledJob.Id, scheduledJob.ActualStart, operatorEstimateHours, newEndTime);
                         
                         // ENHANCED: Cascade schedule changes to subsequent jobs on the same machine
                         if (Math.Abs(timeDifference.TotalMinutes) > 15) // Only cascade if difference > 15 minutes
@@ -1237,6 +1258,38 @@ namespace OpCentrix.Services
                 "INC" => "Inconel Printer",
                 _ => machineId ?? "Unknown"
             };
+        }
+
+        /// <summary>
+        /// Updates part duration when schedule duration is manually adjusted
+        /// </summary>
+        public async Task UpdatePartDurationFromScheduleAsync(int jobId, double newDurationHours)
+        {
+            try
+            {
+                var job = await _context.Jobs.Include(j => j.Part).FirstOrDefaultAsync(j => j.Id == jobId);
+                if (job?.Part != null && job.Quantity > 0)
+                {
+                    var timePerPart = newDurationHours / job.Quantity;
+                    var oldTimePerPart = job.Part.EstimatedHours;
+                    
+                    // Update the part's estimated hours
+                    job.Part.EstimatedHours = timePerPart;
+                    job.Part.LastModifiedDate = DateTime.UtcNow;
+                    
+                    // Update the job's estimated hours to match
+                    job.EstimatedHours = newDurationHours;
+                    
+                    await _context.SaveChangesAsync();
+                    
+                    _logger.LogInformation("Updated Part {PartNumber} duration from {OldHours}h to {NewHours}h per part based on schedule adjustment for Job {JobId}",
+                        job.Part.PartNumber, oldTimePerPart, timePerPart, jobId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating part duration from schedule for job {JobId}", jobId);
+            }
         }
     }
 }

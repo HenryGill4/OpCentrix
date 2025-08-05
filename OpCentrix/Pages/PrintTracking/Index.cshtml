@@ -303,29 +303,62 @@
 
         // Event binding for dashboard elements (called after HTMX updates)
         window.PrintTracking.bindDashboardEvents = function() {
-            // Bind events to dynamically loaded dashboard content
-            document.querySelectorAll('[onclick*="openStartPrintModal"]').forEach(btn => {
-                const onclick = btn.getAttribute('onclick');
-                const match = onclick.match(/openStartPrintModal\('?([^']*)'?\)/);
-                const printerName = match ? match[1] : null;
-                
-                btn.removeAttribute('onclick');
-                btn.addEventListener('click', () => PrintTracking.openStartPrintModal(printerName));
-            });
+            console.log('?? [PRINT-TRACKING] Binding dashboard events...');
+            
+            // Use event delegation for all dashboard buttons to ensure they work even when dynamically loaded
+            document.removeEventListener('click', PrintTracking.dashboardClickHandler);
+            document.addEventListener('click', PrintTracking.dashboardClickHandler);
+            
+            console.log('?? [PRINT-TRACKING] Dashboard events bound using event delegation');
+        };
 
-            document.querySelectorAll('[onclick*="openPostPrintModal"]').forEach(btn => {
-                const onclick = btn.getAttribute('onclick');
-                const buildIdMatch = onclick.match(/openPostPrintModal\((\d+)\)/);
-                const printerMatch = onclick.match(/openPostPrintModal\(null, '([^']*)'\)/);
-                
-                const buildId = buildIdMatch ? parseInt(buildIdMatch[1]) : null;
-                const printerName = printerMatch ? printerMatch[1] : null;
-                
-                btn.removeAttribute('onclick');
-                btn.addEventListener('click', () => PrintTracking.openPostPrintModal(buildId, printerName));
-            });
-
-            console.log('?? [PRINT-TRACKING] Dashboard events rebound');
+        // Event delegation handler for all dashboard clicks
+        window.PrintTracking.dashboardClickHandler = function(event) {
+            const target = event.target.closest('[data-action]');
+            if (!target) return;
+            
+            const action = target.dataset.action;
+            const printer = target.dataset.printer;
+            const buildId = target.dataset.buildId ? parseInt(target.dataset.buildId) : null;
+            
+            console.log('?? [DASHBOARD] Button clicked:', { action, printer, buildId });
+            
+            switch (action) {
+                case 'start-print':
+                    event.preventDefault();
+                    PrintTracking.openStartPrintModal(printer);
+                    break;
+                    
+                case 'complete-print':
+                    event.preventDefault();
+                    PrintTracking.openPostPrintModal(buildId, printer);
+                    break;
+                    
+                case 'toggle-schedule':
+                    // Handle schedule toggle in dashboard
+                    const overview = document.getElementById('schedule-overview');
+                    const summary = document.getElementById('schedule-summary');
+                    const toggleText = document.getElementById('schedule-toggle-text');
+                    const chevron = document.getElementById('schedule-chevron');
+                    
+                    if (overview && summary && toggleText && chevron) {
+                        if (overview.classList.contains('hidden')) {
+                            overview.classList.remove('hidden');
+                            summary.classList.add('hidden');
+                            toggleText.textContent = 'Show Summary';
+                            chevron.classList.add('rotate-180');
+                        } else {
+                            overview.classList.add('hidden');
+                            summary.classList.remove('hidden');
+                            toggleText.textContent = 'Show Details';
+                            chevron.classList.remove('rotate-180');
+                        }
+                    }
+                    break;
+                    
+                default:
+                    console.log('Unknown action:', action);
+            }
         };
 
         // Global function aliases for backward compatibility
@@ -347,7 +380,11 @@
             // Re-bind events if dashboard was updated
             if (event.detail.requestConfig.path?.includes('RefreshDashboard') || 
                 event.detail.target?.id === 'dashboard-content') {
-                PrintTracking.bindDashboardEvents();
+                setTimeout(() => {
+                    PrintTracking.bindDashboardEvents();
+                    PrintTracking.bindLegacyHandlers();
+                    console.log('?? [PRINT-TRACKING] Events re-bound after HTMX update');
+                }, 50);
             }
             
             // Handle network errors
@@ -383,7 +420,7 @@
             }
         });
 
-        // Initialize page - using event delegation for persistent buttons
+        // Initialize page - Ensure proper button binding on page load
         document.addEventListener('DOMContentLoaded', function() {
             console.log('?? [PRINT-TRACKING] Print Tracking Dashboard initializing...');
             
@@ -392,8 +429,14 @@
             document.getElementById('start-print-btn')?.addEventListener('click', () => PrintTracking.openStartPrintModal());
             document.getElementById('complete-print-btn')?.addEventListener('click', () => PrintTracking.openPostPrintModal());
             
-            // Bind dashboard-specific events
-            PrintTracking.bindDashboardEvents();
+            // Use setTimeout to ensure dashboard is fully loaded before binding events
+            setTimeout(() => {
+                // Bind dashboard-specific events
+                PrintTracking.bindDashboardEvents();
+                // Also bind any legacy onclick handlers
+                PrintTracking.bindLegacyHandlers();
+                console.log('? [PRINT-TRACKING] Dashboard events bound after DOM ready');
+            }, 100);
             
             // Start auto-refresh
             PrintTracking.startAutoRefresh();
@@ -407,6 +450,41 @@
             PrintTracking.initialized = true;
             console.log('? [PRINT-TRACKING] Print Tracking Dashboard initialized successfully');
         });
+
+        // Also ensure events are bound when the page content is fully loaded
+        window.addEventListener('load', function() {
+            console.log('?? [PRINT-TRACKING] Window load event - ensuring dashboard events are bound');
+            setTimeout(() => {
+                PrintTracking.bindDashboardEvents();
+                PrintTracking.bindLegacyHandlers();
+                console.log('? [PRINT-TRACKING] Dashboard events re-bound after window load');
+            }, 200);
+        });
+
+        // Also bind any legacy onclick handlers (for backward compatibility)
+        window.PrintTracking.bindLegacyHandlers = function() {
+            // Convert onclick attributes to proper event listeners for any remaining elements
+            document.querySelectorAll('[onclick*="openStartPrintModal"], [onclick*="openPostPrintModal"]').forEach(btn => {
+                const onclick = btn.getAttribute('onclick');
+                if (onclick) {
+                    btn.removeAttribute('onclick');
+                    
+                    if (onclick.includes('openStartPrintModal')) {
+                        const match = onclick.match(/openStartPrintModal\('?([^']*)'?\)/);
+                        const printerName = match ? match[1] : null;
+                        btn.addEventListener('click', () => PrintTracking.openStartPrintModal(printerName));
+                    } else if (onclick.includes('openPostPrintModal')) {
+                        const buildIdMatch = onclick.match(/openPostPrintModal\((\d+)\)/);
+                        const printerMatch = onclick.match(/openPostPrintModal\(null, '([^']*)'\)/);
+                        
+                        const buildId = buildIdMatch ? parseInt(buildIdMatch[1]) : null;
+                        const printerName = printerMatch ? printerMatch[1] : null;
+                        
+                        btn.addEventListener('click', () => PrintTracking.openPostPrintModal(buildId, printerName));
+                    }
+                }
+            });
+        };
 
         // Cleanup on page unload
         window.addEventListener('beforeunload', function() {
