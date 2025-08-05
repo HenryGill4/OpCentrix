@@ -563,6 +563,51 @@
         initialized: false
     };
 
+    // CRITICAL FIX: Ensure modal closes properly after successful submission
+    function handleFormSubmission() {
+        // Listen for successful form submissions
+        const form = document.querySelector('form[hx-post*="CompletePrint"]');
+        if (form) {
+            // Override the HTMX response handling for this specific form
+            form.addEventListener('htmx:afterRequest', function(event) {
+                console.log('?? [POST-PRINT] Form response received:', event.detail.xhr.status);
+                
+                try {
+                    const contentType = event.detail.xhr.getResponseHeader('Content-Type') || '';
+                    
+                    if (contentType.includes('application/json')) {
+                        const response = JSON.parse(event.detail.xhr.responseText);
+                        
+                        if (response.success) {
+                            console.log('? [POST-PRINT] Print completion successful');
+                            
+                            // Use the main PrintTracking modal close function
+                            if (typeof window.PrintTracking !== 'undefined' && typeof window.PrintTracking.closeModal === 'function') {
+                                window.PrintTracking.closeModal();
+                            } else if (typeof window.closeModal === 'function') {
+                                window.closeModal();
+                            }
+                            
+                            // Show success message through PrintTracking
+                            if (typeof window.PrintTracking !== 'undefined' && typeof window.PrintTracking.showToast === 'function') {
+                                window.PrintTracking.showToast(response.message || 'Print completed successfully', 'success');
+                            }
+                            
+                            // Refresh dashboard through PrintTracking
+                            if (typeof window.PrintTracking !== 'undefined' && typeof window.PrintTracking.refreshDashboard === 'function') {
+                                setTimeout(() => {
+                                    window.PrintTracking.refreshDashboard();
+                                }, 500);
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('? [POST-PRINT] Error handling form response:', error);
+                }
+            });
+        }
+    }
+
     // PHASE 4: Enhanced JavaScript for performance tracking
     PostPrintModal.loadJobDetails = async function() {
         const select = document.getElementById('SelectedJobId');
@@ -602,11 +647,17 @@
     // Populate form fields from job data
     PostPrintModal.populateFormFromJob = function(jobData) {
         // Basic job information
-        document.getElementById('PrinterName').value = jobData.machineId || '';
+        const printerNameSelect = document.getElementById('PrinterName');
+        if (printerNameSelect) {
+            printerNameSelect.value = jobData.machineId || '';
+        }
         
         // Times
         if (jobData.actualStart) {
-            document.getElementById('ActualStartTime').value = jobData.actualStart;
+            const actualStartInput = document.getElementById('ActualStartTime');
+            if (actualStartInput) {
+                actualStartInput.value = jobData.actualStart;
+            }
         }
         
         // Hidden fields for job context
@@ -647,24 +698,28 @@
         // Clear existing parts except the first one
         const container = document.getElementById('parts-container');
         
-        // Clear all parts
-        container.innerHTML = '';
-        PostPrintModal.partIndex = 0;
-        
-        // Add the main job part
-        PostPrintModal.addPartEntryWithData({
-            partNumber: jobData.partNumber || '',
-            quantity: jobData.quantity || 1,
-            goodParts: jobData.quantity || 1,
-            description: jobData.partDescription || '',
-            material: jobData.material || '',
-            isPrimary: true
-        });
+        if (container) {
+            // Clear all parts
+            container.innerHTML = '';
+            PostPrintModal.partIndex = 0;
+            
+            // Add the main job part
+            PostPrintModal.addPartEntryWithData({
+                partNumber: jobData.partNumber || '',
+                quantity: jobData.quantity || 1,
+                goodParts: jobData.quantity || 1,
+                description: jobData.partDescription || '',
+                material: jobData.material || '',
+                isPrimary: true
+            });
+        }
     };
     
     // Add part entry with pre-populated data
     PostPrintModal.addPartEntryWithData = function(partData) {
         const container = document.getElementById('parts-container');
+        if (!container) return;
+        
         const newEntry = document.createElement('div');
         newEntry.className = 'part-entry border border-gray-200 rounded-lg p-4 bg-gray-50';
         newEntry.innerHTML = `
@@ -770,8 +825,15 @@
     // Clear job details when no job selected
     PostPrintModal.clearJobDetails = function() {
         // Clear form fields
-        document.getElementById('PrinterName').value = '';
-        document.getElementById('ActualStartTime').value = '';
+        const printerNameSelect = document.getElementById('PrinterName');
+        if (printerNameSelect) {
+            printerNameSelect.value = '';
+        }
+        
+        const actualStartInput = document.getElementById('ActualStartTime');
+        if (actualStartInput) {
+            actualStartInput.value = '';
+        }
         
         // Clear hidden inputs
         PostPrintModal.removeHiddenInput('JobId');
@@ -783,9 +845,11 @@
         
         // Reset parts to default single entry
         const container = document.getElementById('parts-container');
-        container.innerHTML = '';
-        PostPrintModal.partIndex = 0;
-        PostPrintModal.addPartEntry();
+        if (container) {
+            container.innerHTML = '';
+            PostPrintModal.partIndex = 0;
+            PostPrintModal.addPartEntry();
+        }
     };
 
     // Helper function to create hidden input
@@ -793,7 +857,10 @@
         const input = document.createElement('input');
         input.type = 'hidden';
         input.name = name;
-        document.querySelector('form').appendChild(input);
+        const form = document.querySelector('form');
+        if (form) {
+            form.appendChild(input);
+        }
         return input;
     };
 
@@ -886,6 +953,12 @@
     window.updatePerformanceCalculations = PostPrintModal.updatePerformanceCalculations;
     window.handleReasonChange = PostPrintModal.handleReasonChange;
     window.toggleOptionalDetails = PostPrintModal.toggleOptionalDetails;
+
+    // CRITICAL: Initialize form submission handling
+    setTimeout(() => {
+        handleFormSubmission();
+        console.log('? [POST-PRINT] Form submission handler initialized');
+    }, 100);
 
     console.log('? [POST-PRINT] PostPrintModal initialized successfully');
     PostPrintModal.initialized = true;

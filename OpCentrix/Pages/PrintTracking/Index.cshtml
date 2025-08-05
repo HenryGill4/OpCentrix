@@ -293,27 +293,45 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
+    // CRITICAL FIX: Enhanced modal close function with proper cleanup
     window.PrintTracking.closeModal = function() {
         console.log('?? [PRINT-TRACKING] Closing modal');
         
         try {
             const modalContainer = document.getElementById('print-modal-container');
             if (modalContainer) {
+                // Clear modal content completely
                 modalContainer.innerHTML = '';
                 modalContainer.style.display = 'none';
                 modalContainer.classList.add('hidden');
             }
 
-            // Reset body overflow
+            // Reset body overflow and any modal backdrop
             document.body.style.overflow = '';
+            document.body.classList.remove('modal-open');
+            
+            // Remove any Bootstrap modal backdrops that might be left behind
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            backdrops.forEach(backdrop => backdrop.remove());
             
             PrintTracking.hideLoadingIndicator();
             PrintTracking.isModalOpen = false;
+            
+            // CRITICAL: Always resume auto-refresh after modal closes
             PrintTracking.resumeAutoRefresh();
+            
+            // CRITICAL: Re-bind all dashboard events after modal closes
+            setTimeout(() => {
+                PrintTracking.bindDashboardEvents();
+                console.log('?? [PRINT-TRACKING] Dashboard events re-bound after modal close');
+            }, 100);
             
             console.log('? [PRINT-TRACKING] Modal closed successfully');
         } catch (error) {
             console.error('? [PRINT-TRACKING] Error closing modal:', error);
+            // Force cleanup even on error
+            PrintTracking.isModalOpen = false;
+            PrintTracking.resumeAutoRefresh();
         }
     };
 
@@ -331,8 +349,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     PrintTracking.hideLoadingIndicator();
                     PrintTracking.showToast('Dashboard refreshed successfully', 'success');
                     // Re-bind event listeners after content update
-                    PrintTracking.bindDashboardEvents();
-                    console.log('? [PRINT-TRACKING] Dashboard refreshed');
+                    setTimeout(() => {
+                        PrintTracking.bindDashboardEvents();
+                        console.log('? [PRINT-TRACKING] Dashboard refreshed and events re-bound');
+                    }, 100);
                 }).catch((error) => {
                     PrintTracking.hideLoadingIndicator();
                     PrintTracking.showToast('Failed to refresh dashboard', 'error');
@@ -357,7 +377,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         PrintTracking.autoRefreshInterval = setInterval(() => {
-            if (!PrintTracking.isModalOpen && !document.getElementById('print-modal-container').innerHTML) {
+            // CRITICAL: Only auto-refresh if no modal is open AND container is empty
+            if (!PrintTracking.isModalOpen && !document.getElementById('print-modal-container').innerHTML.trim()) {
                 console.log('?? [PRINT-TRACKING] Auto-refreshing dashboard...');
 
                 if (typeof htmx !== 'undefined') {
@@ -366,12 +387,16 @@ document.addEventListener('DOMContentLoaded', function() {
                         swap: 'innerHTML'
                     }).then(() => {
                         // Re-bind events after auto-refresh
-                        PrintTracking.bindDashboardEvents();
-                        console.log('? [PRINT-TRACKING] Auto-refresh completed');
+                        setTimeout(() => {
+                            PrintTracking.bindDashboardEvents();
+                            console.log('? [PRINT-TRACKING] Auto-refresh completed and events re-bound');
+                        }, 100);
                     }).catch((error) => {
                         console.warn('?? [PRINT-TRACKING] Auto-refresh failed (this is normal):', error);
                     });
                 }
+            } else {
+                console.log('?? [PRINT-TRACKING] Auto-refresh skipped - modal is open');
             }
         }, 300000); // 5 minutes
 
@@ -515,10 +540,14 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Auto remove
             setTimeout(() => {
-                toast.classList.add('translate-x-full');
-                setTimeout(() => {
-                    toast.remove();
-                }, 300);
+                if (toast.parentNode) {
+                    toast.classList.add('translate-x-full');
+                    setTimeout(() => {
+                        if (toast.parentNode) {
+                            toast.remove();
+                        }
+                    }, 300);
+                }
             }, type === 'success' ? 5000 : 8000);
             
         } catch (error) {
@@ -528,18 +557,80 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    // Enhanced event binding for dashboard elements
+    // CRITICAL FIX: Enhanced event binding for dashboard elements
     window.PrintTracking.bindDashboardEvents = function() {
         console.log('?? [PRINT-TRACKING] Binding dashboard events...');
         
         try {
-            // Use event delegation for all dashboard buttons to ensure they work even when dynamically loaded
+            // Remove existing event listeners to prevent duplicates
             document.removeEventListener('click', PrintTracking.dashboardClickHandler);
+            
+            // Use event delegation for all dashboard buttons to ensure they work even when dynamically loaded
             document.addEventListener('click', PrintTracking.dashboardClickHandler);
+            
+            // Also bind static button events
+            PrintTracking.bindStaticButtons();
             
             console.log('? [PRINT-TRACKING] Dashboard events bound using event delegation');
         } catch (error) {
             console.error('? [PRINT-TRACKING] Error binding dashboard events:', error);
+        }
+    };
+
+    // CRITICAL FIX: Bind static buttons that don't change
+    window.PrintTracking.bindStaticButtons = function() {
+        try {
+            // Refresh button
+            const refreshBtn = document.getElementById('refresh-dashboard-btn');
+            if (refreshBtn) {
+                refreshBtn.removeEventListener('click', PrintTracking.refreshDashboard);
+                refreshBtn.addEventListener('click', PrintTracking.refreshDashboard);
+            }
+
+            // Start print button
+            const startPrintBtn = document.getElementById('start-print-btn');
+            if (startPrintBtn) {
+                startPrintBtn.removeEventListener('click', PrintTracking.handleStartPrintClick);
+                startPrintBtn.addEventListener('click', PrintTracking.handleStartPrintClick);
+            }
+
+            // Complete print button
+            const completePrintBtn = document.getElementById('complete-print-btn');
+            if (completePrintBtn) {
+                completePrintBtn.removeEventListener('click', PrintTracking.handleCompletePrintClick);
+                completePrintBtn.addEventListener('click', PrintTracking.handleCompletePrintClick);
+            }
+
+            // Help panel toggle for operators
+            if (!isAdminView) {
+                const helpToggle = document.getElementById('help-toggle');
+                const helpPanel = document.getElementById('help-panel');
+                
+                if (helpToggle && helpPanel) {
+                    helpToggle.removeEventListener('click', PrintTracking.handleHelpToggle);
+                    helpToggle.addEventListener('click', PrintTracking.handleHelpToggle);
+                }
+            }
+
+            console.log('? [PRINT-TRACKING] Static buttons bound');
+        } catch (error) {
+            console.error('? [PRINT-TRACKING] Error binding static buttons:', error);
+        }
+    };
+
+    // Handler functions for static buttons
+    window.PrintTracking.handleStartPrintClick = function() {
+        PrintTracking.openStartPrintModal();
+    };
+
+    window.PrintTracking.handleCompletePrintClick = function() {
+        PrintTracking.openPostPrintModal();
+    };
+
+    window.PrintTracking.handleHelpToggle = function() {
+        const helpPanel = document.getElementById('help-panel');
+        if (helpPanel) {
+            helpPanel.classList.toggle('hidden');
         }
     };
 
@@ -568,6 +659,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     break;
                     
                 case 'toggle-schedule':
+                    event.preventDefault();
                     PrintTracking.handleScheduleToggle();
                     break;
                     
@@ -622,56 +714,60 @@ document.addEventListener('DOMContentLoaded', function() {
         return window.PrintTracking.refreshDashboard();
     };
 
-    // Dashboard refresh functionality
-    const refreshBtn = document.getElementById('refresh-dashboard-btn');
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', PrintTracking.refreshDashboard);
-    }
-
-    // Help panel toggle for operators
-    if (!isAdminView) {
-        const helpToggle = document.getElementById('help-toggle');
-        const helpPanel = document.getElementById('help-panel');
-        
-        if (helpToggle && helpPanel) {
-            helpToggle.addEventListener('click', function() {
-                helpPanel.classList.toggle('hidden');
-            });
-            
-            // Close help panel when clicking outside
-            document.addEventListener('click', function(event) {
-                if (!helpToggle.contains(event.target) && !helpPanel.contains(event.target)) {
-                    helpPanel.classList.add('hidden');
-                }
-            });
-        }
-    }
-
-    // Start print button
-    const startPrintBtn = document.getElementById('start-print-btn');
-    if (startPrintBtn) {
-        startPrintBtn.addEventListener('click', function() {
-            PrintTracking.openStartPrintModal();
-        });
-    }
-
-    // Complete print button
-    const completePrintBtn = document.getElementById('complete-print-btn');
-    if (completePrintBtn) {
-        completePrintBtn.addEventListener('click', function() {
-            PrintTracking.openPostPrintModal();
-        });
-    }
-
-    // Enhanced HTMX event handling with better error recovery
+    // CRITICAL FIX: Enhanced HTMX event handling with proper modal state management
     document.body.addEventListener('htmx:beforeRequest', function(event) {
+        console.log('?? [HTMX] Before request:', event.detail.requestConfig.path);
+        
         if (event.detail.requestConfig.headers['HX-Target'] === '#print-modal-container') {
             PrintTracking.showLoadingIndicator('Loading form...');
         }
     });
 
+    // CRITICAL FIX: Handle form submissions properly
     document.body.addEventListener('htmx:afterRequest', function(event) {
+        console.log('?? [HTMX] After request:', event.detail.requestConfig.path, 'Status:', event.detail.xhr.status);
+        
         PrintTracking.hideLoadingIndicator();
+
+        // Handle modal form submissions (StartPrint and CompletePrint)
+        if (event.detail.requestConfig.path?.includes('StartPrint') || event.detail.requestConfig.path?.includes('CompletePrint')) {
+            try {
+                // Check if response is JSON (success) or HTML (error/form with validation errors)
+                const contentType = event.detail.xhr.getResponseHeader('Content-Type') || '';
+                
+                if (contentType.includes('application/json')) {
+                    // Success response - close modal and refresh dashboard
+                    const response = JSON.parse(event.detail.xhr.responseText);
+                    
+                    if (response.success) {
+                        console.log('? [HTMX] Form submission successful');
+                        
+                        // Show success message
+                        PrintTracking.showToast(response.message || 'Operation completed successfully', 'success');
+                        
+                        // Close modal properly
+                        PrintTracking.closeModal();
+                        
+                        // Refresh dashboard after a short delay
+                        setTimeout(() => {
+                            PrintTracking.refreshDashboard();
+                        }, 500);
+                    } else {
+                        console.error('? [HTMX] Form submission failed:', response.message);
+                        PrintTracking.showToast(response.message || 'Operation failed', 'error');
+                    }
+                } else if (contentType.includes('text/html')) {
+                    // HTML response means form validation errors or modal content
+                    console.log('?? [HTMX] Received HTML response - likely validation errors');
+                    
+                    // Modal content should be updated by HTMX automatically
+                    // Don't close the modal, let user see the errors
+                }
+            } catch (error) {
+                console.error('? [HTMX] Error processing response:', error);
+                PrintTracking.showToast('Error processing response', 'error');
+            }
+        }
 
         // Re-bind events if dashboard was updated
         if (event.detail.requestConfig.path?.includes('RefreshDashboard') || 
@@ -679,7 +775,7 @@ document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => {
                 PrintTracking.bindDashboardEvents();
                 console.log('?? [PRINT-TRACKING] Events re-bound after HTMX update');
-            }, 50);
+            }, 100);
         }
 
         // Handle network errors
@@ -702,23 +798,39 @@ document.addEventListener('DOMContentLoaded', function() {
     document.body.addEventListener('htmx:timeout', function(event) {
         PrintTracking.hideLoadingIndicator();
         PrintTracking.showToast('Request timed out. Please try again.', 'error');
+        console.error('? [HTMX] Timeout:', event.detail);
     });
 
     // Enhanced keyboard shortcuts
     document.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape') {
+        if (event.key === 'Escape' && PrintTracking.isModalOpen) {
+            event.preventDefault();
             PrintTracking.closeModal();
         }
-        if (event.ctrlKey && event.key === 'r') {
+        if (event.ctrlKey && event.key === 'r' && !PrintTracking.isModalOpen) {
             event.preventDefault();
             PrintTracking.refreshDashboard();
         }
     });
 
-    // Use setTimeout to ensure dashboard is fully loaded before binding events
+    // Close help panel when clicking outside
+    document.addEventListener('click', function(event) {
+        if (!isAdminView) {
+            const helpToggle = document.getElementById('help-toggle');
+            const helpPanel = document.getElementById('help-panel');
+            
+            if (helpToggle && helpPanel && 
+                !helpToggle.contains(event.target) && 
+                !helpPanel.contains(event.target)) {
+                helpPanel.classList.add('hidden');
+            }
+        }
+    });
+
+    // CRITICAL: Initial event binding with delay to ensure DOM is ready
     setTimeout(() => {
         PrintTracking.bindDashboardEvents();
-        console.log('? [PRINT-TRACKING] Dashboard events bound after DOM ready');
+        console.log('? [PRINT-TRACKING] Initial dashboard events bound');
     }, 100);
     
     // Start auto-refresh

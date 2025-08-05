@@ -433,64 +433,83 @@
         }
     });
 
-    // Enhanced form submission response handling
+    // CRITICAL FIX: Enhanced form submission response handling
     document.body.addEventListener('htmx:afterRequest', function(event) {
         if (event.detail.requestConfig.path.includes('StartPrint')) {
             console.log('?? [FORM] Received response:', event.detail.xhr.status);
             
             try {
-                const response = JSON.parse(event.detail.xhr.responseText);
-                if (response.success) {
-                    console.log('? [FORM] Print started successfully');
+                const contentType = event.detail.xhr.getResponseHeader('Content-Type') || '';
+                
+                if (contentType.includes('application/json')) {
+                    // Success response - handle JSON
+                    const response = JSON.parse(event.detail.xhr.responseText);
                     
-                    // Close modal and show success message
-                    closeModalSafely();
-                    
-                    // Enhanced success message with operator estimate info
-                    let message = `Print started successfully! Build ID: ${response.buildId}`;
-                    if (response.operatorEstimateHours) {
-                        const endTime = new Date(Date.now() + (response.operatorEstimateHours * 60 * 60 * 1000));
-                        message += `\nEstimated Duration: ${response.operatorEstimateHours}h`;
-                        message += `\nExpected Completion: ${endTime.toLocaleString()}`;
-                    }
-                    
-                    if (response.scheduleUpdated) {
-                        message += `\n?? Schedule updated with your time estimate`;
-                    }
-                    
-                    // Try multiple notification methods
-                    if (typeof window.PrintTracking !== 'undefined' && typeof window.PrintTracking.showToast === 'function') {
-                        window.PrintTracking.showToast(message, 'success');
-                    } else if (typeof window.showSuccessNotification === 'function') {
-                        window.showSuccessNotification(message);
+                    if (response.success) {
+                        console.log('? [FORM] Print started successfully');
+                        
+                        // Close modal first
+                        closeModalSafely();
+                        
+                        // Enhanced success message with operator estimate info
+                        let message = `Print started successfully! Build ID: ${response.buildId}`;
+                        if (response.operatorEstimateHours) {
+                            const endTime = new Date(Date.now() + (response.operatorEstimateHours * 60 * 60 * 1000));
+                            message += `\nEstimated Duration: ${response.operatorEstimateHours}h`;
+                            message += `\nExpected Completion: ${endTime.toLocaleString()}`;
+                        }
+                        
+                        if (response.scheduleUpdated) {
+                            message += `\n?? Schedule updated with your time estimate`;
+                        }
+                        
+                        // Try multiple notification methods
+                        if (typeof window.PrintTracking !== 'undefined' && typeof window.PrintTracking.showToast === 'function') {
+                            window.PrintTracking.showToast(message, 'success');
+                        } else if (typeof window.showSuccessNotification === 'function') {
+                            window.showSuccessNotification(message);
+                        } else {
+                            alert(message);
+                        }
+                        
+                        // Refresh dashboard
+                        if (typeof window.PrintTracking !== 'undefined' && typeof window.PrintTracking.refreshDashboard === 'function') {
+                            setTimeout(() => {
+                                window.PrintTracking.refreshDashboard();
+                            }, 500);
+                        }
+                        
+                        // ENHANCED: Notify scheduler if schedule was updated
+                        if (response.refreshSchedulerNeeded && response.scheduleUpdated) {
+                            notifySchedulerOfUpdate(response);
+                        }
                     } else {
-                        alert(message);
+                        console.error('? [FORM] Print start failed:', response.message);
+                        const errorMessage = response.message || 'Error starting print';
+                        
+                        if (typeof window.PrintTracking !== 'undefined' && typeof window.PrintTracking.showToast === 'function') {
+                            window.PrintTracking.showToast(errorMessage, 'error');
+                        } else if (typeof window.showErrorNotification === 'function') {
+                            window.showErrorNotification(errorMessage);
+                        } else {
+                            alert(errorMessage);
+                        }
                     }
+                } else if (contentType.includes('text/html')) {
+                    // HTML response means form validation errors
+                    console.log('?? [FORM] Received HTML response - likely validation errors');
                     
-                    // Refresh dashboard
-                    if (typeof window.PrintTracking !== 'undefined' && typeof window.PrintTracking.refreshDashboard === 'function') {
-                        window.PrintTracking.refreshDashboard();
-                    }
-                    
-                    // ENHANCED: Notify scheduler if schedule was updated
-                    if (response.refreshSchedulerNeeded && response.scheduleUpdated) {
-                        notifySchedulerOfUpdate(response);
-                    }
-                } else {
-                    console.error('? [FORM] Print start failed:', response.message);
-                    const errorMessage = response.message || 'Error starting print';
-                    
-                    if (typeof window.PrintTracking !== 'undefined' && typeof window.PrintTracking.showToast === 'function') {
-                        window.PrintTracking.showToast(errorMessage, 'error');
-                    } else if (typeof window.showErrorNotification === 'function') {
-                        window.showErrorNotification(errorMessage);
-                    } else {
-                        alert(errorMessage);
-                    }
+                    // Don't close the modal, let user see the errors
+                    // The form content should be updated by HTMX automatically
                 }
-            } catch (e) {
-                // If not JSON response, it's likely the form with validation errors
-                console.log('?? [FORM] Form validation errors detected, showing form with errors');
+            } catch (error) {
+                console.error('? [FORM] Error processing response:', error);
+                
+                if (typeof window.PrintTracking !== 'undefined' && typeof window.PrintTracking.showToast === 'function') {
+                    window.PrintTracking.showToast('Error processing response', 'error');
+                } else {
+                    alert('Error processing response');
+                }
             }
         }
     });
