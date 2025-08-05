@@ -81,6 +81,7 @@ namespace OpCentrix.Services
 
         // NEW: Schedule Integration
         Task UpdatePartDurationFromScheduleAsync(int jobId, double newDurationHours);
+        Task<int> CreateBuildJobFromScheduledJobAsync(int jobId, string operatorName);
     }
 
     public class PrintTrackingService : IPrintTrackingService
@@ -802,121 +803,93 @@ namespace OpCentrix.Services
             }
         }
 
-        // Private Helper Methods
-
-        private async Task<int> GenerateBuildIdAsync()
-        {
-            var maxId = await _context.BuildJobs.MaxAsync(b => (int?)b.BuildId) ?? 0;
-            return maxId + 1;
-        }
-
-        private string GenerateBuildFileHash(string? buildFileName)
-        {
-            if (string.IsNullOrEmpty(buildFileName)) return string.Empty;
-            
-            using var sha256 = System.Security.Cryptography.SHA256.Create();
-            var hashBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(buildFileName));
-            return Convert.ToBase64String(hashBytes)[..16];
-        }
-
-        private bool IsSuccessfulCompletion(string reasonForEnd)
-        {
-            return reasonForEnd == "Completed Successfully" || reasonForEnd == "Completed with Issues";
-        }
-
-        private string GetBuildJobStatus(string reasonForEnd)
-        {
-            return reasonForEnd switch
-            {
-                "Completed Successfully" => "Completed",
-                "Completed with Issues" => "Completed",
-                var reason when reason.Contains("Aborted") => "Aborted",
-                "Quality Hold" => "On Hold",
-                "Rework Required" => "Rework",
-                _ => "Completed"
-            };
-        }
-
-        private async Task HandleScheduleDelayAsync(string printerName, int delayMinutes, int buildId)
+        /// <summary>
+        /// Updates part duration when schedule duration is manually adjusted
+        /// </summary>
+        public async Task UpdatePartDurationFromScheduleAsync(int jobId, double newDurationHours)
         {
             try
             {
-                var now = DateTime.UtcNow;
-                var affectedJobs = await _context.Jobs
-                    .Where(j => j.MachineId == printerName && 
-                               j.ScheduledStart > now.AddMinutes(-30) && 
-                               j.Status == "Scheduled")
-                    .OrderBy(j => j.ScheduledStart)
-                    .ToListAsync();
-
-                foreach (var job in affectedJobs)
+                var job = await _context.Jobs.Include(j => j.Part).FirstOrDefaultAsync(j => j.Id == jobId);
+                if (job?.Part != null && job.Quantity > 0)
                 {
-                    job.ScheduledStart = job.ScheduledStart.AddMinutes(delayMinutes);
-                    job.ScheduledEnd = job.ScheduledEnd.AddMinutes(delayMinutes);
+                    var timePerPart = newDurationHours / job.Quantity;
+                    var oldTimePerPart = job.Part.EstimatedHours;
                     
-                    _logger.LogInformation("Pushed back job {JobId} by {DelayMinutes} minutes due to build {BuildId}", 
-                        job.Id, delayMinutes, buildId);
-                }
-
-                if (affectedJobs.Any())
-                {
+                    // Update the part's estimated hours
+                    job.Part.EstimatedHours = timePerPart;
+                    job.Part.LastModifiedDate = DateTime.UtcNow;
+                    
+                    // Update the job's estimated hours to match
+                    job.EstimatedHours = newDurationHours;
+                    
                     await _context.SaveChangesAsync();
+                    
+                    _logger.LogInformation("Updated Part {PartNumber} duration from {OldHours}h to {NewHours}h per part based on schedule adjustment for Job {JobId}",
+                        job.Part.PartNumber, oldTimePerPart, timePerPart, jobId);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to handle schedule delay for printer {PrinterName}", printerName);
+                _logger.LogError(ex, "Error updating part duration from schedule for job {JobId}", jobId);
             }
         }
 
         /// <summary>
-        /// ENHANCED: Cascade schedule changes to subsequent jobs on the same machine
+        /// Creates a build job from an existing scheduled job for print tracking integration
         /// </summary>
-        private async Task CascadeScheduleChangesAsync(string machineId, DateTime fromTime, TimeSpan timeDifference)
+        public async Task<int> CreateBuildJobFromScheduledJobAsync(int jobId, string operatorName)
         {
             try
             {
-                // Get all subsequent jobs on the same machine that are scheduled after the current job
-                var subsequentJobs = await _context.Jobs
-                    .Where(j => j.MachineId == machineId && 
-                               j.ScheduledStart >= fromTime && 
-                               j.Status == "Scheduled")
-                    .OrderBy(j => j.ScheduledStart)
-                    .ToListAsync();
-
-                if (!subsequentJobs.Any())
+                var job = await _context.Jobs.Include(j => j.Part).FirstOrDefaultAsync(j => j.Id == jobId);
+                if (job == null)
                 {
-                    _logger.LogDebug("No subsequent jobs to cascade schedule changes for machine {MachineId}", machineId);
-                    return;
+                    throw new InvalidOperationException($"Job {jobId} not found");
                 }
 
-                var cascadeCount = 0;
-                foreach (var job in subsequentJobs)
-                {
-                    var originalStart = job.ScheduledStart;
-                    var originalEnd = job.ScheduledEnd;
-                    
-                    // Apply the time difference to both start and end times
-                    job.ScheduledStart = job.ScheduledStart.Add(timeDifference);
-                    job.ScheduledEnd = job.ScheduledEnd.Add(timeDifference);
-                    
-                    cascadeCount++;
-                    
-                    _logger.LogInformation("Cascaded schedule change for job {JobId} on {MachineId}: {OriginalStart} -> {NewStart} (shift: {TimeDifference})",
-                        job.Id, machineId, originalStart.ToString("yyyy-MM-dd HH:mm"), 
-                        job.ScheduledStart.ToString("yyyy-MM-dd HH:mm"), timeDifference);
-                }
+                // Find the user by name or use a default
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.FullName == operatorName) ??
+                          await _context.Users.FirstOrDefaultAsync(u => u.Role == "Admin") ??
+                          await _context.Users.FirstAsync(); // Fallback to first user
 
-                if (cascadeCount > 0)
+                var buildJob = new BuildJob
                 {
-                    await _context.SaveChangesAsync();
-                    _logger.LogInformation("Successfully cascaded schedule changes to {CascadeCount} jobs on machine {MachineId}", 
-                        cascadeCount, machineId);
-                }
+                    BuildId = await GenerateBuildIdAsync(),
+                    PrinterName = job.MachineId,
+                    ActualStartTime = job.ActualStart ?? DateTime.UtcNow,
+                    Status = "In Progress",
+                    PartId = job.PartId,
+                    UserId = user.Id,
+                    
+                    // Link to scheduled job
+                    AssociatedScheduledJobId = jobId,
+                    
+                    // Copy job data
+                    OperatorEstimatedHours = (decimal)job.EstimatedHours,
+                    TotalPartsInBuild = job.Quantity,
+                    ScheduledStartTime = job.ScheduledStart,
+                    ScheduledEndTime = job.ScheduledEnd,
+                    
+                    // Build metadata
+                    BuildFileHash = GenerateBuildFileHash(job.PartNumber),
+                    IsLearningBuild = true,
+                    
+                    // Material and process data from job
+                    SetupNotes = $"Started from scheduler job {jobId} - {job.PartNumber} (Qty: {job.Quantity})"
+                };
+
+                _context.BuildJobs.Add(buildJob);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Created build job {BuildId} from scheduled job {JobId} by {OperatorName}",
+                    buildJob.BuildId, jobId, operatorName);
+
+                return buildJob.BuildId;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error cascading schedule changes for machine {MachineId}", machineId);
+                _logger.LogError(ex, "Error creating build job from scheduled job {JobId}", jobId);
                 throw;
             }
         }
@@ -1260,35 +1233,122 @@ namespace OpCentrix.Services
             };
         }
 
-        /// <summary>
-        /// Updates part duration when schedule duration is manually adjusted
-        /// </summary>
-        public async Task UpdatePartDurationFromScheduleAsync(int jobId, double newDurationHours)
+        // Private Helper Methods for build operations
+
+        private async Task<int> GenerateBuildIdAsync()
+        {
+            var maxId = await _context.BuildJobs.MaxAsync(b => (int?)b.BuildId) ?? 0;
+            return maxId + 1;
+        }
+
+        private string GenerateBuildFileHash(string? buildFileName)
+        {
+            if (string.IsNullOrEmpty(buildFileName)) return string.Empty;
+            
+            using var sha256 = System.Security.Cryptography.SHA256.Create();
+            var hashBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(buildFileName));
+            return Convert.ToBase64String(hashBytes)[..16];
+        }
+
+        private bool IsSuccessfulCompletion(string reasonForEnd)
+        {
+            return reasonForEnd == "Completed Successfully" || reasonForEnd == "Completed with Issues";
+        }
+
+        private string GetBuildJobStatus(string reasonForEnd)
+        {
+            return reasonForEnd switch
+            {
+                "Completed Successfully" => "Completed",
+                "Completed with Issues" => "Completed",
+                var reason when reason.Contains("Aborted") => "Aborted",
+                "Quality Hold" => "On Hold",
+                "Rework Required" => "Rework",
+                _ => "Completed"
+            };
+        }
+
+        private async Task HandleScheduleDelayAsync(string printerName, int delayMinutes, int buildId)
         {
             try
             {
-                var job = await _context.Jobs.Include(j => j.Part).FirstOrDefaultAsync(j => j.Id == jobId);
-                if (job?.Part != null && job.Quantity > 0)
+                var now = DateTime.UtcNow;
+                var affectedJobs = await _context.Jobs
+                    .Where(j => j.MachineId == printerName && 
+                               j.ScheduledStart > now.AddMinutes(-30) && 
+                               j.Status == "Scheduled")
+                    .OrderBy(j => j.ScheduledStart)
+                    .ToListAsync();
+
+                foreach (var job in affectedJobs)
                 {
-                    var timePerPart = newDurationHours / job.Quantity;
-                    var oldTimePerPart = job.Part.EstimatedHours;
+                    job.ScheduledStart = job.ScheduledStart.AddMinutes(delayMinutes);
+                    job.ScheduledEnd = job.ScheduledEnd.AddMinutes(delayMinutes);
                     
-                    // Update the part's estimated hours
-                    job.Part.EstimatedHours = timePerPart;
-                    job.Part.LastModifiedDate = DateTime.UtcNow;
-                    
-                    // Update the job's estimated hours to match
-                    job.EstimatedHours = newDurationHours;
-                    
+                    _logger.LogInformation("Pushed back job {JobId} by {DelayMinutes} minutes due to build {BuildId}", 
+                        job.Id, delayMinutes, buildId);
+                }
+
+                if (affectedJobs.Any())
+                {
                     await _context.SaveChangesAsync();
-                    
-                    _logger.LogInformation("Updated Part {PartNumber} duration from {OldHours}h to {NewHours}h per part based on schedule adjustment for Job {JobId}",
-                        job.Part.PartNumber, oldTimePerPart, timePerPart, jobId);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating part duration from schedule for job {JobId}", jobId);
+                _logger.LogWarning(ex, "Failed to handle schedule delay for printer {PrinterName}", printerName);
+            }
+        }
+
+        /// <summary>
+        /// ENHANCED: Cascade schedule changes to subsequent jobs on the same machine
+        /// </summary>
+        private async Task CascadeScheduleChangesAsync(string machineId, DateTime fromTime, TimeSpan timeDifference)
+        {
+            try
+            {
+                // Get all subsequent jobs on the same machine that are scheduled after the current job
+                var subsequentJobs = await _context.Jobs
+                    .Where(j => j.MachineId == machineId && 
+                               j.ScheduledStart >= fromTime && 
+                               j.Status == "Scheduled")
+                    .OrderBy(j => j.ScheduledStart)
+                    .ToListAsync();
+
+                if (!subsequentJobs.Any())
+                {
+                    _logger.LogDebug("No subsequent jobs to cascade schedule changes for machine {MachineId}", machineId);
+                    return;
+                }
+
+                var cascadeCount = 0;
+                foreach (var job in subsequentJobs)
+                {
+                    var originalStart = job.ScheduledStart;
+                    var originalEnd = job.ScheduledEnd;
+                    
+                    // Apply the time difference to both start and end times
+                    job.ScheduledStart = job.ScheduledStart.Add(timeDifference);
+                    job.ScheduledEnd = job.ScheduledEnd.Add(timeDifference);
+                    
+                    cascadeCount++;
+                    
+                    _logger.LogInformation("Cascaded schedule change for job {JobId} on {MachineId}: {OriginalStart} -> {NewStart} (shift: {TimeDifference})",
+                        job.Id, machineId, originalStart.ToString("yyyy-MM-dd HH:mm"), 
+                        job.ScheduledStart.ToString("yyyy-MM-dd HH:mm"), timeDifference);
+                }
+
+                if (cascadeCount > 0)
+                {
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation("Successfully cascaded schedule changes to {CascadeCount} jobs on machine {MachineId}", 
+                        cascadeCount, machineId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error cascading schedule changes for machine {MachineId}", machineId);
+                throw;
             }
         }
     }

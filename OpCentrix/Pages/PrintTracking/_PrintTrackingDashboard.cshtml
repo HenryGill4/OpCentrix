@@ -19,6 +19,22 @@
                     <div class="text-xs text-blue-200 mt-1">Full system access</div>
                 </div>
             </div>
+            
+            <!-- Quick Actions for Admins -->
+            <div class="mt-4 flex space-x-3">
+                <button onclick="openSchedulerIntegrationPanel()" 
+                        class="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                    ?? Scheduler Integration
+                </button>
+                <button onclick="refreshAllData()" 
+                        class="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                    ?? Refresh All Data
+                </button>
+                <a href="/Admin/Machines" 
+                   class="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                    ?? Manage Machines
+                </a>
+            </div>
         </div>
     }
     else
@@ -35,6 +51,18 @@
                     <div class="font-medium text-lg">@Model.OperatorName</div>
                     <div class="text-xs text-green-200 mt-1">@DateTime.Now.ToString("MMMM dd, yyyy")</div>
                 </div>
+            </div>
+            
+            <!-- Quick Actions for Operators -->
+            <div class="mt-4 flex space-x-3">
+                <button onclick="quickStartPrint()" 
+                        class="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                    ?? Quick Start Print
+                </button>
+                <button onclick="viewMySchedule()" 
+                        class="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                    ?? My Schedule
+                </button>
             </div>
         </div>
     }
@@ -587,3 +615,385 @@
         };
     }
 }
+
+<script>
+// Enhanced Print Tracking Dashboard JavaScript with Scheduler Integration
+(function() {
+    'use strict';
+    
+    console.log('?? [PRINT-TRACKING] Initializing enhanced dashboard with scheduler integration');
+    
+    // Global print tracking object
+    window.PrintTracking = window.PrintTracking || {};
+    
+    // Initialize dashboard
+    window.PrintTracking.init = function() {
+        setupScheduleToggle();
+        setupPrintTrackingActions();
+        setupAutoRefresh();
+        setupSchedulerCommunication();
+        console.log('? [PRINT-TRACKING] Dashboard initialized successfully');
+    };
+    
+    // Schedule toggle functionality
+    function setupScheduleToggle() {
+        const toggleButton = document.querySelector('[data-action="toggle-schedule"]');
+        const scheduleOverview = document.getElementById('schedule-overview');
+        const toggleText = document.getElementById('schedule-toggle-text');
+        const chevron = document.getElementById('schedule-chevron');
+        
+        if (toggleButton && scheduleOverview) {
+            toggleButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                if (scheduleOverview.classList.contains('hidden')) {
+                    scheduleOverview.classList.remove('hidden');
+                    toggleText.textContent = 'Hide Schedule';
+                    chevron.classList.add('rotate-180');
+                    
+                    // Trigger HTMX load if content is empty
+                    const htmxContainer = scheduleOverview.querySelector('[hx-get]');
+                    if (htmxContainer && htmxContainer.innerHTML.trim() === '') {
+                        htmx.trigger(htmxContainer, 'revealed');
+                    }
+                } else {
+                    scheduleOverview.classList.add('hidden');
+                    toggleText.textContent = 'Show Schedule';
+                    chevron.classList.remove('rotate-180');
+                }
+            });
+        }
+    }
+    
+    // Print tracking action buttons
+    function setupPrintTrackingActions() {
+        // Start print buttons
+        document.addEventListener('click', function(e) {
+            if (e.target.matches('[data-action="start-print"]') || e.target.closest('[data-action="start-print"]')) {
+                e.preventDefault();
+                const button = e.target.matches('[data-action="start-print"]') ? e.target : e.target.closest('[data-action="start-print"]');
+                const printerName = button.getAttribute('data-printer');
+                handleStartPrint(printerName);
+            }
+            
+            if (e.target.matches('[data-action="complete-print"]') || e.target.closest('[data-action="complete-print"]')) {
+                e.preventDefault();
+                const button = e.target.matches('[data-action="complete-print"]') ? e.target : e.target.closest('[data-action="complete-print"]');
+                const printerName = button.getAttribute('data-printer');
+                const buildId = button.getAttribute('data-build-id');
+                handleCompletePrint(printerName, buildId);
+            }
+        });
+    }
+    
+    // Auto refresh functionality
+    function setupAutoRefresh() {
+        const refreshInterval = 30000; // 30 seconds
+        
+        setInterval(function() {
+            // Check if any modals are open
+            const openModals = document.querySelectorAll('.modal:not(.hidden), [style*="display: flex"]');
+            if (openModals.length > 0) {
+                console.log('?? [AUTO-REFRESH] Skipping refresh - modal is open');
+                return;
+            }
+            
+            console.log('?? [AUTO-REFRESH] Refreshing dashboard data');
+            
+            // Use HTMX to refresh dashboard content
+            if (typeof htmx !== 'undefined') {
+                htmx.ajax('GET', '/PrintTracking?handler=RefreshDashboard', {
+                    target: '#dashboard-content',
+                    swap: 'innerHTML'
+                }).catch((error) => {
+                    console.warn('Auto-refresh failed (this is normal if page is navigating):', error);
+                });
+            }
+        }, refreshInterval);
+    }
+    
+    // Scheduler communication setup
+    function setupSchedulerCommunication() {
+        // Listen for scheduler messages
+        window.addEventListener('message', function(e) {
+            if (e.origin === window.location.origin) {
+                const data = e.data;
+                
+                if (data.type === 'schedulerJobUpdated') {
+                    handleSchedulerJobUpdate(data);
+                } else if (data.type === 'requestPrintTrackingRefresh') {
+                    refreshDashboard();
+                }
+            }
+        });
+        
+        console.log('?? [SCHEDULER-COMM] Communication setup complete');
+    }
+    
+    // Handle start print action
+    function handleStartPrint(printerName) {
+        console.log('?? [START-PRINT] Starting print for printer:', printerName);
+        
+        if (!printerName) {
+            showToast('Error: No printer specified', 'error');
+            return;
+        }
+        
+        try {
+            showLoadingIndicator('Loading start print form...');
+            
+            // Open start print modal
+            if (typeof htmx !== 'undefined') {
+                htmx.ajax('GET', `/PrintTracking?handler=StartPrintModal&printerName=${encodeURIComponent(printerName)}`, {
+                    target: '#modal-container',
+                    swap: 'innerHTML'
+                }).then(() => {
+                    showModal();
+                    hideLoadingIndicator();
+                }).catch((error) => {
+                    hideLoadingIndicator();
+                    console.error('? [START-PRINT] Error loading start print modal:', error);
+                    showToast('Error loading start print form', 'error');
+                });
+            } else {
+                hideLoadingIndicator();
+                showToast('System error: HTMX not available', 'error');
+            }
+            
+        } catch (error) {
+            hideLoadingIndicator();
+            console.error('? [START-PRINT] Error in handleStartPrint:', error);
+            showToast('Error starting print process', 'error');
+        }
+    }
+    
+    // Handle complete print action
+    function handleCompletePrint(printerName, buildId) {
+        console.log('?? [COMPLETE-PRINT] Completing print for printer:', printerName, 'buildId:', buildId);
+        
+        if (!printerName && !buildId) {
+            showToast('Error: No printer or build ID specified', 'error');
+            return;
+        }
+        
+        try {
+            showLoadingIndicator('Loading completion form...');
+            
+            const params = new URLSearchParams();
+            if (buildId) params.append('buildId', buildId);
+            if (printerName) params.append('printerName', printerName);
+            
+            // Open complete print modal
+            if (typeof htmx !== 'undefined') {
+                htmx.ajax('GET', `/PrintTracking?handler=PostPrintModal&${params.toString()}`, {
+                    target: '#modal-container',
+                    swap: 'innerHTML'
+                }).then(() => {
+                    showModal();
+                    hideLoadingIndicator();
+                }).catch((error) => {
+                    hideLoadingIndicator();
+                    console.error('? [COMPLETE-PRINT] Error loading completion modal:', error);
+                    showToast('Error loading completion form', 'error');
+                });
+            } else {
+                hideLoadingIndicator();
+                showToast('System error: HTMX not available', 'error');
+            }
+            
+        } catch (error) {
+            hideLoadingIndicator();
+            console.error('? [COMPLETE-PRINT] Error in handleCompletePrint:', error);
+            showToast('Error loading completion form', 'error');
+        }
+    }
+    
+    // Handle scheduler job updates
+    function handleSchedulerJobUpdate(data) {
+        console.log('?? [SCHEDULER-UPDATE] Received job update:', data);
+        
+        const { jobId, machineId, status, message } = data;
+        
+        if (message) {
+            showToast(message, status === 'Completed' ? 'success' : 'info');
+        }
+        
+        // Refresh relevant parts of the dashboard
+        setTimeout(() => {
+            refreshDashboard();
+        }, 1000);
+    }
+    
+    // Notification functions for print tracking events
+    window.PrintTracking.notifyScheduler = function(eventType, data) {
+        try {
+            console.log('?? [NOTIFY-SCHEDULER] Sending notification:', eventType, data);
+            
+            // Send to scheduler windows via postMessage
+            const schedulerWindows = window.parent !== window ? [window.parent] : [];
+            
+            // Also try localStorage for cross-tab communication
+            const notification = {
+                type: eventType,
+                timestamp: Date.now(),
+                ...data
+            };
+            
+            localStorage.setItem('scheduleUpdateNotification', JSON.stringify(notification));
+            
+            // Send postMessage to scheduler windows
+            schedulerWindows.forEach(win => {
+                try {
+                    win.postMessage(notification, window.location.origin);
+                } catch (e) {
+                    console.warn('Failed to send message to scheduler window:', e);
+                }
+            });
+            
+            console.log('? [NOTIFY-SCHEDULER] Notification sent successfully');
+            
+        } catch (error) {
+            console.error('? [NOTIFY-SCHEDULER] Error sending notification:', error);
+        }
+    };
+    
+    // Enhanced toast notification system
+    window.PrintTracking.showToast = function(message, type = 'info') {
+        // Remove existing toasts
+        const existingToasts = document.querySelectorAll('.print-tracking-toast');
+        existingToasts.forEach(toast => toast.remove());
+        
+        const toast = document.createElement('div');
+        toast.className = `print-tracking-toast fixed top-4 right-4 px-6 py-4 rounded-lg shadow-lg z-50 animate-slide-in-right`;
+        
+        const bgColor = type === 'success' ? 'bg-green-600' : 
+                       type === 'error' ? 'bg-red-600' : 
+                       type === 'warning' ? 'bg-yellow-600' : 'bg-blue-600';
+        
+        const icon = type === 'success' ? '?' : 
+                    type === 'error' ? '?' : 
+                    type === 'warning' ? '??' : '??';
+        
+        toast.className += ` ${bgColor} text-white`;
+        
+        toast.innerHTML = `
+            <div class="flex items-center space-x-3">
+                <span class="text-lg">${icon}</span>
+                <span class="font-medium">${message}</span>
+                <button onclick="this.parentElement.parentElement.remove()" class="ml-2 text-white opacity-70 hover:opacity-100">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        ```
+        
+        document.body.appendChild(toast);
+        
+        // Auto remove after delay
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, type === 'error' ? 8000 : 5000);
+    };
+    
+    // Modal management functions
+    function showModal() {
+        const modalContainer = document.getElementById('modal-container');
+        if (modalContainer) {
+            modalContainer.style.display = 'flex';
+            modalContainer.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+    }
+    
+    function hideModal() {
+        const modalContainer = document.getElementById('modal-container');
+        if (modalContainer) {
+            modalContainer.style.display = 'none';
+            modalContainer.classList.add('hidden');
+            document.body.style.overflow = '';
+            modalContainer.innerHTML = '';
+        }
+    }
+    
+    // Loading indicator functions
+    function showLoadingIndicator(message = 'Loading...') {
+        const indicator = document.getElementById('loading-indicator');
+        if (indicator) {
+            const messageSpan = indicator.querySelector('span');
+            if (messageSpan) messageSpan.textContent = message;
+            indicator.classList.remove('hidden');
+        }
+    }
+    
+    function hideLoadingIndicator() {
+        const indicator = document.getElementById('loading-indicator');
+        if (indicator) {
+            indicator.classList.add('hidden');
+        }
+    }
+    
+    // Dashboard refresh function
+    function refreshDashboard() {
+        console.log('?? [REFRESH] Refreshing print tracking dashboard');
+        
+        if (typeof htmx !== 'undefined') {
+            htmx.ajax('GET', '/PrintTracking?handler=RefreshDashboard', {
+                target: '#dashboard-content',
+                swap: 'innerHTML'
+            }).then(() => {
+                console.log('? [REFRESH] Dashboard refreshed successfully');
+            }).catch((error) => {
+                console.warn('?? [REFRESH] Dashboard refresh failed:', error);
+            });
+        }
+    }
+    
+    // Expose functions globally for compatibility
+    window.showToast = window.PrintTracking.showToast;
+    window.handleStartPrint = handleStartPrint;
+    window.handleCompletePrint = handleCompletePrint;
+    window.refreshDashboard = refreshDashboard;
+    
+    // Admin-specific functions
+    window.openSchedulerIntegrationPanel = function() {
+        console.log('?? [ADMIN] Opening scheduler integration panel');
+        window.open('/Scheduler', '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes');
+    };
+    
+    window.refreshAllData = function() {
+        console.log('?? [ADMIN] Refreshing all data');
+        showLoadingIndicator('Refreshing all data...');
+        refreshDashboard();
+        setTimeout(hideLoadingIndicator, 2000);
+    };
+    
+    // Operator-specific functions
+    window.quickStartPrint = function() {
+        console.log('?? [OPERATOR] Quick start print');
+        // Find the first available SLS machine
+        const availableMachine = document.querySelector('[data-action="start-print"]');
+        if (availableMachine) {
+            const printerName = availableMachine.getAttribute('data-printer');
+            handleStartPrint(printerName);
+        } else {
+            showToast('No SLS machines available for quick start', 'warning');
+        }
+    };
+    
+    window.viewMySchedule = function() {
+        console.log('?? [OPERATOR] View my schedule');
+        window.open('/Scheduler', '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes');
+    };
+    
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', window.PrintTracking.init);
+    } else {
+        window.PrintTracking.init();
+    }
+    
+})();
+</script>

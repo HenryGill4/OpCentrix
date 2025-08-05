@@ -298,21 +298,147 @@ namespace OpCentrix.Pages.Scheduler
 
                 _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Job {JobId} started on {MachineId}", operationId, jobId, job.MachineId);
 
-                // Redirect to print tracking to complete the start process
+                // Notify print tracking service if available
+                try
+                {
+                    var printTrackingService = HttpContext.RequestServices.GetService<IPrintTrackingService>();
+                    if (printTrackingService != null)
+                    {
+                        // Create a build job entry for tracking
+                        await printTrackingService.CreateBuildJobFromScheduledJobAsync(jobId, User.Identity?.Name ?? "System");
+                        _logger.LogInformation("🔗 [SCHEDULER-{OperationId}] Created build job tracking for job {JobId}", operationId, jobId);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "⚠️ [SCHEDULER-{OperationId}] Failed to create build job tracking for job {JobId}", operationId, jobId);
+                    // Don't fail the main operation if tracking creation fails
+                }
+
                 return new JsonResult(new 
                 { 
                     success = true, 
                     message = $"Job {job.PartNumber} started successfully!",
-                    redirectUrl = $"/PrintTracking?jobId={jobId}&machineId={job.MachineId}",
                     jobId = jobId,
                     machineId = job.MachineId,
-                    partNumber = job.PartNumber
+                    partNumber = job.PartNumber,
+                    printTrackingUrl = $"/PrintTracking?jobId={jobId}&machineId={job.MachineId}"
                 });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error starting print job: {JobId}", operationId, jobId);
                 return new JsonResult(new { success = false, error = "Error starting print job" });
+            }
+        }
+
+        // NEW: Method to get print tracking status for a job
+        public async Task<IActionResult> OnGetPrintTrackingStatusAsync(int jobId)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("📊 [SCHEDULER-{OperationId}] Getting print tracking status for job: {JobId}", operationId, jobId);
+
+            try
+            {
+                var job = await _context.Jobs
+                    .Include(j => j.Part)
+                    .FirstOrDefaultAsync(j => j.Id == jobId);
+
+                if (job == null)
+                {
+                    return new JsonResult(new { success = false, error = "Job not found" });
+                }
+
+                // Check for associated build job
+                var buildJob = await _context.BuildJobs
+                    .FirstOrDefaultAsync(bj => bj.AssociatedScheduledJobId == jobId);
+
+                var status = new
+                {
+                    success = true,
+                    jobId = job.Id,
+                    partNumber = job.PartNumber,
+                    machineId = job.MachineId,
+                    status = job.Status,
+                    scheduledStart = job.ScheduledStart,
+                    scheduledEnd = job.ScheduledEnd,
+                    actualStart = job.ActualStart,
+                    actualEnd = job.ActualEnd,
+                    hasBuildJob = buildJob != null,
+                    buildId = buildJob?.BuildId,
+                    operatorEstimate = buildJob?.OperatorEstimatedHours,
+                    printTrackingUrl = $"/PrintTracking?jobId={jobId}&machineId={job.MachineId}",
+                    isSlsJob = new[] { "TI1", "TI2", "INC", "INC1", "INC2" }.Contains(job.MachineId)
+                };
+
+                return new JsonResult(status);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error getting print tracking status for job: {JobId}", operationId, jobId);
+                return new JsonResult(new { success = false, error = "Error getting print tracking status" });
+            }
+        }
+
+        // Enhanced method to handle schedule updates from print tracking
+        public async Task<IActionResult> OnPostUpdateFromPrintTrackingAsync(int jobId, decimal actualHours, string operatorName, string notes = "")
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("🔄 [SCHEDULER-{OperationId}] Updating job {JobId} from print tracking: {ActualHours}h by {Operator}", 
+                operationId, jobId, actualHours, operatorName);
+
+            try
+            {
+                var job = await _context.Jobs
+                    .Include(j => j.Part)
+                    .FirstOrDefaultAsync(j => j.Id == jobId);
+
+                if (job == null)
+                {
+                    return new JsonResult(new { success = false, error = "Job not found" });
+                }
+
+                // Update job with actual completion data
+                job.Status = "Completed";
+                job.ActualEnd = DateTime.UtcNow;
+                job.LastModifiedDate = DateTime.UtcNow;
+                job.LastModifiedBy = operatorName ?? User.Identity?.Name ?? "PrintTracking";
+
+                // If notes provided, append to existing notes
+                if (!string.IsNullOrEmpty(notes))
+                {
+                    job.Notes = string.IsNullOrEmpty(job.Notes) 
+                        ? $"Print completed: {notes}"
+                        : $"{job.Notes}\nPrint completed: {notes}";
+                }
+
+                await _context.SaveChangesAsync();
+
+                // Send cross-tab notification to any open scheduler windows
+                var updateNotification = new
+                {
+                    type = "scheduleUpdated",
+                    jobId = jobId,
+                    machineId = job.MachineId,
+                    partNumber = job.PartNumber,
+                    actualHours = actualHours,
+                    operatorName = operatorName,
+                    timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                };
+
+                _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Job {JobId} updated from print tracking completion", operationId, jobId);
+
+                return new JsonResult(new 
+                { 
+                    success = true, 
+                    message = $"Job {job.PartNumber} updated from print tracking",
+                    notification = updateNotification
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error updating job from print tracking: {JobId}", operationId, jobId);
+                return new JsonResult(new { success = false, error = "Error updating job from print tracking" });
             }
         }
 
