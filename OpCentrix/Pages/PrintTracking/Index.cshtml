@@ -10,9 +10,9 @@
     <div class="bg-white shadow">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="py-6">
-                <div class="flex items-center justify-between">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                        <h1 class="text-3xl font-bold text-gray-900">
+                        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">
                             @if (Model.IsAdminView)
                             {
                                 <span>SLS Print Tracking - Admin Console</span>
@@ -33,8 +33,8 @@
                             }
                         </p>
                     </div>
-                    <div class="flex items-center space-x-4">
-                        <div class="text-right">
+                    <div class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                        <div class="text-center sm:text-right">
                             <p class="text-sm font-medium text-gray-900">@Model.Dashboard.OperatorName</p>
                             <p class="text-xs text-gray-500">
                                 @Model.UserRole
@@ -44,30 +44,30 @@
                                 }
                             </p>
                         </div>
-                        <div class="flex space-x-2">
+                        <div class="flex flex-wrap justify-center sm:justify-end gap-2">
                             @if (Model.IsAdminView)
                             {
                                 <!-- Admin-only buttons -->
                                 <a href="/Admin/Machines" 
-                                   class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                                   class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                     </svg>
-                                    <span>Manage</span>
+                                    <span class="hidden sm:inline">Manage</span>
                                 </a>
                                 
                                 <a href="/Analytics/BuildTimeAnalytics" 
-                                   class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                                   class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                                     </svg>
-                                    <span>Analytics</span>
+                                    <span class="hidden sm:inline">Analytics</span>
                                 </a>
                             }
                             
                             <button id="refresh-dashboard-btn" 
-                                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                                    class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                                 </svg>
@@ -81,7 +81,7 @@
     </div>
 
     <!-- Dashboard Content with Role-Based Information -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" id="dashboard-content">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8" id="dashboard-content">
         @{
             ViewBag.IsAdminView = Model.IsAdminView;
             ViewBag.UserRole = Model.UserRole;
@@ -90,31 +90,31 @@
     </div>
 
     <!-- Role-Based Quick Action Buttons (Fixed Position) -->
-    <div class="fixed bottom-6 right-6 space-y-3">
+    <div class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 space-y-3 z-40">
         @if (Model.IsAdminView)
         {
             <!-- Admin quick actions -->
             <div class="flex flex-col space-y-2">
                 <button id="start-print-btn" 
-                        class="bg-green-600 hover:bg-green-700 text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-200"
+                        class="bg-green-600 hover:bg-green-700 text-white p-3 sm:p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-200"
                         title="Start New SLS Print">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                     </svg>
                 </button>
                 
                 <button id="complete-print-btn" 
-                        class="bg-red-600 hover:bg-red-700 text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-200"
+                        class="bg-red-600 hover:bg-red-700 text-white p-3 sm:p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-200"
                         title="Complete SLS Build">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </button>
 
                 <a href="/Scheduler" 
-                   class="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-200"
+                   class="bg-blue-600 hover:bg-blue-700 text-white p-3 sm:p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center"
                    title="View Full Scheduler">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                     </svg>
                 </a>
@@ -125,21 +125,21 @@
             <!-- Operator focused actions -->
             <div class="flex flex-col space-y-2">
                 <button id="start-print-btn" 
-                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2"
+                        class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 sm:px-4 sm:py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2"
                         title="Start New Build">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                     </svg>
-                    <span class="text-sm font-medium">Start Build</span>
+                    <span class="text-xs sm:text-sm font-medium">Start Build</span>
                 </button>
                 
                 <button id="complete-print-btn" 
-                        class="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2"
+                        class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 sm:px-4 sm:py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2"
                         title="Complete Build">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
-                    <span class="text-sm font-medium">Finish Build</span>
+                    <span class="text-xs sm:text-sm font-medium">Finish Build</span>
                 </button>
             </div>
         }
@@ -148,17 +148,17 @@
     <!-- Help/Info Panel for Operators -->
     @if (!Model.IsAdminView)
     {
-        <div class="fixed bottom-6 left-6">
+        <div class="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 z-40">
             <button id="help-toggle" 
                     class="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200"
                     title="Show Help">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
             </button>
             
             <!-- Hidden help panel -->
-            <div id="help-panel" class="hidden absolute bottom-16 left-0 w-80 bg-white rounded-lg shadow-xl border p-4">
+            <div id="help-panel" class="hidden absolute bottom-16 left-0 w-72 sm:w-80 bg-white rounded-lg shadow-xl border p-4">
                 <h4 class="font-medium text-gray-900 mb-3">SLS Operation Quick Guide</h4>
                 <div class="space-y-2 text-sm text-gray-600">
                     <div><strong>Starting a Build:</strong> Click "Start Build" and select your machine</div>
@@ -176,41 +176,456 @@
 <!-- Print Tracking Modals -->
 <div id="print-modal-container"></div>
 
-<!-- JavaScript for Print Tracking -->
+<!-- Loading Indicator -->
+<div id="loading-indicator" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg p-6 shadow-xl">
+        <div class="flex items-center space-x-3">
+            <svg class="animate-spin h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="text-gray-600">Loading...</span>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+@section Scripts {
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    'use strict';
+    
+    // ===============================
+    // ENHANCED PRINT TRACKING GLOBAL NAMESPACE
+    // ===============================
+    window.PrintTracking = window.PrintTracking || {
+        initialized: false,
+        autoRefreshInterval: null,
+        isModalOpen: false,
+        debug: true
+    };
+
     // Role-based initialization
     const isAdminView = @Json.Serialize(Model.IsAdminView);
     const userRole = @Json.Serialize(Model.UserRole);
     
-    console.log(`Print Tracking initialized for ${userRole} user. Admin view: ${isAdminView}`);
+    console.log(`?? [PRINT-TRACKING] Print Tracking initialized for ${userRole} user. Admin view: ${isAdminView}`);
+
+    // CRITICAL FIX: Enhanced modal management functions with error handling
+    window.PrintTracking.openStartPrintModal = function(printerName = null, jobId = null) {
+        console.log('?? [PRINT-TRACKING] Opening start print modal', { printerName, jobId });
+        
+        try {
+            PrintTracking.isModalOpen = true;
+            PrintTracking.pauseAutoRefresh();
+            PrintTracking.showLoadingIndicator();
+            
+            let url = '/PrintTracking?handler=StartPrintModal';
+            const params = new URLSearchParams();
+            if (printerName) params.append('printerName', printerName);
+            if (jobId) params.append('jobId', jobId);
+            
+            if (params.toString()) {
+                url += '&' + params.toString();
+            }
+            
+            if (typeof htmx !== 'undefined') {
+                htmx.ajax('GET', url, {
+                    target: '#print-modal-container',
+                    swap: 'innerHTML'
+                }).then(() => {
+                    PrintTracking.hideLoadingIndicator();
+                    console.log('? [PRINT-TRACKING] Start print modal loaded');
+                }).catch((error) => {
+                    PrintTracking.hideLoadingIndicator();
+                    PrintTracking.handleModalError('Failed to load start print form', error);
+                });
+            } else {
+                PrintTracking.hideLoadingIndicator();
+                PrintTracking.handleModalError('HTMX not available', new Error('HTMX not loaded'));
+            }
+        } catch (error) {
+            console.error('? [PRINT-TRACKING] Error in openStartPrintModal:', error);
+            PrintTracking.hideLoadingIndicator();
+            PrintTracking.handleModalError('Error opening start print modal', error);
+        }
+    };
+
+    window.PrintTracking.openPostPrintModal = function(buildId = null, printerName = null, jobId = null) {
+        console.log('?? [PRINT-TRACKING] Opening post print modal', { buildId, printerName, jobId });
+        
+        try {
+            PrintTracking.isModalOpen = true;
+            PrintTracking.pauseAutoRefresh();
+            PrintTracking.showLoadingIndicator();
+            
+            let url = '/PrintTracking?handler=PostPrintModal';
+            const params = new URLSearchParams();
+            if (buildId) params.append('buildId', buildId);
+            if (printerName) params.append('printerName', printerName);
+            if (jobId) params.append('jobId', jobId);
+            
+            if (params.toString()) {
+                url += '&' + params.toString();
+            }
+            
+            if (typeof htmx !== 'undefined') {
+                htmx.ajax('GET', url, {
+                    target: '#print-modal-container',
+                    swap: 'innerHTML'
+                }).then(() => {
+                    PrintTracking.hideLoadingIndicator();
+                    console.log('? [PRINT-TRACKING] Post print modal loaded');
+                }).catch((error) => {
+                    PrintTracking.hideLoadingIndicator();
+                    PrintTracking.handleModalError('Failed to load complete print form', error);
+                });
+            } else {
+                PrintTracking.hideLoadingIndicator();
+                PrintTracking.handleModalError('HTMX not available', new Error('HTMX not loaded'));
+            }
+        } catch (error) {
+            console.error('? [PRINT-TRACKING] Error in openPostPrintModal:', error);
+            PrintTracking.hideLoadingIndicator();
+            PrintTracking.handleModalError('Error opening post print modal', error);
+        }
+    };
+
+    window.PrintTracking.closeModal = function() {
+        console.log('?? [PRINT-TRACKING] Closing modal');
+        
+        try {
+            const modalContainer = document.getElementById('print-modal-container');
+            if (modalContainer) {
+                modalContainer.innerHTML = '';
+                modalContainer.style.display = 'none';
+                modalContainer.classList.add('hidden');
+            }
+
+            // Reset body overflow
+            document.body.style.overflow = '';
+            
+            PrintTracking.hideLoadingIndicator();
+            PrintTracking.isModalOpen = false;
+            PrintTracking.resumeAutoRefresh();
+            
+            console.log('? [PRINT-TRACKING] Modal closed successfully');
+        } catch (error) {
+            console.error('? [PRINT-TRACKING] Error closing modal:', error);
+        }
+    };
+
+    window.PrintTracking.refreshDashboard = function() {
+        console.log('?? [PRINT-TRACKING] Manual dashboard refresh');
+        
+        try {
+            PrintTracking.showLoadingIndicator();
+            
+            if (typeof htmx !== 'undefined') {
+                htmx.ajax('GET', '/PrintTracking?handler=RefreshDashboard', {
+                    target: '#dashboard-content',
+                    swap: 'innerHTML'
+                }).then(() => {
+                    PrintTracking.hideLoadingIndicator();
+                    PrintTracking.showToast('Dashboard refreshed successfully', 'success');
+                    // Re-bind event listeners after content update
+                    PrintTracking.bindDashboardEvents();
+                    console.log('? [PRINT-TRACKING] Dashboard refreshed');
+                }).catch((error) => {
+                    PrintTracking.hideLoadingIndicator();
+                    PrintTracking.showToast('Failed to refresh dashboard', 'error');
+                    console.error('? [PRINT-TRACKING] Dashboard refresh error:', error);
+                });
+            } else {
+                PrintTracking.hideLoadingIndicator();
+                PrintTracking.showToast('HTMX not available - refreshing page', 'error');
+                setTimeout(() => window.location.reload(), 1000);
+            }
+        } catch (error) {
+            console.error('? [PRINT-TRACKING] Error in refreshDashboard:', error);
+            PrintTracking.hideLoadingIndicator();
+            PrintTracking.showToast('Error refreshing dashboard', 'error');
+        }
+    };
+
+    // Auto-refresh management with enhanced error handling
+    window.PrintTracking.startAutoRefresh = function() {
+        if (PrintTracking.autoRefreshInterval) {
+            clearInterval(PrintTracking.autoRefreshInterval);
+        }
+
+        PrintTracking.autoRefreshInterval = setInterval(() => {
+            if (!PrintTracking.isModalOpen && !document.getElementById('print-modal-container').innerHTML) {
+                console.log('?? [PRINT-TRACKING] Auto-refreshing dashboard...');
+
+                if (typeof htmx !== 'undefined') {
+                    htmx.ajax('GET', '/PrintTracking?handler=RefreshDashboard', {
+                        target: '#dashboard-content',
+                        swap: 'innerHTML'
+                    }).then(() => {
+                        // Re-bind events after auto-refresh
+                        PrintTracking.bindDashboardEvents();
+                        console.log('? [PRINT-TRACKING] Auto-refresh completed');
+                    }).catch((error) => {
+                        console.warn('?? [PRINT-TRACKING] Auto-refresh failed (this is normal):', error);
+                    });
+                }
+            }
+        }, 300000); // 5 minutes
+
+        console.log('?? [PRINT-TRACKING] Auto-refresh started (5-minute interval)');
+    };
+
+    window.PrintTracking.pauseAutoRefresh = function() {
+        if (PrintTracking.autoRefreshInterval) {
+            clearInterval(PrintTracking.autoRefreshInterval);
+            PrintTracking.autoRefreshInterval = null;
+            console.log('?? [PRINT-TRACKING] Auto-refresh paused');
+        }
+    };
+
+    window.PrintTracking.resumeAutoRefresh = function() {
+        console.log('?? [PRINT-TRACKING] Auto-refresh resumed');
+        PrintTracking.startAutoRefresh();
+    };
+
+    // Enhanced loading indicator management
+    window.PrintTracking.showLoadingIndicator = function(message = 'Loading...') {
+        try {
+            const indicator = document.getElementById('loading-indicator');
+            if (indicator) {
+                const messageSpan = indicator.querySelector('span');
+                if (messageSpan) {
+                    messageSpan.textContent = message;
+                }
+                indicator.classList.remove('hidden');
+            }
+        } catch (error) {
+            console.error('? [PRINT-TRACKING] Error showing loading indicator:', error);
+        }
+    };
+
+    window.PrintTracking.hideLoadingIndicator = function() {
+        try {
+            const indicator = document.getElementById('loading-indicator');
+            if (indicator) {
+                indicator.classList.add('hidden');
+            }
+        } catch (error) {
+            console.error('? [PRINT-TRACKING] Error hiding loading indicator:', error);
+        }
+    };
+
+    // Enhanced error handling
+    window.PrintTracking.handleModalError = function(message, error) {
+        console.error('? [PRINT-TRACKING] Modal error:', error);
+        
+        try {
+            const errorHtml = `
+                <div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+                    <div class="relative top-20 mx-auto p-5 border w-11/12 max-w-md shadow-lg rounded-md bg-white">
+                        <div class="mt-3 text-center">
+                            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                                <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                            <h3 class="text-lg leading-6 font-medium text-gray-900 mt-4">Error Loading Form</h3>
+                            <div class="mt-2 px-7 py-3">
+                                <p class="text-sm text-gray-500">${message}</p>
+                                <p class="text-xs text-gray-400 mt-2">Please check your connection and try again</p>
+                            </div>
+                            <div class="items-center px-4 py-3 space-y-2">
+                                <button onclick="PrintTracking.refreshDashboard()" 
+                                        class="px-4 py-2 bg-blue-600 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-700">
+                                    Refresh Dashboard
+                                </button>
+                                <button onclick="PrintTracking.closeModal()" 
+                                        class="px-4 py-2 bg-gray-300 text-gray-700 text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-400">
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            const modalContainer = document.getElementById('print-modal-container');
+            if (modalContainer) {
+                modalContainer.innerHTML = errorHtml;
+            }
+        } catch (err) {
+            console.error('? [PRINT-TRACKING] Error showing error modal:', err);
+            alert(message + '\n\nPlease refresh the page and try again.');
+        }
+    };
+
+    // Enhanced toast notifications
+    window.PrintTracking.showToast = function(message, type = 'success') {
+        try {
+            const toastContainer = document.getElementById('toast-container');
+            if (!toastContainer) {
+                console.warn('?? [PRINT-TRACKING] Toast container not found');
+                return;
+            }
+
+            const toast = document.createElement('div');
+            toast.className = `
+                transform transition-all duration-300 translate-x-full
+                max-w-sm w-full bg-white shadow-lg rounded-lg pointer-events-auto
+                flex ring-1 ring-black ring-opacity-5
+            `;
+            
+            const bgColor = type === 'success' ? 'bg-green-50' : 'bg-red-50';
+            const textColor = type === 'success' ? 'text-green-800' : 'text-red-800';
+            const iconColor = type === 'success' ? 'text-green-400' : 'text-red-400';
+            
+            toast.innerHTML = `
+                <div class="flex-1 w-0 p-4">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0">
+                            <svg class="h-6 w-6 ${iconColor}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                ${type === 'success' 
+                                    ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6-2a9 9 0 11-18 0 9 9 0 0118 0z" />'
+                                    : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />'
+                                }
+                            </svg>
+                        </div>
+                        <div class="ml-3 w-0 flex-1 pt-0.5">
+                            <p class="text-sm font-medium ${textColor}">${message}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex border-l border-gray-200">
+                    <button onclick="this.parentElement.parentElement.remove()" 
+                            class="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-gray-600 hover:text-gray-500">
+                        ?
+                    </button>
+                </div>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            // Animate in
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-x-full');
+            });
+            
+            // Auto remove
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, type === 'success' ? 5000 : 8000);
+            
+        } catch (error) {
+            console.error('? [PRINT-TRACKING] Error showing toast:', error);
+            // Fallback to alert
+            alert((type === 'success' ? '? ' : '? ') + message);
+        }
+    };
+
+    // Enhanced event binding for dashboard elements
+    window.PrintTracking.bindDashboardEvents = function() {
+        console.log('?? [PRINT-TRACKING] Binding dashboard events...');
+        
+        try {
+            // Use event delegation for all dashboard buttons to ensure they work even when dynamically loaded
+            document.removeEventListener('click', PrintTracking.dashboardClickHandler);
+            document.addEventListener('click', PrintTracking.dashboardClickHandler);
+            
+            console.log('? [PRINT-TRACKING] Dashboard events bound using event delegation');
+        } catch (error) {
+            console.error('? [PRINT-TRACKING] Error binding dashboard events:', error);
+        }
+    };
+
+    // Enhanced event delegation handler for all dashboard clicks
+    window.PrintTracking.dashboardClickHandler = function(event) {
+        try {
+            const target = event.target.closest('[data-action]');
+            if (!target) return;
+            
+            const action = target.dataset.action;
+            const printer = target.dataset.printer;
+            const buildId = target.dataset.buildId ? parseInt(target.dataset.buildId) : null;
+            const jobId = target.dataset.jobId ? parseInt(target.dataset.jobId) : null;
+            
+            console.log('??? [DASHBOARD] Button clicked:', { action, printer, buildId, jobId });
+            
+            switch (action) {
+                case 'start-print':
+                    event.preventDefault();
+                    PrintTracking.openStartPrintModal(printer, jobId);
+                    break;
+                    
+                case 'complete-print':
+                    event.preventDefault();
+                    PrintTracking.openPostPrintModal(buildId, printer, jobId);
+                    break;
+                    
+                case 'toggle-schedule':
+                    PrintTracking.handleScheduleToggle();
+                    break;
+                    
+                default:
+                    console.log('?? [DASHBOARD] Unknown action:', action);
+            }
+        } catch (error) {
+            console.error('? [DASHBOARD] Error handling click:', error);
+        }
+    };
+
+    // Handle schedule toggle in dashboard
+    window.PrintTracking.handleScheduleToggle = function() {
+        try {
+            const overview = document.getElementById('schedule-overview');
+            const summary = document.getElementById('schedule-summary');
+            const toggleText = document.getElementById('schedule-toggle-text');
+            const chevron = document.getElementById('schedule-chevron');
+
+            if (overview && summary && toggleText && chevron) {
+                if (overview.classList.contains('hidden')) {
+                    overview.classList.remove('hidden');
+                    summary.classList.add('hidden');
+                    toggleText.textContent = 'Show Summary';
+                    chevron.classList.add('rotate-180');
+                } else {
+                    overview.classList.add('hidden');
+                    summary.classList.remove('hidden');
+                    toggleText.textContent = 'Show Details';
+                    chevron.classList.remove('rotate-180');
+                }
+            }
+        } catch (error) {
+            console.error('? [DASHBOARD] Error toggling schedule:', error);
+        }
+    };
+
+    // CRITICAL FIX: Global function aliases for backward compatibility
+    window.openStartPrintModal = function(printerName, jobId) {
+        return window.PrintTracking.openStartPrintModal(printerName, jobId);
+    };
+    
+    window.openPostPrintModal = function(buildId, printerName, jobId) {
+        return window.PrintTracking.openPostPrintModal(buildId, printerName, jobId);
+    };
+    
+    window.closeModal = function() {
+        return window.PrintTracking.closeModal();
+    };
+    
+    window.refreshDashboard = function() {
+        return window.PrintTracking.refreshDashboard();
+    };
 
     // Dashboard refresh functionality
     const refreshBtn = document.getElementById('refresh-dashboard-btn');
     if (refreshBtn) {
-        refreshBtn.addEventListener('click', async function() {
-            this.disabled = true;
-            this.innerHTML = '<svg class="animate-spin h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Refreshing...';
-            
-            try {
-                const response = await fetch('/PrintTracking?handler=RefreshDashboard');
-                if (response.ok) {
-                    const html = await response.text();
-                    document.getElementById('dashboard-content').innerHTML = html;
-                    
-                    // Show success message
-                    showToast('Dashboard refreshed successfully', 'success');
-                } else {
-                    throw new Error('Failed to refresh dashboard');
-                }
-            } catch (error) {
-                console.error('Error refreshing dashboard:', error);
-                showToast('Error refreshing dashboard', 'error');
-            } finally {
-                this.disabled = false;
-                this.innerHTML = '<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>Refresh';
-            }
-        });
+        refreshBtn.addEventListener('click', PrintTracking.refreshDashboard);
     }
 
     // Help panel toggle for operators
@@ -236,7 +651,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const startPrintBtn = document.getElementById('start-print-btn');
     if (startPrintBtn) {
         startPrintBtn.addEventListener('click', function() {
-            openStartPrintModal();
+            PrintTracking.openStartPrintModal();
         });
     }
 
@@ -244,163 +659,110 @@ document.addEventListener('DOMContentLoaded', function() {
     const completePrintBtn = document.getElementById('complete-print-btn');
     if (completePrintBtn) {
         completePrintBtn.addEventListener('click', function() {
-            openCompletePrintModal();
+            PrintTracking.openPostPrintModal();
         });
     }
 
-    // Schedule toggle functionality
-    const scheduleToggleBtn = document.querySelector('[data-action="toggle-schedule"]');
-    if (scheduleToggleBtn) {
-        scheduleToggleBtn.addEventListener('click', function() {
-            const scheduleOverview = document.getElementById('schedule-overview');
-            const toggleText = document.getElementById('schedule-toggle-text');
-            const chevron = document.getElementById('schedule-chevron');
-            
-            if (scheduleOverview.classList.contains('hidden')) {
-                scheduleOverview.classList.remove('hidden');
-                toggleText.textContent = 'Hide Schedule';
-                chevron.style.transform = 'rotate(180deg)';
-                
-                // Trigger HTMX load if needed
-                const htmxElement = scheduleOverview.querySelector('[hx-get]');
-                if (htmxElement) {
-                    htmx.trigger(htmxElement, 'revealed');
-                }
-            } else {
-                scheduleOverview.classList.add('hidden');
-                toggleText.textContent = 'Show Schedule';
-                chevron.style.transform = 'rotate(0deg)';
-            }
-        });
-    }
-
-    // Machine action buttons
-    document.addEventListener('click', function(event) {
-        const target = event.target.closest('[data-action]');
-        if (!target) return;
-
-        const action = target.dataset.action;
-        const printer = target.dataset.printer;
-        const buildId = target.dataset.buildId;
-
-        switch (action) {
-            case 'start-print':
-                openStartPrintModal(printer);
-                break;
-            case 'complete-print':
-                if (buildId) {
-                    openCompletePrintModal(buildId);
-                } else if (printer) {
-                    openCompletePrintModal(null, printer);
-                }
-                break;
+    // Enhanced HTMX event handling with better error recovery
+    document.body.addEventListener('htmx:beforeRequest', function(event) {
+        if (event.detail.requestConfig.headers['HX-Target'] === '#print-modal-container') {
+            PrintTracking.showLoadingIndicator('Loading form...');
         }
     });
 
-    // Modal functions
-    async function openStartPrintModal(printerName = null) {
-        try {
-            const url = `/PrintTracking?handler=StartPrintModal${printerName ? `&printerName=${printerName}` : ''}`;
-            const response = await fetch(url);
-            
-            if (response.ok) {
-                const html = await response.text();
-                document.getElementById('print-modal-container').innerHTML = html;
-                
-                // Show modal (assuming Bootstrap or similar modal system)
-                const modal = document.querySelector('#start-print-modal');
-                if (modal) {
-                    // Initialize modal
-                    modal.classList.add('show');
-                    modal.style.display = 'block';
-                    document.body.classList.add('modal-open');
-                }
-            } else {
-                showToast('Error loading start print form', 'error');
-            }
-        } catch (error) {
-            console.error('Error opening start print modal:', error);
-            showToast('Error loading start print form', 'error');
-        }
-    }
+    document.body.addEventListener('htmx:afterRequest', function(event) {
+        PrintTracking.hideLoadingIndicator();
 
-    async function openCompletePrintModal(buildId = null, printerName = null) {
-        try {
-            const params = new URLSearchParams();
-            if (buildId) params.append('buildId', buildId);
-            if (printerName) params.append('printerName', printerName);
-            
-            const url = `/PrintTracking?handler=PostPrintModal${params.toString() ? '&' + params.toString() : ''}`;
-            const response = await fetch(url);
-            
-            if (response.ok) {
-                const html = await response.text();
-                document.getElementById('print-modal-container').innerHTML = html;
-                
-                // Show modal
-                const modal = document.querySelector('#post-print-modal');
-                if (modal) {
-                    modal.classList.add('show');
-                    modal.style.display = 'block';
-                    document.body.classList.add('modal-open');
-                }
-            } else {
-                showToast('Error loading complete print form', 'error');
-            }
-        } catch (error) {
-            console.error('Error opening complete print modal:', error);
-            showToast('Error loading complete print form', 'error');
-        }
-    }
-
-    // Toast notification function
-    function showToast(message, type = 'info') {
-        const toast = document.createElement('div');
-        toast.className = `fixed top-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg text-white transform transition-transform duration-300 ${
-            type === 'success' ? 'bg-green-600' : 
-            type === 'error' ? 'bg-red-600' : 
-            type === 'warning' ? 'bg-yellow-600' : 'bg-blue-600'
-        }`;
-        toast.textContent = message;
-        toast.style.transform = 'translateX(100%)';
-        
-        document.body.appendChild(toast);
-        
-        // Animate in
-        setTimeout(() => {
-            toast.style.transform = 'translateX(0)';
-        }, 100);
-        
-        // Remove after delay
-        setTimeout(() => {
-            toast.style.transform = 'translateX(100%)';
+        // Re-bind events if dashboard was updated
+        if (event.detail.requestConfig.path?.includes('RefreshDashboard') || 
+            event.detail.target?.id === 'dashboard-content') {
             setTimeout(() => {
-                if (toast.parentNode) {
-                    toast.parentNode.removeChild(toast);
-                }
-            }, 300);
-        }, 3000);
+                PrintTracking.bindDashboardEvents();
+                console.log('?? [PRINT-TRACKING] Events re-bound after HTMX update');
+            }, 50);
+        }
+
+        // Handle network errors
+        if (event.detail.xhr.status >= 400) {
+            const isModal = event.detail.requestConfig.headers['HX-Target'] === '#print-modal-container';
+            if (isModal) {
+                PrintTracking.handleModalError(`Server error (${event.detail.xhr.status})`, event.detail.xhr);
+            } else {
+                PrintTracking.showToast(`Request failed (${event.detail.xhr.status})`, 'error');
+            }
+        }
+    });
+
+    document.body.addEventListener('htmx:responseError', function(event) {
+        PrintTracking.hideLoadingIndicator();
+        PrintTracking.showToast('Network error. Please check your connection.', 'error');
+        console.error('? [HTMX] Response Error:', event.detail);
+    });
+
+    document.body.addEventListener('htmx:timeout', function(event) {
+        PrintTracking.hideLoadingIndicator();
+        PrintTracking.showToast('Request timed out. Please try again.', 'error');
+    });
+
+    // Enhanced keyboard shortcuts
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            PrintTracking.closeModal();
+        }
+        if (event.ctrlKey && event.key === 'r') {
+            event.preventDefault();
+            PrintTracking.refreshDashboard();
+        }
+    });
+
+    // Use setTimeout to ensure dashboard is fully loaded before binding events
+    setTimeout(() => {
+        PrintTracking.bindDashboardEvents();
+        console.log('? [PRINT-TRACKING] Dashboard events bound after DOM ready');
+    }, 100);
+    
+    // Start auto-refresh
+    PrintTracking.startAutoRefresh();
+    
+    // Check for initial errors
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('error')) {
+        PrintTracking.showToast(urlParams.get('error'), 'error');
     }
 
-    // Auto refresh every 30 seconds for operators, 2 minutes for admins
-    const autoRefreshInterval = isAdminView ? 120000 : 30000; // 2 minutes vs 30 seconds
-    
-    setInterval(function() {
-        if (document.visibilityState === 'visible') {
-            refreshBtn?.click();
-        }
-    }, autoRefreshInterval);
+    PrintTracking.initialized = true;
+    console.log('? [PRINT-TRACKING] Print Tracking Dashboard initialized successfully');
 
-    console.log(`Auto-refresh set to ${autoRefreshInterval / 1000} seconds for ${userRole} user`);
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', function() {
+        PrintTracking.pauseAutoRefresh();
+    });
+
+    // Cross-tab communication handling for scheduler integration
+    window.addEventListener('message', function(event) {
+        if (event.origin === window.location.origin) {
+            if (event.data.action === 'closeModal') {
+                PrintTracking.closeModal();
+            } else if (event.data.type === 'scheduleUpdated') {
+                PrintTracking.showToast('Schedule updated from another tab', 'success');
+                setTimeout(() => PrintTracking.refreshDashboard(), 1000);
+            }
+        }
+    });
+
+    console.log('? [PRINT-TRACKING] Enhanced Print Tracking script loaded successfully');
 });
 </script>
+}
 
 <style>
 /* Role-based styles */
+.fixed.bottom-4.right-4,
 .fixed.bottom-6.right-6 {
     z-index: 40;
 }
 
+.fixed.bottom-4.left-4,
 .fixed.bottom-6.left-6 {
     z-index: 40;
 }
@@ -425,28 +787,110 @@ document.addEventListener('DOMContentLoaded', function() {
     color: white;
 }
 
-/* Responsive adjustments */
-@@media (max-width: 768px) {
+/* Mobile-first responsive design */
+@@media (max-width: 640px) {
+    .fixed.bottom-4.right-4,
     .fixed.bottom-6.right-6 {
         right: 1rem;
         bottom: 1rem;
     }
     
+    .fixed.bottom-4.left-4,
     .fixed.bottom-6.left-6 {
         left: 1rem;
         bottom: 1rem;
     }
-}
-
-@@media (max-width: 640px) {
-    .grid-cols-1.md\\:grid-cols-2.lg\\:grid-cols-3.xl\\:grid-cols-4 {
-        grid-template-columns: repeat(1, minmax(0, 1fr));
+    
+    /* Stack action buttons vertically on small screens */
+    .flex.flex-col.space-y-2 {
+        space-y: 0.5rem;
     }
 }
 
 @@media (min-width: 641px) and (max-width: 1024px) {
-    .grid-cols-1.md\\:grid-cols-2.lg\\:grid-cols-3.xl\\:grid-cols-4 {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+    /* Tablet adjustments */
+    .max-w-7xl {
+        max-width: 100%;
+        padding: 0 1rem;
+    }
+}
+
+@@media (min-width: 1025px) {
+    /* Desktop optimizations */
+    .fixed.bottom-6.right-6 {
+        right: 2rem;
+        bottom: 2rem;
+    }
+    
+    .fixed.bottom-6.left-6 {
+        left: 2rem;
+        bottom: 2rem;
+    }
+}
+
+/* Enhanced touch targets for mobile */
+@@media (pointer: coarse) {
+    button, .btn, a.btn {
+        min-height: 44px;
+        min-width: 44px;
+    }
+    
+    /* Larger touch targets for important actions */
+    #start-print-btn,
+    #complete-print-btn {
+        min-height: 48px;
+        min-width: 48px;
+    }
+}
+
+/* Loading state animations */
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+@@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Toast animation classes */
+.translate-x-full {
+    transform: translateX(100%);
+}
+
+/* Smooth transitions for interactive elements */
+button, .btn, a.btn {
+    transition: all 0.2s ease-in-out;
+}
+
+button:hover, .btn:hover, a.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Focus styles for accessibility */
+button:focus, .btn:focus, a.btn:focus {
+    outline: 2px solid #3B82F6;
+    outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@@media (prefers-contrast: high) {
+    .shadow-lg {
+        box-shadow: 0 0 0 2px currentColor;
+    }
+}
+
+/* Reduced motion support */
+@@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
     }
 }
 </style>
