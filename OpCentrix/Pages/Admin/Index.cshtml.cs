@@ -639,6 +639,98 @@ namespace OpCentrix.Pages.Admin
             }
         }
 
+        public async Task<IActionResult> OnPostCreateStageDashboardTestDataAsync()
+        {
+            try
+            {
+                _logger.LogInformation("?? [ADMIN] Creating comprehensive stage dashboard test data...");
+
+                // Create stage dashboard test data using our new seeding service
+                var stageDashboardSeeder = HttpContext.RequestServices.GetRequiredService<StageDashboardSeedingService>();
+                await stageDashboardSeeder.CreateStageDashboardTestDataAsync();
+
+                _logger.LogInformation("? [ADMIN] Stage dashboard test data created successfully");
+
+                return Content($@"
+                    <div class='bg-green-50 border border-green-200 rounded-lg p-4'>
+                        <div class='flex items-center mb-3'>
+                            <svg class='w-5 h-5 text-green-500 mr-2' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                                <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M5 13l4 4L19 7'></path>
+                            </svg>
+                            <span class='text-green-800 font-medium'>?? Stage Dashboard Test Data Created!</span>
+                        </div>
+                        <div class='text-green-700 space-y-2'>
+                            <p><strong>Created comprehensive stage-aware test data:</strong></p>
+                            <ul class='list-disc list-inside text-sm ml-4 space-y-1'>
+                                <li>? 6 stage-aware test parts (STAGE-001 to STAGE-006)</li>
+                                <li>?? 9 stage-specific machines (SLS, CNC, EDM, Laser, etc.)</li>
+                                <li>?? 10 jobs in various stages of completion</li>
+                                <li>?? Production stage executions showing progression</li>
+                                <li>?? Build cohorts for testing cohort progression</li>
+                                <li>?? Stage requirements linking parts to manufacturing stages</li>
+                            </ul>
+                            
+                            <div class='mt-4 p-3 bg-blue-50 border border-blue-200 rounded'>
+                                <p class='text-blue-800 font-medium'>?? Ready to test Stage Dashboards:</p>
+                                <div class='mt-2 space-y-1 text-sm'>
+                                    <div>
+                                        <a href='/Operations/StageDashboard' class='text-blue-600 underline font-medium'>
+                                            ?? Master Stage Dashboard
+                                        </a>
+                                        <span class='text-blue-600 ml-2'>- View all 7 stages with progress</span>
+                                    </div>
+                                    <div>
+                                        <a href='/Operations/Dashboard' class='text-blue-600 underline font-medium'>
+                                            ?? Operator Dashboard
+                                        </a>
+                                        <span class='text-blue-600 ml-2'>- Mobile-optimized punch in/out</span>
+                                    </div>
+                                    <div>
+                                        <a href='/Operations/Stages/SLS' class='text-blue-600 underline font-medium'>
+                                            ??? SLS Operations Dashboard
+                                        </a>
+                                        <span class='text-blue-600 ml-2'>- SLS-specific operations</span>
+                                    </div>
+                                    <div>
+                                        <a href='/Operations/Stages/CNC' class='text-blue-600 underline font-medium'>
+                                            ?? CNC Operations Dashboard
+                                        </a>
+                                        <span class='text-blue-600 ml-2'>- CNC-specific operations</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class='mt-3 p-2 bg-green-100 rounded border-l-4 border-green-400'>
+                                <p class='text-sm text-green-800'>
+                                    <strong>?? Perfect for testing:</strong> Stage progression, operator workflows, 
+                                    multi-stage manufacturing, approval processes, and real-time dashboard updates!
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                ");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "? [ADMIN] Error creating stage dashboard test data");
+                return Content($@"
+                    <div class='bg-red-50 border border-red-200 rounded-lg p-4'>
+                        <div class='flex items-center'>
+                            <svg class='w-5 h-5 text-red-500 mr-2' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                                <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 18L18 6M6 6l12 12'></path>
+                            </svg>
+                            <span class='text-red-800 font-medium'>Error Creating Stage Dashboard Test Data</span>
+                        </div>
+                        <p class='text-red-700 mt-1'>Failed to create stage dashboard test data: {ex.Message}</p>
+                        <details class='mt-2'>
+                            <summary class='text-red-600 cursor-pointer'>Show details</summary>
+                            <pre class='text-xs text-red-600 mt-1 whitespace-pre-wrap'>{ex.StackTrace}</pre>
+                        </details>
+                    </div>
+                ");
+            }
+        }
+
         private async Task EnsureSlsMachinesExistAsync()
         {
             var existingMachines = await _context.Machines

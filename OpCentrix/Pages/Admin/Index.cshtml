@@ -132,6 +132,14 @@
                         </button>
                     }
                     
+                    <button hx-post="/Admin?handler=CreateStageDashboardTestData"
+                            hx-confirm="?? CREATE STAGE DASHBOARD TEST DATA: This will create comprehensive stage-aware test data including parts, jobs, machines, and stage progressions for testing the new Stage Dashboard functionality. Continue?"
+                            hx-target="#stage-dashboard-status"
+                            hx-swap="outerHTML"
+                            class="w-full bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition text-sm font-medium">
+                        <i class="fas fa-industry"></i> Create Stage Dashboard Test Data
+                    </button>
+                    
                     <button hx-post="/Admin?handler=CreatePrintTrackingTestJobs"
                             hx-confirm="? CREATE PRINT TRACKING TEST JOBS: This will clear existing jobs and create realistic test jobs for testing print tracking functionality. Continue?"
                             hx-target="#test-jobs-status"
@@ -149,6 +157,7 @@
                 
                 <div id="backup-status" class="mt-2"></div>
                 <div id="test-jobs-status" class="mt-2"></div>
+                <div id="stage-dashboard-status" class="mt-2"></div>
             </div>
             
             <!-- Production Setup Guide -->

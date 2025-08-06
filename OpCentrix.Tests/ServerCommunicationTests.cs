@@ -122,7 +122,7 @@ public class ServerCommunicationTests : IClassFixture<OpCentrixWebApplicationFac
             var loginResponse = await PerformLoginAsync(username, password);
 
             // Assert
-            Assert.True(loginResponse.IsRedirectionResult(), 
+            Assert.True(loginResponse.StatusCode == HttpStatusCode.Redirect, 
                 $"Login should redirect for {username}, got: {loginResponse.StatusCode}");
             
             var location = loginResponse.Headers.Location?.ToString() ?? "";
@@ -142,7 +142,7 @@ public class ServerCommunicationTests : IClassFixture<OpCentrixWebApplicationFac
             if (!string.IsNullOrEmpty(location) && !location.StartsWith("http"))
             {
                 var followUpResponse = await _client.GetAsync(location);
-                Assert.True(followUpResponse.IsSuccessStatusCode || followUpResponse.IsRedirectionResult(),
+                Assert.True(followUpResponse.IsSuccessStatusCode || followUpResponse.StatusCode == HttpStatusCode.Redirect,
                     $"Should be able to access redirected page: {location}");
                 _output.WriteLine($"? Successfully accessed redirected page: {location}");
             }
@@ -172,7 +172,7 @@ public class ServerCommunicationTests : IClassFixture<OpCentrixWebApplicationFac
                     "Should show error message for invalid credentials");
                 _output.WriteLine("? Invalid credentials properly rejected with error message");
             }
-            else if (response.IsRedirectionResult())
+            else if (response.StatusCode == HttpStatusCode.Redirect)
             {
                 _output.WriteLine("? Invalid credentials redirect (may be valid behavior)");
             }
@@ -201,7 +201,7 @@ public class ServerCommunicationTests : IClassFixture<OpCentrixWebApplicationFac
         var response = await _client.GetAsync(path);
 
         // Assert
-        Assert.True(response.IsSuccessStatusCode || response.IsRedirectionResult(),
+        Assert.True(response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.Redirect,
             $"Public page {path} should be accessible");
         
         _output.WriteLine($"? Public page {path} is accessible: {response.StatusCode}");
@@ -399,7 +399,7 @@ public class ServerCommunicationTests : IClassFixture<OpCentrixWebApplicationFac
             _output.WriteLine($"?? Logout redirect location: '{location}'");
             
             // Check that logout was successful (either redirect or success status)
-            Assert.True(logoutResponse.IsSuccessStatusCode || logoutResponse.IsRedirectionResult(), 
+            Assert.True(logoutResponse.IsSuccessStatusCode || logoutResponse.StatusCode == HttpStatusCode.Redirect, 
                 $"Logout should either redirect or return success, got: {logoutResponse.StatusCode}");
             
             // Most importantly, verify we can't access admin pages after logout
@@ -485,7 +485,7 @@ public class ServerCommunicationTests : IClassFixture<OpCentrixWebApplicationFac
     private async Task LoginAsAdminAsync()
     {
         var response = await PerformLoginAsync("admin", "admin123");
-        Assert.True(response.IsRedirectionResult() || response.IsSuccessStatusCode, 
+        Assert.True(response.StatusCode == HttpStatusCode.Redirect || response.IsSuccessStatusCode, 
             $"Admin login should succeed, got: {response.StatusCode}");
     }
 

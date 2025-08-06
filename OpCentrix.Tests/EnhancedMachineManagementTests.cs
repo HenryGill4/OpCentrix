@@ -459,7 +459,7 @@ public class EnhancedMachineManagementTests : IClassFixture<OpCentrixWebApplicat
         var formContent = new FormUrlEncodedContent(loginData);
         var response = await _client.PostAsync("/Account/Login", formContent);
         
-        Assert.True(response.IsRedirectionResult() || response.IsSuccessStatusCode, 
+        Assert.True(response.StatusCode == HttpStatusCode.Redirect || response.IsSuccessStatusCode, 
             $"Login should succeed, got: {response.StatusCode}");
     }
 

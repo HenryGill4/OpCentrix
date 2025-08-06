@@ -65,7 +65,8 @@ public class AuthenticationValidationTests : IClassFixture<OpCentrixWebApplicati
             var response = await PerformEnhancedLoginAsync(username, password);
 
             // Assert
-            Assert.True(response.IsRedirectionResult(), $"Login should redirect for {username}");
+            Assert.True(response.StatusCode == HttpStatusCode.Redirect,
+                $"Login should redirect for {username}, got: {response.StatusCode}");
             
             var location = response.Headers.Location?.ToString() ?? "";
             _output.WriteLine($"? User {username} ({expectedRole}) login redirects to: {location}");
@@ -143,7 +144,7 @@ public class AuthenticationValidationTests : IClassFixture<OpCentrixWebApplicati
             _output.WriteLine($"?? Logout redirect location: '{location}'");
             
             // Check if logout redirects (which it should to /Account/Login)
-            if (response.IsRedirectionResult())
+            if (response.StatusCode == HttpStatusCode.Redirect)
             {
                 Assert.True(location.Contains("Login") || location == "/Account/Login", 
                     $"Expected redirect to login page, got: {location}");
@@ -484,7 +485,7 @@ public class AuthenticationValidationTests : IClassFixture<OpCentrixWebApplicati
     private async Task LoginAsUserAsync(string username, string password)
     {
         var response = await PerformEnhancedLoginAsync(username, password);
-        Assert.True(response.IsRedirectionResult() || response.IsSuccessStatusCode, 
+        Assert.True(response.StatusCode == HttpStatusCode.Redirect || response.IsSuccessStatusCode, 
             $"Login should succeed for {username}, got: {response.StatusCode}");
     }
 

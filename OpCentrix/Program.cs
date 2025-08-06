@@ -248,6 +248,9 @@ builder.Services.AddScoped<IStageProgressionService, StageProgressionService>();
 // Phase 5: Build Time Analytics Service (Machine Learning and Performance Analytics)
 builder.Services.AddScoped<IBuildTimeAnalyticsService, BuildTimeAnalyticsService>();
 
+// NEW: Stage Dashboard Seeding Service for comprehensive test data
+builder.Services.AddScoped<StageDashboardSeedingService>();
+
 // Update PrintTrackingService registration to include cohort service and stage progression service
 builder.Services.AddScoped<IPrintTrackingService>(provider =>
 {
