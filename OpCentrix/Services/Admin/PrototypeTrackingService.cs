@@ -176,7 +176,10 @@ namespace OpCentrix.Services.Admin
                 execution.UpdatedDate = DateTime.UtcNow;
 
                 // Update prototype job totals
-                await UpdatePrototypeJobTotalsAsync(execution.PrototypeJobId);
+                if (execution.PrototypeJobId.HasValue)
+                {
+                    await UpdatePrototypeJobTotalsAsync(execution.PrototypeJobId.Value);
+                }
 
                 await _context.SaveChangesAsync();
 
@@ -542,7 +545,7 @@ namespace OpCentrix.Services.Admin
                 prototypeJob.CompletionDate = DateTime.UtcNow;
                 prototypeJob.LeadTimeDays = prototypeJob.StartDate.HasValue
                     ? (int)(prototypeJob.CompletionDate.Value - prototypeJob.StartDate.Value).TotalDays
-                    : null;
+                    : (int?)null;
                 prototypeJob.AdminReviewStatus = "Pending";
             }
         }

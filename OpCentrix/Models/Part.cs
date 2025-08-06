@@ -743,6 +743,7 @@ namespace OpCentrix.Models
         public virtual PartClassification? PartClassification { get; set; }
         public virtual ICollection<SerialNumber> SerialNumbers { get; set; } = new List<SerialNumber>();
         public virtual ICollection<ComplianceDocument> ComplianceDocuments { get; set; } = new List<ComplianceDocument>();
+        public virtual ICollection<PartStageRequirement> PartStageRequirements { get; set; } = new List<PartStageRequirement>();
         
         #endregion
         

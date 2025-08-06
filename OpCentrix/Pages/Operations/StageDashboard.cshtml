@@ -1,0 +1,449 @@
+@page "/Operations/StageDashboard"
+@model OpCentrix.Pages.Operations.StageDashboardModel
+@{
+    ViewData["Title"] = "Stage-Based Production Scheduler";
+    Layout = "_Layout";
+}
+
+@section Styles {
+    <style>
+    /* Use existing CSS patterns and extend them */
+    .stage-scheduler-container {
+        padding: 20px;
+        min-height: 100vh;
+        background-color: #f8f9fa;
+    }
+
+    .stage-header-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+
+    .view-controls {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .stage-overview-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 15px;
+        margin-bottom: 30px;
+    }
+
+    .stage-overview-card {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-left: 4px solid #ddd;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .stage-overview-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+
+    .stage-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .stage-header h5 {
+        margin: 0;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .stage-metrics {
+        display: flex;
+        gap: 20px;
+    }
+
+    .metric {
+        text-align: center;
+    }
+
+    .metric-value {
+        display: block;
+        font-size: 24px;
+        font-weight: bold;
+        color: #007bff;
+    }
+
+    .metric-label {
+        display: block;
+        font-size: 12px;
+        color: #666;
+        text-transform: uppercase;
+    }
+
+    .stage-job-card {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border: 1px solid #eee;
+    }
+
+    .job-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .job-header h5 {
+        margin: 0;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .job-machine {
+        background: #e9ecef;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+
+    .job-status {
+        font-size: 12px;
+        font-weight: 500;
+    }
+
+    .badge.scheduled { background-color: #6c757d; }
+    .badge.inprogress { background-color: #007bff; }
+    .badge.completed { background-color: #28a745; }
+
+    .stage-timeline {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+        overflow-x: auto;
+        padding: 10px 0;
+    }
+
+    .stage-block {
+        min-width: 150px;
+        padding: 12px;
+        border-radius: 6px;
+        color: white;
+        text-align: center;
+        position: relative;
+        font-size: 13px;
+        flex-shrink: 0;
+    }
+
+    .stage-block.pending {
+        opacity: 0.6;
+        background-color: #6c757d !important;
+    }
+
+    .stage-block.in-progress {
+        opacity: 0.9;
+        animation: pulse 2s infinite;
+    }
+
+    .stage-block.completed {
+        opacity: 1;
+        border: 2px solid #28a745;
+    }
+
+    @@keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+    }
+
+    .stage-name {
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+
+    .stage-duration {
+        font-size: 11px;
+        opacity: 0.9;
+        margin-bottom: 8px;
+    }
+
+    .stage-progress {
+        margin-top: 8px;
+        background: rgba(255,255,255,0.3);
+        height: 4px;
+        border-radius: 2px;
+        overflow: hidden;
+    }
+
+    .progress-bar {
+        height: 100%;
+        background: rgba(255,255,255,0.8);
+        transition: width 0.3s ease;
+    }
+
+    .punch-btn {
+        margin-top: 8px;
+        font-size: 11px;
+        padding: 4px 8px;
+        border: none;
+        border-radius: 4px;
+        color: white;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+
+    .punch-btn:hover {
+        opacity: 0.9;
+    }
+
+    .btn-success { background-color: #28a745; }
+    .btn-warning { background-color: #ffc107; color: #212529; }
+
+    /* Loading spinner */
+    .htmx-indicator {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 9999;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    .htmx-indicator.htmx-request {
+        display: block;
+    }
+
+    /* Mobile responsiveness */
+    @@media (max-width: 768px) {
+        .stage-timeline {
+            flex-direction: column;
+        }
+        
+        .stage-block {
+            min-width: auto;
+            width: 100%;
+        }
+        
+        .view-controls {
+            flex-direction: column;
+            width: 100%;
+        }
+        
+        .view-controls .btn {
+            width: 100%;
+        }
+
+        .stage-header-card {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .stage-overview-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    </style>
+}
+
+<div class="stage-scheduler-container">
+    <!-- Header with view toggles -->
+    <div class="stage-header-card">
+        <div>
+            <h1><i class="fas fa-industry me-2"></i>Stage-Based Production Scheduler</h1>
+            <p class="text-muted mb-0">Visual workflow management across all manufacturing stages</p>
+        </div>
+        <div class="view-controls">
+            <a href="/Scheduler" class="btn btn-outline-secondary">
+                <i class="fas fa-calendar me-1"></i>Job View
+            </a>
+            <a href="/Operations/StageDashboard" class="btn btn-primary">
+                <i class="fas fa-tasks me-1"></i>Stage View
+            </a>
+            <a href="/Operations/Dashboard" class="btn btn-outline-info">
+                <i class="fas fa-user-hard-hat me-1"></i>Operator View
+            </a>
+        </div>
+    </div>
+    
+    <!-- Stage overview cards -->
+    <div class="stage-overview-grid">
+        @foreach(var stage in Model.ProductionStages)
+        {
+            <div class="stage-overview-card" style="border-left-color: @stage.StageColor">
+                <div class="stage-header">
+                    <h5>@stage.Name</h5>
+                    <span class="badge" style="background-color: @stage.StageColor; color: white;">@stage.Department</span>
+                </div>
+                <div class="stage-metrics">
+                    <div class="metric">
+                        <span class="metric-value">@Model.GetActiveJobsCount(stage.Id)</span>
+                        <span class="metric-label">Active Jobs</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-value">@Model.GetQueuedJobsCount(stage.Id)</span>
+                        <span class="metric-label">Queued</span>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+    
+    <!-- Stage timeline visualization -->
+    @foreach(var stageJob in Model.StageJobs)
+    {
+        <div class="stage-job-card">
+            <div class="job-header">
+                <h5>@stageJob.BaseJob.PartNumber</h5>
+                <div>
+                    <span class="job-machine">@stageJob.BaseJob.MachineId</span>
+                    <span class="job-status badge @(stageJob.BaseJob.Status.ToLower().Replace(" ", ""))">
+                        @stageJob.BaseJob.Status
+                    </span>
+                </div>
+            </div>
+            
+            <div class="stage-timeline">
+                @foreach(var stage in stageJob.RequiredStages)
+                {
+                    var stageStatus = stageJob.GetStageStatus(stage);
+                    var progress = stageJob.GetStageProgress(stage);
+                    var statusClass = stageStatus.ToLower().Replace(" ", "-");
+                    
+                    <div class="stage-block @statusClass" 
+                         style="background-color: @stage.StageColor" 
+                         id="stage-@stageJob.BaseJob.Id-@stage.Id">
+                        <div class="stage-name">@stage.Name</div>
+                        <div class="stage-duration">@stage.DefaultSetupMinutes min</div>
+                        <div class="stage-progress">
+                            <div class="progress-bar" style="width: @(progress)%"></div>
+                        </div>
+                        
+                        @if(stageJob.CanOperatorPunch(stage))
+                        {
+                            <button class="punch-btn btn-success" 
+                                    hx-post="/Operations/StageDashboard?handler=PunchIn"
+                                    hx-vals='{"jobId": @stageJob.BaseJob.Id, "stageId": @stage.Id, "operatorName": "@Model.GetCurrentOperator()"}'
+                                    hx-target="#stage-@stageJob.BaseJob.Id-@stage.Id"
+                                    hx-indicator="#loading-spinner">
+                                <i class="fas fa-play me-1"></i>Punch In
+                            </button>
+                        }
+                        else if(stageStatus == "In Progress")
+                        {
+                            <button class="punch-btn btn-warning" 
+                                    hx-post="/Operations/StageDashboard?handler=PunchOut"
+                                    hx-vals='{"jobId": @stageJob.BaseJob.Id, "stageId": @stage.Id}'
+                                    hx-target="#stage-@stageJob.BaseJob.Id-@stage.Id"
+                                    hx-confirm="Are you sure you want to punch out of this stage?"
+                                    hx-indicator="#loading-spinner">
+                                <i class="fas fa-stop me-1"></i>Punch Out
+                            </button>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    @if (!Model.StageJobs.Any())
+    {
+        <div class="text-center py-5">
+            <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+            <h4 class="text-muted">No jobs scheduled for the selected time period</h4>
+            <p class="text-muted">Jobs will appear here once they are scheduled in the system.</p>
+            <a href="/Scheduler" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>Schedule New Job
+            </a>
+        </div>
+    }
+</div>
+
+<!-- Loading spinner -->
+<div id="loading-spinner" class="htmx-indicator">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <div class="ms-2">Processing...</div>
+</div>
+
+@section Scripts {
+<script>
+    // Use existing OpCentrixFormValidator patterns
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Stage Dashboard: Initializing...');
+        
+        // Follow existing JavaScript patterns from form-validation.js
+        if (window.OpCentrixFormValidator) {
+            console.log('Stage Dashboard: Using existing form validation');
+        }
+        
+        // Use existing confirmation dialog patterns
+        if (window.OpCentrixConfirmationDialog) {
+            console.log('Stage Dashboard: Using existing confirmation dialogs');
+        }
+
+        // Auto-refresh every 30 seconds (like PrintTracking)
+        setInterval(function() {
+            if (!document.querySelector('.htmx-request')) {
+                console.log('Stage Dashboard: Auto-refreshing...');
+                htmx.ajax('GET', '/Operations/StageDashboard?handler=RefreshStages', {
+                    target: '.stage-scheduler-container',
+                    swap: 'innerHTML'
+                });
+            }
+        }, 30000);
+    });
+
+    // Enhanced HTMX response handling
+    document.body.addEventListener('htmx:afterRequest', function(event) {
+        if (event.detail.requestConfig.path.includes('StageDashboard')) {
+            const xhr = event.detail.xhr;
+            
+            if (xhr.status === 200) {
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    if (response.success) {
+                        // Show success notification using existing patterns
+                        if (window.showToast) {
+                            window.showToast(response.message, 'success');
+                        } else {
+                            console.log('Stage Dashboard:', response.message);
+                        }
+                    } else {
+                        console.error('Stage Dashboard Error:', response.message);
+                    }
+                } catch (e) {
+                    // HTML response, probably a refresh - that's fine
+                    console.log('Stage Dashboard: Content refreshed');
+                }
+            }
+        }
+    });
+
+    document.body.addEventListener('htmx:responseError', function(event) {
+        console.error('Stage Dashboard: Request failed', event.detail);
+        if (window.showToast) {
+            window.showToast('Request failed. Please try again.', 'error');
+        }
+    });
+</script>
+}

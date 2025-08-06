@@ -1,0 +1,444 @@
+@page "/Operations/Dashboard"
+@model OpCentrix.Pages.Operations.DashboardModel
+@{
+    ViewData["Title"] = "Operator Dashboard";
+    Layout = "_Layout";
+}
+
+@section Styles {
+    <style>
+    /* Copy mobile-optimized styles from PrintTracking */
+    .operator-dashboard {
+        padding: 15px;
+        max-width: 800px;
+        margin: 0 auto;
+        background-color: #f8f9fa;
+        min-height: 100vh;
+    }
+
+    .operator-header {
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        color: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        text-align: center;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .current-operator {
+        margin-top: 10px;
+        font-size: 14px;
+        opacity: 0.9;
+    }
+
+    .my-stages-section, .available-stages-section {
+        margin-bottom: 30px;
+    }
+
+    .my-stages-section h3, .available-stages-section h3 {
+        color: #333;
+        margin-bottom: 15px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .my-stages-section h3::before {
+        content: "??";
+        font-size: 1.2em;
+    }
+
+    .available-stages-section h3::before {
+        content: "??";
+        font-size: 1.2em;
+    }
+
+    .stage-card {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border-left: 4px solid #ddd;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .stage-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .stage-card.active {
+        border-left-color: #28a745;
+        background: linear-gradient(135deg, #ffffff, #f8fff8);
+    }
+
+    .stage-card.available {
+        border-left-color: #007bff;
+        background: linear-gradient(135deg, #ffffff, #f8f9ff);
+    }
+
+    .stage-info h4 {
+        margin: 0 0 8px 0;
+        color: #333;
+        font-weight: 600;
+    }
+
+    .stage-info p {
+        margin: 4px 0;
+        color: #666;
+        font-size: 14px;
+    }
+
+    .empty-state {
+        text-align: center;
+        color: #6c757d;
+        padding: 40px 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .empty-state i {
+        font-size: 48px;
+        margin-bottom: 15px;
+        opacity: 0.6;
+    }
+
+    /* Touch-friendly buttons for tablets */
+    .btn {
+        min-height: 44px;
+        min-width: 120px;
+        font-size: 16px;
+        font-weight: 500;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+        transform: translateY(-1px);
+    }
+
+    .btn-success {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        border: none;
+    }
+
+    .btn-warning {
+        background: linear-gradient(135deg, #ffc107, #fd7e14);
+        border: none;
+        color: #333;
+    }
+
+    .quick-actions {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 1000;
+    }
+
+    .quick-action-btn {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        border: none;
+        color: white;
+        font-size: 20px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    .quick-action-btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+    }
+
+    .refresh-btn {
+        background: linear-gradient(135deg, #17a2b8, #138496);
+    }
+
+    .help-btn {
+        background: linear-gradient(135deg, #6f42c1, #5a2d91);
+    }
+
+    /* Mobile responsive */
+    @@media (max-width: 768px) {
+        .operator-dashboard {
+            padding: 10px;
+        }
+        
+        .stage-card {
+            padding: 12px;
+        }
+        
+        .btn {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .quick-actions {
+            bottom: 15px;
+            right: 15px;
+        }
+
+        .quick-action-btn {
+            width: 50px;
+            height: 50px;
+            font-size: 18px;
+        }
+    }
+
+    /* Loading states */
+    .htmx-indicator {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 9999;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    .htmx-indicator.htmx-request {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    </style>
+}
+
+<div class="operator-dashboard" id="operator-dashboard">
+    <!-- Header -->
+    <div class="operator-header">
+        <h2>OPERATOR DASHBOARD</h2>
+        <div class="current-operator">
+            <strong>Current Operator: </strong>
+            <span id="current-operator">@Model.CurrentOperator</span>
+        </div>
+        <div class="current-time">
+            <small>@DateTime.Now.ToString("dddd, MMMM dd, yyyy - HH:mm")</small>
+        </div>
+    </div>
+    
+    <!-- My Active Stages -->
+    <div class="my-stages-section">
+        <h3>MY ACTIVE STAGES</h3>
+        @if (Model.MyActiveStages.Any())
+        {
+            @foreach(var stage in Model.MyActiveStages)
+            {
+                <div class="stage-card active" id="stage-card-@stage.JobId-@stage.StageId">
+                    <div class="stage-info">
+                        <h4>@stage.JobPartNumber - @stage.StageName</h4>
+                        <p><strong>Started:</strong> @stage.StartTime.ToString("HH:mm on MMM dd")</p>
+                        <p><strong>Estimated Duration:</strong> @stage.EstimatedHours hours</p>
+                        <p><strong>Machine:</strong> @stage.MachineId</p>
+                    </div>
+                    <button class="btn btn-warning" 
+                            hx-post="/Operations/Dashboard?handler=PunchOut"
+                            hx-vals='{"jobId": @stage.JobId, "stageId": @stage.StageId}'
+                            hx-confirm="Are you sure you want to punch out of this stage?"
+                            hx-target="#stage-card-@stage.JobId-@stage.StageId"
+                            hx-indicator="#loading-spinner">
+                        <i class="fas fa-stop me-1"></i>Punch Out
+                    </button>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="empty-state">
+                <i class="fas fa-clock"></i>
+                <p><strong>No active stages</strong></p>
+                <p>Select a job below to get started with your work.</p>
+            </div>
+        }
+    </div>
+    
+    <!-- Available Stages -->
+    <div class="available-stages-section">
+        <h3>AVAILABLE STAGES</h3>
+        @if (Model.AvailableStages.Any())
+        {
+            @foreach(var stage in Model.AvailableStages)
+            {
+                <div class="stage-card available" id="stage-card-@stage.JobId-@stage.StageId">
+                    <div class="stage-info">
+                        <h4>@stage.JobPartNumber - @stage.StageName</h4>
+                        <p><strong>Machine:</strong> @stage.MachineId | <strong>Est. Duration:</strong> @stage.EstimatedHours h</p>
+                        <p><strong>Priority:</strong> @stage.Priority | <strong>Status:</strong> @stage.Status</p>
+                        @if (!string.IsNullOrEmpty(stage.Notes))
+                        {
+                            <p><strong>Notes:</strong> @stage.Notes</p>
+                        }
+                    </div>
+                    <button class="btn btn-success" 
+                            hx-post="/Operations/Dashboard?handler=PunchIn"
+                            hx-vals='{"jobId": @stage.JobId, "stageId": @stage.StageId}'
+                            hx-target="#stage-card-@stage.JobId-@stage.StageId"
+                            hx-indicator="#loading-spinner">
+                        <i class="fas fa-play me-1"></i>Punch In
+                    </button>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="empty-state">
+                <i class="fas fa-check-circle"></i>
+                <p><strong>No available stages</strong></p>
+                <p>All current work is either in progress or completed. Check back later for new assignments.</p>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="quick-actions">
+    <button class="quick-action-btn refresh-btn" 
+            hx-get="/Operations/Dashboard"
+            hx-target="#operator-dashboard"
+            hx-indicator="#loading-spinner"
+            title="Refresh Dashboard">
+        <i class="fas fa-sync-alt"></i>
+    </button>
+    <button class="quick-action-btn help-btn" 
+            onclick="toggleHelp()"
+            title="Help & Information">
+        <i class="fas fa-question"></i>
+    </button>
+</div>
+
+<!-- Loading spinner -->
+<div id="loading-spinner" class="htmx-indicator">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <span>Processing...</span>
+</div>
+
+<!-- Help Modal -->
+<div class="modal fade" id="helpModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Operator Dashboard Help</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6>My Active Stages</h6>
+                <p>Shows the stages you are currently working on. Click "Punch Out" when you complete the work.</p>
+                
+                <h6>Available Stages</h6>
+                <p>Shows stages that are ready for you to work on. Click "Punch In" to start working on a stage.</p>
+                
+                <h6>Quick Actions</h6>
+                <ul>
+                    <li><strong>Refresh Button:</strong> Updates the dashboard with the latest information</li>
+                    <li><strong>Help Button:</strong> Shows this help information</li>
+                </ul>
+                
+                <h6>Tips</h6>
+                <ul>
+                    <li>The dashboard auto-refreshes every 30 seconds</li>
+                    <li>Make sure to punch out when you finish a stage</li>
+                    <li>Contact your supervisor if you encounter any issues</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // Use existing OpCentrix patterns
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Operator Dashboard: Initializing...');
+        
+        // Auto-refresh every 30 seconds
+        setInterval(function() {
+            if (!document.querySelector('.htmx-request')) {
+                console.log('Operator Dashboard: Auto-refreshing...');
+                htmx.ajax('GET', '/Operations/Dashboard', {
+                    target: '#operator-dashboard',
+                    swap: 'outerHTML'
+                });
+            }
+        }, 30000);
+        
+        // Show current time
+        updateCurrentTime();
+        setInterval(updateCurrentTime, 60000); // Update every minute
+    });
+
+    function toggleHelp() {
+        const helpModal = new bootstrap.Modal(document.getElementById('helpModal'));
+        helpModal.show();
+    }
+
+    function updateCurrentTime() {
+        const now = new Date();
+        const options = { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        };
+        const timeString = now.toLocaleDateString('en-US', options);
+        const timeElement = document.querySelector('.current-time small');
+        if (timeElement) {
+            timeElement.textContent = timeString;
+        }
+    }
+
+    // Enhanced HTMX response handling
+    document.body.addEventListener('htmx:afterRequest', function(event) {
+        if (event.detail.requestConfig.path.includes('Dashboard')) {
+            const xhr = event.detail.xhr;
+            
+            if (xhr.status === 200) {
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    if (response.success) {
+                        console.log('Operator Dashboard:', response.message);
+                        
+                        // Show success notification if available
+                        if (window.showToast) {
+                            window.showToast(response.message, 'success');
+                        }
+                    } else {
+                        console.error('Operator Dashboard Error:', response.message);
+                        if (window.showToast) {
+                            window.showToast(response.message, 'error');
+                        }
+                    }
+                } catch (e) {
+                    // HTML response, probably a refresh - that's fine
+                    console.log('Operator Dashboard: Content refreshed');
+                }
+            }
+        }
+    });
+
+    document.body.addEventListener('htmx:responseError', function(event) {
+        console.error('Operator Dashboard: Request failed', event.detail);
+        if (window.showToast) {
+            window.showToast('Request failed. Please try again.', 'error');
+        }
+    });
+</script>
+}

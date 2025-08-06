@@ -5,16 +5,26 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace OpCentrix.Models
 {
     /// <summary>
-    /// Tracks the execution of a specific production stage for a prototype job
+    /// Tracks the execution of a specific production stage for jobs (both regular jobs and prototype jobs)
     /// Captures actual time, cost, and quality data for each stage
+    /// Updated to support both regular jobs and prototype jobs per Stage Dashboard Master Plan
     /// </summary>
     public class ProductionStageExecution
     {
         [Key]
         public int Id { get; set; }
 
-        [Required]
-        public int PrototypeJobId { get; set; }
+        /// <summary>
+        /// Reference to regular Job (new field for stage dashboard support)
+        /// Either JobId OR PrototypeJobId must be set, but not both
+        /// </summary>
+        public int? JobId { get; set; }
+
+        /// <summary>
+        /// Reference to PrototypeJob (existing field, kept for backward compatibility)
+        /// Either JobId OR PrototypeJobId must be set, but not both
+        /// </summary>
+        public int? PrototypeJobId { get; set; }
 
         [Required]
         public int ProductionStageId { get; set; }
@@ -94,11 +104,29 @@ namespace OpCentrix.Models
         [StringLength(100)]
         public string? ApprovedBy { get; set; }
 
+        // Stage Dashboard Support Fields (new)
+        [StringLength(100)]
+        public string? OperatorName { get; set; }
+
+        public DateTime? ActualStartTime { get; set; }
+        public DateTime? ActualEndTime { get; set; }
+
+        [StringLength(100)]
+        public string? CreatedBy { get; set; }
+
+        [StringLength(100)]
+        public string? LastModifiedBy { get; set; }
+
+        public DateTime? LastModifiedDate { get; set; }
+
         // Audit Fields
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedDate { get; set; }
 
         // Navigation Properties
+        [ForeignKey(nameof(JobId))]
+        public virtual Job? Job { get; set; }
+
         [ForeignKey(nameof(PrototypeJobId))]
         public virtual PrototypeJob? PrototypeJob { get; set; }
 
@@ -106,5 +134,33 @@ namespace OpCentrix.Models
         public virtual ProductionStage? ProductionStage { get; set; }
 
         public virtual ICollection<PrototypeTimeLog> TimeLogs { get; set; } = new List<PrototypeTimeLog>();
+
+        /// <summary>
+        /// Helper property to get the associated job, whether it's a regular job or prototype job
+        /// </summary>
+        [NotMapped]
+        public string JobIdentifier
+        {
+            get
+            {
+                if (JobId.HasValue && Job != null)
+                    return $"Job-{JobId}-{Job.PartNumber}";
+                if (PrototypeJobId.HasValue && PrototypeJob != null)
+                    return $"Prototype-{PrototypeJobId}-{PrototypeJob.PrototypeNumber}";
+                return "Unknown";
+            }
+        }
+
+        /// <summary>
+        /// Helper property to determine if this is for a regular job or prototype
+        /// </summary>
+        [NotMapped]
+        public bool IsRegularJob => JobId.HasValue;
+
+        /// <summary>
+        /// Helper property to determine if this is for a prototype job
+        /// </summary>
+        [NotMapped]
+        public bool IsPrototypeJob => PrototypeJobId.HasValue;
     }
 }

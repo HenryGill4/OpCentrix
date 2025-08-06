@@ -13,7 +13,7 @@ namespace OpCentrix.Data
 
         // Core scheduling tables
         public DbSet<Job> Jobs { get; set; }
-        public DbSet<Part> Parts { get; set; }  
+        public DbSet<Part> Parts { get; set; }
         public DbSet<Machine> Machines { get; set; }
         public DbSet<User> Users { get; set; }
         public DbSet<UserSettings> UserSettings { get; set; }
@@ -101,7 +101,7 @@ namespace OpCentrix.Data
 
             // Configure core entities for Parts page functionality
             ConfigureCoreEntities(modelBuilder);
-            
+
             // Configure admin entities
             ConfigureAdminEntities(modelBuilder);
 
@@ -110,7 +110,7 @@ namespace OpCentrix.Data
 
             // Configure prototype tracking entities  
             ConfigurePrototypeTrackingEntities(modelBuilder);
-            
+
             // Configure Option A workflow entities
             ConfigureOptionAWorkflowEntities(modelBuilder);
 
@@ -141,10 +141,10 @@ namespace OpCentrix.Data
                 entity.Property(e => e.EstimatedPowderUsageKg).HasDefaultValue(0.5);
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
                 entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
-                
+
                 // CRITICAL FIX: Make CustomerOrderNumber nullable and provide default
                 entity.Property(e => e.CustomerOrderNumber).HasMaxLength(100).HasDefaultValue("");
-                
+
                 // Indexes for performance
                 entity.HasIndex(e => new { e.MachineId, e.ScheduledStart });
                 entity.HasIndex(e => e.Status);
@@ -167,7 +167,7 @@ namespace OpCentrix.Data
                 entity.Property(e => e.LastModifiedBy).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
                 entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
-                
+
                 // Configure decimal properties with proper precision
                 entity.Property(e => e.MaterialCostPerKg).HasPrecision(12, 2);
                 entity.Property(e => e.StandardLaborCostPerHour).HasPrecision(10, 2);
@@ -178,7 +178,7 @@ namespace OpCentrix.Data
                 entity.Property(e => e.ArgonCostPerHour).HasPrecision(10, 2);
                 entity.Property(e => e.AverageCostPerUnit).HasPrecision(10, 2);
                 entity.Property(e => e.StandardSellingPrice).HasPrecision(10, 2);
-                
+
                 // Configure string properties with defaults
                 entity.Property(e => e.PowderSpecification).HasMaxLength(100).HasDefaultValue("15-45 micron particle size");
                 entity.Property(e => e.Dimensions).HasMaxLength(100).HasDefaultValue("");
@@ -204,7 +204,7 @@ namespace OpCentrix.Data
                 entity.Property(e => e.AvgDuration).HasMaxLength(50).HasDefaultValue("8h 0m");
                 entity.Property(e => e.AdminOverrideReason).HasMaxLength(500).HasDefaultValue("");
                 entity.Property(e => e.AdminOverrideBy).HasMaxLength(100).HasDefaultValue("");
-                
+
                 // B&T Specialization properties
                 entity.Property(e => e.ExportClassification).HasMaxLength(50).HasDefaultValue("");
                 entity.Property(e => e.ComponentType).HasMaxLength(50).HasDefaultValue("");
@@ -212,16 +212,16 @@ namespace OpCentrix.Data
                 entity.Property(e => e.BTTestingRequirements).HasMaxLength(500).HasDefaultValue("");
                 entity.Property(e => e.BTQualityStandards).HasMaxLength(500).HasDefaultValue("");
                 entity.Property(e => e.BTRegulatoryNotes).HasMaxLength(200).HasDefaultValue("");
-                
+
                 // Foreign key relationships for B&T
                 entity.HasOne(e => e.PartClassification)
                     .WithMany(pc => pc.Parts)
                     .HasForeignKey(e => e.PartClassificationId)
                     .OnDelete(DeleteBehavior.SetNull);
-                
+
                 // Unique constraint on part number
                 entity.HasIndex(e => e.PartNumber).IsUnique();
-                
+
                 // Performance indexes for Parts page
                 entity.HasIndex(e => e.Name);
                 entity.HasIndex(e => e.Material);
@@ -233,7 +233,7 @@ namespace OpCentrix.Data
                 entity.HasIndex(e => e.RequiredMachineType);
                 entity.HasIndex(e => e.CreatedDate);
                 entity.HasIndex(e => e.CustomerPartNumber);
-                
+
                 // B&T specific indexes
                 entity.HasIndex(e => e.PartClassificationId);
                 entity.HasIndex(e => e.ComponentType);
@@ -256,34 +256,34 @@ namespace OpCentrix.Data
                 entity.Property(e => e.LastModifiedBy).IsRequired().HasMaxLength(100).HasDefaultValue("System");
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
                 entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
-                
+
                 // Constraints and indexes
                 entity.HasIndex(e => e.MachineId).IsUnique();
                 entity.HasIndex(e => e.MachineType);
                 entity.HasIndex(e => e.Status);
                 entity.HasIndex(e => e.IsActive);
             });
-            
+
             // FIXED: Configure MachineCapability entity with correct foreign key
             modelBuilder.Entity<MachineCapability>(entity =>
             {
                 entity.HasKey(e => e.Id);
-                
+
                 // Uses integer MachineId referencing Machine.Id (primary key)
                 entity.Property(e => e.MachineId).IsRequired();
-                
+
                 // Relationship to Machine using integer primary key
                 entity.HasOne(e => e.Machine)
                       .WithMany(m => m.Capabilities)
                       .HasForeignKey(e => e.MachineId)
                       .OnDelete(DeleteBehavior.Cascade);
-                      
+
                 // Indexes
                 entity.HasIndex(e => e.MachineId);
                 entity.HasIndex(e => e.CapabilityType);
                 entity.HasIndex(e => e.IsAvailable);
                 entity.HasIndex(e => new { e.MachineId, e.CapabilityType });
-                
+
                 // Properties
                 entity.Property(e => e.CapabilityType).HasMaxLength(50);
                 entity.Property(e => e.CapabilityName).HasMaxLength(100);
@@ -298,7 +298,7 @@ namespace OpCentrix.Data
                 entity.Property(e => e.IsAvailable).HasDefaultValue(true);
                 entity.Property(e => e.Priority).HasDefaultValue(3);
             });
-            
+
             // Task 9: Configure JobNote entity
             modelBuilder.Entity<JobNote>(entity =>
             {
@@ -311,19 +311,19 @@ namespace OpCentrix.Data
                 entity.Property(e => e.LastModifiedBy).HasMaxLength(100).HasDefaultValue("System");
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
                 entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
-                
+
                 // Foreign key relationship to Job
                 entity.HasOne(e => e.Job)
                     .WithMany(j => j.JobNotes)
                     .HasForeignKey(e => e.JobId)
                     .OnDelete(DeleteBehavior.Cascade);
-                    
+
                 // Foreign key relationship to Part (optional)
                 entity.HasOne(e => e.Part)
                     .WithMany(p => p.JobNotes)
                     .HasForeignKey(e => e.PartId)
                     .OnDelete(DeleteBehavior.SetNull);
-                    
+
                 // Indexes for performance
                 entity.HasIndex(e => e.JobId);
                 entity.HasIndex(e => e.PartId);
@@ -352,16 +352,16 @@ namespace OpCentrix.Data
                 entity.Property(e => e.LastModifiedBy).HasMaxLength(100).HasDefaultValue("System");
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
                 entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
-                
+
                 // Foreign key relationships
                 entity.HasOne(e => e.Job)
                     .WithMany(j => j.JobStages)
                     .HasForeignKey(e => e.JobId)
                     .OnDelete(DeleteBehavior.Cascade);
-                    
+
                 // NOTE: JobStage.MachineId is a string reference to Machine.MachineId
                 // We don't configure a navigation property here to avoid confusion
-                
+
                 // Indexes for performance
                 entity.HasIndex(e => e.JobId);
                 entity.HasIndex(e => e.StageType);
@@ -380,25 +380,25 @@ namespace OpCentrix.Data
                 entity.Property(e => e.DependencyType).IsRequired().HasMaxLength(50).HasDefaultValue("FinishToStart");
                 entity.Property(e => e.Notes).HasMaxLength(500);
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
-                
+
                 // Foreign key relationships
                 entity.HasOne(e => e.DependentStage)
                     .WithMany(s => s.Dependencies)
                     .HasForeignKey(e => e.DependentStageId)
                     .OnDelete(DeleteBehavior.Restrict);
-                    
+
                 entity.HasOne(e => e.RequiredStage)
                     .WithMany(s => s.Dependents)
                     .HasForeignKey(e => e.RequiredStageId)
                     .OnDelete(DeleteBehavior.Restrict);
-                    
+
                 // Indexes for performance
                 entity.HasIndex(e => e.DependentStageId);
                 entity.HasIndex(e => e.RequiredStageId);
                 entity.HasIndex(e => e.DependencyType);
-                
+
                 // Prevent circular dependencies
-                entity.ToTable(t => t.HasCheckConstraint("CK_JobStageDependency_NoSelfReference", 
+                entity.ToTable(t => t.HasCheckConstraint("CK_JobStageDependency_NoSelfReference",
                     "DependentStageId != RequiredStageId"));
             });
 
@@ -411,13 +411,13 @@ namespace OpCentrix.Data
                 entity.Property(e => e.Priority).HasDefaultValue(3);
                 entity.Property(e => e.CreatedBy).HasMaxLength(100).HasDefaultValue("System");
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
-                
+
                 // Foreign key relationship to JobStage
                 entity.HasOne(e => e.Stage)
                     .WithMany(s => s.StageNotes)
                     .HasForeignKey(e => e.StageId)
                     .OnDelete(DeleteBehavior.Cascade);
-                    
+
                 // Indexes for performance
                 entity.HasIndex(e => e.StageId);
                 entity.HasIndex(e => e.NoteType);
@@ -528,7 +528,7 @@ namespace OpCentrix.Data
                 entity.HasIndex(e => new { e.ReportedDate, e.Status });
             });
         }
-        
+
         private void ConfigureAdminEntities(ModelBuilder modelBuilder)
         {
             // Configure OperatingShift entity
@@ -540,7 +540,7 @@ namespace OpCentrix.Data
                 entity.Property(e => e.LastModifiedBy).HasMaxLength(100).HasDefaultValue("System");
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
                 entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
-                
+
                 // Indexes
                 entity.HasIndex(e => e.DayOfWeek);
                 entity.HasIndex(e => e.IsActive);
@@ -564,10 +564,10 @@ namespace OpCentrix.Data
                 entity.Property(e => e.LastModifiedBy).HasMaxLength(100).HasDefaultValue("System");
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
                 entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
-                
+
                 // Unique constraint
                 entity.HasIndex(e => e.SettingKey).IsUnique();
-                
+
                 // Indexes
                 entity.HasIndex(e => e.Category);
                 entity.HasIndex(e => e.IsActive);
@@ -588,10 +588,10 @@ namespace OpCentrix.Data
                 entity.Property(e => e.LastModifiedBy).HasMaxLength(100).HasDefaultValue("System");
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
                 entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
-                
+
                 // Unique constraint
                 entity.HasIndex(e => new { e.RoleName, e.PermissionKey }).IsUnique();
-                
+
                 // Indexes
                 entity.HasIndex(e => e.RoleName);
                 entity.HasIndex(e => e.PermissionKey);
@@ -620,18 +620,18 @@ namespace OpCentrix.Data
                 entity.Property(e => e.LastModifiedBy).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
                 entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
-                
+
                 // Foreign key relationships
                 entity.HasOne(e => e.Part)
                     .WithMany(p => p.InspectionCheckpoints)
                     .HasForeignKey(e => e.PartId)
                     .OnDelete(DeleteBehavior.Cascade);
-                    
+
                 entity.HasOne(e => e.DefectCategory)
                     .WithMany()
                     .HasForeignKey(e => e.DefectCategoryId)
                     .OnDelete(DeleteBehavior.SetNull);
-                
+
                 // Indexes
                 entity.HasIndex(e => e.PartId);
                 entity.HasIndex(e => e.DefectCategoryId);
@@ -659,7 +659,7 @@ namespace OpCentrix.Data
                 entity.Property(e => e.LastModifiedBy).HasMaxLength(100).HasDefaultValue("System");
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
                 entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
-                
+
                 // Indexes
                 entity.HasIndex(e => e.Name);
                 entity.HasIndex(e => e.Code);
@@ -768,7 +768,7 @@ namespace OpCentrix.Data
                 entity.HasIndex(e => new { e.ReportedDate, e.Status });
             });
         }
-        
+
         private void ConfigureBTEntities(ModelBuilder modelBuilder)
         {
             // Configure PartClassification entity - Segment 7.1
@@ -797,7 +797,7 @@ namespace OpCentrix.Data
                 entity.Property(e => e.LastModifiedBy).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
                 entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
-                
+
                 // Indexes
                 entity.HasIndex(e => e.ClassificationCode).IsUnique();
                 entity.HasIndex(e => e.ClassificationName);
@@ -843,17 +843,17 @@ namespace OpCentrix.Data
                 entity.Property(e => e.LastModifiedBy).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
                 entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
-                
+
                 // Configure decimal properties
                 entity.Property(e => e.MaxPenaltyAmount).HasPrecision(12, 2);
                 entity.Property(e => e.EstimatedImplementationCost).HasPrecision(10, 2);
-                
+
                 // Foreign key relationships
                 entity.HasOne(e => e.PartClassification)
                     .WithMany(pc => pc.ComplianceRequirements)
                     .HasForeignKey(e => e.PartClassificationId)
                     .OnDelete(DeleteBehavior.SetNull);
-                
+
                 // Indexes
                 entity.HasIndex(e => e.RequirementCode).IsUnique();
                 entity.HasIndex(e => e.ComplianceType);
@@ -911,23 +911,23 @@ namespace OpCentrix.Data
                 entity.Property(e => e.LastModifiedBy).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
                 entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
-                
+
                 // Foreign key relationships
                 entity.HasOne(e => e.Part)
                     .WithMany(p => p.SerialNumbers)
                     .HasForeignKey(e => e.PartId)
                     .OnDelete(DeleteBehavior.SetNull);
-                    
+
                 entity.HasOne(e => e.Job)
                     .WithMany()
                     .HasForeignKey(e => e.JobId)
                     .OnDelete(DeleteBehavior.SetNull);
-                    
+
                 entity.HasOne(e => e.ComplianceRequirement)
                     .WithMany(cr => cr.SerialNumbers)
                     .HasForeignKey(e => e.ComplianceRequirementId)
                     .OnDelete(DeleteBehavior.SetNull);
-                
+
                 // Indexes
                 entity.HasIndex(e => e.SerialNumberValue).IsUnique();
                 entity.HasIndex(e => e.ManufacturerCode);
@@ -985,31 +985,31 @@ namespace OpCentrix.Data
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
                 entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
                 entity.Property(e => e.LastAccessedDate).HasDefaultValueSql("datetime('now')");
-                
+
                 // Configure decimal properties
                 entity.Property(e => e.FileSizeMB).HasPrecision(8, 2);
-                
+
                 // Foreign key relationships
                 entity.HasOne(e => e.SerialNumber)
                     .WithMany(sn => sn.ComplianceDocuments)
                     .HasForeignKey(e => e.SerialNumberId)
                     .OnDelete(DeleteBehavior.SetNull);
-                    
+
                 entity.HasOne(e => e.ComplianceRequirement)
                     .WithMany(cr => cr.ComplianceDocuments)
                     .HasForeignKey(e => e.ComplianceRequirementId)
                     .OnDelete(DeleteBehavior.SetNull);
-                    
+
                 entity.HasOne(e => e.Part)
                     .WithMany(p => p.ComplianceDocuments)
                     .HasForeignKey(e => e.PartId)
                     .OnDelete(DeleteBehavior.SetNull);
-                    
+
                 entity.HasOne(e => e.Job)
                     .WithMany()
                     .HasForeignKey(e => e.JobId)
                     .OnDelete(DeleteBehavior.SetNull);
-                
+
                 // Indexes
                 entity.HasIndex(e => e.DocumentNumber).IsUnique();
                 entity.HasIndex(e => e.DocumentType);
@@ -1026,7 +1026,7 @@ namespace OpCentrix.Data
                 entity.HasIndex(e => e.IsArchived);
             });
         }
-        
+
         private void ConfigurePrototypeTrackingEntities(ModelBuilder modelBuilder)
         {
             // Configure PrototypeJob entity
@@ -1041,7 +1041,7 @@ namespace OpCentrix.Data
                 entity.Property(e => e.CreatedBy).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
                 entity.Property(e => e.IsActive).HasDefaultValue(true);
-                
+
                 // Configure decimal properties
                 entity.Property(e => e.TotalActualCost).HasPrecision(12, 2);
                 entity.Property(e => e.TotalEstimatedCost).HasPrecision(12, 2);
@@ -1049,13 +1049,13 @@ namespace OpCentrix.Data
                 entity.Property(e => e.TotalActualHours).HasPrecision(8, 2);
                 entity.Property(e => e.TotalEstimatedHours).HasPrecision(8, 2);
                 entity.Property(e => e.TimeVariancePercent).HasPrecision(5, 2);
-                
+
                 // Foreign key relationships
                 entity.HasOne(e => e.Part)
                     .WithMany()
                     .HasForeignKey(e => e.PartId)
                     .OnDelete(DeleteBehavior.Restrict);
-                
+
                 // Indexes
                 entity.HasIndex(e => e.PrototypeNumber).IsUnique();
                 entity.HasIndex(e => e.PartId);
@@ -1082,23 +1082,10 @@ namespace OpCentrix.Data
                 entity.Property(e => e.IsOptional).HasDefaultValue(false);
                 entity.Property(e => e.RequiredRole).HasMaxLength(50);
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.CreatedBy).IsRequired().HasMaxLength(100).HasDefaultValue("System");
+                entity.Property(e => e.LastModifiedBy).IsRequired().HasMaxLength(100).HasDefaultValue("System");
                 entity.Property(e => e.IsActive).HasDefaultValue(true);
-                
-                // Configure additional columns that exist in database
-                entity.Property(e => e.CustomFieldsConfig).HasMaxLength(2000).HasDefaultValue("[]");
-                entity.Property(e => e.AssignedMachineIds).HasMaxLength(500);
-                entity.Property(e => e.RequiresMachineAssignment).HasDefaultValue(false);
-                entity.Property(e => e.DefaultMachineId).HasMaxLength(50);
-                entity.Property(e => e.StageColor).HasMaxLength(7).HasDefaultValue("#007bff");
-                entity.Property(e => e.StageIcon).HasMaxLength(50).HasDefaultValue("fas fa-cogs");
-                entity.Property(e => e.Department).HasMaxLength(100);
-                entity.Property(e => e.AllowParallelExecution).HasDefaultValue(false);
-                entity.Property(e => e.DefaultMaterialCost).HasPrecision(10, 2).HasDefaultValue(0.00m);
-                entity.Property(e => e.DefaultDurationHours).HasDefaultValue(1.0);
-                entity.Property(e => e.CreatedBy).HasMaxLength(100).HasDefaultValue("System");
-                entity.Property(e => e.LastModifiedBy).HasMaxLength(100).HasDefaultValue("System");
-                entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
-                
+
                 // Indexes
                 entity.HasIndex(e => e.Name);
                 entity.HasIndex(e => e.DisplayOrder);
@@ -1119,7 +1106,7 @@ namespace OpCentrix.Data
                 entity.Property(e => e.ProcessParameters).HasMaxLength(2000).HasDefaultValue("{}");
                 entity.Property(e => e.ExecutedBy).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
-                
+
                 // Configure decimal properties
                 entity.Property(e => e.EstimatedHours).HasPrecision(8, 2);
                 entity.Property(e => e.ActualHours).HasPrecision(8, 2);
@@ -1130,28 +1117,46 @@ namespace OpCentrix.Data
                 entity.Property(e => e.MaterialCost).HasPrecision(10, 2);
                 entity.Property(e => e.LaborCost).HasPrecision(10, 2);
                 entity.Property(e => e.OverheadCost).HasPrecision(10, 2);
-                
-                // Foreign key relationships
+
+                // Foreign key relationships - Updated for stage dashboard support
+                // Either JobId OR PrototypeJobId must be set (but not both)
+                entity.HasOne(e => e.Job)
+                    .WithMany()
+                    .HasForeignKey(e => e.JobId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
                 entity.HasOne(e => e.PrototypeJob)
                     .WithMany(pj => pj.StageExecutions)
                     .HasForeignKey(e => e.PrototypeJobId)
                     .OnDelete(DeleteBehavior.Cascade);
-                    
+
                 entity.HasOne(e => e.ProductionStage)
                     .WithMany(ps => ps.StageExecutions)
                     .HasForeignKey(e => e.ProductionStageId)
                     .OnDelete(DeleteBehavior.Restrict);
-                
-                // Unique constraint - one execution per stage per prototype job
-                entity.HasIndex(e => new { e.PrototypeJobId, e.ProductionStageId }).IsUnique();
-                
+
+                // Unique constraints - prevent multiple executions per stage per job
+                entity.HasIndex(e => new { e.PrototypeJobId, e.ProductionStageId }).IsUnique()
+                    .HasFilter("PrototypeJobId IS NOT NULL"); // Only for prototype jobs
+
+                entity.HasIndex(e => new { e.JobId, e.ProductionStageId }).IsUnique()
+                    .HasFilter("JobId IS NOT NULL"); // Only for regular jobs
+
                 // Performance indexes
+                entity.HasIndex(e => e.JobId);
                 entity.HasIndex(e => e.PrototypeJobId);
                 entity.HasIndex(e => e.ProductionStageId);
                 entity.HasIndex(e => e.Status);
                 entity.HasIndex(e => e.ExecutedBy);
+                entity.HasIndex(e => e.OperatorName);
                 entity.HasIndex(e => e.StartDate);
                 entity.HasIndex(e => e.CompletionDate);
+                entity.HasIndex(e => e.ActualStartTime);
+                entity.HasIndex(e => e.ActualEndTime);
+
+                // Custom constraint to ensure either JobId or PrototypeJobId is set (but not both)
+                entity.ToTable(t => t.HasCheckConstraint("CK_ProductionStageExecution_JobReference",
+                    "(JobId IS NOT NULL AND PrototypeJobId IS NULL) OR (JobId IS NULL AND PrototypeJobId IS NOT NULL)"));
             });
 
             // Configure AssemblyComponent entity
@@ -1167,17 +1172,17 @@ namespace OpCentrix.Data
                 entity.Property(e => e.CreatedBy).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
                 entity.Property(e => e.IsActive).HasDefaultValue(true);
-                
+
                 // Configure decimal properties
                 entity.Property(e => e.UnitCost).HasPrecision(8, 2);
                 entity.Property(e => e.TotalCost).HasPrecision(10, 2);
-                
+
                 // Foreign key relationships
                 entity.HasOne(e => e.PrototypeJob)
                     .WithMany(pj => pj.AssemblyComponents)
                     .HasForeignKey(e => e.PrototypeJobId)
                     .OnDelete(DeleteBehavior.Cascade);
-                
+
                 // Indexes
                 entity.HasIndex(e => e.PrototypeJobId);
                 entity.HasIndex(e => e.ComponentType);
@@ -1194,13 +1199,13 @@ namespace OpCentrix.Data
                 entity.Property(e => e.ActivityDescription).IsRequired().HasMaxLength(500);
                 entity.Property(e => e.Employee).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
-                
+
                 // Foreign key relationships
                 entity.HasOne(e => e.ProductionStageExecution)
                     .WithMany(pse => pse.TimeLogs)
                     .HasForeignKey(e => e.ProductionStageExecutionId)
                     .OnDelete(DeleteBehavior.Cascade);
-                
+
                 // Indexes
                 entity.HasIndex(e => e.ProductionStageExecutionId);
                 entity.HasIndex(e => e.ActivityType);
@@ -1209,7 +1214,7 @@ namespace OpCentrix.Data
                 entity.HasIndex(e => e.StartTime);
             });
         }
-        
+
         private void ConfigureOptionAWorkflowEntities(ModelBuilder modelBuilder)
         {
             // Configure BuildCohort entity
@@ -1223,13 +1228,13 @@ namespace OpCentrix.Data
                 entity.Property(e => e.Notes).HasMaxLength(1000);
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
                 entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
-                
+
                 // Foreign key relationships
                 entity.HasOne(e => e.BuildJob)
                     .WithMany()
                     .HasForeignKey(e => e.BuildJobId)
                     .OnDelete(DeleteBehavior.SetNull);
-                
+
                 // Indexes
                 entity.HasIndex(e => e.BuildNumber).IsUnique();
                 entity.HasIndex(e => e.BuildJobId);
@@ -1250,18 +1255,18 @@ namespace OpCentrix.Data
                 entity.Property(e => e.Notes).HasMaxLength(1000);
                 entity.Property(e => e.MachineId).HasMaxLength(50);
                 entity.Property(e => e.QualityResult).HasMaxLength(20);
-                
+
                 // Foreign key relationships
                 entity.HasOne(e => e.Job)
                     .WithMany()
                     .HasForeignKey(e => e.JobId)
                     .OnDelete(DeleteBehavior.Cascade);
-                    
+
                 entity.HasOne(e => e.ProductionStage)
                     .WithMany()
                     .HasForeignKey(e => e.ProductionStageId)
                     .OnDelete(DeleteBehavior.SetNull);
-                
+
                 // Indexes
                 entity.HasIndex(e => e.JobId);
                 entity.HasIndex(e => e.ProductionStageId);
@@ -1272,19 +1277,19 @@ namespace OpCentrix.Data
                 entity.HasIndex(e => e.MachineId);
                 entity.HasIndex(e => new { e.JobId, e.Timestamp });
             });
-            
+
             // Update Job entity configuration for Option A fields
             modelBuilder.Entity<Job>(entity =>
             {
                 // Option A workflow fields
                 entity.Property(e => e.WorkflowStage).HasMaxLength(50);
-                
+
                 // Foreign key to BuildCohort
                 entity.HasOne<BuildCohort>()
                     .WithMany(bc => bc.Jobs)
                     .HasForeignKey(e => e.BuildCohortId)
                     .OnDelete(DeleteBehavior.SetNull);
-                
+
                 // Indexes for new workflow fields
                 entity.HasIndex(e => e.BuildCohortId);
                 entity.HasIndex(e => e.WorkflowStage);
@@ -1309,13 +1314,13 @@ namespace OpCentrix.Data
                 entity.Property(e => e.IsPrimary).HasDefaultValue(false);
                 entity.Property(e => e.InspectionNotes).HasMaxLength(500);
                 entity.Property(e => e.CompletedAt).HasDefaultValueSql("datetime('now')");
-                
+
                 // Foreign key relationship
                 entity.HasOne(e => e.BuildJob)
                     .WithMany()
                     .HasForeignKey(e => e.BuildJobId)
                     .OnDelete(DeleteBehavior.Cascade);
-                
+
                 // Indexes
                 entity.HasIndex(e => e.BuildJobId);
                 entity.HasIndex(e => e.PartNumber);
@@ -1327,22 +1332,24 @@ namespace OpCentrix.Data
             // Configure OperatorEstimateLog entity
             modelBuilder.Entity<OperatorEstimateLog>(entity =>
             {
-                entity.HasKey(e => e.Id);
-                entity.Property(e => e.EstimatedHours).HasPrecision(5, 2).IsRequired();
-                entity.Property(e => e.TimeFactors).HasMaxLength(500);
-                entity.Property(e => e.OperatorNotes).HasMaxLength(500);
-                entity.Property(e => e.LoggedAt).HasDefaultValueSql("datetime('now')");
-                
-                // Foreign key relationship
-                entity.HasOne(e => e.BuildJob)
-                    .WithMany()
-                    .HasForeignKey(e => e.BuildJobId)
-                    .OnDelete(DeleteBehavior.Cascade);
-                
-                // Indexes
-                entity.HasIndex(e => e.BuildJobId);
-                entity.HasIndex(e => e.LoggedAt);
-                entity.HasIndex(e => e.EstimatedHours);
+                {
+                    entity.HasKey(e => e.Id);
+                    entity.Property(e => e.EstimatedHours).HasPrecision(5, 2).IsRequired();
+                    entity.Property(e => e.TimeFactors).HasMaxLength(500);
+                    entity.Property(e => e.OperatorNotes).HasMaxLength(500);
+                    entity.Property(e => e.LoggedAt).HasDefaultValueSql("datetime('now')");
+
+                    // Foreign key relationship
+                    entity.HasOne(e => e.BuildJob)
+                        .WithMany()
+                        .HasForeignKey(e => e.BuildJobId)
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    // Indexes
+                    entity.HasIndex(e => e.BuildJobId);
+                    entity.HasIndex(e => e.LoggedAt);
+                    entity.HasIndex(e => e.EstimatedHours);
+                }
             });
 
             // Configure BuildTimeLearningData entity
@@ -1363,13 +1370,13 @@ namespace OpCentrix.Data
                 entity.Property(e => e.TotalParts).HasDefaultValue(1);
                 entity.Property(e => e.PartOrientations).HasMaxLength(500);
                 entity.Property(e => e.RecordedAt).HasDefaultValueSql("datetime('now')");
-                
+
                 // Foreign key relationship
                 entity.HasOne(e => e.BuildJob)
                     .WithMany()
                     .HasForeignKey(e => e.BuildJobId)
                     .OnDelete(DeleteBehavior.Cascade);
-                
+
                 // Indexes for machine learning and analytics
                 entity.HasIndex(e => e.BuildJobId);
                 entity.HasIndex(e => e.MachineId);
@@ -1380,7 +1387,7 @@ namespace OpCentrix.Data
                 entity.HasIndex(e => new { e.MachineId, e.BuildFileHash });
                 entity.HasIndex(e => new { e.MachineId, e.SupportComplexity });
                 entity.HasIndex(e => new { e.BuildFileHash, e.SupportComplexity });
-                
+
                 // Index for finding similar builds for learning
                 entity.HasIndex(e => new { e.MachineId, e.TotalParts, e.SupportComplexity });
             });
@@ -1456,7 +1463,7 @@ namespace OpCentrix.Data
                     .WithMany()
                     .HasForeignKey(e => e.DependentStageId)
                     .OnDelete(DeleteBehavior.Restrict);
-                    
+
                 entity.HasOne(e => e.PrerequisiteStage)
                     .WithMany()
                     .HasForeignKey(e => e.PrerequisiteStageId)
@@ -1468,12 +1475,12 @@ namespace OpCentrix.Data
                 entity.HasIndex(e => e.DependencyType);
                 entity.HasIndex(e => e.IsActive);
                 entity.HasIndex(e => new { e.DependentStageId, e.PrerequisiteStageId }).IsUnique();
-                
+
                 // Use a different table name to avoid conflicts with JobStage StageDependency
                 entity.ToTable("ProductionStageDependencies");
-                
+
                 // Prevent circular dependencies
-                entity.ToTable("ProductionStageDependencies", t => t.HasCheckConstraint("CK_ProductionStageDependency_NoSelfReference", 
+                entity.ToTable("ProductionStageDependencies", t => t.HasCheckConstraint("CK_ProductionStageDependency_NoSelfReference",
                     "DependentStageId != PrerequisiteStageId"));
             });
 
@@ -1481,12 +1488,12 @@ namespace OpCentrix.Data
             modelBuilder.Entity<PartStageRequirement>(entity =>
             {
                 entity.Property(e => e.WorkflowTemplateId).IsRequired(false);
-                
+
                 entity.HasOne<WorkflowTemplate>()
                     .WithMany()
                     .HasForeignKey(e => e.WorkflowTemplateId)
                     .OnDelete(DeleteBehavior.SetNull);
-                    
+
                 entity.HasIndex(e => e.WorkflowTemplateId);
             });
 
@@ -1494,12 +1501,12 @@ namespace OpCentrix.Data
             modelBuilder.Entity<ProductionStageExecution>(entity =>
             {
                 entity.Property(e => e.WorkflowTemplateId).IsRequired(false);
-                
+
                 entity.HasOne<WorkflowTemplate>()
                     .WithMany()
                     .HasForeignKey(e => e.WorkflowTemplateId)
                     .OnDelete(DeleteBehavior.SetNull);
-                    
+
                 entity.HasIndex(e => e.WorkflowTemplateId);
             });
         }
@@ -1509,38 +1516,38 @@ namespace OpCentrix.Data
             UpdateAuditFields();
             return base.SaveChangesAsync(cancellationToken);
         }
-        
+
         public override int SaveChanges()
         {
             UpdateAuditFields();
             return base.SaveChanges();
         }
-        
+
         private void UpdateAuditFields()
         {
             var entries = ChangeTracker.Entries()
-                .Where(e => e.Entity.GetType().GetProperty("LastModifiedDate") != null && 
+                .Where(e => e.Entity.GetType().GetProperty("LastModifiedDate") != null &&
                            (e.State == EntityState.Added || e.State == EntityState.Modified));
-                           
+
             foreach (var entry in entries)
             {
                 var entity = entry.Entity;
                 var entityType = entity.GetType();
-                
+
                 if (entry.State == EntityState.Added)
                 {
                     var createdDateProp = entityType.GetProperty("CreatedDate");
                     var createdByProp = entityType.GetProperty("CreatedBy");
-                    
+
                     if (createdDateProp != null)
                         createdDateProp.SetValue(entity, DateTime.UtcNow);
                     if (createdByProp != null && createdByProp.GetValue(entity)?.ToString() == "")
                         createdByProp.SetValue(entity, "System");
                 }
-                
+
                 var lastModifiedDateProp = entityType.GetProperty("LastModifiedDate");
                 var lastModifiedByProp = entityType.GetProperty("LastModifiedBy");
-                
+
                 if (lastModifiedDateProp != null)
                     lastModifiedDateProp.SetValue(entity, DateTime.UtcNow);
                 if (lastModifiedByProp != null && lastModifiedByProp.GetValue(entity)?.ToString() == "")
