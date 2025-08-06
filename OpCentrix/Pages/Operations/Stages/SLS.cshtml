@@ -1,0 +1,673 @@
+@page
+@model OpCentrix.Pages.Operations.Stages.SLSModel
+@{
+    ViewData["Title"] = "SLS Operations Dashboard";
+    Layout = "_Layout";
+}
+
+@section Styles {
+    <style>
+    /* SLS Operations Dashboard CSS - Following PrintTracking mobile patterns */
+    .sls-dashboard-container {
+        min-height: 100vh;
+        background-color: #f8f9fa;
+        padding: 1rem;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    /* Header styling - matches PrintTracking pattern */
+    .sls-header {
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        text-align: center;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .sls-header h1 {
+        margin: 0;
+        font-size: 1.75rem;
+        font-weight: 600;
+    }
+
+    .stage-badge {
+        display: inline-block;
+        margin-top: 0.5rem;
+        padding: 0.25rem 0.75rem;
+        background: rgba(255,255,255,0.2);
+        border-radius: 1rem;
+        font-size: 0.875rem;
+    }
+
+    /* Statistics grid */
+    .sls-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 8px;
+        padding: 1.25rem;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-left: 4px solid #007bff;
+        transition: transform 0.2s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #007bff;
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+        font-size: 0.875rem;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Machine status grid */
+    .sls-machines-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .machine-card {
+        background: white;
+        border-radius: 8px;
+        padding: 1.25rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-left: 4px solid #007bff;
+    }
+
+    .machine-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .machine-name {
+        font-weight: 600;
+        color: #333;
+        margin: 0;
+    }
+
+    .machine-status {
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .status-idle { background-color: #e3f2fd; color: #1565c0; }
+    .status-building { background-color: #e8f5e8; color: #2e7d32; }
+    .status-maintenance { background-color: #fff3e0; color: #f57c00; }
+    .status-error { background-color: #ffebee; color: #c62828; }
+
+    /* Job sections */
+    .job-section {
+        background: white;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+
+    .section-header {
+        background: #f8f9fa;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid #e9ecef;
+        margin: 0;
+    }
+
+    .section-title {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #333;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .job-list {
+        padding: 0;
+        margin: 0;
+        list-style: none;
+    }
+
+    .job-item {
+        padding: 1.25rem;
+        border-bottom: 1px solid #e9ecef;
+        transition: background-color 0.2s ease;
+    }
+
+    .job-item:last-child {
+        border-bottom: none;
+    }
+
+    .job-item:hover {
+        background-color: #f8f9fa;
+    }
+
+    .job-item.active {
+        background-color: #f0f8ff;
+        border-left: 4px solid #28a745;
+    }
+
+    .job-item.queued {
+        background-color: #fff;
+        border-left: 4px solid #007bff;
+    }
+
+    .job-item.completed {
+        background-color: #f8fff9;
+        border-left: 4px solid #6c757d;
+    }
+
+    .job-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 0.75rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .job-title {
+        font-weight: 600;
+        color: #333;
+        margin: 0;
+        font-size: 1rem;
+    }
+
+    .job-meta {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.875rem;
+        color: #666;
+        margin-bottom: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .job-actions {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 0.75rem;
+    }
+
+    /* Buttons - Touch-friendly for tablets */
+    .btn {
+        min-height: 44px;
+        min-width: 120px;
+        font-size: 0.875rem;
+        border-radius: 6px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        border: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .btn-success {
+        background-color: #28a745;
+        color: white;
+    }
+
+    .btn-warning {
+        background-color: #ffc107;
+        color: #212529;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+    }
+
+    .btn-secondary {
+        background-color: #6c757d;
+        color: white;
+    }
+
+    /* Empty state */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1.5rem;
+        color: #6c757d;
+    }
+
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .empty-state h4 {
+        margin-bottom: 0.5rem;
+        color: #6c757d;
+    }
+
+    /* Loading indicator */
+    .htmx-indicator {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 9999;
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    .htmx-indicator.htmx-request {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    /* Responsive design */
+    @@media (max-width: 768px) {
+        .sls-dashboard-container {
+            padding: 0.75rem;
+        }
+
+        .sls-header {
+            padding: 1rem;
+        }
+
+        .sls-header h1 {
+            font-size: 1.5rem;
+        }
+
+        .sls-stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .sls-machines-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .job-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .job-actions {
+            width: 100%;
+        }
+
+        .btn {
+            width: 100%;
+        }
+    }
+
+    @@media (max-width: 480px) {
+        .sls-stats-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .job-meta {
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+    }
+    </style>
+}
+
+<div class="sls-dashboard-container" id="sls-dashboard">
+    <!-- SLS Header -->
+    <div class="sls-header">
+        <h1><i class="fas fa-cube me-2"></i>SLS Operations Dashboard</h1>
+        <div class="stage-badge" style="background-color: @Model.SLSStage.StageColor">
+            @Model.SLSStage.Name - @Model.SLSStage.Department
+        </div>
+        <div class="mt-2">
+            <small>Operator: <strong>@Model.CurrentOperator</strong> (@Model.UserRole)</small>
+        </div>
+    </div>
+
+    <!-- SLS Statistics -->
+    <div class="sls-stats-grid">
+        <div class="stat-card">
+            <div class="stat-value">@Model.TotalActiveSLSJobs</div>
+            <div class="stat-label">Active SLS Jobs</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">@Model.TotalQueuedSLSJobs</div>
+            <div class="stat-label">Queued Jobs</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">@Model.TotalSLSHoursToday.ToString("F1")</div>
+            <div class="stat-label">Hours Today</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">@Model.CompletedSLSJobsToday</div>
+            <div class="stat-label">Completed Today</div>
+        </div>
+    </div>
+
+    <!-- SLS Machines Status -->
+    @if (Model.SLSMachines.Any())
+    {
+        <div class="job-section">
+            <div class="section-header">
+                <h3 class="section-title">
+                    <i class="fas fa-industry text-primary"></i>
+                    SLS Machines Status
+                </h3>
+            </div>
+            <div class="sls-machines-grid p-3">
+                @foreach(var machine in Model.SLSMachines)
+                {
+                    <div class="machine-card">
+                        <div class="machine-header">
+                            <h4 class="machine-name">@machine.MachineName</h4>
+                            <span class="machine-status status-@machine.Status.ToLower()">@machine.Status</span>
+                        </div>
+                        <div class="machine-details">
+                            <p><strong>Location:</strong> @machine.Location</p>
+                            <p><strong>Material:</strong> @machine.CurrentMaterial</p>
+                            <p><strong>Build Volume:</strong> @machine.BuildVolume</p>
+                            <p><strong>Active Jobs:</strong> @machine.ActiveJobs | <strong>Queued:</strong> @machine.QueuedJobs</p>
+                            <p><strong>Utilization:</strong> @machine.UtilizationPercent.ToString("F1")%</p>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Dashboard Content -->
+    <div id="sls-content">
+        <!-- Active SLS Jobs -->
+        <div class="job-section">
+            <div class="section-header">
+                <h3 class="section-title">
+                    <i class="fas fa-play-circle text-success"></i>
+                    Active SLS Jobs (@Model.TotalActiveSLSJobs)
+                </h3>
+            </div>
+            @if (Model.ActiveSLSJobs.Any())
+            {
+                <ul class="job-list">
+                    @foreach(var job in Model.ActiveSLSJobs)
+                    {
+                        <li class="job-item active" id="active-job-@job.Job.Id">
+                            <div class="job-header">
+                                <h4 class="job-title">@job.PartNumber</h4>
+                                <span class="badge bg-success">In Progress</span>
+                            </div>
+                            <div class="job-meta">
+                                <span><i class="fas fa-cogs"></i> Machine: @job.MachineId</span>
+                                <span><i class="fas fa-user"></i> Operator: @job.OperatorName</span>
+                                <span><i class="fas fa-clock"></i> Started: @(job.StartTime?.ToString("MMM dd, HH:mm") ?? "Unknown")</span>
+                                <span><i class="fas fa-hourglass-half"></i> Estimated: @job.EstimatedHours.ToString("F1")h</span>
+                            </div>
+                            @if (Model.IsOperatorView && job.OperatorName == Model.CurrentOperator)
+                            {
+                                <div class="job-actions">
+                                    <button class="btn btn-warning" 
+                                            hx-post="/Operations/Stages/SLS?handler=CompleteSLSJob"
+                                            hx-vals='{"jobId": @job.Job.Id}'
+                                            hx-confirm="Are you sure you want to complete this SLS job?"
+                                            hx-target="#active-job-@job.Job.Id"
+                                            hx-indicator="#loading-indicator">
+                                        <i class="fas fa-check"></i>Complete Job
+                                    </button>
+                                </div>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <div class="empty-state">
+                    <i class="fas fa-pause-circle"></i>
+                    <h4>No Active SLS Jobs</h4>
+                    <p>No SLS jobs are currently in progress.</p>
+                </div>
+            }
+        </div>
+
+        <!-- Queued SLS Jobs -->
+        <div class="job-section">
+            <div class="section-header">
+                <h3 class="section-title">
+                    <i class="fas fa-list text-primary"></i>
+                    Queued SLS Jobs (@Model.TotalQueuedSLSJobs)
+                </h3>
+            </div>
+            @if (Model.QueuedSLSJobs.Any())
+            {
+                <ul class="job-list">
+                    @foreach(var job in Model.QueuedSLSJobs)
+                    {
+                        <li class="job-item queued" id="queued-job-@job.Job.Id">
+                            <div class="job-header">
+                                <h4 class="job-title">@job.PartNumber</h4>
+                                <span class="badge bg-primary">Scheduled</span>
+                            </div>
+                            <div class="job-meta">
+                                <span><i class="fas fa-cogs"></i> Machine: @job.MachineId</span>
+                                <span><i class="fas fa-calendar"></i> Scheduled: @job.ScheduledStart.ToString("MMM dd, HH:mm")</span>
+                                <span><i class="fas fa-boxes"></i> Quantity: @job.Quantity</span>
+                                <span><i class="fas fa-hourglass-half"></i> Estimated: @job.EstimatedHours.ToString("F1")h</span>
+                            </div>
+                            @if (Model.IsOperatorView && string.IsNullOrEmpty(job.OperatorName))
+                            {
+                                <div class="job-actions">
+                                    <button class="btn btn-success" 
+                                            hx-post="/Operations/Stages/SLS?handler=StartSLSJob"
+                                            hx-vals='{"jobId": @job.Job.Id}'
+                                            hx-target="#queued-job-@job.Job.Id"
+                                            hx-indicator="#loading-indicator">
+                                        <i class="fas fa-play"></i>Start Job
+                                    </button>
+                                </div>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <div class="empty-state">
+                    <i class="fas fa-clipboard-list"></i>
+                    <h4>No Queued SLS Jobs</h4>
+                    <p>No SLS jobs are scheduled at this time.</p>
+                </div>
+            }
+        </div>
+
+        <!-- Recently Completed SLS Jobs -->
+        @if (Model.CompletedSLSJobs.Any())
+        {
+            <div class="job-section">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <i class="fas fa-check-circle text-success"></i>
+                        Recently Completed SLS Jobs
+                    </h3>
+                </div>
+                <ul class="job-list">
+                    @foreach(var job in Model.CompletedSLSJobs)
+                    {
+                        <li class="job-item completed">
+                            <div class="job-header">
+                                <h4 class="job-title">@job.PartNumber</h4>
+                                <span class="badge bg-success">Completed</span>
+                            </div>
+                            <div class="job-meta">
+                                <span><i class="fas fa-cogs"></i> Machine: @job.MachineId</span>
+                                <span><i class="fas fa-user"></i> Operator: @job.OperatorName</span>
+                                <span><i class="fas fa-check"></i> Completed: @(job.EndTime?.ToString("MMM dd, HH:mm") ?? "Unknown")</span>
+                                <span><i class="fas fa-clock"></i> Actual: @(job.ActualHours?.ToString("F1") ?? "N/A")h</span>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+    </div>
+
+    <!-- Quick Action Buttons (Fixed Position) -->
+    <div class="fixed-bottom p-3 d-flex justify-content-end" style="pointer-events: none;">
+        <div style="pointer-events: auto;">
+            <button id="refresh-sls-btn" 
+                    class="btn btn-primary rounded-circle p-3 me-2"
+                    style="width: 56px; height: 56px;"
+                    hx-get="/Operations/Stages/SLS?handler=RefreshSLSDashboard"
+                    hx-target="#sls-content"
+                    hx-indicator="#loading-indicator"
+                    title="Refresh SLS Dashboard">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+            <a href="/Operations/StageDashboard" 
+               class="btn btn-secondary rounded-circle p-3"
+               style="width: 56px; height: 56px;"
+               title="Stage Dashboard">
+                <i class="fas fa-industry"></i>
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Indicator -->
+<div id="loading-indicator" class="htmx-indicator">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <div class="ms-2">Processing...</div>
+</div>
+
+@section Scripts {
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    'use strict';
+    
+    console.log('?? [SLS-OPS] SLS Operations Dashboard initialized');
+
+    // HTMX response handling
+    document.body.addEventListener('htmx:afterRequest', function(event) {
+        if (event.detail.requestConfig.path.includes('SLS')) {
+            const xhr = event.detail.xhr;
+            
+            if (xhr.status === 200) {
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    if (response.success) {
+                        showToast(response.message, 'success');
+                        
+                        // Auto-refresh after successful operation
+                        setTimeout(() => {
+                            htmx.ajax('GET', '/Operations/Stages/SLS?handler=RefreshSLSDashboard', {
+                                target: '#sls-content',
+                                swap: 'innerHTML'
+                            });
+                        }, 1000);
+                    } else {
+                        showToast(response.message || 'Operation failed', 'error');
+                    }
+                } catch (e) {
+                    // HTML response, probably a refresh - that's fine
+                    console.log('SLS Dashboard: Content refreshed');
+                }
+            } else {
+                showToast(`Request failed (${xhr.status})`, 'error');
+            }
+        }
+    });
+
+    // Toast notification system
+    function showToast(message, type = 'success') {
+        // Create toast container if it doesn't exist
+        let toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toast-container';
+            toastContainer.className = 'fixed-top mt-3 me-3';
+            toastContainer.style.cssText = 'z-index: 9999; right: 0; max-width: 350px; pointer-events: none;';
+            document.body.appendChild(toastContainer);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show mb-2 pointer-events-auto`;
+        toast.style.cssText = 'transform: translateX(100%); transition: transform 0.3s ease-in-out;';
+        
+        toast.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
+                <div class="flex-grow-1">${message}</div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+        
+        toastContainer.appendChild(toast);
+        
+        // Animate in
+        requestAnimationFrame(() => {
+            toast.style.transform = 'translateX(0)';
+        });
+        
+        // Auto remove
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.remove();
+                    }
+                }, 300);
+            }
+        }, type === 'success' ? 5000 : 8000);
+    }
+
+    // Auto-refresh every 30 seconds
+    setInterval(() => {
+        if (typeof htmx !== 'undefined') {
+            htmx.ajax('GET', '/Operations/Stages/SLS?handler=RefreshSLSDashboard', {
+                target: '#sls-content',
+                swap: 'innerHTML'
+            });
+        }
+    }, 30000);
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(event) {
+        if (event.ctrlKey && event.key === 'r') {
+            event.preventDefault();
+            htmx.trigger('#refresh-sls-btn', 'click');
+        }
+    });
+
+    console.log('? [SLS-OPS] SLS Operations Dashboard ready');
+});
+</script>
+}

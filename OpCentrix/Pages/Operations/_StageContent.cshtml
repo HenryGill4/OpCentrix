@@ -1,0 +1,93 @@
+<!-- Stage overview cards -->
+<div class="stage-overview-grid">
+    @foreach(var stage in Model.ProductionStages)
+    {
+        <div class="stage-overview-card" style="border-left-color: @stage.StageColor">
+            <div class="stage-header">
+                <h5>@stage.Name</h5>
+                <span class="badge text-white" style="background-color: @stage.StageColor;">@stage.Department</span>
+            </div>
+            <div class="stage-metrics">
+                <div class="metric">
+                    <span class="metric-value">@Model.GetActiveJobsCount(stage.Id)</span>
+                    <span class="metric-label">Active Jobs</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-value">@Model.GetQueuedJobsCount(stage.Id)</span>
+                    <span class="metric-label">Queued</span>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Stage timeline visualization -->
+@if (Model.StageJobs.Any())
+{
+    @foreach(var stageJob in Model.StageJobs)
+    {
+        <div class="stage-job-card">
+            <div class="job-header">
+                <h5>@stageJob.BaseJob.PartNumber</h5>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="job-machine">@stageJob.BaseJob.MachineId</span>
+                    <span class="job-status badge @Model.GetJobStatusClass(stageJob.BaseJob.Status)">
+                        @stageJob.BaseJob.Status
+                    </span>
+                </div>
+            </div>
+            
+            <div class="stage-timeline">
+                @foreach(var stage in stageJob.RequiredStages)
+                {
+                    var stageStatus = stageJob.GetStageStatus(stage);
+                    var progress = stageJob.GetStageProgress(stage);
+                    var statusClass = stageStatus.ToLower().Replace(" ", "");
+                    
+                    <div class="stage-block @statusClass" 
+                         style="background-color: @stage.StageColor" 
+                         id="stage-@stageJob.BaseJob.Id-@stage.Id">
+                        <div class="stage-name">@stage.Name</div>
+                        <div class="stage-duration">@stage.DefaultSetupMinutes min</div>
+                        <div class="stage-progress">
+                            <div class="progress-bar" style="width: @(progress)%"></div>
+                        </div>
+                        
+                        @if(stageJob.CanOperatorPunch(stage))
+                        {
+                            <button class="punch-btn btn-success" 
+                                    hx-post="/Operations/StageDashboard?handler=PunchIn"
+                                    hx-vals='{"jobId": @stageJob.BaseJob.Id, "stageId": @stage.Id, "operatorName": "@Model.GetCurrentOperator()"}'
+                                    hx-target="#stage-@stageJob.BaseJob.Id-@stage.Id"
+                                    hx-indicator="#loading-indicator">
+                                <i class="fas fa-play me-1"></i>Punch In
+                            </button>
+                        }
+                        else if(stageStatus == "InProgress")
+                        {
+                            <button class="punch-btn btn-warning" 
+                                    hx-post="/Operations/StageDashboard?handler=PunchOut"
+                                    hx-vals='{"jobId": @stageJob.BaseJob.Id, "stageId": @stage.Id}'
+                                    hx-target="#stage-@stageJob.BaseJob.Id-@stage.Id"
+                                    hx-confirm="Are you sure you want to punch out of this stage?"
+                                    hx-indicator="#loading-indicator">
+                                <i class="fas fa-stop me-1"></i>Punch Out
+                            </button>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    }
+}
+else
+{
+    <div class="empty-state">
+        <i class="fas fa-calendar-times"></i>
+        <h4 class="text-muted">No jobs scheduled for the selected time period</h4>
+        <p class="text-muted">Jobs will appear here once they are scheduled in the system.</p>
+        <a href="/Scheduler" class="btn btn-primary mt-3">
+            <i class="fas fa-plus me-1"></i>Schedule New Job
+        </a>
+    </div>
+}

@@ -1,0 +1,85 @@
+<!-- My Active Stages Section -->
+<div class="dashboard-section">
+    <div class="section-header">
+        <h3>
+            <i class="fas fa-play-circle text-success"></i>
+            MY ACTIVE STAGES
+        </h3>
+    </div>
+    <div class="section-content">
+        @if (Model.MyActiveStages.Any())
+        {
+            @foreach(var stage in Model.MyActiveStages)
+            {
+                <div class="stage-card active" id="active-stage-@stage.ExecutionId">
+                    <div class="stage-info">
+                        <h4>@stage.JobPartNumber - @stage.StageName</h4>
+                        <p><i class="fas fa-clock"></i> Started: @stage.StartTime.ToString("MMM dd, HH:mm")</p>
+                        <p><i class="fas fa-hourglass-half"></i> Estimated: @stage.EstimatedHours.ToString("F1") hours</p>
+                        <p><i class="fas fa-stopwatch"></i> Elapsed: @((DateTime.Now - stage.StartTime).TotalHours.ToString("F1")) hours</p>
+                    </div>
+                    <button class="btn btn-warning" 
+                            hx-post="/Operations/Dashboard?handler=PunchOut"
+                            hx-vals='{"jobId": @stage.JobId, "stageId": @stage.StageId}'
+                            hx-confirm="Are you sure you want to punch out of this stage?"
+                            hx-target="#active-stage-@stage.ExecutionId"
+                            hx-indicator="#loading-indicator">
+                        <i class="fas fa-stop me-1"></i>Punch Out
+                    </button>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="empty-state">
+                <i class="fas fa-clock"></i>
+                <h4>No Active Stages</h4>
+                <p>You are not currently working on any stages. Select a job below to get started.</p>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Available Stages Section -->
+<div class="dashboard-section">
+    <div class="section-header">
+        <h3>
+            <i class="fas fa-list text-primary"></i>
+            AVAILABLE STAGES
+        </h3>
+    </div>
+    <div class="section-content">
+        @if (Model.AvailableStages.Any())
+        {
+            @foreach(var stage in Model.AvailableStages)
+            {
+                <div class="stage-card available" id="available-stage-@stage.JobId-@stage.StageId">
+                    <div class="stage-info">
+                        <h4>@stage.JobPartNumber - @stage.StageName</h4>
+                        <p><i class="fas fa-cogs"></i> Machine: @stage.MachineId | <i class="fas fa-hourglass-half"></i> Est: @stage.EstimatedHours.ToString("F1")h</p>
+                        <p><i class="fas fa-flag"></i> Priority: @stage.Priority | <i class="fas fa-info-circle"></i> Status: @stage.Status</p>
+                        <p><i class="fas fa-calendar"></i> Scheduled: @stage.ScheduledStart.ToString("MMM dd, HH:mm")</p>
+                    </div>
+                    <button class="btn btn-success" 
+                            hx-post="/Operations/Dashboard?handler=PunchIn"
+                            hx-vals='{"jobId": @stage.JobId, "stageId": @stage.StageId}'
+                            hx-target="#available-stage-@stage.JobId-@stage.StageId"
+                            hx-indicator="#loading-indicator">
+                        <i class="fas fa-play me-1"></i>Punch In
+                    </button>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="empty-state">
+                <i class="fas fa-check-circle"></i>
+                <h4>No Available Stages</h4>
+                <p>There are no stages available for you to work on at this time.</p>
+                <a href="/Operations/StageDashboard" class="btn btn-primary">
+                    <i class="fas fa-eye me-1"></i>View Stage Dashboard
+                </a>
+            </div>
+        }
+    </div>
+</div>

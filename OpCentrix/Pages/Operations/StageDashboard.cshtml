@@ -1,49 +1,45 @@
-@page "/Operations/StageDashboard"
+@page
 @model OpCentrix.Pages.Operations.StageDashboardModel
 @{
-    ViewData["Title"] = "Stage-Based Production Scheduler";
+    ViewData["Title"] = "Stage-Based Manufacturing Dashboard";
     Layout = "_Layout";
 }
 
 @section Styles {
     <style>
-    /* Use existing CSS patterns and extend them */
+    /* Stage Dashboard CSS - Following PrintTracking patterns */
     .stage-scheduler-container {
-        padding: 20px;
         min-height: 100vh;
         background-color: #f8f9fa;
     }
 
+    /* Header styling - matches PrintTracking */
     .stage-header-card {
         background: white;
-        border-radius: 8px;
-        padding: 20px;
-        margin-bottom: 20px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border-radius: 8px;
     }
 
     .view-controls {
         display: flex;
-        gap: 10px;
+        gap: 0.75rem;
         flex-wrap: wrap;
     }
 
+    /* Stage overview grid - responsive like PrintTracking */
     .stage-overview-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-        gap: 15px;
-        margin-bottom: 30px;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
     }
 
     .stage-overview-card {
         background: white;
         border-radius: 8px;
-        padding: 15px;
+        padding: 1.25rem;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         border-left: 4px solid #ddd;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -58,18 +54,19 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 10px;
+        margin-bottom: 1rem;
     }
 
     .stage-header h5 {
         margin: 0;
         font-weight: 600;
         color: #333;
+        font-size: 1.1rem;
     }
 
     .stage-metrics {
         display: flex;
-        gap: 20px;
+        gap: 1.5rem;
     }
 
     .metric {
@@ -78,23 +75,25 @@
 
     .metric-value {
         display: block;
-        font-size: 24px;
+        font-size: 1.75rem;
         font-weight: bold;
         color: #007bff;
     }
 
     .metric-label {
         display: block;
-        font-size: 12px;
+        font-size: 0.75rem;
         color: #666;
         text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
 
+    /* Job cards - following PrintTracking style */
     .stage-job-card {
         background: white;
         border-radius: 8px;
-        padding: 15px;
-        margin-bottom: 15px;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         border: 1px solid #eee;
     }
@@ -103,51 +102,73 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 15px;
+        margin-bottom: 1rem;
         flex-wrap: wrap;
-        gap: 10px;
+        gap: 0.75rem;
     }
 
     .job-header h5 {
         margin: 0;
         font-weight: 600;
         color: #333;
+        font-size: 1.1rem;
     }
 
     .job-machine {
         background: #e9ecef;
-        padding: 4px 8px;
+        padding: 0.25rem 0.5rem;
         border-radius: 4px;
-        font-size: 12px;
+        font-size: 0.875rem;
         font-weight: 500;
     }
 
     .job-status {
-        font-size: 12px;
+        font-size: 0.875rem;
         font-weight: 500;
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
     }
 
-    .badge.scheduled { background-color: #6c757d; }
-    .badge.inprogress { background-color: #007bff; }
-    .badge.completed { background-color: #28a745; }
+    .badge-scheduled { background-color: #6c757d; color: white; }
+    .badge-inprogress { background-color: #007bff; color: white; }
+    .badge-completed { background-color: #28a745; color: white; }
+    .badge-cancelled { background-color: #dc3545; color: white; }
+    .badge-warning { background-color: #ffc107; color: #212529; }
 
+    /* Stage timeline - horizontal flow */
     .stage-timeline {
         display: flex;
-        gap: 10px;
-        margin-top: 15px;
+        gap: 0.75rem;
+        margin-top: 1rem;
         overflow-x: auto;
-        padding: 10px 0;
+        padding: 0.75rem 0;
+        scrollbar-width: thin;
+    }
+
+    .stage-timeline::-webkit-scrollbar {
+        height: 6px;
+    }
+
+    .stage-timeline::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+
+    .stage-timeline::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 3px;
     }
 
     .stage-block {
-        min-width: 150px;
-        padding: 12px;
+        min-width: 160px;
+        padding: 1rem;
         border-radius: 6px;
         color: white;
         text-align: center;
         position: relative;
-        font-size: 13px;
+        font-size: 0.875rem;
         flex-shrink: 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
     .stage-block.pending {
@@ -155,35 +176,37 @@
         background-color: #6c757d !important;
     }
 
-    .stage-block.in-progress {
-        opacity: 0.9;
-        animation: pulse 2s infinite;
+    .stage-block.inprogress {
+        opacity: 0.95;
+        animation: pulse-glow 2s infinite;
+        border: 2px solid rgba(255, 255, 255, 0.8);
     }
 
     .stage-block.completed {
         opacity: 1;
-        border: 2px solid #28a745;
+        border: 2px solid #fff;
     }
 
-    @@keyframes pulse {
-        0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
-        70% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
-        100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+    @@keyframes pulse-glow {
+        0% { box-shadow: 0 2px 4px rgba(0,0,0,0.1), 0 0 0 0 rgba(255, 255, 255, 0.7); }
+        70% { box-shadow: 0 2px 4px rgba(0,0,0,0.1), 0 0 0 8px rgba(255, 255, 255, 0); }
+        100% { box-shadow: 0 2px 4px rgba(0,0,0,0.1), 0 0 0 0 rgba(255, 255, 255, 0); }
     }
 
     .stage-name {
         font-weight: 600;
-        margin-bottom: 4px;
+        margin-bottom: 0.5rem;
+        line-height: 1.2;
     }
 
     .stage-duration {
-        font-size: 11px;
+        font-size: 0.75rem;
         opacity: 0.9;
-        margin-bottom: 8px;
+        margin-bottom: 0.75rem;
     }
 
     .stage-progress {
-        margin-top: 8px;
+        margin: 0.75rem 0;
         background: rgba(255,255,255,0.3);
         height: 4px;
         border-radius: 2px;
@@ -192,29 +215,48 @@
 
     .progress-bar {
         height: 100%;
-        background: rgba(255,255,255,0.8);
+        background: rgba(255,255,255,0.9);
         transition: width 0.3s ease;
+        border-radius: 2px;
     }
 
+    /* Buttons - PrintTracking style */
     .punch-btn {
-        margin-top: 8px;
-        font-size: 11px;
-        padding: 4px 8px;
+        margin-top: 0.75rem;
+        font-size: 0.75rem;
+        padding: 0.375rem 0.75rem;
         border: none;
         border-radius: 4px;
         color: white;
         cursor: pointer;
-        transition: background-color 0.2s ease;
+        transition: all 0.2s ease;
+        font-weight: 500;
+        min-width: 80px;
     }
 
     .punch-btn:hover {
-        opacity: 0.9;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
 
-    .btn-success { background-color: #28a745; }
-    .btn-warning { background-color: #ffc107; color: #212529; }
+    .punch-btn.btn-success { 
+        background-color: #28a745; 
+    }
 
-    /* Loading spinner */
+    .punch-btn.btn-success:hover { 
+        background-color: #218838; 
+    }
+
+    .punch-btn.btn-warning { 
+        background-color: #ffc107; 
+        color: #212529; 
+    }
+
+    .punch-btn.btn-warning:hover { 
+        background-color: #e0a800; 
+    }
+
+    /* Loading spinner - matches PrintTracking */
     .htmx-indicator {
         display: none;
         position: fixed;
@@ -223,197 +265,334 @@
         transform: translate(-50%, -50%);
         z-index: 9999;
         background: white;
-        padding: 20px;
+        padding: 1.5rem;
         border-radius: 8px;
         box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
 
     .htmx-indicator.htmx-request {
-        display: block;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
     }
 
-    /* Mobile responsiveness */
+    /* Empty state */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1.5rem;
+        color: #6c757d;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    /* Mobile responsiveness - PrintTracking patterns */
     @@media (max-width: 768px) {
+        .stage-scheduler-container {
+            padding: 1rem;
+        }
+
+        .stage-header-card {
+            padding: 1rem;
+        }
+
+        .stage-header-card > div {
+            flex-direction: column;
+            text-align: center;
+            gap: 1rem;
+        }
+
+        .view-controls {
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .view-controls .btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .stage-overview-grid {
+            grid-template-columns: 1fr;
+            gap: 0.75rem;
+        }
+
         .stage-timeline {
             flex-direction: column;
+            gap: 0.75rem;
         }
         
         .stage-block {
             min-width: auto;
             width: 100%;
         }
-        
-        .view-controls {
+
+        .job-header {
             flex-direction: column;
-            width: 100%;
-        }
-        
-        .view-controls .btn {
-            width: 100%;
+            align-items: flex-start;
+            gap: 0.5rem;
         }
 
-        .stage-header-card {
-            flex-direction: column;
-            text-align: center;
+        .stage-metrics {
+            justify-content: space-around;
+            width: 100%;
+        }
+    }
+
+    /* Touch-friendly for tablets - PrintTracking patterns */
+    @@media (max-width: 1024px) and (min-width: 769px) {
+        .punch-btn {
+            min-height: 44px;
+            min-width: 100px;
+            font-size: 0.875rem;
         }
 
-        .stage-overview-grid {
-            grid-template-columns: 1fr;
+        .stage-block {
+            min-width: 180px;
+            padding: 1.25rem;
         }
     }
     </style>
 }
 
 <div class="stage-scheduler-container">
-    <!-- Header with view toggles -->
-    <div class="stage-header-card">
-        <div>
-            <h1><i class="fas fa-industry me-2"></i>Stage-Based Production Scheduler</h1>
-            <p class="text-muted mb-0">Visual workflow management across all manufacturing stages</p>
-        </div>
-        <div class="view-controls">
-            <a href="/Scheduler" class="btn btn-outline-secondary">
-                <i class="fas fa-calendar me-1"></i>Job View
-            </a>
-            <a href="/Operations/StageDashboard" class="btn btn-primary">
-                <i class="fas fa-tasks me-1"></i>Stage View
-            </a>
-            <a href="/Operations/Dashboard" class="btn btn-outline-info">
-                <i class="fas fa-user-hard-hat me-1"></i>Operator View
-            </a>
+    <!-- Role-Based Header - PrintTracking Pattern -->
+    <div class="bg-white shadow">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="py-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">
+                            @if (Model.IsAdminView)
+                            {
+                                <span><i class="fas fa-industry me-2"></i>Stage Manufacturing Dashboard - Admin Console</span>
+                            }
+                            else
+                            {
+                                <span><i class="fas fa-tasks me-2"></i>Stage Operations</span>
+                            }
+                        </h1>
+                        <p class="mt-1 text-sm text-gray-600">
+                            @if (Model.IsAdminView)
+                            {
+                                <span>Comprehensive oversight of manufacturing workflow across all stages</span>
+                            }
+                            else
+                            {
+                                <span>Track and manage manufacturing stage progression</span>
+                            }
+                        </p>
+                    </div>
+                    <div class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                        <div class="text-center sm:text-right">
+                            <p class="text-sm font-medium text-gray-900">@Model.CurrentOperator</p>
+                            <p class="text-xs text-gray-500">
+                                @Model.UserRole
+                                @if (Model.IsAdminView)
+                                {
+                                    <span class="ml-1 px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs">Admin Access</span>
+                                }
+                            </p>
+                        </div>
+                        <div class="view-controls">
+                            <a href="/Scheduler" class="btn btn-outline-secondary flex items-center">
+                                <i class="fas fa-calendar me-1"></i>Job View
+                            </a>
+                            <a href="/Operations/StageDashboard" class="btn btn-primary flex items-center">
+                                <i class="fas fa-tasks me-1"></i>Stage View
+                            </a>
+                            <a href="/Operations/Dashboard" class="btn btn-outline-info flex items-center">
+                                <i class="fas fa-user-hard-hat me-1"></i>Operator View
+                            </a>
+                            <button id="refresh-stages-btn" 
+                                    class="btn btn-success flex items-center"
+                                    hx-get="/Operations/StageDashboard?handler=RefreshStages"
+                                    hx-target="#stage-content"
+                                    hx-indicator="#loading-indicator">
+                                <i class="fas fa-sync-alt me-1"></i>Refresh
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-    
-    <!-- Stage overview cards -->
-    <div class="stage-overview-grid">
-        @foreach(var stage in Model.ProductionStages)
+
+    <!-- Dashboard Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8" id="stage-content">
+        <!-- Stage overview cards -->
+        <div class="stage-overview-grid">
+            @foreach(var stage in Model.ProductionStages)
+            {
+                <div class="stage-overview-card" style="border-left-color: @stage.StageColor">
+                    <div class="stage-header">
+                        <h5>@stage.Name</h5>
+                        <span class="badge text-white" style="background-color: @stage.StageColor;">@stage.Department</span>
+                    </div>
+                    <div class="stage-metrics">
+                        <div class="metric">
+                            <span class="metric-value">@Model.GetActiveJobsCount(stage.Id)</span>
+                            <span class="metric-label">Active Jobs</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-value">@Model.GetQueuedJobsCount(stage.Id)</span>
+                            <span class="metric-label">Queued</span>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+        
+        <!-- Stage timeline visualization -->
+        @if (Model.StageJobs.Any())
         {
-            <div class="stage-overview-card" style="border-left-color: @stage.StageColor">
-                <div class="stage-header">
-                    <h5>@stage.Name</h5>
-                    <span class="badge" style="background-color: @stage.StageColor; color: white;">@stage.Department</span>
-                </div>
-                <div class="stage-metrics">
-                    <div class="metric">
-                        <span class="metric-value">@Model.GetActiveJobsCount(stage.Id)</span>
-                        <span class="metric-label">Active Jobs</span>
+            @foreach(var stageJob in Model.StageJobs)
+            {
+                <div class="stage-job-card">
+                    <div class="job-header">
+                        <h5>@stageJob.BaseJob.PartNumber</h5>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="job-machine">@stageJob.BaseJob.MachineId</span>
+                            <span class="job-status badge @Model.GetJobStatusClass(stageJob.BaseJob.Status)">
+                                @stageJob.BaseJob.Status
+                            </span>
+                        </div>
                     </div>
-                    <div class="metric">
-                        <span class="metric-value">@Model.GetQueuedJobsCount(stage.Id)</span>
-                        <span class="metric-label">Queued</span>
+                    
+                    <div class="stage-timeline">
+                        @foreach(var stage in stageJob.RequiredStages)
+                        {
+                            var stageStatus = stageJob.GetStageStatus(stage);
+                            var progress = stageJob.GetStageProgress(stage);
+                            var statusClass = stageStatus.ToLower().Replace(" ", "");
+                            
+                            <div class="stage-block @statusClass" 
+                                 style="background-color: @stage.StageColor" 
+                                 id="stage-@stageJob.BaseJob.Id-@stage.Id">
+                                <div class="stage-name">@stage.Name</div>
+                                <div class="stage-duration">@stage.DefaultSetupMinutes min</div>
+                                <div class="stage-progress">
+                                    <div class="progress-bar" style="width: @(progress)%"></div>
+                                </div>
+                                
+                                @if(stageJob.CanOperatorPunch(stage))
+                                {
+                                    <button class="punch-btn btn-success" 
+                                            hx-post="/Operations/StageDashboard?handler=PunchIn"
+                                            hx-vals='{"jobId": @stageJob.BaseJob.Id, "stageId": @stage.Id, "operatorName": "@Model.GetCurrentOperator()"}'
+                                            hx-target="#stage-@stageJob.BaseJob.Id-@stage.Id"
+                                            hx-indicator="#loading-indicator">
+                                        <i class="fas fa-play me-1"></i>Punch In
+                                    </button>
+                                }
+                                else if(stageStatus == "InProgress")
+                                {
+                                    <button class="punch-btn btn-warning" 
+                                            hx-post="/Operations/StageDashboard?handler=PunchOut"
+                                            hx-vals='{"jobId": @stageJob.BaseJob.Id, "stageId": @stage.Id}'
+                                            hx-target="#stage-@stageJob.BaseJob.Id-@stage.Id"
+                                            hx-confirm="Are you sure you want to punch out of this stage?"
+                                            hx-indicator="#loading-indicator">
+                                        <i class="fas fa-stop me-1"></i>Punch Out
+                                    </button>
+                                }
+                            </div>
+                        }
                     </div>
                 </div>
+            }
+        }
+        else
+        {
+            <div class="empty-state">
+                <i class="fas fa-calendar-times"></i>
+                <h4 class="text-muted">No jobs scheduled for the selected time period</h4>
+                <p class="text-muted">Jobs will appear here once they are scheduled in the system.</p>
+                <a href="/Scheduler" class="btn btn-primary mt-3">
+                    <i class="fas fa-plus me-1"></i>Schedule New Job
+                </a>
             </div>
         }
     </div>
-    
-    <!-- Stage timeline visualization -->
-    @foreach(var stageJob in Model.StageJobs)
-    {
-        <div class="stage-job-card">
-            <div class="job-header">
-                <h5>@stageJob.BaseJob.PartNumber</h5>
-                <div>
-                    <span class="job-machine">@stageJob.BaseJob.MachineId</span>
-                    <span class="job-status badge @(stageJob.BaseJob.Status.ToLower().Replace(" ", ""))">
-                        @stageJob.BaseJob.Status
-                    </span>
-                </div>
-            </div>
-            
-            <div class="stage-timeline">
-                @foreach(var stage in stageJob.RequiredStages)
-                {
-                    var stageStatus = stageJob.GetStageStatus(stage);
-                    var progress = stageJob.GetStageProgress(stage);
-                    var statusClass = stageStatus.ToLower().Replace(" ", "-");
-                    
-                    <div class="stage-block @statusClass" 
-                         style="background-color: @stage.StageColor" 
-                         id="stage-@stageJob.BaseJob.Id-@stage.Id">
-                        <div class="stage-name">@stage.Name</div>
-                        <div class="stage-duration">@stage.DefaultSetupMinutes min</div>
-                        <div class="stage-progress">
-                            <div class="progress-bar" style="width: @(progress)%"></div>
-                        </div>
-                        
-                        @if(stageJob.CanOperatorPunch(stage))
-                        {
-                            <button class="punch-btn btn-success" 
-                                    hx-post="/Operations/StageDashboard?handler=PunchIn"
-                                    hx-vals='{"jobId": @stageJob.BaseJob.Id, "stageId": @stage.Id, "operatorName": "@Model.GetCurrentOperator()"}'
-                                    hx-target="#stage-@stageJob.BaseJob.Id-@stage.Id"
-                                    hx-indicator="#loading-spinner">
-                                <i class="fas fa-play me-1"></i>Punch In
-                            </button>
-                        }
-                        else if(stageStatus == "In Progress")
-                        {
-                            <button class="punch-btn btn-warning" 
-                                    hx-post="/Operations/StageDashboard?handler=PunchOut"
-                                    hx-vals='{"jobId": @stageJob.BaseJob.Id, "stageId": @stage.Id}'
-                                    hx-target="#stage-@stageJob.BaseJob.Id-@stage.Id"
-                                    hx-confirm="Are you sure you want to punch out of this stage?"
-                                    hx-indicator="#loading-spinner">
-                                <i class="fas fa-stop me-1"></i>Punch Out
-                            </button>
-                        }
-                    </div>
-                }
-            </div>
-        </div>
-    }
 
-    @if (!Model.StageJobs.Any())
-    {
-        <div class="text-center py-5">
-            <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
-            <h4 class="text-muted">No jobs scheduled for the selected time period</h4>
-            <p class="text-muted">Jobs will appear here once they are scheduled in the system.</p>
-            <a href="/Scheduler" class="btn btn-primary">
-                <i class="fas fa-plus me-1"></i>Schedule New Job
-            </a>
-        </div>
-    }
+    <!-- Role-Based Quick Action Buttons (Fixed Position) - PrintTracking Pattern -->
+    <div class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 space-y-3 z-40">
+        @if (Model.IsAdminView)
+        {
+            <!-- Admin quick actions -->
+            <div class="flex flex-col space-y-2">
+                <a href="/Scheduler" 
+                   class="bg-blue-600 hover:bg-blue-700 text-white p-3 sm:p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center"
+                   title="Full Scheduler">
+                    <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                </a>
+                
+                <a href="/Admin/ProductionStages" 
+                   class="bg-purple-600 hover:bg-purple-700 text-white p-3 sm:p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center"
+                   title="Manage Stages">
+                    <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                    </svg>
+                </a>
+            </div>
+        }
+        else
+        {
+            <!-- Operator focused actions -->
+            <div class="flex flex-col space-y-2">
+                <button hx-get="/Operations/StageDashboard?handler=RefreshStages"
+                        hx-target="#stage-content"
+                        hx-indicator="#loading-indicator"
+                        class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 sm:px-4 sm:py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2"
+                        title="Refresh Stages">
+                    <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    <span class="text-xs sm:text-sm font-medium">Refresh</span>
+                </button>
+            </div>
+        }
+    </div>
 </div>
 
-<!-- Loading spinner -->
-<div id="loading-spinner" class="htmx-indicator">
+<!-- Loading Indicator - PrintTracking Pattern -->
+<div id="loading-indicator" class="htmx-indicator">
     <div class="spinner-border text-primary" role="status">
         <span class="visually-hidden">Loading...</span>
     </div>
     <div class="ms-2">Processing...</div>
 </div>
 
+<!-- Toast Container - PrintTracking Pattern -->
+<div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2 max-w-md w-full pointer-events-none"></div>
+
 @section Scripts {
 <script>
-    // Use existing OpCentrixFormValidator patterns
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('Stage Dashboard: Initializing...');
-        
-        // Follow existing JavaScript patterns from form-validation.js
-        if (window.OpCentrixFormValidator) {
-            console.log('Stage Dashboard: Using existing form validation');
-        }
-        
-        // Use existing confirmation dialog patterns
-        if (window.OpCentrixConfirmationDialog) {
-            console.log('Stage Dashboard: Using existing confirmation dialogs');
-        }
+document.addEventListener('DOMContentLoaded', function() {
+    'use strict';
+    
+    // Stage Dashboard Global Namespace - Following PrintTracking patterns
+    window.StageDashboard = window.StageDashboard || {
+        initialized: false,
+        autoRefreshInterval: null,
+        debug: true
+    };
 
-        // Auto-refresh every 30 seconds (like PrintTracking)
-        setInterval(function() {
-            if (!document.querySelector('.htmx-request')) {
-                console.log('Stage Dashboard: Auto-refreshing...');
-                htmx.ajax('GET', '/Operations/StageDashboard?handler=RefreshStages', {
-                    target: '.stage-scheduler-container',
-                    swap: 'innerHTML'
-                });
-            }
-        }, 30000);
-    });
+    // Role-based initialization
+    const isAdminView = @Json.Serialize(Model.IsAdminView);
+    const userRole = @Json.Serialize(Model.UserRole);
+    
+    console.log(`?? [STAGE-DASHBOARD] Stage Dashboard initialized for ${userRole} user. Admin view: ${isAdminView}`);
 
-    // Enhanced HTMX response handling
+    // Enhanced HTMX response handling - PrintTracking pattern
     document.body.addEventListener('htmx:afterRequest', function(event) {
         if (event.detail.requestConfig.path.includes('StageDashboard')) {
             const xhr = event.detail.xhr;
@@ -422,28 +601,132 @@
                 try {
                     const response = JSON.parse(xhr.responseText);
                     if (response.success) {
-                        // Show success notification using existing patterns
-                        if (window.showToast) {
-                            window.showToast(response.message, 'success');
-                        } else {
-                            console.log('Stage Dashboard:', response.message);
-                        }
+                        showToast(response.message, 'success');
                     } else {
-                        console.error('Stage Dashboard Error:', response.message);
+                        showToast(response.message || 'Operation failed', 'error');
                     }
                 } catch (e) {
                     // HTML response, probably a refresh - that's fine
                     console.log('Stage Dashboard: Content refreshed');
                 }
+            } else {
+                showToast(`Request failed (${xhr.status})`, 'error');
             }
         }
     });
 
     document.body.addEventListener('htmx:responseError', function(event) {
         console.error('Stage Dashboard: Request failed', event.detail);
-        if (window.showToast) {
-            window.showToast('Request failed. Please try again.', 'error');
+        showToast('Request failed. Please check your connection.', 'error');
+    });
+
+    // Toast notification system - PrintTracking pattern
+    function showToast(message, type = 'success') {
+        const toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) return;
+
+        const toast = document.createElement('div');
+        toast.className = `
+            transform translate-x-full transition-transform duration-300 ease-in-out
+            bg-white rounded-lg shadow-lg border border-gray-200 mb-2 max-w-sm w-full
+            pointer-events-auto flex
+        `;
+        
+        const bgColor = type === 'success' ? 'bg-green-50' : 'bg-red-50';
+        const textColor = type === 'success' ? 'text-green-800' : 'text-red-800';
+        const iconColor = type === 'success' ? 'text-green-400' : 'text-red-400';
+        
+        toast.innerHTML = `
+            <div class="flex-1 w-0 p-4">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 ${iconColor}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            ${type === 'success' 
+                                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6-2a9 9 0 11-18 0 9 9 0 0118 0z" />'
+                                : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />'
+                            }
+                        </svg>
+                    </div>
+                    <div class="ml-3 w-0 flex-1 pt-0.5">
+                        <p class="text-sm font-medium ${textColor}">${message}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex border-l border-gray-200">
+                <button onclick="this.parentElement.parentElement.remove()" 
+                        class="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-gray-600 hover:text-gray-500"
+                        title="Close">
+                    ?
+                </button>
+            </div>
+        `;
+        
+        toastContainer.appendChild(toast);
+        
+        // Animate in
+        requestAnimationFrame(() => {
+            toast.classList.remove('translate-x-full');
+            toast.classList.add('translate-x-0');
+        });
+        
+        // Auto remove
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.classList.add('translate-x-full');
+                toast.classList.remove('translate-x-0');
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.remove();
+                    }
+                }, 300);
+            }
+        }, type === 'success' ? 5000 : 8000);
+    }
+
+    // Auto-refresh functionality - PrintTracking pattern
+    StageDashboard.startAutoRefresh = function() {
+        if (StageDashboard.autoRefreshInterval) {
+            clearInterval(StageDashboard.autoRefreshInterval);
+        }
+
+        StageDashboard.autoRefreshInterval = setInterval(() => {
+            console.log('?? [STAGE-DASHBOARD] Auto-refreshing...');
+
+            if (typeof htmx !== 'undefined') {
+                htmx.ajax('GET', '/Operations/StageDashboard?handler=RefreshStages', {
+                    target: '#stage-content',
+                    swap: 'innerHTML'
+                }).then(() => {
+                    console.log('? [STAGE-DASHBOARD] Auto-refresh completed');
+                }).catch((error) => {
+                    console.warn('?? [STAGE-DASHBOARD] Auto-refresh failed:', error);
+                });
+            }
+        }, 60000); // 1 minute
+
+        console.log('?? [STAGE-DASHBOARD] Auto-refresh started (1-minute interval)');
+    };
+
+    // Enhanced keyboard shortcuts
+    document.addEventListener('keydown', function(event) {
+        if (event.ctrlKey && event.key === 'r') {
+            event.preventDefault();
+            htmx.trigger('#refresh-stages-btn', 'click');
         }
     });
+
+    // Start auto-refresh
+    StageDashboard.startAutoRefresh();
+    
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', function() {
+        if (StageDashboard.autoRefreshInterval) {
+            clearInterval(StageDashboard.autoRefreshInterval);
+        }
+    });
+
+    StageDashboard.initialized = true;
+    console.log('? [STAGE-DASHBOARD] Stage Dashboard initialized successfully');
+});
 </script>
 }

@@ -1,0 +1,130 @@
+<!-- Active SLS Jobs -->
+<div class="job-section">
+    <div class="section-header">
+        <h3 class="section-title">
+            <i class="fas fa-play-circle text-success"></i>
+            Active SLS Jobs (@Model.TotalActiveSLSJobs)
+        </h3>
+    </div>
+    @if (Model.ActiveSLSJobs.Any())
+    {
+        <ul class="job-list">
+            @foreach(var job in Model.ActiveSLSJobs)
+            {
+                <li class="job-item active" id="active-job-@job.Job.Id">
+                    <div class="job-header">
+                        <h4 class="job-title">@job.PartNumber</h4>
+                        <span class="badge bg-success">In Progress</span>
+                    </div>
+                    <div class="job-meta">
+                        <span><i class="fas fa-cogs"></i> Machine: @job.MachineId</span>
+                        <span><i class="fas fa-user"></i> Operator: @job.OperatorName</span>
+                        <span><i class="fas fa-clock"></i> Started: @(job.StartTime?.ToString("MMM dd, HH:mm") ?? "Unknown")</span>
+                        <span><i class="fas fa-hourglass-half"></i> Estimated: @job.EstimatedHours.ToString("F1")h</span>
+                    </div>
+                    @if (Model.IsOperatorView && job.OperatorName == Model.CurrentOperator)
+                    {
+                        <div class="job-actions">
+                            <button class="btn btn-warning" 
+                                    hx-post="/Operations/Stages/SLS?handler=CompleteSLSJob"
+                                    hx-vals='{"jobId": @job.Job.Id}'
+                                    hx-confirm="Are you sure you want to complete this SLS job?"
+                                    hx-target="#active-job-@job.Job.Id"
+                                    hx-indicator="#loading-indicator">
+                                <i class="fas fa-check"></i>Complete Job
+                            </button>
+                        </div>
+                    }
+                </li>
+            }
+        </ul>
+    }
+    else
+    {
+        <div class="empty-state">
+            <i class="fas fa-pause-circle"></i>
+            <h4>No Active SLS Jobs</h4>
+            <p>No SLS jobs are currently in progress.</p>
+        </div>
+    }
+</div>
+
+<!-- Queued SLS Jobs -->
+<div class="job-section">
+    <div class="section-header">
+        <h3 class="section-title">
+            <i class="fas fa-list text-primary"></i>
+            Queued SLS Jobs (@Model.TotalQueuedSLSJobs)
+        </h3>
+    </div>
+    @if (Model.QueuedSLSJobs.Any())
+    {
+        <ul class="job-list">
+            @foreach(var job in Model.QueuedSLSJobs)
+            {
+                <li class="job-item queued" id="queued-job-@job.Job.Id">
+                    <div class="job-header">
+                        <h4 class="job-title">@job.PartNumber</h4>
+                        <span class="badge bg-primary">Scheduled</span>
+                    </div>
+                    <div class="job-meta">
+                        <span><i class="fas fa-cogs"></i> Machine: @job.MachineId</span>
+                        <span><i class="fas fa-calendar"></i> Scheduled: @job.ScheduledStart.ToString("MMM dd, HH:mm")</span>
+                        <span><i class="fas fa-boxes"></i> Quantity: @job.Quantity</span>
+                        <span><i class="fas fa-hourglass-half"></i> Estimated: @job.EstimatedHours.ToString("F1")h</span>
+                    </div>
+                    @if (Model.IsOperatorView && string.IsNullOrEmpty(job.OperatorName))
+                    {
+                        <div class="job-actions">
+                            <button class="btn btn-success" 
+                                    hx-post="/Operations/Stages/SLS?handler=StartSLSJob"
+                                    hx-vals='{"jobId": @job.Job.Id}'
+                                    hx-target="#queued-job-@job.Job.Id"
+                                    hx-indicator="#loading-indicator">
+                                <i class="fas fa-play"></i>Start Job
+                            </button>
+                        </div>
+                    }
+                </li>
+            }
+        </ul>
+    }
+    else
+    {
+        <div class="empty-state">
+            <i class="fas fa-clipboard-list"></i>
+            <h4>No Queued SLS Jobs</h4>
+            <p>No SLS jobs are scheduled at this time.</p>
+        </div>
+    }
+</div>
+
+<!-- Recently Completed SLS Jobs -->
+@if (Model.CompletedSLSJobs.Any())
+{
+    <div class="job-section">
+        <div class="section-header">
+            <h3 class="section-title">
+                <i class="fas fa-check-circle text-success"></i>
+                Recently Completed SLS Jobs
+            </h3>
+        </div>
+        <ul class="job-list">
+            @foreach(var job in Model.CompletedSLSJobs)
+            {
+                <li class="job-item completed">
+                    <div class="job-header">
+                        <h4 class="job-title">@job.PartNumber</h4>
+                        <span class="badge bg-success">Completed</span>
+                    </div>
+                    <div class="job-meta">
+                        <span><i class="fas fa-cogs"></i> Machine: @job.MachineId</span>
+                        <span><i class="fas fa-user"></i> Operator: @job.OperatorName</span>
+                        <span><i class="fas fa-check"></i> Completed: @(job.EndTime?.ToString("MMM dd, HH:mm") ?? "Unknown")</span>
+                        <span><i class="fas fa-clock"></i> Actual: @(job.ActualHours?.ToString("F1") ?? "N/A")h</span>
+                    </div>
+                </li>
+            }
+        </ul>
+    </div>
+}
