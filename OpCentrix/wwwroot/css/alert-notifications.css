@@ -1,0 +1,24 @@
+/* Enhanced Alert Notification Base Styles
+ * Responsive styles moved to responsive-master.css
+ * Updated for Larger Size */
+
+/* Toast container base styles for larger notifications */
+.alert-notifications-container {
+    min-width: 320px !important;
+    max-width: 448px !important;
+}
+
+.alert-notification {
+    min-width: 300px !important;
+    width: 100% !important;
+}
+
+/* Note: All responsive @media queries have been moved to responsive-master.css
+   This includes:
+   - Mobile responsive design (max-width: 768px)
+   - Small mobile devices (max-width: 480px) 
+   - Desktop enhancements (min-width: 769px)
+   - High contrast mode support
+   - Reduced motion support
+   - Print styles
+ */

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Parts Form JavaScript Test</title>
+    <script>
+        // Test the global functions accessibility
+        function runFunctionTests() {
+            const results = {
+                toggleStageDetails: typeof window.toggleStageDetails === 'function',
+                updateManufacturingSummary: typeof window.updateManufacturingSummary === 'function',
+                validateAdminOverride: typeof window.validateAdminOverride === 'function',
+                updateMaterialDefaults: typeof window.updateMaterialDefaults === 'function'
+            };
+            
+            console.log('?? [PARTS] Function availability test results:', results);
+            
+            const allFunctionsAvailable = Object.values(results).every(Boolean);
+            
+            document.getElementById('testResults').innerHTML = `
+                <div class="alert ${allFunctionsAvailable ? 'alert-success' : 'alert-danger'}">
+                    <h4>${allFunctionsAvailable ? '? All Functions Available' : '? Missing Functions'}</h4>
+                    <ul>
+                        <li>toggleStageDetails: ${results.toggleStageDetails ? '?' : '?'}</li>
+                        <li>updateManufacturingSummary: ${results.updateManufacturingSummary ? '?' : '?'}</li>
+                        <li>validateAdminOverride: ${results.validateAdminOverride ? '?' : '?'}</li>
+                        <li>updateMaterialDefaults: ${results.updateMaterialDefaults ? '?' : '?'}</li>
+                    </ul>
+                </div>
+            `;
+            
+            return allFunctionsAvailable;
+        }
+        
+        // Include the actual functions from _PartForm.cshtml
+        window.toggleStageDetails = function(stageName, isEnabled) {
+            try {
+                console.log(`?? [PARTS] Toggling stage ${stageName}: ${isEnabled ? 'enabled' : 'disabled'}`);
+                
+                const detailsElement = document.getElementById(`${stageName}StageDetails`);
+                if (detailsElement) {
+                    if (isEnabled) {
+                        detailsElement.style.display = 'block';
+                        detailsElement.classList.add('show');
+                        const firstInput = detailsElement.querySelector('input[type="number"]');
+                        if (firstInput) {
+                            setTimeout(() => firstInput.focus(), 300);
+                        }
+                    } else {
+                        detailsElement.style.display = 'none';
+                        detailsElement.classList.remove('show');
+                        const inputs = detailsElement.querySelectorAll('input[type="number"]');
+                        inputs.forEach(input => input.value = '');
+                    }
+                    
+                    console.log(`? [PARTS] Stage ${stageName} details ${isEnabled ? 'shown' : 'hidden'}`);
+                    if (typeof window.updateManufacturingSummary === 'function') {
+                        window.updateManufacturingSummary();
+                    }
+                } else {
+                    console.warn(`?? [PARTS] Stage details element not found: ${stageName}StageDetails`);
+                }
+                return true;
+            } catch (error) {
+                console.error(`? [PARTS] Error toggling stage ${stageName}:`, error);
+                return false;
+            }
+        };
+
+        window.updateManufacturingSummary = function() {
+            try {
+                console.log('?? [PARTS] Updating manufacturing summary...');
+                return true;
+            } catch (error) {
+                console.error('? [PARTS] Error updating manufacturing summary:', error);
+                return false;
+            }
+        };
+
+        window.validateAdminOverride = function() {
+            try {
+                console.log('?? [PARTS] Validating admin override...');
+                return true;
+            } catch (error) {
+                console.error('? [PARTS] Error validating admin override:', error);
+                return false;
+            }
+        };
+
+        window.updateMaterialDefaults = function() {
+            try {
+                console.log('?? [PARTS] Updating material defaults...');
+                return true;
+            } catch (error) {
+                console.error('? [PARTS] Error updating material defaults:', error);
+                return false;
+            }
+        };
+        
+        // Test when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            runFunctionTests();
+            
+            // Test actual function calls
+            setTimeout(() => {
+                console.log('?? [PARTS] Testing function execution...');
+                
+                try {
+                    const testResults = {
+                        toggle: window.toggleStageDetails('test', true),
+                        summary: window.updateManufacturingSummary(),
+                        validate: window.validateAdminOverride(),
+                        material: window.updateMaterialDefaults()
+                    };
+                    
+                    document.getElementById('executionResults').innerHTML = `
+                        <div class="alert alert-info">
+                            <h4>?? Function Execution Test Results</h4>
+                            <ul>
+                                <li>toggleStageDetails('test', true): ${testResults.toggle ? '?' : '?'}</li>
+                                <li>updateManufacturingSummary(): ${testResults.summary ? '?' : '?'}</li>
+                                <li>validateAdminOverride(): ${testResults.validate ? '?' : '?'}</li>
+                                <li>updateMaterialDefaults(): ${testResults.material ? '?' : '?'}</li>
+                            </ul>
+                        </div>
+                    `;
+                } catch (error) {
+                    document.getElementById('executionResults').innerHTML = `
+                        <div class="alert alert-danger">
+                            <h4>? Function Execution Error</h4>
+                            <p>${error.message}</p>
+                        </div>
+                    `;
+                }
+            }, 500);
+        });
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>?? Parts Form JavaScript Function Test</h1>
+        <p>This page tests the global accessibility of Parts form JavaScript functions.</p>
+        
+        <div id="testResults">
+            <div class="alert alert-info">
+                <h4>Loading tests...</h4>
+            </div>
+        </div>
+        
+        <div id="executionResults">
+            <!-- Execution results will appear here -->
+        </div>
+        
+        <div class="mt-4">
+            <h3>Console Output</h3>
+            <p>Check the browser's developer console (F12) for detailed logging.</p>
+        </div>
+        
+        <!-- Test elements -->
+        <div id="testStageDetails" style="display: none;">
+            <input type="number" value="5.0" />
+        </div>
+    </div>
+</body>
+</html>

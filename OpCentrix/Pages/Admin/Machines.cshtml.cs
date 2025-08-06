@@ -99,7 +99,7 @@ public class MachinesModel : PageModel
                 {
                     ModelState.AddModelError(error.PropertyName, error.ErrorMessage);
                 }
-                
+
                 await LoadPageDataAsync();
                 TempData["Error"] = "Please correct the validation errors and try again.";
                 return Page();
@@ -107,7 +107,7 @@ public class MachinesModel : PageModel
 
             // Create machine from DTO
             var machine = CreateMachineFromDto(CreateMachineRequest);
-            
+
             _context.Machines.Add(machine);
             await _context.SaveChangesAsync();
 
@@ -116,7 +116,7 @@ public class MachinesModel : PageModel
 
             // Clear form
             CreateMachineRequest = new CreateMachineDto();
-            
+
             return RedirectToPage();
         }
         catch (Exception ex)
@@ -147,7 +147,7 @@ public class MachinesModel : PageModel
                 {
                     ModelState.AddModelError(error.PropertyName, error.ErrorMessage);
                 }
-                
+
                 await LoadPageDataAsync();
                 TempData["Error"] = "Please correct the validation errors and try again.";
                 return Page();
@@ -168,7 +168,7 @@ public class MachinesModel : PageModel
 
             EditingMachineId = null;
             EditMachineRequest = new EditMachineDto();
-            
+
             return RedirectToPage();
         }
         catch (Exception ex)
@@ -210,7 +210,7 @@ public class MachinesModel : PageModel
 
             var action = machine.IsActive ? "activated" : "deactivated";
             TempData["Success"] = $"Machine '{machine.MachineId}' {action} successfully.";
-            
+
             return RedirectToPage();
         }
         catch (Exception ex)
@@ -236,7 +236,7 @@ public class MachinesModel : PageModel
             }
 
             var hasActiveJobs = await _context.Jobs
-                .AnyAsync(j => j.MachineId == machine.MachineId && 
+                .AnyAsync(j => j.MachineId == machine.MachineId &&
                               j.Status != "Completed" && j.Status != "Cancelled");
 
             if (hasActiveJobs)
@@ -279,7 +279,7 @@ public class MachinesModel : PageModel
                 {
                     ModelState.AddModelError(error.PropertyName, error.ErrorMessage);
                 }
-                
+
                 await LoadPageDataAsync();
                 TempData["Error"] = "Please correct the validation errors and try again.";
                 return Page();
@@ -318,7 +318,7 @@ public class MachinesModel : PageModel
 
             TempData["Success"] = $"Capability '{CreateCapabilityRequest.CapabilityName}' added successfully.";
             CreateCapabilityRequest = new CreateCapabilityDto();
-            
+
             return RedirectToPage();
         }
         catch (Exception ex)
@@ -354,7 +354,7 @@ public class MachinesModel : PageModel
 
         if (!string.IsNullOrEmpty(SearchTerm))
         {
-            query = query.Where(m => 
+            query = query.Where(m =>
                 m.MachineId.Contains(SearchTerm) ||
                 m.Name.Contains(SearchTerm) ||
                 m.MachineType.Contains(SearchTerm) ||
@@ -369,7 +369,7 @@ public class MachinesModel : PageModel
 
         if (!string.IsNullOrEmpty(MaterialFilter))
         {
-            query = query.Where(m => m.SupportedMaterials.Contains(MaterialFilter) || 
+            query = query.Where(m => m.SupportedMaterials.Contains(MaterialFilter) ||
                                    m.CurrentMaterial.Contains(MaterialFilter));
         }
 
@@ -410,35 +410,115 @@ public class MachinesModel : PageModel
     {
         try
         {
+            // Ensure materials are available - with enhanced error handling
             AvailableMaterials = await _materialService.GetActiveMaterialsAsync();
             MaterialTypes = await _materialService.GetMaterialTypesAsync();
+
+            // If no materials found, try to seed them
+            if (!AvailableMaterials.Any())
+            {
+                _logger.LogWarning("⚠️ No materials found in database, attempting to seed default materials");
+                try
+                {
+                    await _materialService.SeedDefaultMaterialsAsync();
+                    AvailableMaterials = await _materialService.GetActiveMaterialsAsync();
+                    MaterialTypes = await _materialService.GetMaterialTypesAsync();
+                    _logger.LogInformation("✅ Materials seeded successfully, found {Count} materials", AvailableMaterials.Count);
+                }
+                catch (Exception seedEx)
+                {
+                    _logger.LogError(seedEx, "❌ Failed to seed materials, using fallback data");
+                    // Provide fallback materials to prevent UI crash
+                    AvailableMaterials = GetFallbackMaterials();
+                    MaterialTypes = AvailableMaterials.Select(m => m.MaterialType).Distinct().ToList();
+                }
+            }
+
+            _logger.LogInformation("✅ Loaded {MaterialCount} materials and {TypeCount} material types",
+                AvailableMaterials.Count, MaterialTypes.Count);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "❌ Error loading materials");
-            AvailableMaterials = new List<Material>();
-            MaterialTypes = new List<string>();
+            _logger.LogError(ex, "❌ Error loading materials, using fallback data");
+            // Provide fallback materials to prevent UI crash
+            AvailableMaterials = GetFallbackMaterials();
+            MaterialTypes = AvailableMaterials.Select(m => m.MaterialType).Distinct().ToList();
         }
+    }
+
+    /// <summary>
+    /// Provide fallback materials if database loading fails
+    /// </summary>
+    private List<Material> GetFallbackMaterials()
+    {
+        return new List<Material>
+        {
+            new Material
+            {
+                Id = 1,
+                MaterialCode = "TI64-G5",
+                MaterialName = "Ti-6Al-4V Grade 5",
+                MaterialType = "Titanium",
+                IsActive = true
+            },
+            new Material
+            {
+                Id = 2,
+                MaterialCode = "IN718",
+                MaterialName = "Inconel 718",
+                MaterialType = "Nickel",
+                IsActive = true
+            },
+            new Material
+            {
+                Id = 3,
+                MaterialCode = "SS316L",
+                MaterialName = "Stainless Steel 316L",
+                MaterialType = "Steel",
+                IsActive = true
+            },
+            new Material
+            {
+                Id = 4,
+                MaterialCode = "ALSI10MG",
+                MaterialName = "AlSi10Mg",
+                MaterialType = "Aluminum",
+                IsActive = true
+            }
+        };
     }
 
     private async Task LoadStatisticsAsync()
     {
-        TotalMachines = await _context.Machines.CountAsync();
-        ActiveMachines = await _context.Machines.CountAsync(m => m.IsActive);
-        OfflineMachines = await _context.Machines.CountAsync(m => m.Status == "Offline");
+        try
+        {
+            TotalMachines = await _context.Machines.CountAsync();
+            ActiveMachines = await _context.Machines.CountAsync(m => m.IsActive);
+            OfflineMachines = await _context.Machines.CountAsync(m => m.Status == "Offline");
 
-        var machines = await _context.Machines.Select(m => m.Status).ToListAsync();
-        StatusStatistics = machines
-            .Where(status => !string.IsNullOrEmpty(status))
-            .GroupBy(status => status)
-            .ToDictionary(g => g.Key, g => g.Count());
+            var machines = await _context.Machines.Select(m => m.Status).ToListAsync();
+            StatusStatistics = machines
+                .Where(status => !string.IsNullOrEmpty(status))
+                .GroupBy(status => status)
+                .ToDictionary(g => g.Key, g => g.Count());
 
-        var utilizationValues = await _context.Machines
-            .Where(m => m.IsActive)
-            .Select(m => (double?)m.AverageUtilizationPercent)
-            .ToListAsync();
-            
-        AverageUtilization = utilizationValues.Any() ? utilizationValues.Average() ?? 0 : 0;
+            var utilizationValues = await _context.Machines
+                .Where(m => m.IsActive)
+                .Select(m => (double?)m.AverageUtilizationPercent)
+                .ToListAsync();
+
+            AverageUtilization = utilizationValues.Any() ? utilizationValues.Average() ?? 0 : 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error loading machine statistics");
+            // Provide default values on error
+            TotalMachines = 0;
+            ActiveMachines = 0;
+            OfflineMachines = 0;
+            StatusStatistics = new Dictionary<string, int>();
+            AverageUtilization = 0;
+        }
     }
 
     private async Task<ValidationResult> ValidateCreateRequestAsync(CreateMachineDto request)
@@ -448,16 +528,16 @@ public class MachinesModel : PageModel
         // Required field validation
         if (string.IsNullOrWhiteSpace(request.MachineId))
             result.AddError(nameof(request.MachineId), "Machine ID is required.");
-        
+
         if (string.IsNullOrWhiteSpace(request.MachineName))
             result.AddError(nameof(request.MachineName), "Machine Name is required.");
-        
+
         if (string.IsNullOrWhiteSpace(request.MachineModel))
             result.AddError(nameof(request.MachineModel), "Machine Model is required.");
-        
+
         if (string.IsNullOrWhiteSpace(request.SupportedMaterials))
             result.AddError(nameof(request.SupportedMaterials), "Supported Materials is required.");
-        
+
         if (string.IsNullOrWhiteSpace(request.Status))
             result.AddError(nameof(request.Status), "Status is required.");
 
@@ -466,7 +546,7 @@ public class MachinesModel : PageModel
         {
             var existingMachine = await _context.Machines
                 .FirstOrDefaultAsync(m => m.MachineId.ToLower() == request.MachineId.ToLower());
-            
+
             if (existingMachine != null)
                 result.AddError(nameof(request.MachineId), $"Machine ID '{request.MachineId}' already exists.");
         }
@@ -481,7 +561,7 @@ public class MachinesModel : PageModel
         // Required field validation
         if (string.IsNullOrWhiteSpace(request.MachineId))
             result.AddError(nameof(request.MachineId), "Machine ID is required.");
-        
+
         if (string.IsNullOrWhiteSpace(request.MachineName))
             result.AddError(nameof(request.MachineName), "Machine Name is required.");
 
@@ -490,7 +570,7 @@ public class MachinesModel : PageModel
         {
             var existingMachine = await _context.Machines
                 .FirstOrDefaultAsync(m => m.MachineId.ToLower() == request.MachineId.ToLower() && m.Id != machineId);
-            
+
             if (existingMachine != null)
                 result.AddError(nameof(request.MachineId), $"Machine ID '{request.MachineId}' already exists.");
         }
@@ -504,10 +584,10 @@ public class MachinesModel : PageModel
 
         if (string.IsNullOrWhiteSpace(request.MachineId))
             result.AddError(nameof(request.MachineId), "Machine ID is required.");
-        
+
         if (string.IsNullOrWhiteSpace(request.CapabilityName))
             result.AddError(nameof(request.CapabilityName), "Capability Name is required.");
-        
+
         if (string.IsNullOrWhiteSpace(request.CapabilityType))
             result.AddError(nameof(request.CapabilityType), "Capability Type is required.");
 

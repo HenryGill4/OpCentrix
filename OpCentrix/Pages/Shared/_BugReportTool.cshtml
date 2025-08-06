@@ -1,4 +1,4 @@
-@using OpCentrix.Models
+﻿@using OpCentrix.Models
 @{
     var user = Context.User;
     var isAuthenticated = user.Identity?.IsAuthenticated ?? false;
@@ -104,10 +104,10 @@
                         <div>
                             <label for="severity" class="block text-sm font-medium text-gray-700 mb-2">Severity</label>
                             <select id="severity" name="severity" class="w-full border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-red-500">
-                                <option value="Low">?? Low</option>
-                                <option value="Medium" selected>?? Medium</option>
-                                <option value="High">?? High</option>
-                                <option value="Critical">?? Critical</option>
+                                <option value="Low">⚪ Low</option>
+                                <option value="Medium" selected>🟡 Medium</option>
+                                <option value="High">🟠 High</option>
+                                <option value="Critical">🔴 Critical</option>
                             </select>
                         </div>
                         <div>
@@ -123,16 +123,16 @@
                             <label for="category" class="block text-sm font-medium text-gray-700 mb-2">Category</label>
                             <select id="category" name="category" class="w-full border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-red-500">
                                 <option value="General">General</option>
-                                <option value="UI">?? UI/Visual</option>
-                                <option value="Forms">?? Forms</option>
-                                <option value="Navigation">?? Navigation</option>
-                                <option value="Backend">?? Backend</option>
-                                <option value="Database">??? Database</option>
-                                <option value="Performance">? Performance</option>
-                                <option value="Security">?? Security</option>
-                                <option value="API">?? API</option>
-                                <option value="Authentication">?? Authentication</option>
-                                <option value="Reporting">?? Reporting</option>
+                                <option value="UI">🎨 UI/Visual</option>
+                                <option value="Forms">📝 Forms</option>
+                                <option value="Navigation">🧭 Navigation</option>
+                                <option value="Backend">⚙️ Backend</option>
+                                <option value="Database">🗃️ Database</option>
+                                <option value="Performance">⚡ Performance</option>
+                                <option value="Security">🔒 Security</option>
+                                <option value="API">🔗 API</option>
+                                <option value="Authentication">👤 Authentication</option>
+                                <option value="Reporting">📊 Reporting</option>
                             </select>
                         </div>
                     </div>
@@ -719,10 +719,10 @@
                                     <div>
                                         <label for="editSeverity" class="block text-sm font-medium text-gray-700 mb-2">Severity</label>
                                         <select id="editSeverity" name="severity" class="w-full border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                            <option value="Low" ${bug.severity === 'Low' ? 'selected' : ''}>?? Low</option>
-                                            <option value="Medium" ${bug.severity === 'Medium' ? 'selected' : ''}>?? Medium</option>
-                                            <option value="High" ${bug.severity === 'High' ? 'selected' : ''}>?? High</option>
-                                            <option value="Critical" ${bug.severity === 'Critical' ? 'selected' : ''}>?? Critical</option>
+                                            <option value="Low" ${bug.severity === 'Low' ? 'selected' : ''}>⚪ Low</option>
+                                            <option value="Medium" ${bug.severity === 'Medium' ? 'selected' : ''}>🟡 Medium</option>
+                                            <option value="High" ${bug.severity === 'High' ? 'selected' : ''}>🟠 High</option>
+                                            <option value="Critical" ${bug.severity === 'Critical' ? 'selected' : ''}>🔴 Critical</option>
                                         </select>
                                     </div>
                                     <div>
@@ -951,7 +951,7 @@
                         <p class="font-semibold">${title}</p>
                         <p class="text-sm opacity-90 mt-1">${message}</p>
                     </div>
-                    <button class="ml-auto pl-3 text-lg opacity-70 hover:opacity-100 transition-opacity" onclick="this.parentElement.parentElement.remove()">�</button>
+                    <button class="ml-auto pl-3 text-lg opacity-70 hover:opacity-100 transition-opacity" onclick="this.parentElement.parentElement.remove()">×</button>
                 </div>
             `;
             
@@ -1037,7 +1037,7 @@
 
     // Initialize bug report tool
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('?? [BUG-REPORT-TOOL] Bug reporting tool initialized');
+        console.log('📋 [BUG-REPORT-TOOL] Bug reporting tool initialized');
 
         // Add event listeners
         const bugReportButton = document.getElementById('bugReportButton');
@@ -1068,7 +1068,7 @@
 </script>
 
 <style>
-    /* Bug Report Tool Styles */
+    /* Bug Report Tool Styles - Media queries moved to responsive-master.css */
     #bugReportTool {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     }
@@ -1112,7 +1112,7 @@
         background: #c1c1c1;
         border-radius: 3px;
     }
-
+ 
     .overflow-y-auto::-webkit-scrollbar-thumb:hover {
         background: #a8a8a8;
     }
@@ -1136,24 +1136,4 @@
     .text-green-800 { color: #166534; }
     .bg-gray-100 { background-color: #f3f4f6; }
     .text-gray-800 { color: #1f2937; }
-
-    /* Ensure modal content is scrollable on small screens */
-    @@media (max-height: 600px) {
-        #bugReportModal .bg-white,
-        #bugStatsModal .bg-white,
-        #editBugModal .bg-white {
-            max-height: 90vh;
-            margin-top: 1rem;
-            margin-bottom: 1rem;
-        }
-    }
-
-    /* Responsive improvements */
-    @@media (max-width: 768px) {
-        #bugStatsModal .bg-white,
-        #editBugModal .bg-white {
-            width: 95%;
-            margin: 1rem auto;
-        }
-    }
 </style>

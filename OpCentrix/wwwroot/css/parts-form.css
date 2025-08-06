@@ -1,0 +1,196 @@
+/* Parts Form Specific Styling */
+
+/* Core Form Styling */
+.part-required::after {
+    content: " *";
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+}
+
+/* Section Headers */
+.part-section-header {
+    color: #0d6efd;
+    border-bottom: 2px solid #e9ecef;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+/* Tab Styling */
+.nav-tabs {
+    border-bottom: 2px solid #dee2e6;
+}
+
+.nav-tabs .nav-link {
+    color: #6c757d;
+    border: 1px solid transparent;
+    border-bottom: none;
+    font-weight: 500;
+    padding: 0.75rem 1rem;
+    transition: all 0.15s ease-in-out;
+}
+
+.nav-tabs .nav-link:hover {
+    color: #0d6efd;
+    border-color: #e9ecef #e9ecef #dee2e6;
+    background-color: #f8f9fa;
+}
+
+.nav-tabs .nav-link.active {
+    color: #ffffff;
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    font-weight: 600;
+}
+
+.tab-content {
+    min-height: 400px;
+    padding-top: 1rem;
+}
+
+/* Stage Cards */
+.part-stage-card {
+    border: 2px solid #e9ecef;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.part-stage-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+}
+
+.part-stage-header {
+    padding: 1rem;
+    font-weight: 600;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.part-stage-details {
+    padding: 1rem;
+    display: none;
+    background-color: rgba(0, 0, 0, 0.02);
+    border-top: 1px solid #dee2e6;
+}
+
+.part-stage-details.show {
+    display: block;
+}
+
+.part-stage-checkbox {
+    transform: scale(1.2);
+    margin-right: 0.5rem;
+}
+
+/* Summary and Admin Override Cards */
+.part-summary-card,
+.part-admin-override-card {
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    background-color: #ffffff;
+}
+
+.part-summary-header,
+.part-admin-override-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 1rem;
+    border-bottom: 1px solid #dee2e6;
+    color: #495057;
+    font-weight: 600;
+}
+
+.part-summary-content,
+.part-admin-override-content {
+    padding: 1rem;
+}
+
+.part-admin-override-card {
+    border-color: #ffc107;
+}
+
+.part-admin-override-header {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeeba 100%);
+    color: #856404;
+}
+
+.part-override-required-text {
+    display: none;
+    margin-top: 0.5rem;
+    color: #856404;
+    font-size: 0.875rem;
+}
+
+/* Form Validation */
+.was-validated .form-control:valid {
+    border-color: #198754;
+}
+
+.was-validated .form-control:invalid {
+    border-color: #dc3545;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .part-tab-text {
+        display: none;
+    }
+    
+    .nav-tabs .nav-link {
+        padding: 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    .part-section-header {
+        font-size: 1rem;
+    }
+}
+
+/* Loading States */
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+}
+
+/* Form Text Styling */
+.form-text {
+    color: #6c757d;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+/* Alert Styling */
+.alert {
+    border-radius: 0.5rem;
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+/* Badge Styling */
+.badge {
+    font-size: 0.75rem;
+    padding: 0.35em 0.65em;
+}
+
+/* Modal Enhancements */
+.modal-header.bg-primary {
+    border-bottom: none;
+}
+
+.modal-footer {
+    border-top: 1px solid #dee2e6;
+    background-color: #f8f9fa;
+}

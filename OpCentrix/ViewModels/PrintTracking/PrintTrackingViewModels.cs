@@ -36,9 +36,9 @@ namespace OpCentrix.ViewModels.PrintTracking
         public DateTime EstimatedEndTime { get; set; } = DateTime.Now.AddHours(4);
 
         [Display(Name = "Calculated Duration (hours)")]
-        public decimal OperatorEstimatedHours 
-        { 
-            get 
+        public decimal OperatorEstimatedHours
+        {
+            get
             {
                 if (EstimatedEndTime > ActualStartTime)
                 {
@@ -126,6 +126,24 @@ namespace OpCentrix.ViewModels.PrintTracking
         public int? Quantity { get; set; }
         public double? EstimatedHours { get; set; }
 
+        // ENHANCED: Material Selection and Validation
+        [Display(Name = "Material Being Used")]
+        public string? SelectedMaterial { get; set; }
+
+        [Display(Name = "Material Verified")]
+        public bool MaterialVerified { get; set; }
+
+        [Display(Name = "Material Verification Notes")]
+        [StringLength(500, ErrorMessage = "Material verification notes cannot exceed 500 characters")]
+        public string? MaterialVerificationNotes { get; set; }
+
+        [Display(Name = "Material Batch/Lot Number")]
+        [StringLength(100, ErrorMessage = "Material batch number cannot exceed 100 characters")]
+        public string? MaterialBatchNumber { get; set; }
+
+        [Display(Name = "Available Materials")]
+        public List<MaterialInfo> AvailableMaterials { get; set; } = new();
+
         // Production stage information
         public string? StageName { get; set; }
         public string? StageType { get; set; }
@@ -152,9 +170,9 @@ namespace OpCentrix.ViewModels.PrintTracking
         [Range(10, 5000, ErrorMessage = "Layer count must be between 10 and 5000")]
         public int? LayerCount { get; set; }
 
-        public List<string> SupportComplexityOptions { get; set; } = new() 
-        { 
-            "None", "Low", "Medium", "High", "Extreme" 
+        public List<string> SupportComplexityOptions { get; set; } = new()
+        {
+            "None", "Low", "Medium", "High", "Extreme"
         };
 
         // PHASE 4: Time Factor Assessment
@@ -164,11 +182,11 @@ namespace OpCentrix.ViewModels.PrintTracking
         public List<string> AvailableTimeFactors { get; set; } = new()
         {
             "Complex geometry",
-            "Fine details", 
+            "Fine details",
             "Thick supports",
             "Multiple orientations",
             "New material",
-            "Tight tolerances", 
+            "Tight tolerances",
             "First-time build",
             "Rush job",
             "Holiday/weekend",
@@ -195,7 +213,7 @@ namespace OpCentrix.ViewModels.PrintTracking
         public string PartNumber { get; set; } = string.Empty;
 
         [Range(1, 50, ErrorMessage = "Quantity must be between 1 and 50")]
-        [Display(Name = "Quantity")]  
+        [Display(Name = "Quantity")]
         public int Quantity { get; set; } = 1;
 
         [Display(Name = "Description")]
@@ -217,9 +235,9 @@ namespace OpCentrix.ViewModels.PrintTracking
         [StringLength(500, ErrorMessage = "Notes cannot exceed 500 characters")]
         public string? Notes { get; set; }
 
-        public List<string> PriorityOptions { get; set; } = new() 
-        { 
-            "Low", "Normal", "High", "Urgent" 
+        public List<string> PriorityOptions { get; set; } = new()
+        {
+            "Low", "Normal", "High", "Urgent"
         };
     }
 
@@ -283,7 +301,7 @@ namespace OpCentrix.ViewModels.PrintTracking
         public List<string> BuildAssessmentOptions { get; set; } = new()
         {
             "Much faster than expected (25%+ time savings)",
-            "Faster than expected (10-25% time savings)", 
+            "Faster than expected (10-25% time savings)",
             "As expected (within 10% of estimate)",
             "Slower than expected (10-25% longer)",
             "Much slower than expected (25%+ longer)",
@@ -306,7 +324,7 @@ namespace OpCentrix.ViewModels.PrintTracking
         public List<string> QualityAssessmentOptions { get; set; } = new()
         {
             "Excellent - exceeds requirements",
-            "Good - meets all requirements", 
+            "Good - meets all requirements",
             "Acceptable - minor issues",
             "Poor - significant issues",
             "Failed - does not meet requirements"
@@ -323,7 +341,7 @@ namespace OpCentrix.ViewModels.PrintTracking
         public List<string> AvailableTimeFactors { get; set; } = new()
         {
             "Machine ran faster than usual",
-            "Machine ran slower than usual", 
+            "Machine ran slower than usual",
             "Supports more complex than expected",
             "Supports simpler than expected",
             "Material issues/inconsistency",
@@ -331,7 +349,7 @@ namespace OpCentrix.ViewModels.PrintTracking
             "Operator interrupted build",
             "Emergency stop required",
             "Software/file issues",
-            "First time building this file", 
+            "First time building this file",
             "Familiar/repeated build",
             "Post-processing requirements changed"
         };
@@ -420,20 +438,20 @@ namespace OpCentrix.ViewModels.PrintTracking
 
         // Available options (populated dynamically)
         public List<string> AvailablePrinters { get; set; } = new();
-        public List<string> EndReasons { get; set; } = new() 
-        { 
-            "Completed Successfully", 
-            "Completed with Issues", 
-            "Aborted - Operator", 
-            "Aborted - Machine Error", 
-            "Aborted - Material Issue", 
-            "Aborted - Power Failure", 
+        public List<string> EndReasons { get; set; } = new()
+        {
+            "Completed Successfully",
+            "Completed with Issues",
+            "Aborted - Operator",
+            "Aborted - Machine Error",
+            "Aborted - Material Issue",
+            "Aborted - Power Failure",
             "Aborted - Emergency Stop",
             "Quality Hold",
             "Rework Required"
         };
         public List<Part> AvailableParts { get; set; } = new();
-        
+
         // ENHANCED: Available running jobs for dropdown selection
         public List<Job> AvailableRunningJobs { get; set; } = new();
 
@@ -476,8 +494,8 @@ namespace OpCentrix.ViewModels.PrintTracking
         public List<string> Warnings { get; set; } = new();
 
         // Performance calculations
-        public decimal TimeVariancePercent => OperatorEstimatedHours.HasValue && OperatorEstimatedHours > 0 
-            ? ((OperatorActualHours - OperatorEstimatedHours.Value) / OperatorEstimatedHours.Value) * 100 
+        public decimal TimeVariancePercent => OperatorEstimatedHours.HasValue && OperatorEstimatedHours > 0
+            ? ((OperatorActualHours - OperatorEstimatedHours.Value) / OperatorEstimatedHours.Value) * 100
             : 0;
 
         public bool IsSignificantVariance => Math.Abs(TimeVariancePercent) > 15;
@@ -610,7 +628,7 @@ namespace OpCentrix.ViewModels.PrintTracking
         public string CustomerImpact { get; set; } = "None";
 
         public List<string> AvailableReasons { get; set; } = DelayLog.DelayReasons.ToList();
-        
+
         public List<string> RootCauseCategories { get; set; } = new()
         {
             "Machine/Equipment",
@@ -626,7 +644,7 @@ namespace OpCentrix.ViewModels.PrintTracking
         {
             "None",
             "Low - Minor Schedule Impact",
-            "Medium - Delivery Date at Risk", 
+            "Medium - Delivery Date at Risk",
             "High - Customer Notification Required",
             "Critical - Immediate Escalation Required"
         };
@@ -707,33 +725,33 @@ namespace OpCentrix.ViewModels.PrintTracking
         public bool IsActive { get; set; }
         public bool IsAvailableForScheduling { get; set; }
         public int Priority { get; set; }
-        
+
         // Material information
         public List<string> SupportedMaterials { get; set; } = new();
         public string CurrentMaterial { get; set; } = string.Empty;
-        
+
         // Location and organization
         public string Location { get; set; } = string.Empty;
         public string Department { get; set; } = string.Empty;
-        
+
         // Technical specifications
         public string BuildVolumeInfo { get; set; } = string.Empty;
         public Dictionary<string, object> TechnicalSpecs { get; set; } = new();
-        
+
         // Maintenance information
         public string MaintenanceStatus { get; set; } = string.Empty;
         public DateTime? LastMaintenanceDate { get; set; }
         public DateTime? NextMaintenanceDate { get; set; }
         public double HoursSinceLastMaintenance { get; set; }
         public double MaintenanceIntervalHours { get; set; }
-        
+
         // Performance metrics
         public double UtilizationPercent { get; set; }
         public int ActiveJobs { get; set; }
         public int QueuedJobs { get; set; }
         public double AverageJobTime { get; set; }
         public double HoursToday { get; set; }
-        
+
         // Communication settings
         public string OpcUaEndpointUrl { get; set; } = string.Empty;
         public bool OpcUaEnabled { get; set; }
@@ -744,7 +762,7 @@ namespace OpCentrix.ViewModels.PrintTracking
         public bool MaintenanceSoon => MaintenanceStatus == "Soon";
         public bool IsHighPriority => Priority <= 2;
         public bool CanAcceptJobs => IsActive && IsAvailableForScheduling && Status != "Maintenance" && Status != "Error";
-        
+
         // UI helper properties
         public string StatusColor => Status?.ToLower() switch
         {
@@ -769,7 +787,7 @@ namespace OpCentrix.ViewModels.PrintTracking
         public string UtilizationLevel => UtilizationPercent switch
         {
             >= 90 => "Very High",
-            >= 70 => "High", 
+            >= 70 => "High",
             >= 50 => "Medium",
             >= 20 => "Low",
             _ => "Very Low"
@@ -963,5 +981,25 @@ namespace OpCentrix.ViewModels.PrintTracking
         public string Severity { get; set; } = string.Empty;
         public int StageId { get; set; }
         public DateTime CreatedDate { get; set; }
+    }
+
+    /// <summary>
+    /// Material information for print start selection
+    /// </summary>
+    public class MaterialInfo
+    {
+        public int Id { get; set; }
+        public string MaterialCode { get; set; } = string.Empty;
+        public string MaterialName { get; set; } = string.Empty;
+        public string MaterialType { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string DisplayName => $"{MaterialCode} - {MaterialName}";
+        public string SafetyNotes { get; set; } = string.Empty;
+        public decimal CostPerGram { get; set; }
+        public bool IsCompatibleWithMachine { get; set; } = true;
+        public string MaterialTypeColor { get; set; } = "#6B7280";
+        public double DefaultLayerThicknessMicrons { get; set; }
+        public double DefaultLaserPowerPercent { get; set; }
+        public double DefaultScanSpeedMmPerSec { get; set; }
     }
 }

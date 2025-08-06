@@ -21,6 +21,7 @@ namespace OpCentrix.Pages.PrintTracking
     {
         private readonly IPrintTrackingService _printTrackingService;
         private readonly IMachineManagementService _machineManagementService;
+        private readonly IMaterialService _materialService;
         private readonly SchedulerContext _context;
         private readonly ILogger<IndexModel> _logger;
 
@@ -34,11 +35,13 @@ namespace OpCentrix.Pages.PrintTracking
         public IndexModel(
             IPrintTrackingService printTrackingService,
             IMachineManagementService machineManagementService,
+            IMaterialService materialService,
             SchedulerContext context,
             ILogger<IndexModel> logger)
         {
             _printTrackingService = printTrackingService ?? throw new ArgumentNullException(nameof(printTrackingService));
             _machineManagementService = machineManagementService ?? throw new ArgumentNullException(nameof(machineManagementService));
+            _materialService = materialService ?? throw new ArgumentNullException(nameof(materialService));
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
@@ -48,7 +51,7 @@ namespace OpCentrix.Pages.PrintTracking
             try
             {
                 var userId = GetCurrentUserId();
-                
+
                 // Determine user role and view type
                 UserRole = GetCurrentUserRole();
                 IsAdminView = UserRole == "Admin" || UserRole == "Manager";
@@ -86,7 +89,7 @@ namespace OpCentrix.Pages.PrintTracking
                 var userId = GetCurrentUserId();
                 UserRole = GetCurrentUserRole();
                 IsAdminView = UserRole == "Admin" || UserRole == "Manager";
-                
+
                 Dashboard = await _printTrackingService.GetDashboardDataAsync(userId);
                 await PopulateSlsMachinesOnlyAsync();
 
@@ -174,23 +177,23 @@ namespace OpCentrix.Pages.PrintTracking
         {
             try
             {
-                _logger.LogInformation("CompletePrint request received - BuildId: {BuildId}, OperatorActualHours: {ActualHours}", 
+                _logger.LogInformation("CompletePrint request received - BuildId: {BuildId}, OperatorActualHours: {ActualHours}",
                     model.BuildId, model.OperatorActualHours);
 
                 if (!ModelState.IsValid)
                 {
                     var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
                     model.Errors = errors.ToList();
-                    
+
                     // CRITICAL: Log validation errors for debugging
                     _logger.LogWarning("CompletePrint validation failed. Errors: {Errors}", string.Join(", ", errors));
-                    
+
                     // CRITICAL: Log specific field validation errors
                     foreach (var kvp in ModelState)
                     {
                         if (kvp.Value.Errors.Any())
                         {
-                            _logger.LogWarning("Field '{FieldName}' has errors: {FieldErrors}", 
+                            _logger.LogWarning("Field '{FieldName}' has errors: {FieldErrors}",
                                 kvp.Key, string.Join(", ", kvp.Value.Errors.Select(e => e.ErrorMessage)));
                         }
                     }
@@ -273,8 +276,8 @@ namespace OpCentrix.Pages.PrintTracking
             {
                 // CRITICAL FILTER: Only get SLS machines for print tracking
                 var slsMachines = await _context.Machines
-                    .Where(m => m.IsActive && 
-                               m.IsAvailableForScheduling && 
+                    .Where(m => m.IsActive &&
+                               m.IsAvailableForScheduling &&
                                m.MachineType.ToUpper() == "SLS") // SLS machines only
                     .OrderBy(m => m.Priority)
                     .ThenBy(m => m.MachineId)
@@ -310,7 +313,7 @@ namespace OpCentrix.Pages.PrintTracking
                 // Update existing machine-based data with SLS machines only
                 await UpdateMachineBasedStatsAsync(slsMachines);
 
-                _logger.LogInformation("Successfully populated {MachineCount} SLS machines from database for {UserRole} user", 
+                _logger.LogInformation("Successfully populated {MachineCount} SLS machines from database for {UserRole} user",
                     slsMachines.Count, UserRole);
             }
             catch (Exception ex)
@@ -426,8 +429,8 @@ namespace OpCentrix.Pages.PrintTracking
 
                 // FILTER: Only SLS machines for embedded scheduler
                 var slsMachines = await _context.Machines
-                    .Where(m => m.IsActive && 
-                               m.IsAvailableForScheduling && 
+                    .Where(m => m.IsActive &&
+                               m.IsAvailableForScheduling &&
                                m.MachineType.ToUpper() == "SLS")
                     .OrderBy(m => m.Priority)
                     .Select(m => m.MachineId)
@@ -545,13 +548,16 @@ namespace OpCentrix.Pages.PrintTracking
             {
                 // Get available SLS printers only
                 var slsMachines = await _context.Machines
-                    .Where(m => m.IsActive && 
-                               m.IsAvailableForScheduling && 
+                    .Where(m => m.IsActive &&
+                               m.IsAvailableForScheduling &&
                                m.MachineType.ToUpper() == "SLS")
                     .OrderBy(m => m.Priority)
                     .ToListAsync();
 
                 viewModel.AvailablePrinters = slsMachines.Select(m => m.MachineId).ToList();
+
+                // ENHANCED: Get available materials for the selected printer
+                await PopulateMaterialsForPrinterAsync(viewModel);
 
                 // Get available scheduled jobs
                 if (!string.IsNullOrEmpty(viewModel.PrinterName))
@@ -577,35 +583,95 @@ namespace OpCentrix.Pages.PrintTracking
         }
 
         /// <summary>
-        /// Populate post print view model with available options (SLS machines only)
+        /// Populate materials available for the selected printer
         /// </summary>
-        private async Task PopulatePostPrintViewModelAsync(PostPrintViewModel viewModel)
+        private async Task PopulateMaterialsForPrinterAsync(PrintStartViewModel viewModel)
         {
             try
             {
-                // Get available SLS printers only
-                var slsMachines = await _context.Machines
-                    .Where(m => m.IsActive && 
-                               m.IsAvailableForScheduling && 
-                               m.MachineType.ToUpper() == "SLS")
-                    .OrderBy(m => m.Priority)
-                    .ToListAsync();
+                var availableMaterials = new List<MaterialInfo>();
 
-                viewModel.AvailablePrinters = slsMachines.Select(m => m.MachineId).ToList();
+                if (!string.IsNullOrEmpty(viewModel.PrinterName))
+                {
+                    // Get the selected machine and its supported materials
+                    var machine = await _context.Machines
+                        .FirstOrDefaultAsync(m => m.MachineId == viewModel.PrinterName);
 
-                // Get available parts
-                viewModel.AvailableParts = await _printTrackingService.GetAvailablePartsAsync();
+                    if (machine != null && !string.IsNullOrEmpty(machine.SupportedMaterials))
+                    {
+                        var supportedMaterialCodes = machine.SupportedMaterials
+                            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(m => m.Trim())
+                            .ToList();
 
-                // Get running jobs
-                viewModel.AvailableRunningJobs = await _context.Jobs
-                    .Where(j => j.Status == "In Progress" || j.Status == "Building")
-                    .OrderBy(j => j.ActualStart)
-                    .ToListAsync();
+                        // Get materials from database that are supported by this machine
+                        var materials = await _context.Materials
+                            .Where(m => m.IsActive && supportedMaterialCodes.Contains(m.MaterialCode))
+                            .OrderBy(m => m.MaterialType)
+                            .ThenBy(m => m.MaterialCode)
+                            .ToListAsync();
+
+                        availableMaterials = materials.Select(m => new MaterialInfo
+                        {
+                            Id = m.Id,
+                            MaterialCode = m.MaterialCode,
+                            MaterialName = m.MaterialName,
+                            MaterialType = m.MaterialType,
+                            Description = m.Description,
+                            SafetyNotes = m.SafetyNotes,
+                            CostPerGram = m.CostPerGram,
+                            IsCompatibleWithMachine = true,
+                            MaterialTypeColor = m.MaterialTypeColor,
+                            DefaultLayerThicknessMicrons = m.DefaultLayerThicknessMicrons,
+                            DefaultLaserPowerPercent = m.DefaultLaserPowerPercent,
+                            DefaultScanSpeedMmPerSec = m.DefaultScanSpeedMmPerSec
+                        }).ToList();
+
+                        // Set current material if machine has one loaded
+                        if (!string.IsNullOrEmpty(machine.CurrentMaterial))
+                        {
+                            viewModel.SelectedMaterial = machine.CurrentMaterial;
+                        }
+                    }
+                }
+
+                // If no printer-specific materials, get all active materials
+                if (!availableMaterials.Any())
+                {
+                    var allMaterials = await _context.Materials
+                        .Where(m => m.IsActive)
+                        .OrderBy(m => m.MaterialType)
+                        .ThenBy(m => m.MaterialCode)
+                        .ToListAsync();
+
+                    availableMaterials = allMaterials.Select(m => new MaterialInfo
+                    {
+                        Id = m.Id,
+                        MaterialCode = m.MaterialCode,
+                        MaterialName = m.MaterialName,
+                        MaterialType = m.MaterialType,
+                        Description = m.Description,
+                        SafetyNotes = m.SafetyNotes,
+                        CostPerGram = m.CostPerGram,
+                        IsCompatibleWithMachine = string.IsNullOrEmpty(viewModel.PrinterName), // Unknown compatibility if no printer selected
+                        MaterialTypeColor = m.MaterialTypeColor,
+                        DefaultLayerThicknessMicrons = m.DefaultLayerThicknessMicrons,
+                        DefaultLaserPowerPercent = m.DefaultLaserPowerPercent,
+                        DefaultScanSpeedMmPerSec = m.DefaultScanSpeedMmPerSec
+                    }).ToList();
+                }
+
+                viewModel.AvailableMaterials = availableMaterials;
+
+                _logger.LogInformation("Populated {MaterialCount} materials for printer {PrinterName}",
+                    availableMaterials.Count, viewModel.PrinterName ?? "None");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error populating post print view model");
-                throw;
+                _logger.LogError(ex, "Error populating materials for printer {PrinterName}", viewModel.PrinterName);
+
+                // Fallback to empty list
+                viewModel.AvailableMaterials = new List<MaterialInfo>();
             }
         }
 
@@ -698,6 +764,50 @@ namespace OpCentrix.Pages.PrintTracking
         }
 
         /// <summary>
+        /// Populate post print view model with available options (SLS machines only)
+        /// </summary>
+        private async Task PopulatePostPrintViewModelAsync(PostPrintViewModel viewModel)
+        {
+            try
+            {
+                // Get available SLS printers only
+                var slsMachines = await _context.Machines
+                    .Where(m => m.IsActive &&
+                               m.IsAvailableForScheduling &&
+                               m.MachineType.ToUpper() == "SLS")
+                    .OrderBy(m => m.Priority)
+                    .ToListAsync();
+
+                viewModel.AvailablePrinters = slsMachines.Select(m => m.MachineId).ToList();
+
+                // Get available running jobs for completion
+                if (!string.IsNullOrEmpty(viewModel.PrinterName))
+                {
+                    viewModel.AvailableRunningJobs = await _context.Jobs
+                        .Where(j => j.MachineId == viewModel.PrinterName &&
+                                   (j.Status == "Running" || j.Status == "In Progress"))
+                        .OrderBy(j => j.ScheduledStart)
+                        .ToListAsync();
+                }
+
+                // Get available parts for selection
+                viewModel.AvailableParts = await _context.Parts
+                    .Where(p => p.IsActive)
+                    .OrderBy(p => p.PartNumber)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error populating post print view model");
+
+                // Fallback to empty lists
+                viewModel.AvailablePrinters = new List<string>();
+                viewModel.AvailableRunningJobs = new List<Job>();
+                viewModel.AvailableParts = new List<Part>();
+            }
+        }
+
+        /// <summary>
         /// Create fallback dashboard when errors occur
         /// </summary>
         private PrintTrackingDashboardViewModel CreateFallbackDashboard()
@@ -731,37 +841,37 @@ namespace OpCentrix.Pages.PrintTracking
         {
             return new List<Machine>
             {
-                new Machine { 
-                    MachineId = "TI1", 
-                    MachineName = "TruPrint 3000 #1", 
-                    MachineType = "SLS", 
-                    Status = "Idle", 
-                    IsActive = true, 
-                    IsAvailableForScheduling = true, 
+                new Machine {
+                    MachineId = "TI1",
+                    MachineName = "TruPrint 3000 #1",
+                    MachineType = "SLS",
+                    Status = "Idle",
+                    IsActive = true,
+                    IsAvailableForScheduling = true,
                     Priority = 1,
                     Location = "Print Floor",
                     Department = "Printing",
                     CurrentMaterial = "SS316L"
                 },
-                new Machine { 
-                    MachineId = "TI2", 
-                    MachineName = "TruPrint 3000 #2", 
-                    MachineType = "SLS", 
-                    Status = "Idle", 
-                    IsActive = true, 
-                    IsAvailableForScheduling = true, 
+                new Machine {
+                    MachineId = "TI2",
+                    MachineName = "TruPrint 3000 #2",
+                    MachineType = "SLS",
+                    Status = "Idle",
+                    IsActive = true,
+                    IsAvailableForScheduling = true,
                     Priority = 2,
                     Location = "Print Floor",
                     Department = "Printing",
                     CurrentMaterial = "SS316L"
                 },
-                new Machine { 
-                    MachineId = "INC", 
-                    MachineName = "Inconel Printer", 
-                    MachineType = "SLS", 
-                    Status = "Idle", 
-                    IsActive = true, 
-                    IsAvailableForScheduling = true, 
+                new Machine {
+                    MachineId = "INC",
+                    MachineName = "Inconel Printer",
+                    MachineType = "SLS",
+                    Status = "Idle",
+                    IsActive = true,
+                    IsAvailableForScheduling = true,
                     Priority = 3,
                     Location = "Print Floor",
                     Department = "Printing",
@@ -777,35 +887,35 @@ namespace OpCentrix.Pages.PrintTracking
         {
             return new List<OpCentrix.ViewModels.PrintTracking.MachineInfo>
             {
-                new OpCentrix.ViewModels.PrintTracking.MachineInfo { 
-                    MachineId = "TI1", 
-                    MachineName = "TruPrint 3000 #1", 
-                    MachineType = "SLS", 
-                    Status = "Idle", 
-                    IsActive = true, 
-                    IsAvailableForScheduling = true, 
+                new OpCentrix.ViewModels.PrintTracking.MachineInfo {
+                    MachineId = "TI1",
+                    MachineName = "TruPrint 3000 #1",
+                    MachineType = "SLS",
+                    Status = "Idle",
+                    IsActive = true,
+                    IsAvailableForScheduling = true,
                     Priority = 1,
                     Location = "Print Floor",
                     Department = "Printing"
                 },
-                new OpCentrix.ViewModels.PrintTracking.MachineInfo { 
-                    MachineId = "TI2", 
-                    MachineName = "TruPrint 3000 #2", 
-                    MachineType = "SLS", 
-                    Status = "Idle", 
-                    IsActive = true, 
-                    IsAvailableForScheduling = true, 
+                new OpCentrix.ViewModels.PrintTracking.MachineInfo {
+                    MachineId = "TI2",
+                    MachineName = "TruPrint 3000 #2",
+                    MachineType = "SLS",
+                    Status = "Idle",
+                    IsActive = true,
+                    IsAvailableForScheduling = true,
                     Priority = 2,
                     Location = "Print Floor",
                     Department = "Printing"
                 },
-                new OpCentrix.ViewModels.PrintTracking.MachineInfo { 
-                    MachineId = "INC", 
-                    MachineName = "Inconel Printer", 
-                    MachineType = "SLS", 
-                    Status = "Idle", 
-                    IsActive = true, 
-                    IsAvailableForScheduling = true, 
+                new OpCentrix.ViewModels.PrintTracking.MachineInfo {
+                    MachineId = "INC",
+                    MachineName = "Inconel Printer",
+                    MachineType = "SLS",
+                    Status = "Idle",
+                    IsActive = true,
+                    IsAvailableForScheduling = true,
                     Priority = 3,
                     Location = "Print Floor",
                     Department = "Printing"

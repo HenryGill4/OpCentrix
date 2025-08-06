@@ -1,4 +1,4 @@
-@using OpCentrix.ViewModels.PrintTracking
+﻿@using OpCentrix.ViewModels.PrintTracking
 @model PrintStartViewModel
 
 <!-- Enhanced Print Start Modal - Phase 4 with Operator Time Estimation and Prototype Addition -->
@@ -79,6 +79,134 @@
                                required
                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                         <p class="mt-1 text-xs text-gray-500">Auto-filled to current time, but can be edited if needed</p>
+                    </div>
+                </div>
+
+                <!-- ENHANCED: Material Selection and Verification Section -->
+                <div class="bg-gradient-to-r from-orange-50 to-red-50 p-6 rounded-lg border">
+                    <h4 class="text-lg font-semibold text-orange-800 mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
+                        </svg>
+                        Material Verification
+                        <span class="ml-2 text-sm font-normal text-red-600">(Required)</span>
+                    </h4>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Material Selection -->
+                        <div>
+                            <label for="SelectedMaterial" class="block text-sm font-medium text-gray-700 mb-2">
+                                Material Being Used <span class="text-red-500">*</span>
+                            </label>
+                            <select name="SelectedMaterial" id="SelectedMaterial" required 
+                                    onchange="updateMaterialInfo()"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">
+                                <option value="">Select Material</option>
+                                @if (Model.AvailableMaterials?.Any() == true)
+                                {
+                                    @foreach (var materialType in Model.AvailableMaterials.GroupBy(m => m.MaterialType))
+                                    {
+                                        <optgroup label="@materialType.Key">
+                                            @foreach (var material in materialType.OrderBy(m => m.MaterialCode))
+                                            {
+                                                <option value="@material.MaterialCode" 
+                                                        data-material-type="@material.MaterialType"
+                                                        data-safety-notes="@material.SafetyNotes"
+                                                        data-cost="@material.CostPerGram.ToString("F3")"
+                                                        data-compatible="@material.IsCompatibleWithMachine.ToString().ToLower()"
+                                                        selected="@(Model.SelectedMaterial == material.MaterialCode)">
+                                                    @material.DisplayName
+                                                </option>
+                                            }
+                                        </optgroup>
+                                    }
+                                }
+                                else
+                                {
+                                    <option value="">No materials available</option>
+                                }
+                            </select>
+                            <p class="mt-1 text-xs text-gray-600">Select the material currently loaded in the printer</p>
+                        </div>
+
+                        <!-- Material Batch/Lot Number -->
+                        <div>
+                            <label for="MaterialBatchNumber" class="block text-sm font-medium text-gray-700 mb-2">
+                                Material Batch/Lot Number
+                            </label>
+                            <input type="text" 
+                                   name="MaterialBatchNumber" 
+                                   id="MaterialBatchNumber" 
+                                   value="@Model.MaterialBatchNumber"
+                                   maxlength="100"
+                                   placeholder="e.g., TI64-2024-001"
+                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">
+                            <p class="mt-1 text-xs text-gray-600">For traceability and quality control</p>
+                        </div>
+                    </div>
+
+                    <!-- Material Information Display -->
+                    <div id="materialInfoDisplay" class="mt-4 p-4 bg-white rounded-lg border hidden">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                            <div>
+                                <span class="text-gray-600">Type:</span>
+                                <span class="font-semibold ml-1" id="materialTypeDisplay">-</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-600">Cost:</span>
+                                <span class="font-semibold ml-1" id="materialCostDisplay">-</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-600">Compatible:</span>
+                                <span class="font-semibold ml-1" id="materialCompatibleDisplay">-</span>
+                            </div>
+                        </div>
+                        <div id="materialSafetyNotes" class="mt-3 p-3 bg-yellow-50 border-l-4 border-yellow-400 hidden">
+                            <div class="flex">
+                                <div class="flex-shrink-0">
+                                    <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                    </svg>
+                                </div>
+                                <div class="ml-3">
+                                    <p class="text-sm text-yellow-700">
+                                        <strong>Safety Notes:</strong> <span id="safetyNotesText"></span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Material Verification Checkbox -->
+                    <div class="mt-4 flex items-start">
+                        <div class="flex items-center h-5">
+                            <input type="checkbox" 
+                                   name="MaterialVerified" 
+                                   id="MaterialVerified" 
+                                   value="true"
+                                   required
+                                   class="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded">
+                            <input type="hidden" name="MaterialVerified" value="false" />
+                        </div>
+                        <div class="ml-3 text-sm">
+                            <label for="MaterialVerified" class="font-medium text-gray-700">
+                                I verify that the material selected above matches the material currently loaded in the printer <span class="text-red-500">*</span>
+                            </label>
+                            <p class="text-gray-500">This verification is required for quality control and traceability</p>
+                        </div>
+                    </div>
+
+                    <!-- Material Verification Notes -->
+                    <div class="mt-4">
+                        <label for="MaterialVerificationNotes" class="block text-sm font-medium text-gray-700 mb-2">
+                            Material Verification Notes (Optional)
+                        </label>
+                        <textarea name="MaterialVerificationNotes" 
+                                  id="MaterialVerificationNotes" 
+                                  rows="2" 
+                                  maxlength="500"
+                                  placeholder="Any notes about the material condition, packaging, or verification process..."
+                                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">@Model.MaterialVerificationNotes</textarea>
                     </div>
                 </div>
 
@@ -614,6 +742,55 @@
         updateCalculatedDuration();
     }
 
+    // ENHANCED: Material information update function
+    function updateMaterialInfo() {
+        const materialSelect = document.getElementById('SelectedMaterial');
+        const selectedOption = materialSelect.options[materialSelect.selectedIndex];
+        const infoDisplay = document.getElementById('materialInfoDisplay');
+        const safetyNotesDiv = document.getElementById('materialSafetyNotes');
+        
+        if (materialSelect.value && selectedOption) {
+            // Get material data from option attributes
+            const materialType = selectedOption.getAttribute('data-material-type') || '-';
+            const cost = selectedOption.getAttribute('data-cost') || '-';
+            const compatible = selectedOption.getAttribute('data-compatible') === 'true';
+            const safetyNotes = selectedOption.getAttribute('data-safety-notes') || '';
+            
+            // Update display elements
+            document.getElementById('materialTypeDisplay').textContent = materialType;
+            document.getElementById('materialCostDisplay').textContent = cost ? `$${cost}/g` : '-';
+            document.getElementById('materialCompatibleDisplay').innerHTML = compatible 
+                ? '<span class="text-green-600">✓ Yes</span>' 
+                : '<span class="text-red-600">✗ No</span>';
+            
+            // Show material info
+            infoDisplay.classList.remove('hidden');
+            
+            // Handle safety notes
+            if (safetyNotes.trim()) {
+                document.getElementById('safetyNotesText').textContent = safetyNotes;
+                safetyNotesDiv.classList.remove('hidden');
+            } else {
+                safetyNotesDiv.classList.add('hidden');
+            }
+            
+            // Warn about incompatible materials
+            if (!compatible) {
+                materialSelect.style.borderColor = '#EF4444';
+                materialSelect.style.backgroundColor = '#FEF2F2';
+            } else {
+                materialSelect.style.borderColor = '';
+                materialSelect.style.backgroundColor = '';
+            }
+        } else {
+            // Hide material info when no selection
+            infoDisplay.classList.add('hidden');
+            safetyNotesDiv.classList.add('hidden');
+            materialSelect.style.borderColor = '';
+            materialSelect.style.backgroundColor = '';
+        }
+    }
+
     // Enhanced DOM ready handling
     document.addEventListener('DOMContentLoaded', function() {
         console.log('?? [MODAL] Start Print Modal DOM ready');
@@ -835,4 +1012,52 @@
     });
 
     console.log('? [MODAL] Start Print Modal script loaded successfully');
+
+    // Update material information display based on selection
+    function updateMaterialInfo() {
+        const materialSelect = document.getElementById('SelectedMaterial');
+        const selectedOption = materialSelect.options[materialSelect.selectedIndex];
+        
+        const typeDisplay = document.getElementById('materialTypeDisplay');
+        const costDisplay = document.getElementById('materialCostDisplay');
+        const compatibleDisplay = document.getElementById('materialCompatibleDisplay');
+        const safetyNotesDiv = document.getElementById('materialSafetyNotes');
+        const safetyNotesText = document.getElementById('safetyNotesText');
+        
+        if (selectedOption) {
+            // Update static displays
+            typeDisplay.textContent = selectedOption.getAttribute('data-material-type') || '-';
+            costDisplay.textContent = '$' + (parseFloat(selectedOption.getAttribute('data-cost')) || 0).toFixed(3) + ' per g';
+            compatibleDisplay.textContent = (selectedOption.getAttribute('data-compatible') === 'true') ? 'Yes' : 'No';
+            
+            // Update safety notes
+            const safetyNotes = selectedOption.getAttribute('data-safety-notes') || '';
+            if (safetyNotes) {
+                safetyNotesText.textContent = safetyNotes;
+                safetyNotesDiv.classList.remove('hidden');
+            } else {
+                safetyNotesDiv.classList.add('hidden');
+            }
+            
+            // Enable material verification checkbox
+            const materialVerifiedCheckbox = document.getElementById('MaterialVerified');
+            if (materialVerifiedCheckbox) {
+                materialVerifiedCheckbox.disabled = false; 
+            }
+        } else {
+            // Clear displays
+            typeDisplay.textContent = '-';
+            costDisplay.textContent = '-';
+            compatibleDisplay.textContent = '-';
+            safetyNotesText.textContent = '';
+            safetyNotesDiv.classList.add('hidden');
+            
+            // Disable material verification checkbox
+            const materialVerifiedCheckbox = document.getElementById('MaterialVerified');
+            if (materialVerifiedCheckbox) {
+                materialVerifiedCheckbox.disabled = true;
+                materialVerifiedCheckbox.checked = false;
+            }
+        }
+    }
 </script>

@@ -1,5 +1,7 @@
-/* Master Schedule Specific Styles */
-/* Task 12: Master Schedule View CSS */
+/* Master Schedule Specific Styles - Base styles only
+ * All responsive @media queries moved to responsive-master.css
+ * Task 12: Master Schedule View CSS
+ */
 
 .master-schedule-container {
     background: #f8fafc;
@@ -21,10 +23,10 @@
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.metric-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
+    .metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
 
 .metric-value {
     font-size: 2rem;
@@ -46,16 +48,16 @@
     margin-top: 0.25rem;
 }
 
-.trend-up { 
-    color: #059669; 
+.trend-up {
+    color: #059669;
 }
 
-.trend-down { 
-    color: #dc2626; 
+.trend-down {
+    color: #dc2626;
 }
 
-.trend-neutral { 
-    color: #6b7280; 
+.trend-neutral {
+    color: #6b7280;
 }
 
 .alert-item {
@@ -70,10 +72,10 @@
     transition: all 0.2s ease;
 }
 
-.alert-item:hover {
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    transform: translateX(2px);
-}
+    .alert-item:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        transform: translateX(2px);
+    }
 
 .alert-icon {
     width: 1.25rem;
@@ -117,10 +119,10 @@
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.machine-card:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 3px 8px rgba(0,0,0,0.15);
-}
+    .machine-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+    }
 
 .machine-header {
     display: flex;
@@ -233,11 +235,11 @@
     transition: all 0.2s ease;
 }
 
-.timeline-slot:hover {
-    background: #f1f5f9;
-    transform: scale(1.02);
-    z-index: 10;
-}
+    .timeline-slot:hover {
+        background: #f1f5f9;
+        transform: scale(1.02);
+        z-index: 10;
+    }
 
 .slot-occupied {
     background: #dbeafe;
@@ -245,9 +247,9 @@
     font-weight: 600;
 }
 
-.slot-occupied:hover {
-    background: #bfdbfe;
-}
+    .slot-occupied:hover {
+        background: #bfdbfe;
+    }
 
 .slot-conflict {
     background: #fecaca;
@@ -255,9 +257,9 @@
     font-weight: 600;
 }
 
-.slot-conflict:hover {
-    background: #fca5a5;
-}
+    .slot-conflict:hover {
+        background: #fca5a5;
+    }
 
 .slot-maintenance {
     background: #fef3c7;
@@ -265,9 +267,9 @@
     font-weight: 600;
 }
 
-.slot-maintenance:hover {
-    background: #fde68a;
-}
+    .slot-maintenance:hover {
+        background: #fde68a;
+    }
 
 .filters-panel {
     background: white;
@@ -299,13 +301,13 @@
     transition: color 0.2s ease;
 }
 
-.refresh-indicator.active {
-    color: #3b82f6;
-}
+    .refresh-indicator.active {
+        color: #3b82f6;
+    }
 
-.refresh-indicator svg {
-    margin-right: 0.25rem;
-}
+    .refresh-indicator svg {
+        margin-right: 0.25rem;
+    }
 
 /* Performance Indicator Styles */
 .performance-excellent {
@@ -338,16 +340,22 @@
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 @keyframes slideIn {
-    from { 
+    from {
         opacity: 0;
         transform: translateY(10px);
     }
-    to { 
+
+    to {
         opacity: 1;
         transform: translateY(0);
     }
@@ -361,102 +369,19 @@
 }
 
 @keyframes loading {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-}
+    0% {
+        background-position: 200% 0;
+    }
 
-/* Responsive Design */
-@media (max-width: 1024px) {
-    .metrics-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    .machine-status-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .timeline-grid {
-        font-size: 0.625rem;
-    }
-    
-    .timeline-header,
-    .timeline-machine {
-        padding: 0.5rem 0.25rem;
+    100% {
+        background-position: -200% 0;
     }
 }
 
-@media (max-width: 768px) {
-    .metrics-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .filters-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .export-buttons {
-        flex-direction: column;
-        width: 100%;
-    }
-    
-    .export-buttons button {
-        width: 100%;
-    }
-    
-    .timeline-container {
-        padding: 1rem;
-    }
-    
-    .metric-card {
-        padding: 1rem;
-    }
-    
-    .metric-value {
-        font-size: 1.5rem;
-    }
-}
-
-@media (max-width: 640px) {
-    .master-schedule-container .max-w-full {
-        padding-left: 1rem;
-        padding-right: 1rem;
-    }
-    
-    .alert-item {
-        padding: 0.5rem;
-    }
-    
-    .machine-card {
-        padding: 1rem;
-    }
-    
-    .timeline-slot {
-        min-height: 40px;
-        padding: 0.25rem;
-        font-size: 0.5rem;
-    }
-}
-
-/* Print Styles */
-@media print {
-    .master-schedule-container {
-        background: white;
-    }
-    
-    .export-buttons,
-    .refresh-indicator,
-    button {
-        display: none !important;
-    }
-    
-    .timeline-container,
-    .metric-card,
-    .filters-panel {
-        box-shadow: none;
-        border: 1px solid #e5e7eb;
-    }
-    
-    .alert-item {
-        break-inside: avoid;
-    }
-}
+/* Note: All responsive @media queries have been moved to responsive-master.css
+   This includes:
+   - Tablet responsive design (max-width: 1024px)
+   - Mobile responsive design (max-width: 768px)
+   - Small mobile devices (max-width: 640px)
+   - Print styles
+ */

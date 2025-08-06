@@ -1,0 +1,200 @@
+/* PrintTracking Page Styles - Base Styles Only
+ * All responsive @media queries moved to responsive-master.css
+ */
+
+/* ==============================================
+   TOAST CONTAINER STYLES
+   ============================================== */
+
+/* Enhanced toast container positioning for larger toasts */
+#toast-container {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 50;
+    width: auto;
+    min-width: 320px;
+    max-width: 448px; /* max-w-md equivalent */
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* Toast notification styling */
+.toast-notification {
+    pointer-events: auto;
+    transform: translateX(100%);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    width: 100%;
+    background: white;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15), 0 4px 6px rgba(0, 0, 0, 0.05);
+    border-radius: 0.5rem;
+    display: flex;
+    ring: 1px;
+    ring-color: rgba(0, 0, 0, 0.05);
+    margin-bottom: 0.5rem;
+    min-width: 320px;
+    max-width: 448px;
+}
+
+    .toast-notification.translate-x-0 {
+        transform: translateX(0);
+    }
+
+    .toast-notification.translate-x-full {
+        transform: translateX(100%);
+    }
+
+/* ==============================================
+   FIXED POSITIONING STYLES
+   ============================================== */
+
+/* Role-based styles for fixed elements */
+.fixed.bottom-4.right-4,
+.fixed.bottom-6.right-6 {
+    z-index: 40;
+}
+
+.fixed.bottom-4.left-4,
+.fixed.bottom-6.left-6 {
+    z-index: 40;
+}
+
+/* ==============================================
+   VIEW-SPECIFIC STYLES
+   ============================================== */
+
+/* Admin view specific styles */
+.admin-view .machine-card {
+    border-left: 4px solid #3B82F6;
+}
+
+/* Operator view specific styles */
+.operator-view .machine-card {
+    border-left: 4px solid #10B981;
+}
+
+/* ==============================================
+   SLS-SPECIFIC COLOR SCHEME
+   ============================================== */
+
+.sls-machine {
+    background: linear-gradient(135deg, #EBF4FF 0%, #F0F9FF 100%);
+}
+
+.sls-badge {
+    background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+    color: white;
+}
+
+/* ==============================================
+   BUTTON AND TOUCH TARGET ENHANCEMENTS
+   ============================================== */
+
+/* Enhanced touch targets for mobile */
+button, .btn, a.btn {
+    min-height: 44px;
+    min-width: 44px;
+    transition: all 0.2s ease-in-out;
+}
+
+/* Larger touch targets for important actions */
+#start-print-btn,
+#complete-print-btn {
+    min-height: 48px;
+    min-width: 48px;
+}
+
+/* Smooth transitions for interactive elements */
+button:hover, .btn:hover, a.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Focus styles for accessibility */
+button:focus, .btn:focus, a.btn:focus {
+    outline: 2px solid #3B82F6;
+    outline-offset: 2px;
+}
+
+/* ==============================================
+   LOADING ANIMATIONS
+   ============================================== */
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Toast animation classes */
+.translate-x-full {
+    transform: translateX(100%);
+}
+
+/* ==============================================
+   UTILITY CLASSES
+   ============================================== */
+
+/* Responsive utility classes for print tracking */
+.print-tracking-responsive {
+    /* Mobile first approach */
+}
+
+.print-tracking-desktop {
+    /* Desktop specific styles */
+}
+
+/* Animation utility classes */
+.slide-in-right {
+    animation: slideInRight 0.3s ease-out;
+}
+
+.slide-out-right {
+    animation: slideOutRight 0.3s ease-in;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+/* Note: All responsive @media queries have been moved to responsive-master.css
+   This includes:
+   - Mobile phones (portrait) - max-width: 640px
+   - Mobile phones (landscape) and small tablets - 641px-1024px  
+   - Desktop and larger screens - min-width: 1025px
+   - Accessibility enhancements (high contrast, reduced motion)
+   - Print styles
+   - Touch device optimizations
+   - Orientation specific styles
+   - Dark mode support
+ */

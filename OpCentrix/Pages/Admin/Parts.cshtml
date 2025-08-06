@@ -2,20 +2,20 @@
 @model OpCentrix.Pages.Admin.PartsModel
 @{
     ViewData["Title"] = "Parts Management";
-    ViewData["Description"] = "Manage SLS manufacturing parts and specifications with stage management";
+    ViewData["Description"] = "Manage SLS manufacturing parts and specifications";
     Layout = "~/Pages/Admin/Shared/_AdminLayout.cshtml";
 }
 
 <div class="container-fluid">
-    <!-- Enhanced Header Section -->
+    <!-- Simplified Header Section -->
     <div class="parts-page-header">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
                 <h1 class="parts-page-title">
                     <i class="fas fa-cogs text-primary"></i>
-                    Parts (@Model.TotalCount)
+                    Parts Management (@Model.TotalCount)
                 </h1>
-                <p class="parts-page-subtitle">Multi-Stage Manufacturing Parts & Workflow Management</p>
+                <p class="parts-page-subtitle">Manufacturing Parts Library</p>
             </div>
             <div class="d-flex gap-3">
                 <button type="button" 
@@ -25,12 +25,6 @@
                         title="Add New Part">
                     <i class="fas fa-plus me-2"></i>Add New Part
                 </button>
-                <a href="/Admin/ProductionStages" 
-                   class="btn btn-outline-info"
-                   data-bs-toggle="tooltip" 
-                   title="Manage Production Stages">
-                    <i class="fas fa-tasks me-2"></i>Manage Stages
-                </a>
                 <button type="button" 
                         class="btn btn-outline-secondary" 
                         onclick="window.location.reload()" 
@@ -41,7 +35,7 @@
             </div>
         </div>
 
-        <!-- Enhanced Statistics Cards with Stage Info -->
+        <!-- Statistics Cards -->
         <div class="row g-4">
             <div class="col-md-3">
                 <div class="card parts-stats-card active-parts border-0">
@@ -78,7 +72,7 @@
         </div>
     </div>
 
-    <!-- Enhanced Filters Section with Complexity Filter -->
+    <!-- Simplified Filters Section -->
     <div class="card parts-filter-section mb-4">
         <div class="card-header parts-filter-header">
             <h6 class="parts-filter-title">
@@ -88,7 +82,7 @@
         </div>
         <div class="card-body">
             <form method="get" class="row g-3" id="filterForm">
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <label for="SearchTerm" class="form-label">
                         <i class="fas fa-search me-1"></i>Search
                     </label>
@@ -136,20 +130,8 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label for="ComplexityFilter" class="form-label">
-                        <i class="fas fa-layer-group me-1"></i>Complexity
-                    </label>
-                    <select asp-for="ComplexityFilter" class="form-select">
-                        <option value="">All Complexities</option>
-                        @foreach (var complexity in Model.AvailableComplexityLevels)
-                        {
-                            <option value="@complexity" selected="@(Model.ComplexityFilter == complexity)">@complexity</option>
-                        }
-                    </select>
-                </div>
-                <div class="col-md-1">
                     <label class="form-label">
-                        <i class="fas fa-toggle-on me-1"></i>Status
+                        <i class="fas fa-toggle-on me-1"></i>Options
                     </label>
                     <div class="form-check">
                         <input asp-for="ActiveOnly" class="form-check-input" type="checkbox" />
@@ -164,7 +146,7 @@
         </div>
     </div>
 
-    <!-- Enhanced Parts Table with Stage Indicators -->
+    <!-- Simplified Parts Table -->
     <div class="card parts-card border-0">
         <div class="card-header bg-white border-bottom">
             <div class="d-flex justify-content-between align-items-center">
@@ -197,21 +179,21 @@
                         <thead class="table-light">
                             <tr>
                                 <th>
-                                    <a href="?SortBy=PartNumber&SortDirection=@Model.GetSortDirection("PartNumber")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ComplexityFilter=@Model.ComplexityFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
+                                    <a href="?SortBy=PartNumber&SortDirection=@Model.GetSortDirection("PartNumber")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
                                        class="text-decoration-none">
                                         <i class="fas fa-hashtag me-1"></i>
                                         Part Number @Model.GetSortIcon("PartNumber")
                                     </a>
                                 </th>
                                 <th>
-                                    <a href="?SortBy=Name&SortDirection=@Model.GetSortDirection("Name")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ComplexityFilter=@Model.ComplexityFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
+                                    <a href="?SortBy=Name&SortDirection=@Model.GetSortDirection("Name")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
                                        class="text-decoration-none">
                                         <i class="fas fa-tag me-1"></i>
                                         Name @Model.GetSortIcon("Name")
                                     </a>
                                 </th>
                                 <th>
-                                    <a href="?SortBy=Material&SortDirection=@Model.GetSortDirection("Material")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ComplexityFilter=@Model.ComplexityFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
+                                    <a href="?SortBy=Material&SortDirection=@Model.GetSortDirection("Material")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
                                        class="text-decoration-none">
                                         <i class="fas fa-flask me-1"></i>
                                         Material @Model.GetSortIcon("Material")
@@ -222,14 +204,7 @@
                                     Manufacturing Stages
                                 </th>
                                 <th>
-                                    <a href="?SortBy=Complexity&SortDirection=@Model.GetSortDirection("Complexity")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ComplexityFilter=@Model.ComplexityFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
-                                       class="text-decoration-none">
-                                        <i class="fas fa-layer-group me-1"></i>
-                                        Complexity @Model.GetSortIcon("Complexity")
-                                    </a>
-                                </th>
-                                <th>
-                                    <a href="?SortBy=Hours&SortDirection=@Model.GetSortDirection("Hours")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ComplexityFilter=@Model.ComplexityFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
+                                    <a href="?SortBy=Hours&SortDirection=@Model.GetSortDirection("Hours")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
                                        class="text-decoration-none">
                                         <i class="fas fa-clock me-1"></i>
                                         Duration @Model.GetSortIcon("Hours")
@@ -248,9 +223,6 @@
                         <tbody>
                             @foreach (var part in Model.Parts)
                             {
-                                var partStages = Model.GetPartStages(part.Id);
-                                var totalStageTime = partStages.Sum(s => s.EstimatedHours ?? (double)(s.ProductionStage?.DefaultSetupMinutes ?? 60) / 60.0);
-                                
                                 <tr class="@(part.HasAdminOverride ? "parts-admin-override" : "")">
                                     <td>
                                         <div class="fw-bold text-primary">@part.PartNumber</div>
@@ -281,115 +253,70 @@
                                             <i class="fas fa-atom me-1"></i>
                                             @part.Material
                                         </span>
-                                        @if (part.Material != part.SlsMaterial)
-                                        {
-                                            <br><span class="badge parts-badge bg-secondary mt-1">
-                                                <i class="fas fa-cogs me-1"></i>
-                                                SLS: @part.SlsMaterial
-                                            </span>
-                                        }
                                     </td>
                                     <td>
-                                        <!-- Stage Indicators -->
-                                        @if (partStages.Any())
+                                        <!-- Simple Stage Indicators using boolean flags -->
+                                        <div class="d-flex flex-wrap gap-1 mb-1">
+                                            @if (part.RequiresSLSPrinting)
+                                            {
+                                                <span class="badge stage-indicator bg-primary" data-bs-toggle="tooltip" title="SLS Printing Required">
+                                                    <i class="fas fa-print me-1"></i>SLS
+                                                </span>
+                                            }
+                                            @if (part.RequiresCNCMachining)
+                                            {
+                                                <span class="badge stage-indicator bg-success" data-bs-toggle="tooltip" title="CNC Machining Required">
+                                                    <i class="fas fa-cogs me-1"></i>CNC
+                                                </span>
+                                            }
+                                            @if (part.RequiresEDMOperations)
+                                            {
+                                                <span class="badge stage-indicator bg-warning text-dark" data-bs-toggle="tooltip" title="EDM Operations Required">
+                                                    <i class="fas fa-bolt me-1"></i>EDM
+                                                </span>
+                                            }
+                                            @if (part.RequiresAssembly)
+                                            {
+                                                <span class="badge stage-indicator bg-info" data-bs-toggle="tooltip" title="Assembly Required">
+                                                    <i class="fas fa-puzzle-piece me-1"></i>Assembly
+                                                </span>
+                                            }
+                                            @if (part.RequiresFinishing)
+                                            {
+                                                <span class="badge stage-indicator bg-secondary" data-bs-toggle="tooltip" title="Finishing Required">
+                                                    <i class="fas fa-brush me-1"></i>Finishing
+                                                </span>
+                                            }
+                                            @if (part.RequiresInspection)
+                                            {
+                                                <span class="badge stage-indicator bg-danger" data-bs-toggle="tooltip" title="Quality Inspection Required">
+                                                    <i class="fas fa-search me-1"></i>QC
+                                                </span>
+                                            }
+                                        </div>
+                                        @{
+                                            var stageCount = 0;
+                                            if (part.RequiresSLSPrinting) stageCount++;
+                                            if (part.RequiresCNCMachining) stageCount++;
+                                            if (part.RequiresEDMOperations) stageCount++;
+                                            if (part.RequiresAssembly) stageCount++;
+                                            if (part.RequiresFinishing) stageCount++;
+                                            if (part.RequiresInspection) stageCount++;
+                                        }
+                                        @if (stageCount > 0)
                                         {
-                                            <div class="d-flex flex-wrap gap-1 mb-1">
-                                                @foreach (var stage in partStages.OrderBy(s => s.ExecutionOrder))
-                                                {
-                                                    var badgeClass = stage.ProductionStage?.Name switch
-                                                    {
-                                                        var n when n.Contains("SLS") || n.Contains("Printing") => "bg-primary",
-                                                        var n when n.Contains("CNC") || n.Contains("Machining") => "bg-success", 
-                                                        var n when n.Contains("EDM") => "bg-warning text-dark",
-                                                        var n when n.Contains("Assembly") => "bg-info",
-                                                        var n when n.Contains("Finishing") => "bg-secondary",
-                                                        var n when n.Contains("Quality") || n.Contains("Inspection") => "bg-danger",
-                                                        _ => "bg-dark"
-                                                    };
-                                                    
-                                                    var stageIcon = stage.ProductionStage?.Name switch
-                                                    {
-                                                        var n when n.Contains("SLS") || n.Contains("Printing") => "fas fa-print",
-                                                        var n when n.Contains("CNC") || n.Contains("Machining") => "fas fa-cogs",
-                                                        var n when n.Contains("EDM") => "fas fa-bolt",
-                                                        var n when n.Contains("Assembly") => "fas fa-puzzle-piece",
-                                                        var n when n.Contains("Finishing") => "fas fa-brush",
-                                                        var n when n.Contains("Quality") || n.Contains("Inspection") => "fas fa-search",
-                                                        _ => "fas fa-tasks"
-                                                    };
-                                                    
-                                                    <span class="badge stage-indicator @badgeClass" 
-                                                          data-bs-toggle="tooltip" 
-                                                          title="@stage.ProductionStage?.Name - Order: @stage.ExecutionOrder - Est: @((stage.EstimatedHours ?? (double)(stage.ProductionStage?.DefaultSetupMinutes ?? 60) / 60.0).ToString("F1"))h">
-                                                        <i class="@stageIcon me-1"></i>
-                                                        @(stage.ExecutionOrder)
-                                                    </span>
-                                                }
-                                            </div>
                                             <div class="small text-muted">
                                                 <i class="fas fa-route me-1"></i>
-                                                @partStages.Count stage@(partStages.Count == 1 ? "" : "s") 
-                                                (@totalStageTime.ToString("F1")h total)
+                                                @stageCount stage@(stageCount == 1 ? "" : "s")
                                             </div>
                                         }
                                         else
                                         {
-                                            <!-- Fallback to boolean flags for legacy parts -->
-                                            <div class="d-flex flex-wrap gap-1 mb-1">
-                                                @if (part.RequiresSLSPrinting)
-                                                {
-                                                    <span class="badge stage-indicator bg-primary" data-bs-toggle="tooltip" title="SLS Printing Required">
-                                                        <i class="fas fa-print me-1"></i>SLS
-                                                    </span>
-                                                }
-                                                @if (part.RequiresEDMOperations)
-                                                {
-                                                    <span class="badge stage-indicator bg-warning text-dark" data-bs-toggle="tooltip" title="EDM Operations Required">
-                                                        <i class="fas fa-bolt me-1"></i>EDM
-                                                    </span>
-                                                }
-                                                @if (part.RequiresCNCMachining)
-                                                {
-                                                    <span class="badge stage-indicator bg-success" data-bs-toggle="tooltip" title="CNC Machining Required">
-                                                        <i class="fas fa-cogs me-1"></i>CNC
-                                                    </span>
-                                                }
-                                                @if (part.RequiresAssembly)
-                                                {
-                                                    <span class="badge stage-indicator bg-info" data-bs-toggle="tooltip" title="Assembly Required">
-                                                        <i class="fas fa-puzzle-piece me-1"></i>Assembly
-                                                    </span>
-                                                }
-                                                @if (part.RequiresFinishing)
-                                                {
-                                                    <span class="badge stage-indicator bg-secondary" data-bs-toggle="tooltip" title="Finishing Required">
-                                                        <i class="fas fa-brush me-1"></i>Finishing
-                                                    </span>
-                                                }
-                                                @if (part.RequiresInspection)
-                                                {
-                                                    <span class="badge stage-indicator bg-danger" data-bs-toggle="tooltip" title="Quality Inspection Required">
-                                                        <i class="fas fa-search me-1"></i>QC
-                                                    </span>
-                                                }
-                                            </div>
                                             <div class="small text-muted">
-                                                <i class="fas fa-exclamation-triangle me-1"></i>
-                                                Legacy stage flags
+                                                <i class="fas fa-info-circle me-1"></i>
+                                                No stages specified
                                             </div>
                                         }
-                                    </td>
-                                    <td>
-                                        <!-- Complexity Level -->
-                                        <span class="badge complexity-badge @Model.GetComplexityBadgeClass(part.ComplexityLevel)" 
-                                              data-bs-toggle="tooltip" 
-                                              title="Complexity Score: @part.ComplexityScore">
-                                            <i class="fas fa-layer-group me-1"></i>
-                                            @part.ComplexityLevel
-                                        </span>
-                                        <div class="small text-muted mt-1">
-                                            Score: @part.ComplexityScore
-                                        </div>
                                     </td>
                                     <td>
                                         @if (part.HasAdminOverride)
@@ -410,13 +337,6 @@
                                                 <i class="fas fa-clock me-1"></i>
                                                 @part.EstimatedHours.ToString("F1")h
                                             </div>
-                                            @if (partStages.Any() && totalStageTime > part.EstimatedHours)
-                                            {
-                                                <div class="small text-info">
-                                                    <i class="fas fa-plus me-1"></i>
-                                                    +@((totalStageTime - part.EstimatedHours).ToString("F1"))h stages
-                                                </div>
-                                            }
                                         }
                                     </td>
                                     <td>
@@ -456,27 +376,11 @@
                                     </td>
                                     <td>
                                         <div class="btn-group parts-btn-group btn-group-sm d-flex flex-wrap gap-1" role="group">
-                                            <!-- Schedule Job button -->
-                                            <form method="post" asp-page-handler="ScheduleJob" class="d-inline">
-                                                <input type="hidden" name="partId" value="@part.Id" />
-                                                <button type="submit" class="btn btn-sm btn-success" 
-                                                        data-bs-toggle="tooltip" title="Schedule Print Job">
-                                                    <i class="fas fa-calendar-plus"></i>
-                                                </button>
-                                            </form>
-                                            
                                             <!-- Edit button -->
                                             <button type="button" class="btn btn-sm btn-primary" 
                                                     onclick="handleEditPartClick(@part.Id)" 
                                                     data-bs-toggle="tooltip" title="Edit Part">
                                                 <i class="fas fa-edit"></i>
-                                            </button>
-                                            
-                                            <!-- View Details button -->
-                                            <button type="button" class="btn btn-sm btn-info" 
-                                                    onclick="showPartDetails(@part.Id)" 
-                                                    data-bs-toggle="tooltip" title="View Details">
-                                                <i class="fas fa-eye"></i>
                                             </button>
                                             
                                             <!-- Delete button -->
@@ -495,7 +399,7 @@
                     </table>
                 </div>
 
-                <!-- Enhanced Pagination -->
+                <!-- Pagination -->
                 @if (Model.TotalPages > 1)
                 {
                     <div class="card-footer bg-white border-top">
@@ -506,7 +410,7 @@
                                         @if (Model.PageNumber > 1)
                                         {
                                             <li class="page-item">
-                                                <a class="page-link" href="?PageNumber=@(Model.PageNumber - 1)&SortBy=@Model.SortBy&SortDirection=@Model.SortDirection&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ComplexityFilter=@Model.ComplexityFilter&ActiveOnly=@Model.ActiveOnly">
+                                                <a class="page-link" href="?PageNumber=@(Model.PageNumber - 1)&SortBy=@Model.SortBy&SortDirection=@Model.SortDirection&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ActiveOnly=@Model.ActiveOnly">
                                                     <i class="fas fa-chevron-left me-1"></i>Previous
                                                 </a>
                                             </li>
@@ -515,14 +419,14 @@
                                         @for (int i = Math.Max(1, Model.PageNumber - 2); i <= Math.Min(Model.TotalPages, Model.PageNumber + 2); i++)
                                         {
                                             <li class="page-item @(i == Model.PageNumber ? "active" : "")">
-                                                <a class="page-link" href="?PageNumber=@i&SortBy=@Model.SortBy&SortDirection=@Model.SortDirection&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ComplexityFilter=@Model.ComplexityFilter&ActiveOnly=@Model.ActiveOnly">@i</a>
+                                                <a class="page-link" href="?PageNumber=@i&SortBy=@Model.SortBy&SortDirection=@Model.SortDirection&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ActiveOnly=@Model.ActiveOnly">@i</a>
                                             </li>
                                         }
 
                                         @if (Model.PageNumber < Model.TotalPages)
                                         {
                                             <li class="page-item">
-                                                <a class="page-link" href="?PageNumber=@(Model.PageNumber + 1)&SortBy=@Model.SortBy&SortDirection=@Model.SortDirection&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ComplexityFilter=@Model.ComplexityFilter&ActiveOnly=@Model.ActiveOnly">
+                                                <a class="page-link" href="?PageNumber=@(Model.PageNumber + 1)&SortBy=@Model.SortBy&SortDirection=@Model.SortDirection&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&IndustryFilter=@Model.IndustryFilter&CategoryFilter=@Model.CategoryFilter&ActiveOnly=@Model.ActiveOnly">
                                                     Next<i class="fas fa-chevron-right ms-1"></i>
                                                 </a>
                                             </li>
@@ -568,7 +472,7 @@
     </div>
 </div>
 
-<!-- Enhanced Toast Container -->
+<!-- Toast Container -->
 <div id="toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;"></div>
 
 <!-- Include antiforgery token for AJAX requests -->
@@ -576,15 +480,21 @@
     @Html.AntiForgeryToken()
 </form>
 
-<!-- Enhanced JavaScript with stage management support -->
+<!-- HTMX for seamless form submission -->
+<script src="https://unpkg.com/htmx.org@1.9.10/dist/htmx.min.js"></script>
+
+<!-- Bulletproof JavaScript - Simple and Reliable -->
 <script>
-    console.log('?? [PARTS] Loading enhanced parts page with stage management');
+(function() {
+    'use strict';
+    
+    console.log('?? [PARTS] Loading bulletproof parts page');
     
     // Global variables
     let antiforgeryToken = '';
 
     // ===================================================================
-    // MAIN BUTTON HANDLERS
+    // MAIN BUTTON HANDLERS - Bulletproof with Multiple Fallbacks
     // ===================================================================
 
     window.handleAddPartClick = function() {
@@ -613,12 +523,13 @@
             return;
         }
         
-        const message = `Are you sure you want to delete part "${partNumber}" (${partName})?\n\nThis will also delete all associated stage requirements.\n\nThis action cannot be undone.`;
+        const message = `Are you sure you want to delete part "${partNumber}" (${partName})?\n\nThis action cannot be undone.`;
         
         if (confirm(message)) {
             console.log('? [PARTS] Delete confirmed, submitting form');
             
             try {
+                // Create and submit form
                 const form = document.createElement('form');
                 form.method = 'post';
                 form.action = '/Admin/Parts?handler=Delete';
@@ -644,19 +555,19 @@
                 document.body.appendChild(form);
                 form.submit();
                 
-                console.log('? [PARTS] Delete form submitted');
+                console.log('? [PARTS] Delete form submitted successfully');
                 
             } catch (error) {
                 console.error('? [PARTS] Error creating delete form:', error);
                 showToast('error', 'Failed to delete part. Please try again.');
             }
         } else {
-            console.log('? [PARTS] Delete cancelled');
+            console.log('?? [PARTS] Delete cancelled by user');
         }
     };
 
     // ===================================================================
-    // CORE FUNCTIONALITY
+    // CORE FUNCTIONALITY - Simplified and Bulletproof
     // ===================================================================
 
     function loadPartForm(action, partId = null) {
@@ -700,14 +611,14 @@
         
         // Show modal
         try {
-            let bootstrapModal;
             if (typeof bootstrap !== 'undefined') {
-                bootstrapModal = new bootstrap.Modal(modal, {
+                const bootstrapModal = new bootstrap.Modal(modal, {
                     backdrop: 'static',
                     keyboard: true
                 });
                 bootstrapModal.show();
             } else {
+                // Fallback modal display
                 modal.style.display = 'block';
                 modal.classList.add('show');
                 document.body.classList.add('modal-open');
@@ -719,9 +630,9 @@
             return;
         }
         
-        // Fetch form content
+        // Fetch form content with bulletproof error handling
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
         
         fetch(url, {
             method: 'GET',
@@ -787,120 +698,6 @@
     // UTILITY FUNCTIONS
     // ===================================================================
 
-    window.showPartDetails = function(partId) {
-        console.log('?? [PARTS] Showing part details for ID:', partId);
-        
-        if (!partId || partId <= 0) {
-            console.error('? [PARTS] Invalid part ID for details:', partId);
-            showToast('error', 'Invalid part ID');
-            return;
-        }
-        
-        // Show loading modal first
-        const modal = document.getElementById('partModal');
-        const modalContent = document.getElementById('partModalContent');
-        
-        if (!modal || !modalContent) {
-            console.error('? [PARTS] Modal elements not found');
-            showToast('error', 'Modal not available');
-            return;
-        }
-        
-        // Show loading state
-        modalContent.innerHTML = createLoadingContent('details');
-        
-        // Show modal
-        try {
-            if (typeof bootstrap !== 'undefined') {
-                const bootstrapModal = new bootstrap.Modal(modal);
-                bootstrapModal.show();
-            } else {
-                modal.style.display = 'block';
-                modal.classList.add('show');
-                document.body.classList.add('modal-open');
-            }
-        } catch (error) {
-            console.error('? [PARTS] Error showing modal:', error);
-            showToast('error', 'Failed to open details modal');
-            return;
-        }
-        
-        // Fetch part data with timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-        
-        fetch(`/Admin/Parts?handler=PartData&id=${partId}`, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-                'RequestVerificationToken': antiforgeryToken
-            },
-            signal: controller.signal,
-            credentials: 'same-origin'
-        })
-        .then(response => {
-            clearTimeout(timeoutId);
-            
-            console.log('?? [PARTS] Part data response:', response.status, response.statusText);
-            
-            if (!response.ok) {
-                if (response.status === 404) {
-                    throw new Error('Part not found. It may have been deleted.');
-                } else if (response.status === 500) {
-                    throw new Error('Server error occurred while loading part details.');
-                } else {
-                    throw new Error(`Server returned ${response.status}: ${response.statusText}`);
-                }
-            }
-            
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                throw new Error('Invalid response format. Expected JSON data.');
-            }
-            
-            return response.json();
-        })
-        .then(part => {
-            clearTimeout(timeoutId);
-            
-            if (!part || !part.id) {
-                throw new Error('Invalid part data received from server');
-            }
-            
-            console.log('? [PARTS] Part details loaded successfully:', part.partNumber);
-            
-            // Generate and display part details
-            const details = createPartDetailsContent(part);
-            modalContent.innerHTML = details;
-            
-            // Initialize any tooltips in the details content
-            setTimeout(() => {
-                if (typeof bootstrap !== 'undefined') {
-                    const tooltipTriggerList = modalContent.querySelectorAll('[data-bs-toggle="tooltip"]');
-                    tooltipTriggerList.forEach(tooltipTriggerEl => {
-                        new bootstrap.Tooltip(tooltipTriggerEl);
-                    });
-                }
-            }, 100);
-        })
-        .catch(error => {
-            clearTimeout(timeoutId);
-            console.error('? [PARTS] Error loading part details:', error);
-            
-            let errorMessage = 'Failed to load part details';
-            if (error.name === 'AbortError') {
-                errorMessage = 'Request timed out. Please check your connection and try again.';
-            } else if (error.message) {
-                errorMessage = error.message;
-            }
-            
-            // Show error in modal
-            modalContent.innerHTML = createErrorContent('details', errorMessage, `/Admin/Parts`);
-            showToast('error', errorMessage);
-        });
-    };
-
     window.changePageSize = function(newSize) {
         const url = new URL(window.location);
         url.searchParams.set('PageSize', newSize);
@@ -956,78 +753,20 @@
     };
 
     // ===================================================================
-    // INITIALIZATION
+    // HELPER FUNCTIONS
     // ===================================================================
 
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('?? [PARTS] Initializing enhanced Parts page with stage management');
-        
+    function initializeFormComponents() {
         try {
-            // Initialize antiforgery token
-            let tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
-            
-            if (!tokenInput) {
-                tokenInput = document.querySelector('form input[name="__RequestVerificationToken"]');
-            }
-            
-            if (!tokenInput) {
-                const hiddenForm = document.querySelector('form[style*="display: none"]');
-                if (hiddenForm) {
-                    tokenInput = hiddenForm.querySelector('input[name="__RequestVerificationToken"]');
-                }
-            }
-            
-            if (tokenInput) {
-                antiforgeryToken = tokenInput.value;
-                console.log('? [PARTS] Antiforgery token initialized successfully');
-            } else {
-                console.warn('?? [PARTS] Antiforgery token not found');
-            }
-            
             // Initialize Bootstrap tooltips
             if (typeof bootstrap !== 'undefined') {
                 const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-                tooltipTriggerList.forEach(tooltipTriggerEl => {
-                    new bootstrap.Tooltip(tooltipTriggerEl, {
-                        trigger: 'hover',
-                        delay: { show: 500, hide: 100 }
-                    });
-                });
-                console.log('? [PARTS] Bootstrap tooltips initialized');
-            }
-            
-            // Check for URL messages
-            const urlParams = new URLSearchParams(window.location.search);
-            const successMessage = urlParams.get('success');
-            const errorMessage = urlParams.get('error');
-            
-            if (successMessage) {
-                showToast('success', decodeURIComponent(successMessage));
-                window.history.replaceState({}, document.title, window.location.pathname);
-            }
-            
-            if (errorMessage) {
-                showToast('error', decodeURIComponent(errorMessage));
-                window.history.replaceState({}, document.title, window.location.pathname);
-            }
-            
-            console.log('? [PARTS] Enhanced Parts page with stage management initialized successfully');
-            
-        } catch (error) {
-            console.error('? [PARTS] Error initializing Parts page:', error);
-        }
-    });
-
-    // Helper functions for modal content generation
-    function initializeFormComponents() {
-        try {
-            const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-            if (typeof bootstrap !== 'undefined') {
                 tooltipTriggerList.forEach(tooltipTriggerEl => {
                     new bootstrap.Tooltip(tooltipTriggerEl);
                 });
             }
             
+            // Add form validation classes
             const forms = document.querySelectorAll('form');
             forms.forEach(form => {
                 if (form.checkValidity) {
@@ -1064,9 +803,7 @@
     }
 
     function createLoadingContent(action) {
-        const actionText = action === 'add' ? 'Add Part' : 
-                          action === 'edit' ? 'Edit Part' : 
-                          action === 'details' ? 'Part Details' : 'Part';
+        const actionText = action === 'add' ? 'Add Part' : 'Edit Part';
         
         return `
             <div class="modal-header bg-primary text-white">
@@ -1085,11 +822,7 @@
                 <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
                     <span class="visually-hidden">Loading...</span>
                 </div>
-                <p class="text-muted">
-                    ${action === 'details' ? 'Loading part details...' : 
-                      action === 'add' ? 'Loading part form with stage management...' : 
-                      'Loading part form...'}
-                </p>
+                <p class="text-muted">Loading part form...</p>
                 <div class="progress" style="height: 6px;">
                     <div class="progress-bar progress-bar-striped progress-bar-animated" 
                          role="progressbar" style="width: 100%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100">
@@ -1104,7 +837,7 @@
             <div class="modal-header bg-danger text-white">
                 <h5 class="modal-title">
                     <i class="fas fa-exclamation-triangle me-2"></i>
-                    Error Loading ${action === 'add' ? 'Add Part' : action === 'edit' ? 'Edit Part' : 'Part'} Form
+                    Error Loading ${action === 'add' ? 'Add Part' : 'Edit Part'} Form
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -1128,197 +861,58 @@
         `;
     }
 
-    function createPartDetailsContent(part) {
-        return `
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">
-                    <i class="fas fa-cogs me-2"></i>
-                    Part Details: ${part.partNumber}
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6 class="text-primary border-bottom pb-2 mb-3">
-                            <i class="fas fa-info-circle me-2"></i>Basic Information
-                        </h6>
-                        <div class="mb-3">
-                            <strong>Part Number:</strong> 
-                            <span class="badge bg-primary ms-2">${part.partNumber}</span>
-                        </div>
-                        <p><strong>Name:</strong> ${part.name || 'N/A'}</p>
-                        <p><strong>Description:</strong> ${part.description || 'N/A'}</p>
-                        <p><strong>Industry:</strong> 
-                            <span class="badge bg-info">${part.industry || 'N/A'}</span>
-                        </p>
-                        <p><strong>Application:</strong> ${part.application || 'N/A'}</p>
-                        <p><strong>Category:</strong> 
-                            <span class="badge bg-secondary">${part.partCategory || 'N/A'}</span>
-                        </p>
-                        <p><strong>Class:</strong> 
-                            <span class="badge ${getClassBadgeColor(part.partClass)}">${part.partClass || 'N/A'}</span>
-                        </p>
-                        ${part.customerPartNumber ? `<p><strong>Customer Part #:</strong> ${part.customerPartNumber}</p>` : ''}
-                        <p><strong>Status:</strong> 
-                            <span class="badge ${part.isActive ? 'bg-success' : 'bg-secondary'}">
-                                <i class="fas fa-${part.isActive ? 'check-circle' : 'pause-circle'} me-1"></i>
-                                ${part.isActive ? 'Active' : 'Inactive'}
-                            </span>
-                        </p>
-                    </div>
-                    <div class="col-md-6">
-                        <h6 class="text-primary border-bottom pb-2 mb-3">
-                            <i class="fas fa-cogs me-2"></i>Manufacturing Details
-                        </h6>
-                        <p><strong>Material:</strong> 
-                            <span class="badge bg-success">${part.material || 'N/A'}</span>
-                        </p>
-                        ${part.slsMaterial !== part.material ? `<p><strong>SLS Material:</strong> <span class="badge bg-success">${part.slsMaterial || 'N/A'}</span></p>` : ''}
-                        <p><strong>Estimated Hours:</strong> 
-                            <span class="fw-bold text-info">${part.estimatedHours || 0}h</span>
-                        </p>
-                        ${part.adminEstimatedHoursOverride ? `
-                            <p><strong>Override Hours:</strong> 
-                                <span class="fw-bold text-warning">${part.adminEstimatedHoursOverride}h</span>
-                                <span class="badge bg-warning text-dark ms-1">ADMIN OVERRIDE</span>
-                            </p>
-                            ${part.adminOverrideReason ? `<p><strong>Override Reason:</strong> <em>${part.adminOverrideReason}</em></p>` : ''}
-                        ` : ''}
-                        <p><strong>Process Type:</strong> ${part.processType || 'N/A'}</p>
-                        <p><strong>Required Machine:</strong> 
-                            <span class="badge bg-warning text-dark">${part.requiredMachineType || 'N/A'}</span>
-                        </p>
-                        <p><strong>Material Cost:</strong> 
-                            <span class="text-success fw-bold">$${(part.materialCostPerKg || 0).toFixed(2)}/kg</span>
-                        </p>
-                        <p><strong>Labor Rate:</strong> 
-                            <span class="text-info fw-bold">$${(part.standardLaborCostPerHour || 0).toFixed(2)}/hr</span>
-                        </p>
-                        ${part.dimensions ? `<p><strong>Dimensions:</strong> ${part.dimensions}</p>` : ''}
-                        ${part.weightGrams > 0 ? `<p><strong>Weight:</strong> ${part.weightGrams}g</p>` : ''}
-                    </div>
-                </div>
-                
-                ${part.stageRequirements && part.stageRequirements.length > 0 ? `
-                    <div class="row mt-4">
-                        <div class="col-12">
-                            <h6 class="text-primary border-bottom pb-2 mb-3">
-                                <i class="fas fa-tasks me-2"></i>Manufacturing Stages
-                            </h6>
-                            <div class="row">
-                                ${part.stageRequirements.map(stage => `
-                                    <div class="col-md-6 mb-3">
-                                        <div class="card border-left-primary h-100">
-                                            <div class="card-body p-3">
-                                                <div class="d-flex align-items-center justify-content-between">
-                                                    <span class="badge bg-primary">#${stage.executionOrder}</span>
-                                                    <small class="text-muted">${(stage.estimatedHours || 0).toFixed(1)}h</small>
-                                                </div>
-                                                <h6 class="card-title mt-2 mb-1">${stage.stageName}</h6>
-                                                ${stage.isRequired ? '<small class="text-danger">Required</small>' : '<small class="text-muted">Optional</small>'}
-                                                ${stage.notes ? `<p class="card-text small mt-1">${stage.notes}</p>` : ''}
-                                            </div>
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    </div>
-                ` : ''}
-                
-                ${(part.requiresFDA || part.requiresAS9100 || part.requiresNADCAP) ? `
-                    <div class="row mt-4">
-                        <div class="col-12">
-                            <h6 class="text-primary border-bottom pb-2 mb-3">
-                                <i class="fas fa-certificate me-2"></i>Compliance Requirements
-                            </h6>
-                            <div class="d-flex flex-wrap gap-2">
-                                ${part.requiresFDA ? '<span class="badge bg-danger"><i class="fas fa-shield-alt me-1"></i>FDA</span>' : ''}
-                                ${part.requiresAS9100 ? '<span class="badge bg-danger"><i class="fas fa-certificate me-1"></i>AS9100</span>' : ''}
-                                ${part.requiresNADCAP ? '<span class="badge bg-danger"><i class="fas fa-award me-1"></i>NADCAP</span>' : ''}
-                            </div>
-                        </div>
-                    </div>
-                ` : ''}
-                
-                <div class="row mt-4">
-                    <div class="col-12">
-                        <h6 class="text-primary border-bottom pb-2 mb-3">
-                            <i class="fas fa-wrench me-2"></i>Process Parameters
-                        </h6>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <p><strong>Laser Power:</strong> ${part.recommendedLaserPower || 0}W</p>
-                                <p><strong>Scan Speed:</strong> ${part.recommendedScanSpeed || 0} mm/s</p>
-                            </div>
-                            <div class="col-md-6">
-                                <p><strong>Layer Thickness:</strong> ${part.recommendedLayerThickness || 0}?m</p>
-                                <p><strong>Build Temperature:</strong> ${part.recommendedBuildTemperature || 0}°C</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="row mt-4">
-                    <div class="col-12">
-                        <h6 class="text-muted border-bottom pb-2 mb-3">
-                            <i class="fas fa-clock me-2"></i>Audit Information
-                        </h6>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <p><small><strong>Created:</strong> ${formatDate(part.createdDate)} by ${part.createdBy}</small></p>
-                            </div>
-                            <div class="col-md-6">
-                                <p><small><strong>Modified:</strong> ${formatDate(part.lastModifiedDate)} by ${part.lastModifiedBy}</small></p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-2"></i>Close
-                </button>
-                <button type="button" class="btn btn-primary" onclick="handleEditPartClick(${part.id})">
-                    <i class="fas fa-edit me-2"></i>Edit Part
-                </button>
-                <form method="post" action="/Admin/Parts?handler=ScheduleJob" class="d-inline">      
-                    <input type="hidden" name="partId" value="${part.id}" />
-                    <input type="hidden" name="__RequestVerificationToken" value="${antiforgeryToken}" />
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-calendar-plus me-2"></i>Schedule Job
-                    </button>
-                </form>
-            </div>
-        `;
-    }
-
-    // Helper function for class badge colors
-    function getClassBadgeColor(partClass) {
-        switch(partClass) {
-            case 'A': return 'bg-danger';
-            case 'B': return 'bg-warning text-dark';
-            case 'C': return 'bg-info';
-            default: return 'bg-secondary';
+    function getErrorMessage(error) {
+        if (error.name === 'AbortError') {
+            return 'Request timed out. Please check your connection and try again.';
         }
+        if (error.message) {
+            return error.message;
+        }
+        return 'An unexpected error occurred.';
     }
 
-    // Helper function for date formatting
-    function formatDate(dateString) {
-        if (!dateString) return 'N/A';
+    // ===================================================================
+    // INITIALIZATION
+    // ===================================================================
+
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('?? [PARTS] Initializing bulletproof Parts page');
+        
         try {
-            const date = new Date(dateString);
-            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        } catch {
-            return dateString;
+            // Initialize antiforgery token
+            const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]') ||
+                              document.querySelector('form input[name="__RequestVerificationToken"]');
+            
+            if (tokenInput) {
+                antiforgeryToken = tokenInput.value;
+                console.log('? [PARTS] Antiforgery token initialized');
+            } else {
+                console.warn('?? [PARTS] Antiforgery token not found');
+            }
+            
+            // Initialize Bootstrap tooltips
+            if (typeof bootstrap !== 'undefined') {
+                const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+                tooltipTriggerList.forEach(tooltipTriggerEl => {
+                    new bootstrap.Tooltip(tooltipTriggerEl, {
+                        trigger: 'hover',
+                        delay: { show: 500, hide: 100 }
+                    });
+                });
+                console.log('? [PARTS] Bootstrap tooltips initialized');
+            }
+            
+            console.log('? [PARTS] Bulletproof Parts page initialized successfully');
+            
+        } catch (error) {
+            console.error('? [PARTS] Error initializing Parts page:', error);
         }
-    }
+    });
 
-    console.log('? [PARTS] Enhanced Parts page with stage management loaded successfully');
+    console.log('? [PARTS] Bulletproof parts page loaded successfully');
+})();
 </script>
 
-<!-- Enhanced CSS for stage indicators and complexity levels -->
 <style>
     .stage-indicator {
         font-size: 0.75rem;
@@ -1329,15 +923,6 @@
         display: inline-flex;
         align-items: center;
         white-space: nowrap;
-    }
-
-    .complexity-badge {
-        font-size: 0.8rem;
-        font-weight: 600;
-        border-radius: 6px;
-        padding: 4px 8px;
-        display: inline-flex;
-        align-items: center;
     }
 
     .parts-admin-override {
@@ -1416,17 +1001,6 @@
         border-radius: 4px;
         font-size: 0.8rem;
         padding: 4px 8px;
-    }
-
-    @@media (max-width: 768px) {
-        .parts-stats-number {
-            font-size: 1.5rem;
-        }
-        
-        .stage-indicator {
-            font-size: 0.7rem;
-            padding: 1px 4px;
-        }
     }
 </style>
 

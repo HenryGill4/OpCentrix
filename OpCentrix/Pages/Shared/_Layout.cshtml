@@ -6,7 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - OpCentrix</title>
     
-    @* Load OpCentrix styles FIRST to avoid conflicts *@
+    @* Load master responsive CSS FIRST *@
+    <link rel="stylesheet" href="~/css/responsive-master.css" asp-append-version="true" />
+    
+    @* Load OpCentrix styles *@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/stage-cohort-enhancements.css" asp-append-version="true" />
     
@@ -584,7 +587,7 @@
                 // Close all other dropdowns
                 allDropdowns.forEach(dd => {
                     if (dd.id !== dropdownId) {
-                        dd.classList.add('hidden');
+                        dd.classList.add('hidden'); 
                     }
                 });
                 

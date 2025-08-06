@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using OpCentrix.Data;
 using OpCentrix.Models;
@@ -71,12 +71,12 @@ builder.Services.AddRazorPages(options =>
     // FIXED: Ensure proper authorization for Admin folder
     options.Conventions.AuthorizeFolder("/Admin", "AdminOnly");
     options.Conventions.AuthorizeFolder("/Scheduler", "SchedulerPolicy");
-    
+
     // B&T MES Route Authorization (NEW)
     options.Conventions.AuthorizeFolder("/BT", "BTAccess");
     options.Conventions.AuthorizeFolder("/Workflows", "WorkflowAccess");
     options.Conventions.AuthorizeFolder("/Compliance", "ComplianceAccess");
-    
+
     // FIXED: Configure antiforgery for all pages
     options.Conventions.ConfigureFilter(new Microsoft.AspNetCore.Mvc.AutoValidateAntiforgeryTokenAttribute());
 });
@@ -120,41 +120,41 @@ builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("SchedulerPolicy", policy =>
         policy.RequireAuthenticatedUser());
-    
+
     options.AddPolicy("AdminPolicy", policy =>
         policy.RequireRole("Admin", "Manager"));  // FIXED: Add Manager role
-    
+
     // FIXED: AdminOnly should also allow Manager role to match test expectations
     options.AddPolicy("AdminOnly", policy =>
         policy.RequireRole("Admin", "Manager"));  // FIXED: Add Manager role
-    
+
     // Add the missing SchedulerAccess policy that health endpoint uses
     options.AddPolicy("SchedulerAccess", policy =>
         policy.RequireAuthenticatedUser());
-    
+
     options.AddPolicy("SupervisorAccess", policy =>
         policy.RequireRole("Admin", "Supervisor"));
-    
+
     options.AddPolicy("OperatorAccess", policy =>
         policy.RequireRole("Admin", "Supervisor", "Operator"));
-    
+
     // B&T Manufacturing Policies (NEW)
     options.AddPolicy("BTAccess", policy =>
         policy.RequireRole("Admin", "Manager", "BTSpecialist"));
-    
+
     options.AddPolicy("WorkflowAccess", policy =>
         policy.RequireRole("Admin", "Manager", "WorkflowSpecialist"));
-    
+
     options.AddPolicy("ComplianceAccess", policy =>
         policy.RequireRole("Admin", "Manager", "ComplianceSpecialist", "BTSpecialist"));
-    
+
     // Individual B&T Feature Policies
     options.AddPolicy("BTSpecialistAccess", policy =>
         policy.RequireRole("Admin", "Manager", "BTSpecialist"));
-    
+
     options.AddPolicy("WorkflowSpecialistAccess", policy =>
         policy.RequireRole("Admin", "Manager", "WorkflowSpecialist"));
-    
+
     options.AddPolicy("ComplianceSpecialistAccess", policy =>
         policy.RequireRole("Admin", "Manager", "ComplianceSpecialist"));
 });
@@ -348,6 +348,7 @@ app.MapGet("/Admin/BT/SerialNumbers", () => "B&T Serial Numbers Admin - Coming S
 app.MapGet("/Admin/BT/ComplianceDocuments", () => "B&T Compliance Documents Admin - Coming Soon")
     .RequireAuthorization("AdminOnly");
 
+
 // Add health check endpoint
 app.MapGet("/health", () => "Healthy")
     .RequireAuthorization("SchedulerAccess");
@@ -357,7 +358,7 @@ using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     var logger = services.GetRequiredService<ILogger<Program>>();
-    
+
     try
     {
         // Initialize database with seeded data
@@ -369,31 +370,38 @@ using (var scope = app.Services.CreateScope())
             var adminSeedingService = initScope.ServiceProvider.GetRequiredService<OpCentrix.Services.Admin.IAdminDataSeedingService>();
             var partClassificationService = initScope.ServiceProvider.GetRequiredService<IPartClassificationService>();
 
+            // FIXED: Add material service for material seeding
+            var materialService = initScope.ServiceProvider.GetRequiredService<IMaterialService>();
+
             // Ensure database is created and up to date
             await context.Database.EnsureCreatedAsync();
 
             // Seed initial data
             await seedingService.SeedDataAsync();
-            
+
             // Seed admin control system data (Task 2)
             await adminSeedingService.SeedAllDefaultDataAsync();
 
+            // FIXED: Seed materials for machine management
+            await materialService.SeedDefaultMaterialsAsync();
+            logger.LogInformation("✅ Material seeding completed successfully");
+
             // Seed B&T part classifications (Segment 7)
             await partClassificationService.SeedDefaultClassificationsAsync();
-            
+
             // Initialize production stages for prototype tracking (Phase 0.5)
             var productionStageService = initScope.ServiceProvider.GetRequiredService<ProductionStageService>();
             await productionStageService.CreateDefaultStagesAsync();
-            
+
             // FIXED: Use the Admin namespace service for production stage seeding - COMPLETE FIX
             var productionStageSeeder = initScope.ServiceProvider.GetRequiredService<OpCentrix.Services.Admin.IProductionStageSeederService>();
             var seededStageCount = await productionStageSeeder.SeedDefaultStagesAsync();
             logger.LogInformation("Production stages seeded: {Count} stages available", seededStageCount);
-            
+
             // Load system settings into configuration (Task 3)
             var configurationService = initScope.ServiceProvider.GetRequiredService<OpCentrix.Services.Admin.ISystemConfigurationService>();
             await configurationService.LoadSettingsIntoConfigurationAsync();
-            
+
             // Initialize static configuration helper
             OpCentrix.Services.Admin.SystemConfiguration.Initialize(app.Services);
         }
@@ -401,7 +409,7 @@ using (var scope = app.Services.CreateScope())
         logger.LogInformation("B&T Manufacturing Execution System ready!");
         logger.LogInformation("Test users available:");
         logger.LogInformation("   admin/admin123 (Admin)");
-        logger.LogInformation("   manager/manager123 (Manager)");  
+        logger.LogInformation("   manager/manager123 (Manager)");
         logger.LogInformation("   scheduler/scheduler123 (Scheduler)");
         logger.LogInformation("   operator/operator123 (Operator)");
         logger.LogInformation("   printer/printer123 (PrintingSpecialist)");
@@ -424,7 +432,7 @@ using (var scope = app.Services.CreateScope())
     {
         logger.LogError(ex, "CRITICAL ERROR during database initialization");
         logger.LogError("Stack trace: {StackTrace}", ex.StackTrace);
-        
+
         // In development, continue running even if seeding fails
         if (!app.Environment.IsDevelopment())
         {

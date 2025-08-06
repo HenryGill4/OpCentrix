@@ -1,4 +1,4 @@
-@page
+﻿@page
 @using OpCentrix.ViewModels.Scheduler;
 @model OpCentrix.Pages.Scheduler.IndexModel
 
@@ -269,6 +269,7 @@
     <link rel="stylesheet" href="~/css/scheduler.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/scheduler-modal.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/stage-cohort-enhancements.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/responsive-master.css" asp-append-version="true" />
     <style>
         /* Task 9 & 10: Enhanced CSS for new zoom levels and orientation toggle */
         .scheduler-grid-container {
@@ -333,13 +334,13 @@
         
         /* Priority indicators */
         .job-block[data-priority="1"]:before {
-            content: "?";
+            content: "🔴";
             font-size: 10px;
             margin-right: 2px;
         }
         
         .job-block[data-priority="2"]:before {
-            content: "??";
+            content: "🟠";
             font-size: 10px;
             margin-right: 2px;
         }
@@ -480,28 +481,82 @@
             margin-right: var(--opcentrix-spacing-2);
             flex-shrink: 0;
         }
-        
+
+        /* Dark mode adjustments */
+        @@media (prefers-color-scheme: dark) {
+            .opcentrix-card {
+                background-color: #1f2937;
+                border-color: #374151;
+            }
+            
+            .opcentrix-button-secondary {
+                background-color: #374151;
+                color: #f9fafb;
+            }
+            
+            .opcentrix-button-secondary:hover {
+                background-color: #475569;
+            }
+            
+            /* Scheduler empty state in dark mode */
+            .empty-state {
+                background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+                border-color: #374151;
+            }
+            
+            .empty-state-icon {
+                color: #9ca3af;
+            }
+            
+            .empty-state-title {
+                color: #f9fafb;
+            }
+            
+            .empty-state-text {
+                color: #d1d5db;
+            }
+            
+            .setup-instructions {
+                background: #111827;
+                border-color: #374151;
+            }
+            
+            .setup-instructions h4 {
+                color: #f9fafb;
+            }
+            
+            .setup-instructions ol {
+                color: #d1d5db;
+            }
+            
+            /* Scheduler status colors in dark mode */
+            .status-indicator {
+                background-color: rgba(255, 255, 255, 0.2);
+                color: #f9fafb;
+            }
+            
+            /* Override specific job block colors in dark mode */
+            .job-block[data-status="scheduled"] {
+                background-color: #3b82f6;
+            }
+            
+            .job-block[data-status="running"] {
+                background-color: #f59e0b;
+            }
+            
+            .job-block[data-status="completed"] {
+                background-color: #10b981;
+            }
+            
+            .job-block[data-status="delayed"] {
+                background-color: #ef4444;
+            }
+        }
+
         /* Responsive adjustments */
         @@media (max-width: 768px) {
             .scheduler-grid-container {
                 --slot-width: @slotWidthMobile;
-            }
-            
-            .empty-state {
-                padding: var(--opcentrix-spacing-8);
-                min-height: 300px;
-            }
-            
-            .empty-state-title {
-                font-size: var(--opcentrix-font-size-xl);
-            }
-            
-            .empty-state-text {
-                font-size: var(--opcentrix-font-size-base);
-            }
-            
-            .setup-instructions {
-                padding: var(--opcentrix-spacing-4);
             }
         }
     </style>
@@ -517,10 +572,10 @@
     
     // CRITICAL FIX: Define openJobModal function immediately with enhanced error handling
     window.openJobModal = function(machineId, date, jobId = null) {
-        console.log('?? [MODAL] Opening job modal for:', { machineId, date, jobId });
+        console.log('📅 [MODAL] Opening job modal for:', { machineId, date, jobId });
         
         if (!machineId || !date) {
-            console.error('? [MODAL] Missing required parameters');
+            console.error('❌ [MODAL] Missing required parameters');
             if (window.showErrorNotification) {
                 window.showErrorNotification('Missing machine ID or date for opening job modal');
             }
@@ -543,12 +598,12 @@
             const prePopulatePartId = '@ViewData["PrePopulatePartId"]';
             if (prePopulatePartId && prePopulatePartId !== '' && !jobId) {
                 params.append('partId', prePopulatePartId);
-                console.log('?? [MODAL] Adding part pre-population:', prePopulatePartId);
+                console.log('📋 [MODAL] Adding part pre-population:', prePopulatePartId);
             }
             
             const url = `/Scheduler?${params.toString()}`;
             
-            console.log('?? [MODAL] Fetching modal content from:', url);
+            console.log('🔄 [MODAL] Fetching modal content from:', url);
             
             // Show loading indicator
             if (window.showLoadingIndicator) {
@@ -565,19 +620,19 @@
                     if (window.hideLoadingIndicator) {
                         window.hideLoadingIndicator();
                     }
-                    console.log('? [MODAL] Modal opened successfully');
+                    console.log('✅ [MODAL] Modal opened successfully');
                 }).catch((error) => {
                     if (window.hideLoadingIndicator) {
                         window.hideLoadingIndicator();
                     }
-                    console.error('? [MODAL] Error loading modal:', error);
+                    console.error('❌ [MODAL] Error loading modal:', error);
                     if (window.showErrorNotification) {
                         window.showErrorNotification('Error opening job form. Please try again.');
                     }
                 });
             } else {
                 // Fallback if HTMX is not available
-                console.error('? [MODAL] HTMX not available');
+                console.error('❌ [MODAL] HTMX not available');
                 if (window.hideLoadingIndicator) {
                     window.hideLoadingIndicator();
                 }
@@ -589,7 +644,7 @@
             return true;
             
         } catch (error) {
-            console.error('? [MODAL] Error in openJobModal:', error);
+            console.error('❌ [MODAL] Error in openJobModal:', error);
             if (window.hideLoadingIndicator) {
                 window.hideLoadingIndicator();
             }
@@ -618,13 +673,13 @@
                 }, 150);
             }
         } catch (error) {
-            console.error('? [MODAL] Error showing modal container:', error);
+            console.error('❌ [MODAL] Error showing modal container:', error);
         }
     }
     
     // Enhanced close modal function
     window.closeJobModal = function() {
-        console.log('?? [MODAL] Closing job modal');
+        console.log('❌ [MODAL] Closing job modal');
         
         try {
             const modalContainer = document.getElementById('modal-container');
@@ -638,16 +693,16 @@
                     modalContainer.innerHTML = '';
                 }, 300);
                 
-                console.log('? [MODAL] Modal closed successfully');
+                console.log('✅ [MODAL] Modal closed successfully');
             }
         } catch (error) {
-            console.error('? [MODAL] Error closing modal:', error);
+            console.error('❌ [MODAL] Error closing modal:', error);
         }
     };
     
     // Quick start with demo machines function with enhanced error handling
     window.seedDefaultMachines = function() {
-        console.log('?? [SEED] Starting demo machine creation');
+        console.log('🌱 [SEED] Starting demo machine creation');
         
         try {
             if (window.showLoadingIndicator) {
@@ -674,7 +729,7 @@
                     if (window.hideLoadingIndicator) {
                         window.hideLoadingIndicator();
                     }
-                    console.error('? [SEED] Error seeding default machines:', error);
+                    console.error('❌ [SEED] Error seeding default machines:', error);
                     if (window.showErrorNotification) {
                         window.showErrorNotification('Error creating demo machines. Please try again or contact support.');
                     }
@@ -688,7 +743,7 @@
                 }
             }
         } catch (error) {
-            console.error('? [SEED] Error in seedDefaultMachines:', error);
+            console.error('❌ [SEED] Error in seedDefaultMachines:', error);
             if (window.hideLoadingIndicator) {
                 window.hideLoadingIndicator();
             }
@@ -718,19 +773,97 @@
             this.setupZoomControls();
             this.setupOrientationToggle();
             this.setupAddJobButton();
-            this.handlePartPrePopulation(); // NEW: Handle automatic modal opening
-            this.setupScheduleUpdateListener(); // NEW: Listen for schedule updates from Print Tracking
+            this.handlePartPrePopulation();
+            this.setupScheduleUpdateListener();
             this.logDebugInfo();
         },
         
-        // NEW: Setup listener for schedule updates from Print Tracking
+        // Setup event listeners
+        setupEventListeners() {
+            // Modal backdrop clicking
+            document.addEventListener('click', (event) => {
+                if (event.target.classList.contains('modal-backdrop')) {
+                    this.closeModal();
+                }
+            });
+            
+            // Escape key handler
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && this.isModalOpen) {
+                    this.closeModal();
+                }
+            });
+        },
+        
+        // Update grid styles based on zoom level
+        updateGridStyles(zoom) {
+            const root = document.documentElement;
+            const slotWidthValue = zoom === '2month' ? '30px' : 
+                                  zoom === 'month' ? '40px' : 
+                                  zoom === 'week' ? '120px' : 
+                                  zoom === '12h' ? '60px' : 
+                                  zoom === '6h' ? '50px' : 
+                                  zoom === '4h' ? '40px' : 
+                                  zoom === '2h' ? '30px' : 
+                                  zoom === '1h' ? '25px' : 
+                                  zoom === '30min' ? '20px' : 
+                                  zoom === '15min' ? '15px' : '120px';
+            
+            root.style.setProperty('--slot-width', slotWidthValue);
+        },
+        
+        // Setup zoom controls
+        setupZoomControls() {
+            const currentIndex = this.zoomLevels.indexOf(this.currentZoom);
+            
+            // Update button states
+            const zoomInBtn = document.getElementById('zoomIn');
+            const zoomOutBtn = document.getElementById('zoomOut');
+            
+            if (zoomInBtn) {
+                zoomInBtn.disabled = currentIndex >= this.zoomLevels.length - 1;
+            }
+            
+            if (zoomOutBtn) {
+                zoomOutBtn.disabled = currentIndex <= 0;
+            }
+        },
+        
+        // Setup orientation toggle
+        setupOrientationToggle() {
+            // Already handled in HTML with onclick handlers
+        },
+        
+        // Setup add job button
+        setupAddJobButton() {
+            // This is handled by grid cell clicks and job modal opening
+        },
+        
+        // Handle part pre-population
+        handlePartPrePopulation() {
+            // Check if we should auto-open modal with part pre-population
+            const shouldOpen = '@ViewData["ShouldOpenModal"]' === 'True';
+            if (shouldOpen) {
+                const partId = '@ViewData["PrePopulatePartId"]';
+                const machineId = '@ViewData["PrePopulateMachineId"]';
+                const date = '@ViewData["PrePopulateDate"]';
+                
+                if (partId && machineId && date) {
+                    setTimeout(() => {
+                        window.openJobModal(machineId, date);
+                    }, 500);
+                }
+            }
+        },
+        
+        // Setup schedule update listener
         setupScheduleUpdateListener() {
             // Listen for cross-tab communication via localStorage
             window.addEventListener('storage', (e) => {
                 if (e.key === 'scheduleUpdateNotification' && e.newValue) {
                     try {
                         const notification = JSON.parse(e.newValue);
-                        if (notification.type === 'printStarted' && notification.timestamp > Date.now() - 10000) { // Only process recent notifications
+                        if (notification.type === 'printStarted' && notification.timestamp > Date.now() - 10000) {
                             this.handleScheduleUpdate(notification);
                         }
                     } catch (error) {
@@ -738,1174 +871,92 @@
                     }
                 }
             });
-
-            // Listen for direct window messages (same tab communication)
-            window.addEventListener('message', (e) => {
-                if (e.origin === window.location.origin && e.data.type === 'scheduleUpdated') {
-                    this.handleScheduleUpdate(e.data);
-                }
-            });
-            
-            // Listen for PostMessage API from Print Tracking pages
-            window.addEventListener('message', (e) => {
-                if (e.origin === window.location.origin) {
-                    const data = e.data;
-                    
-                    if (data.type === 'printJobStarted') {
-                        this.handlePrintJobStarted(data);
-                    } else if (data.type === 'printJobCompleted') {
-                        this.handlePrintJobCompleted(data);
-                    } else if (data.type === 'scheduleNeedsRefresh') {
-                        this.refreshSchedulerSafely();
-                    }
-                }
-            });
-
-            console.log('?? [INIT] Schedule update listener setup complete');
         },
-
-        // NEW: Handle print job started notification
-        handlePrintJobStarted(data) {
-            console.log('?? [SCHEDULE] Print job started notification:', data);
+        
+        // Handle schedule updates
+        handleScheduleUpdate(notification) {
+            console.log('🔄 [SCHEDULE] Received update notification:', notification);
             
-            const { jobId, machineId, partNumber, operatorEstimate } = data;
-            const message = `?? Print Started: ${partNumber} on ${machineId} with ${operatorEstimate}h estimate`;
+            if (window.showSuccessNotification) {
+                window.showSuccessNotification('Schedule updated from Print Tracking');
+            }
             
-            this.showSuccessNotification(message);
+            // Refresh after a short delay
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        },
+        
+        // Change zoom level
+        changeZoom(direction) {
+            const currentIndex = this.zoomLevels.indexOf(this.currentZoom);
+            const newIndex = currentIndex + direction;
             
-            // Update the job block if visible
-            const jobElement = document.querySelector(`[data-job-id="${jobId}"]`);
-            if (jobElement) {
-                // Add visual indicator that job is now building
-                jobElement.classList.add('building-job');
-                jobElement.setAttribute('data-status', 'Building');
+            if (newIndex >= 0 && newIndex < this.zoomLevels.length) {
+                const newZoom = this.zoomLevels[newIndex];
+                const url = new URL(window.location);
+                url.searchParams.set('zoom', newZoom);
                 
-                // Update status indicator
-                const statusIndicator = jobElement.querySelector('.status-indicator');
-                if (statusIndicator) {
-                    statusIndicator.textContent = '?? Building';
-                    statusIndicator.className = 'status-indicator bg-amber-500 text-white text-xs px-1 rounded animate-pulse';
+                if (window.showLoadingIndicator) {
+                    window.showLoadingIndicator(`Switching to ${newZoom} view...`);
                 }
                 
-                // Refresh after 2 seconds to get updated data
-                setTimeout(() => {
-                    this.refreshSchedulerSafely();
-                }, 2000);
+                window.location.href = url.toString();
             }
         },
-
-        // NEW: Handle print job completed notification
-        handlePrintJobCompleted(data) {
-            console.log('?? [SCHEDULE] Print job completed notification:', data);
-            
-            const { jobId, machineId, partNumber, actualHours } = data;
-            const message = `?? Print Completed: ${partNumber} on ${machineId} (${actualHours}h actual)`;
-            
-            this.showSuccessNotification(message);
-            
-            // Update the job block if visible
-            const jobElement = document.querySelector(`[data-job-id="${jobId}"]`);
-            if (jobElement) {
-                // Add visual indicator that job is complete
-                jobElement.classList.add('completed-job');
-                jobElement.setAttribute('data-status', 'Completed');
-                
-                // Update status indicator
-                const statusIndicator = jobElement.querySelector('.status-indicator');
-                if (statusIndicator) {
-                    statusIndicator.textContent = '? Complete';
-                    statusIndicator.className = 'status-indicator bg-green-500 text-white text-xs px-1 rounded';
-                }
-                
-                // Refresh after 2 seconds to get updated data
-                setTimeout(() => {
-                    this.refreshSchedulerSafely();
-                }, 2000);
-            }
-        },
-
-        // Enhanced refresh with safety checks
-        refreshSchedulerSafely() {
-            if (this.isLoading) {
-                console.log('?? [SCHEDULE] Refresh already in progress, skipping');
+        
+        // Toggle orientation
+        toggleOrientation(orientation) {
+            if (orientation !== 'horizontal' && orientation !== 'vertical') {
+                console.error('❌ [ORIENTATION] Invalid orientation value:', orientation);
                 return;
             }
             
-            console.log('?? [SCHEDULE] Safely refreshing scheduler...');
-            this.showLoadingIndicator('Refreshing with latest data...');
+            console.log('🔄 [ORIENTATION] Toggling orientation to:', orientation);
             
-            // Use a timeout to prevent infinite loading
-            const refreshTimeout = setTimeout(() => {
-                this.hideLoadingIndicator();
-                this.showErrorNotification('Refresh timed out. Please manually refresh the page.');
-            }, 10000);
+            const url = new URL(window.location);
+            url.searchParams.set('orientation', orientation);
             
-            // Attempt to refresh
-            try {
-                window.location.reload();
-            } catch (error) {
-                clearTimeout(refreshTimeout);
-                this.hideLoadingIndicator();
-                console.error('? [SCHEDULE] Error during refresh:', error);
-                this.showErrorNotification('Error refreshing scheduler. Please manually refresh the page.');
+            window.location.href = url.toString();
+        },
+        
+        // Close modal
+        closeModal() {
+            if (window.closeJobModal) {
+                window.closeJobModal();
             }
+            this.isModalOpen = false;
         },
         
-        // Task 9: Extended zoom levels (12h to 1h, 2 months)
-        currentZoom: '@zoom',
-        zoomLevels: ['2month', 'month', 'week', '12h', '6h', '4h', '2h', '1h', '30min', '15min'],
-        
-        // Task 10: Orientation state
-        currentOrientation: '@(isVertical ? "vertical" : "horizontal")',
-        
-        isModalOpen: false,
-        isLoading: false,
-        modalCloseTimeout: null,
-        
-        // Initialize the application
-        init() {
-            this.setupEventListeners();
-            this.updateGridStyles(this.currentZoom);
-            this.setupZoomControls();
-            this.setupOrientationToggle();
-            this.setupAddJobButton();
-            this.handlePartPrePopulation(); // NEW: Handle automatic modal opening
-            this.setupScheduleUpdateListener(); // NEW: Listen for schedule updates from Print Tracking
-            this.logDebugInfo();
-        },
-        
-        // NEW: Setup listener for schedule updates from Print Tracking
-        setupScheduleUpdateListener() {
-            // Listen for cross-tab communication via localStorage
-            window.addEventListener('storage', (e) => {
-                if (e.key === 'scheduleUpdateNotification' && e.newValue) {
-                    try {
-                        const notification = JSON.parse(e.newValue);
-                        if (notification.type === 'printStarted' && notification.timestamp > Date.now() - 10000) { // Only process recent notifications
-                            this.handleScheduleUpdate(notification);
-                        }
-                    } catch (error) {
-                        console.log('Error processing schedule update notification:', error);
-                    }
-                }
-            });
-
-            // Listen for direct window messages (same tab communication)
-            window.addEventListener('message', (e) => {
-                if (e.origin === window.location.origin && e.data.type === 'scheduleUpdated') {
-                    this.handleScheduleUpdate(e.data);
-                }
-            });
-            
-            // Listen for PostMessage API from Print Tracking pages
-            window.addEventListener('message', (e) => {
-                if (e.origin === window.location.origin) {
-                    const data = e.data;
-                    
-                    if (data.type === 'printJobStarted') {
-                        this.handlePrintJobStarted(data);
-                    } else if (data.type === 'printJobCompleted') {
-                        this.handlePrintJobCompleted(data);
-                    } else if (data.type === 'scheduleNeedsRefresh') {
-                        this.refreshSchedulerSafely();
-                    }
-                }
-            });
-
-            console.log('?? [INIT] Schedule update listener setup complete');
-        },
-
-        // NEW: Handle print job started notification
-        handlePrintJobStarted(data) {
-            console.log('?? [SCHEDULE] Print job started notification:', data);
-            
-            const { jobId, machineId, partNumber, operatorEstimate } = data;
-            const message = `?? Print Started: ${partNumber} on ${machineId} with ${operatorEstimate}h estimate`;
-            
-            this.showSuccessNotification(message);
-            
-            // Update the job block if visible
-            const jobElement = document.querySelector(`[data-job-id="${jobId}"]`);
-            if (jobElement) {
-                // Add visual indicator that job is now building
-                jobElement.classList.add('building-job');
-                jobElement.setAttribute('data-status', 'Building');
-                
-                // Update status indicator
-                const statusIndicator = jobElement.querySelector('.status-indicator');
-                if (statusIndicator) {
-                    statusIndicator.textContent = '?? Building';
-                    statusIndicator.className = 'status-indicator bg-amber-500 text-white text-xs px-1 rounded animate-pulse';
-                }
-                
-                // Refresh after 2 seconds to get updated data
-                setTimeout(() => {
-                    this.refreshSchedulerSafely();
-                }, 2000);
+        // Navigation functions
+        navigatePeriod(direction) {
+            @{
+                var firstDate = viewModel.Dates.FirstOrDefault();
+                var firstDateStr = firstDate != default(DateTime) ? firstDate.ToString("yyyy-MM-dd") : DateTime.Today.ToString("yyyy-MM-dd");
             }
-        },
-
-        // NEW: Handle print job completed notification
-        handlePrintJobCompleted(data) {
-            console.log('?? [SCHEDULE] Print job completed notification:', data);
+            const currentDate = new Date('@Html.Raw(firstDateStr)');
+            const newDate = new Date(currentDate);
             
-            const { jobId, machineId, partNumber, actualHours } = data;
-            const message = `?? Print Completed: ${partNumber} on ${machineId} (${actualHours}h actual)`;
-            
-            this.showSuccessNotification(message);
-            
-            // Update the job block if visible
-            const jobElement = document.querySelector(`[data-job-id="${jobId}"]`);
-            if (jobElement) {
-                // Add visual indicator that job is complete
-                jobElement.classList.add('completed-job');
-                jobElement.setAttribute('data-status', 'Completed');
-                
-                // Update status indicator
-                const statusIndicator = jobElement.querySelector('.status-indicator');
-                if (statusIndicator) {
-                    statusIndicator.textContent = '? Complete';
-                    statusIndicator.className = 'status-indicator bg-green-500 text-white text-xs px-1 rounded';
-                }
-                
-                // Refresh after 2 seconds to get updated data
-                setTimeout(() => {
-                    this.refreshSchedulerSafely();
-                }, 2000);
-            }
-        },
-
-        // Enhanced refresh with safety checks
-        refreshSchedulerSafely() {
-            if (this.isLoading) {
-                console.log('?? [SCHEDULE] Refresh already in progress, skipping');
-                return;
+            // Adjust based on current zoom level
+            if (this.currentZoom.includes('month')) {
+                newDate.setMonth(newDate.getMonth() + direction);
+            } else if (this.currentZoom === 'week') {
+                newDate.setDate(newDate.getDate() + (direction * 7));
+            } else {
+                newDate.setDate(newDate.getDate() + direction);
             }
             
-            console.log('?? [SCHEDULE] Safely refreshing scheduler...');
-            this.showLoadingIndicator('Refreshing with latest data...');
+            const url = new URL(window.location);
+            url.searchParams.set('date', newDate.toISOString().split('T')[0]);
             
-            // Use a timeout to prevent infinite loading
-            const refreshTimeout = setTimeout(() => {
-                this.hideLoadingIndicator();
-                this.showErrorNotification('Refresh timed out. Please manually refresh the page.');
-            }, 10000);
-            
-            // Attempt to refresh
-            try {
-                window.location.reload();
-            } catch (error) {
-                clearTimeout(refreshTimeout);
-                this.hideLoadingIndicator();
-                console.error('? [SCHEDULE] Error during refresh:', error);
-                this.showErrorNotification('Error refreshing scheduler. Please manually refresh the page.');
-            }
+            window.location.href = url.toString();
         },
         
-        // Task 9: Extended zoom levels (12h to 1h, 2 months)
-        currentZoom: '@zoom',
-        zoomLevels: ['2month', 'month', 'week', '12h', '6h', '4h', '2h', '1h', '30min', '15min'],
-        
-        // Task 10: Orientation state
-        currentOrientation: '@(isVertical ? "vertical" : "horizontal")',
-        
-        isModalOpen: false,
-        isLoading: false,
-        modalCloseTimeout: null,
-        
-        // Initialize the application
-        init() {
-            this.setupEventListeners();
-            this.updateGridStyles(this.currentZoom);
-            this.setupZoomControls();
-            this.setupOrientationToggle();
-            this.setupAddJobButton();
-            this.handlePartPrePopulation(); // NEW: Handle automatic modal opening
-            this.setupScheduleUpdateListener(); // NEW: Listen for schedule updates from Print Tracking
-            this.logDebugInfo();
-        },
-        
-        // NEW: Setup listener for schedule updates from Print Tracking
-        setupScheduleUpdateListener() {
-            // Listen for cross-tab communication via localStorage
-            window.addEventListener('storage', (e) => {
-                if (e.key === 'scheduleUpdateNotification' && e.newValue) {
-                    try {
-                        const notification = JSON.parse(e.newValue);
-                        if (notification.type === 'printStarted' && notification.timestamp > Date.now() - 10000) { // Only process recent notifications
-                            this.handleScheduleUpdate(notification);
-                        }
-                    } catch (error) {
-                        console.log('Error processing schedule update notification:', error);
-                    }
-                }
-            });
-
-            // Listen for direct window messages (same tab communication)
-            window.addEventListener('message', (e) => {
-                if (e.origin === window.location.origin && e.data.type === 'scheduleUpdated') {
-                    this.handleScheduleUpdate(e.data);
-                }
-            });
+        navigateToToday() {
+            const url = new URL(window.location);
+            url.searchParams.set('date', new Date().toISOString().split('T')[0]);
             
-            // Listen for PostMessage API from Print Tracking pages
-            window.addEventListener('message', (e) => {
-                if (e.origin === window.location.origin) {
-                    const data = e.data;
-                    
-                    if (data.type === 'printJobStarted') {
-                        this.handlePrintJobStarted(data);
-                    } else if (data.type === 'printJobCompleted') {
-                        this.handlePrintJobCompleted(data);
-                    } else if (data.type === 'scheduleNeedsRefresh') {
-                        this.refreshSchedulerSafely();
-                    }
-                }
-            });
-
-            console.log('?? [INIT] Schedule update listener setup complete');
-        },
-
-        // NEW: Handle print job started notification
-        handlePrintJobStarted(data) {
-            console.log('?? [SCHEDULE] Print job started notification:', data);
-            
-            const { jobId, machineId, partNumber, operatorEstimate } = data;
-            const message = `?? Print Started: ${partNumber} on ${machineId} with ${operatorEstimate}h estimate`;
-            
-            this.showSuccessNotification(message);
-            
-            // Update the job block if visible
-            const jobElement = document.querySelector(`[data-job-id="${jobId}"]`);
-            if (jobElement) {
-                // Add visual indicator that job is now building
-                jobElement.classList.add('building-job');
-                jobElement.setAttribute('data-status', 'Building');
-                
-                // Update status indicator
-                const statusIndicator = jobElement.querySelector('.status-indicator');
-                if (statusIndicator) {
-                    statusIndicator.textContent = '?? Building';
-                    statusIndicator.className = 'status-indicator bg-amber-500 text-white text-xs px-1 rounded animate-pulse';
-                }
-                
-                // Refresh after 2 seconds to get updated data
-                setTimeout(() => {
-                    this.refreshSchedulerSafely();
-                }, 2000);
-            }
-        },
-
-        // NEW: Handle print job completed notification
-        handlePrintJobCompleted(data) {
-            console.log('?? [SCHEDULE] Print job completed notification:', data);
-            
-            const { jobId, machineId, partNumber, actualHours } = data;
-            const message = `?? Print Completed: ${partNumber} on ${machineId} (${actualHours}h actual)`;
-            
-            this.showSuccessNotification(message);
-            
-            // Update the job block if visible
-            const jobElement = document.querySelector(`[data-job-id="${jobId}"]`);
-            if (jobElement) {
-                // Add visual indicator that job is complete
-                jobElement.classList.add('completed-job');
-                jobElement.setAttribute('data-status', 'Completed');
-                
-                // Update status indicator
-                const statusIndicator = jobElement.querySelector('.status-indicator');
-                if (statusIndicator) {
-                    statusIndicator.textContent = '? Complete';
-                    statusIndicator.className = 'status-indicator bg-green-500 text-white text-xs px-1 rounded';
-                }
-                
-                // Refresh after 2 seconds to get updated data
-                setTimeout(() => {
-                    this.refreshSchedulerSafely();
-                }, 2000);
-            }
-        },
-
-        // Enhanced refresh with safety checks
-        refreshSchedulerSafely() {
-            if (this.isLoading) {
-                console.log('?? [SCHEDULE] Refresh already in progress, skipping');
-                return;
-            }
-            
-            console.log('?? [SCHEDULE] Safely refreshing scheduler...');
-            this.showLoadingIndicator('Refreshing with latest data...');
-            
-            // Use a timeout to prevent infinite loading
-            const refreshTimeout = setTimeout(() => {
-                this.hideLoadingIndicator();
-                this.showErrorNotification('Refresh timed out. Please manually refresh the page.');
-            }, 10000);
-            
-            // Attempt to refresh
-            try {
-                window.location.reload();
-            } catch (error) {
-                clearTimeout(refreshTimeout);
-                this.hideLoadingIndicator();
-                console.error('? [SCHEDULE] Error during refresh:', error);
-                this.showErrorNotification('Error refreshing scheduler. Please manually refresh the page.');
-            }
-        },
-        
-        // Task 9: Extended zoom levels (12h to 1h, 2 months)
-        currentZoom: '@zoom',
-        zoomLevels: ['2month', 'month', 'week', '12h', '6h', '4h', '2h', '1h', '30min', '15min'],
-        
-        // Task 10: Orientation state
-        currentOrientation: '@(isVertical ? "vertical" : "horizontal")',
-        
-        isModalOpen: false,
-        isLoading: false,
-        modalCloseTimeout: null,
-        
-        // Initialize the application
-        init() {
-            this.setupEventListeners();
-            this.updateGridStyles(this.currentZoom);
-            this.setupZoomControls();
-            this.setupOrientationToggle();
-            this.setupAddJobButton();
-            this.handlePartPrePopulation(); // NEW: Handle automatic modal opening
-            this.setupScheduleUpdateListener(); // NEW: Listen for schedule updates from Print Tracking
-            this.logDebugInfo();
-        },
-        
-        // NEW: Setup listener for schedule updates from Print Tracking
-        setupScheduleUpdateListener() {
-            // Listen for cross-tab communication via localStorage
-            window.addEventListener('storage', (e) => {
-                if (e.key === 'scheduleUpdateNotification' && e.newValue) {
-                    try {
-                        const notification = JSON.parse(e.newValue);
-                        if (notification.type === 'printStarted' && notification.timestamp > Date.now() - 10000) { // Only process recent notifications
-                            this.handleScheduleUpdate(notification);
-                        }
-                    } catch (error) {
-                        console.log('Error processing schedule update notification:', error);
-                    }
-                }
-            });
-
-            // Listen for direct window messages (same tab communication)
-            window.addEventListener('message', (e) => {
-                if (e.origin === window.location.origin && e.data.type === 'scheduleUpdated') {
-                    this.handleScheduleUpdate(e.data);
-                }
-            });
-            
-            // Listen for PostMessage API from Print Tracking pages
-            window.addEventListener('message', (e) => {
-                if (e.origin === window.location.origin) {
-                    const data = e.data;
-                    
-                    if (data.type === 'printJobStarted') {
-                        this.handlePrintJobStarted(data);
-                    } else if (data.type === 'printJobCompleted') {
-                        this.handlePrintJobCompleted(data);
-                    } else if (data.type === 'scheduleNeedsRefresh') {
-                        this.refreshSchedulerSafely();
-                    }
-                }
-            });
-
-            console.log('?? [INIT] Schedule update listener setup complete');
-        },
-
-        // NEW: Handle print job started notification
-        handlePrintJobStarted(data) {
-            console.log('?? [SCHEDULE] Print job started notification:', data);
-            
-            const { jobId, machineId, partNumber, operatorEstimate } = data;
-            const message = `?? Print Started: ${partNumber} on ${machineId} with ${operatorEstimate}h estimate`;
-            
-            this.showSuccessNotification(message);
-            
-            // Update the job block if visible
-            const jobElement = document.querySelector(`[data-job-id="${jobId}"]`);
-            if (jobElement) {
-                // Add visual indicator that job is now building
-                jobElement.classList.add('building-job');
-                jobElement.setAttribute('data-status', 'Building');
-                
-                // Update status indicator
-                const statusIndicator = jobElement.querySelector('.status-indicator');
-                if (statusIndicator) {
-                    statusIndicator.textContent = '?? Building';
-                    statusIndicator.className = 'status-indicator bg-amber-500 text-white text-xs px-1 rounded animate-pulse';
-                }
-                
-                // Refresh after 2 seconds to get updated data
-                setTimeout(() => {
-                    this.refreshSchedulerSafely();
-                }, 2000);
-            }
-        },
-
-        // NEW: Handle print job completed notification
-        handlePrintJobCompleted(data) {
-            console.log('?? [SCHEDULE] Print job completed notification:', data);
-            
-            const { jobId, machineId, partNumber, actualHours } = data;
-            const message = `?? Print Completed: ${partNumber} on ${machineId} (${actualHours}h actual)`;
-            
-            this.showSuccessNotification(message);
-            
-            // Update the job block if visible
-            const jobElement = document.querySelector(`[data-job-id="${jobId}"]`);
-            if (jobElement) {
-                // Add visual indicator that job is complete
-                jobElement.classList.add('completed-job');
-                jobElement.setAttribute('data-status', 'Completed');
-                
-                // Update status indicator
-                const statusIndicator = jobElement.querySelector('.status-indicator');
-                if (statusIndicator) {
-                    statusIndicator.textContent = '? Complete';
-                    statusIndicator.className = 'status-indicator bg-green-500 text-white text-xs px-1 rounded';
-                }
-                
-                // Refresh after 2 seconds to get updated data
-                setTimeout(() => {
-                    this.refreshSchedulerSafely();
-                }, 2000);
-            }
-        },
-
-        // Enhanced refresh with safety checks
-        refreshSchedulerSafely() {
-            if (this.isLoading) {
-                console.log('?? [SCHEDULE] Refresh already in progress, skipping');
-                return;
-            }
-            
-            console.log('?? [SCHEDULE] Safely refreshing scheduler...');
-            this.showLoadingIndicator('Refreshing with latest data...');
-            
-            // Use a timeout to prevent infinite loading
-            const refreshTimeout = setTimeout(() => {
-                this.hideLoadingIndicator();
-                this.showErrorNotification('Refresh timed out. Please manually refresh the page.');
-            }, 10000);
-            
-            // Attempt to refresh
-            try {
-                window.location.reload();
-            } catch (error) {
-                clearTimeout(refreshTimeout);
-                this.hideLoadingIndicator();
-                console.error('? [SCHEDULE] Error during refresh:', error);
-                this.showErrorNotification('Error refreshing scheduler. Please manually refresh the page.');
-            }
-        },
-        
-        // Task 9: Extended zoom levels (12h to 1h, 2 months)
-        currentZoom: '@zoom',
-        zoomLevels: ['2month', 'month', 'week', '12h', '6h', '4h', '2h', '1h', '30min', '15min'],
-        
-        // Task 10: Orientation state
-        currentOrientation: '@(isVertical ? "vertical" : "horizontal")',
-        
-        isModalOpen: false,
-        isLoading: false,
-        modalCloseTimeout: null,
-        
-        // Initialize the application
-        init() {
-            this.setupEventListeners();
-            this.updateGridStyles(this.currentZoom);
-            this.setupZoomControls();
-            this.setupOrientationToggle();
-            this.setupAddJobButton();
-            this.handlePartPrePopulation(); // NEW: Handle automatic modal opening
-            this.setupScheduleUpdateListener(); // NEW: Listen for schedule updates from Print Tracking
-            this.logDebugInfo();
-        },
-        
-        // NEW: Setup listener for schedule updates from Print Tracking
-        setupScheduleUpdateListener() {
-            // Listen for cross-tab communication via localStorage
-            window.addEventListener('storage', (e) => {
-                if (e.key === 'scheduleUpdateNotification' && e.newValue) {
-                    try {
-                        const notification = JSON.parse(e.newValue);
-                        if (notification.type === 'printStarted' && notification.timestamp > Date.now() - 10000) { // Only process recent notifications
-                            this.handleScheduleUpdate(notification);
-                        }
-                    } catch (error) {
-                        console.log('Error processing schedule update notification:', error);
-                    }
-                }
-            });
-
-            // Listen for direct window messages (same tab communication)
-            window.addEventListener('message', (e) => {
-                if (e.origin === window.location.origin && e.data.type === 'scheduleUpdated') {
-                    this.handleScheduleUpdate(e.data);
-                }
-            });
-            
-            // Listen for PostMessage API from Print Tracking pages
-            window.addEventListener('message', (e) => {
-                if (e.origin === window.location.origin) {
-                    const data = e.data;
-                    
-                    if (data.type === 'printJobStarted') {
-                        this.handlePrintJobStarted(data);
-                    } else if (data.type === 'printJobCompleted') {
-                        this.handlePrintJobCompleted(data);
-                    } else if (data.type === 'scheduleNeedsRefresh') {
-                        this.refreshSchedulerSafely();
-                    }
-                }
-            });
-
-            console.log('?? [INIT] Schedule update listener setup complete');
-        },
-
-        // NEW: Handle print job started notification
-        handlePrintJobStarted(data) {
-            console.log('?? [SCHEDULE] Print job started notification:', data);
-            
-            const { jobId, machineId, partNumber, operatorEstimate } = data;
-            const message = `?? Print Started: ${partNumber} on ${machineId} with ${operatorEstimate}h estimate`;
-            
-            this.showSuccessNotification(message);
-            
-            // Update the job block if visible
-            const jobElement = document.querySelector(`[data-job-id="${jobId}"]`);
-            if (jobElement) {
-                // Add visual indicator that job is now building
-                jobElement.classList.add('building-job');
-                jobElement.setAttribute('data-status', 'Building');
-                
-                // Update status indicator
-                const statusIndicator = jobElement.querySelector('.status-indicator');
-                if (statusIndicator) {
-                    statusIndicator.textContent = '?? Building';
-                    statusIndicator.className = 'status-indicator bg-amber-500 text-white text-xs px-1 rounded animate-pulse';
-                }
-                
-                // Refresh after 2 seconds to get updated data
-                setTimeout(() => {
-                    this.refreshSchedulerSafely();
-                }, 2000);
-            }
-        },
-
-        // NEW: Handle print job completed notification
-        handlePrintJobCompleted(data) {
-            console.log('?? [SCHEDULE] Print job completed notification:', data);
-            
-            const { jobId, machineId, partNumber, actualHours } = data;
-            const message = `?? Print Completed: ${partNumber} on ${machineId} (${actualHours}h actual)`;
-            
-            this.showSuccessNotification(message);
-            
-            // Update the job block if visible
-            const jobElement = document.querySelector(`[data-job-id="${jobId}"]`);
-            if (jobElement) {
-                // Add visual indicator that job is complete
-                jobElement.classList.add('completed-job');
-                jobElement.setAttribute('data-status', 'Completed');
-                
-                // Update status indicator
-                const statusIndicator = jobElement.querySelector('.status-indicator');
-                if (statusIndicator) {
-                    statusIndicator.textContent = '? Complete';
-                    statusIndicator.className = 'status-indicator bg-green-500 text-white text-xs px-1 rounded';
-                }
-                
-                // Refresh after 2 seconds to get updated data
-                setTimeout(() => {
-                    this.refreshSchedulerSafely();
-                }, 2000);
-            }
-        },
-
-        // Enhanced refresh with safety checks
-        refreshSchedulerSafely() {
-            if (this.isLoading) {
-                console.log('?? [SCHEDULE] Refresh already in progress, skipping');
-                return;
-            }
-            
-            console.log('?? [SCHEDULE] Safely refreshing scheduler...');
-            this.showLoadingIndicator('Refreshing with latest data...');
-            
-            // Use a timeout to prevent infinite loading
-            const refreshTimeout = setTimeout(() => {
-                this.hideLoadingIndicator();
-                this.showErrorNotification('Refresh timed out. Please manually refresh the page.');
-            }, 10000);
-            
-            // Attempt to refresh
-            try {
-                window.location.reload();
-            } catch (error) {
-                clearTimeout(refreshTimeout);
-                this.hideLoadingIndicator();
-                console.error('? [SCHEDULE] Error during refresh:', error);
-                this.showErrorNotification('Error refreshing scheduler. Please manually refresh the page.');
-            }
-        },
-        
-        // Task 9: Extended zoom levels (12h to 1h, 2 months)
-        currentZoom: '@zoom',
-        zoomLevels: ['2month', 'month', 'week', '12h', '6h', '4h', '2h', '1h', '30min', '15min'],
-        
-        // Task 10: Orientation state
-        currentOrientation: '@(isVertical ? "vertical" : "horizontal")',
-        
-        isModalOpen: false,
-        isLoading: false,
-        modalCloseTimeout: null,
-        
-        // Initialize the application
-        init() {
-            this.setupEventListeners();
-            this.updateGridStyles(this.currentZoom);
-            this.setupZoomControls();
-            this.setupOrientationToggle();
-            this.setupAddJobButton();
-            this.handlePartPrePopulation(); // NEW: Handle automatic modal opening
-            this.setupScheduleUpdateListener(); // NEW: Listen for schedule updates from Print Tracking
-            this.logDebugInfo();
-        },
-        
-        // NEW: Setup listener for schedule updates from Print Tracking
-        setupScheduleUpdateListener() {
-            // Listen for cross-tab communication via localStorage
-            window.addEventListener('storage', (e) => {
-                if (e.key === 'scheduleUpdateNotification' && e.newValue) {
-                    try {
-                        const notification = JSON.parse(e.newValue);
-                        if (notification.type === 'printStarted' && notification.timestamp > Date.now() - 10000) { // Only process recent notifications
-                            this.handleScheduleUpdate(notification);
-                        }
-                    } catch (error) {
-                        console.log('Error processing schedule update notification:', error);
-                    }
-                }
-            });
-
-            // Listen for direct window messages (same tab communication)
-            window.addEventListener('message', (e) => {
-                if (e.origin === window.location.origin && e.data.type === 'scheduleUpdated') {
-                    this.handleScheduleUpdate(e.data);
-                }
-            });
-            
-            // Listen for PostMessage API from Print Tracking pages
-            window.addEventListener('message', (e) => {
-                if (e.origin === window.location.origin) {
-                    const data = e.data;
-                    
-                    if (data.type === 'printJobStarted') {
-                        this.handlePrintJobStarted(data);
-                    } else if (data.type === 'printJobCompleted') {
-                        this.handlePrintJobCompleted(data);
-                    } else if (data.type === 'scheduleNeedsRefresh') {
-                        this.refreshSchedulerSafely();
-                    }
-                }
-            });
-
-            console.log('?? [INIT] Schedule update listener setup complete');
-        },
-
-        // NEW: Handle print job started notification
-        handlePrintJobStarted(data) {
-            console.log('?? [SCHEDULE] Print job started notification:', data);
-            
-            const { jobId, machineId, partNumber, operatorEstimate } = data;
-            const message = `?? Print Started: ${partNumber} on ${machineId} with ${operatorEstimate}h estimate`;
-            
-            this.showSuccessNotification(message);
-            
-            // Update the job block if visible
-            const jobElement = document.querySelector(`[data-job-id="${jobId}"]`);
-            if (jobElement) {
-                // Add visual indicator that job is now building
-                jobElement.classList.add('building-job');
-                jobElement.setAttribute('data-status', 'Building');
-                
-                // Update status indicator
-                const statusIndicator = jobElement.querySelector('.status-indicator');
-                if (statusIndicator) {
-                    statusIndicator.textContent = '?? Building';
-                    statusIndicator.className = 'status-indicator bg-amber-500 text-white text-xs px-1 rounded animate-pulse';
-                }
-                
-                // Refresh after 2 seconds to get updated data
-                setTimeout(() => {
-                    this.refreshSchedulerSafely();
-                }, 2000);
-            }
-        },
-
-        // NEW: Handle print job completed notification
-        handlePrintJobCompleted(data) {
-            console.log('?? [SCHEDULE] Print job completed notification:', data);
-            
-            const { jobId, machineId, partNumber, actualHours } = data;
-            const message = `?? Print Completed: ${partNumber} on ${machineId} (${actualHours}h actual)`;
-            
-            this.showSuccessNotification(message);
-            
-            // Update the job block if visible
-            const jobElement = document.querySelector(`[data-job-id="${jobId}"]`);
-            if (jobElement) {
-                // Add visual indicator that job is complete
-                jobElement.classList.add('completed-job');
-                jobElement.setAttribute('data-status', 'Completed');
-                
-                // Update status indicator
-                const statusIndicator = jobElement.querySelector('.status-indicator');
-                if (statusIndicator) {
-                    statusIndicator.textContent = '? Complete';
-                    statusIndicator.className = 'status-indicator bg-green-500 text-white text-xs px-1 rounded';
-                }
-                
-                // Refresh after 2 seconds to get updated data
-                setTimeout(() => {
-                    this.refreshSchedulerSafely();
-                }, 2000);
-            }
-        },
-
-        // Enhanced refresh with safety checks
-        refreshSchedulerSafely() {
-            if (this.isLoading) {
-                console.log('?? [SCHEDULE] Refresh already in progress, skipping');
-                return;
-            }
-            
-            console.log('?? [SCHEDULE] Safely refreshing scheduler...');
-            this.showLoadingIndicator('Refreshing with latest data...');
-            
-            // Use a timeout to prevent infinite loading
-            const refreshTimeout = setTimeout(() => {
-                this.hideLoadingIndicator();
-                this.showErrorNotification('Refresh timed out. Please manually refresh the page.');
-            }, 10000);
-            
-            // Attempt to refresh
-            try {
-                window.location.reload();
-            } catch (error) {
-                clearTimeout(refreshTimeout);
-                this.hideLoadingIndicator();
-                console.error('? [SCHEDULE] Error during refresh:', error);
-                this.showErrorNotification('Error refreshing scheduler. Please manually refresh the page.');
-            }
-        },
-        
-        // Task 9: Extended zoom levels (12h to 1h, 2 months)
-        currentZoom: '@zoom',
-        zoomLevels: ['2month', 'month', 'week', '12h', '6h', '4h', '2h', '1h', '30min', '15min'],
-        
-        // Task 10: Orientation state
-        currentOrientation: '@(isVertical ? "vertical" : "horizontal")',
-        
-        isModalOpen: false,
-        isLoading: false,
-        modalCloseTimeout: null,
-        
-        // Initialize the application
-        init() {
-            this.setupEventListeners();
-            this.updateGridStyles(this.currentZoom);
-            this.setupZoomControls();
-            this.setupOrientationToggle();
-            this.setupAddJobButton();
-            this.handlePartPrePopulation(); // NEW: Handle automatic modal opening
-            this.setupScheduleUpdateListener(); // NEW: Listen for schedule updates from Print Tracking
-            this.logDebugInfo();
-        },
-        
-        // NEW: Setup listener for schedule updates from Print Tracking
-        setupScheduleUpdateListener() {
-            // Listen for cross-tab communication via localStorage
-            window.addEventListener('storage', (e) => {
-                if (e.key === 'scheduleUpdateNotification' && e.newValue) {
-                    try {
-                        const notification = JSON.parse(e.newValue);
-                        if (notification.type === 'printStarted' && notification.timestamp > Date.now() - 10000) { // Only process recent notifications
-                            this.handleScheduleUpdate(notification);
-                        }
-                    } catch (error) {
-                        console.log('Error processing schedule update notification:', error);
-                    }
-                }
-            });
-
-            // Listen for direct window messages (same tab communication)
-            window.addEventListener('message', (e) => {
-                if (e.origin === window.location.origin && e.data.type === 'scheduleUpdated') {
-                    this.handleScheduleUpdate(e.data);
-                }
-            });
-            
-            // Listen for PostMessage API from Print Tracking pages
-            window.addEventListener('message', (e) => {
-                if (e.origin === window.location.origin) {
-                    const data = e.data;
-                    
-                    if (data.type === 'printJobStarted') {
-                        this.handlePrintJobStarted(data);
-                    } else if (data.type === 'printJobCompleted') {
-                        this.handlePrintJobCompleted(data);
-                    } else if (data.type === 'scheduleNeedsRefresh') {
-                        this.refreshSchedulerSafely();
-                    }
-                }
-            });
-
-            console.log('?? [INIT] Schedule update listener setup complete');
-        },
-
-        // NEW: Handle print job started notification
-        handlePrintJobStarted(data) {
-            console.log('?? [SCHEDULE] Print job started notification:', data);
-            
-            const { jobId, machineId, partNumber, operatorEstimate } = data;
-            const message = `?? Print Started: ${partNumber} on ${machineId} with ${operatorEstimate}h estimate`;
-            
-            this.showSuccessNotification(message);
-            
-            // Update the job block if visible
-            const jobElement = document.querySelector(`[data-job-id="${jobId}"]`);
-            if (jobElement) {
-                // Add visual indicator that job is now building
-                jobElement.classList.add('building-job');
-                jobElement.setAttribute('data-status', 'Building');
-                
-                // Update status indicator
-                const statusIndicator = jobElement.querySelector('.status-indicator');
-                if (statusIndicator) {
-                    statusIndicator.textContent = '?? Building';
-                    statusIndicator.className = 'status-indicator bg-amber-500 text-white text-xs px-1 rounded animate-pulse';
-                }
-                
-                // Refresh after 2 seconds to get updated data
-                setTimeout(() => {
-                    this.refreshSchedulerSafely();
-                }, 2000);
-            }
-        },
-
-        // NEW: Handle print job completed notification
-        handlePrintJobCompleted(data) {
-            console.log('?? [SCHEDULE] Print job completed notification:', data);
-            
-            const { jobId, machineId, partNumber, actualHours } = data;
-            const message = `?? Print Completed: ${partNumber} on ${machineId} (${actualHours}h actual)`;
-            
-            this.showSuccessNotification(message);
-            
-            // Update the job block if visible
-            const jobElement = document.querySelector(`[data-job-id="${jobId}"]`);
-            if (jobElement) {
-                // Add visual indicator that job is complete
-                jobElement.classList.add('completed-job');
-                jobElement.setAttribute('data-status', 'Completed');
-                
-                // Update status indicator
-                const statusIndicator = jobElement.querySelector('.status-indicator');
-                if (statusIndicator) {
-                    statusIndicator.textContent = '? Complete';
-                    statusIndicator.className = 'status-indicator bg-green-500 text-white text-xs px-1 rounded';
-                }
-                
-                // Refresh after 2 seconds to get updated data
-                setTimeout(() => {
-                    this.refreshSchedulerSafely();
-                }, 2000);
-            }
-        },
-
-        // Enhanced refresh with safety checks
-        refreshSchedulerSafely() {
-            if (this.isLoading) {
-                console.log('?? [SCHEDULE] Refresh already in progress, skipping');
-                return;
-            }
-            
-            console.log('?? [SCHEDULE] Safely refreshing scheduler...');
-            this.showLoadingIndicator('Refreshing with latest data...');
-            
-            // Use a timeout to prevent infinite loading
-            const refreshTimeout = setTimeout(() => {
-                this.hideLoadingIndicator();
-                this.showErrorNotification('Refresh timed out. Please manually refresh the page.');
-            }, 10000);
-            
-            // Attempt to refresh
-            try {
-                window.location.reload();
-            } catch (error) {
-                clearTimeout(refreshTimeout);
-                this.hideLoadingIndicator();
-                console.error('? [SCHEDULE] Error during refresh:', error);
-                this.showErrorNotification('Error refreshing scheduler. Please manually refresh the page.');
-            }
-        },
-        
-        // Task 9: Extended zoom levels (12h to 1h, 2 months)
-        currentZoom: '@zoom',
-        zoomLevels: ['2month', 'month', 'week', '12h', '6h', '4h', '2h', '1h', '30min', '15min'],
-        
-        // Task 10: Orientation state
-        currentOrientation: '@(isVertical ? "vertical" : "horizontal")',
-        
-        isModalOpen: false,
-        isLoading: false,
-        modalCloseTimeout: null,
-        
-        // Initialize the application
-        init() {
-            this.setupEventListeners();
-            this.updateGridStyles(this.currentZoom);
-            this.setupZoomControls();
-            this.setupOrientationToggle();
-            this.setupAddJobButton();
-            this.handlePartPrePopulation(); // NEW: Handle automatic modal opening
-            this.setupScheduleUpdateListener(); // NEW: Listen for schedule updates from Print Tracking
-            this.logDebugInfo();
-        },
-        
-        // NEW: Setup listener for schedule updates from Print Tracking
-        setupScheduleUpdateListener() {
-            // Listen for cross-tab communication via localStorage
-            window.addEventListener('storage', (e) => {
-                if (e.key === 'scheduleUpdateNotification' && e.newValue) {
-                    try {
-                        const notification = JSON.parse(e.newValue);
-                        if (notification.type === 'printStarted' && notification.timestamp > Date.now() - 10000) { // Only process recent notifications
-                            this.handleScheduleUpdate(notification);
-                        }
-                    } catch (error) {
-                        console.log('Error processing schedule update notification:', error);
-                    }
-                }
-            });
-
-            // Listen for direct window messages (same tab communication)
-            window.addEventListener('message', (e) => {
-                if (e.origin === window.location.origin && e.data.type === 'scheduleUpdated') {
-                    this.handleScheduleUpdate(e.data);
-                }
-            });
-            
-            // Listen for PostMessage API from Print Tracking pages
-            window.addEventListener('message', (e) => {
-                if (e.origin === window.location.origin) {
-                    const data = e.data;
-                    
-                    if (data.type === 'printJobStarted') {
-                        this.handlePrintJobStarted(data);
-                    } else if (data.type === 'printJobCompleted') {
-                        this.handlePrintJobCompleted(data);
-                    } else if (data.type === 'scheduleNeedsRefresh') {
-                        this.refreshSchedulerSafely();
-                    }
-                }
-            });
-
-            console.log('?? [INIT] Schedule update listener setup complete');
-        },
-
-        // NEW: Handle print job started notification
-        handlePrintJobStarted(data) {
-            console.log('?? [SCHEDULE] Print job started notification:', data);
-            
-            const { jobId, machineId, partNumber, operatorEstimate } = data;
-            const message = `?? Print Started: ${partNumber} on ${machineId} with ${operatorEstimate}h estimate`;
-            
-            this.showSuccessNotification(message);
-            
-            // Update the job block if visible
-            const jobElement = document.querySelector(`[data-job-id="${jobId}"]`);
-            if (jobElement) {
-                // Add visual indicator that job is now building
-                jobElement.classList.add('building-job');
-                jobElement.setAttribute('data-status', 'Building');
-                
-                // Update status indicator
-                const statusIndicator = jobElement.querySelector('.status-indicator');
-                if (statusIndicator) {
-                    statusIndicator.textContent = '?? Building';
-                    statusIndicator.className = 'status-indicator bg-amber-500 text-white text-xs px-1 rounded animate-pulse';
-                }
-                
-                // Refresh after 2 seconds to get updated data
-                setTimeout(() => {
-                    this.refreshSchedulerSafely();
-                }, 2000);
-            }
-        },
-
-        // NEW: Handle print job completed notification
-        handlePrintJobCompleted(data) {
-            console.log('?? [SCHEDULE] Print job completed notification:', data);
-            
-            const { jobId, machineId, partNumber, actualHours } = data;
-            const message = `?? Print Completed: ${partNumber} on ${machineId} (${actualHours}h actual)`;
-            
-            this.showSuccessNotification(message);
-            
-            // Update the job block if visible
-            const jobElement = document.querySelector(`[data-job-id="${jobId}"]`);
-            if (jobElement) {
-                // Add visual indicator that job is complete
-                jobElement.classList.add('completed-job');
-                jobElement.setAttribute('data-status', 'Completed');
-                
-                // Update status indicator
-                const statusIndicator = jobElement.querySelector('.status-indicator');
-                if (statusIndicator) {
-                    statusIndicator.textContent = '? Complete';
-                    statusIndicator.className = 'status-indicator bg-green-500 text-white text-xs px-1 rounded';
-                }
-                
-                // Refresh after 2 seconds to get updated data
-                setTimeout(() => {
-                    this.refreshSchedulerSafely();
-                }, 2000);
-            }
-        },
-
-        // Enhanced refresh with safety checks
-        refreshSchedulerSafely() {
-            if (this.isLoading) {
-                console.log('?? [SCHEDULE] Refresh already in progress, skipping');
-                return;
-            }
-            
-            console.log('?? [SCHEDULE] Safely refreshing scheduler...');
-            this.showLoadingIndicator('Refreshing with latest data...');
-            
-            // Use a timeout to prevent infinite loading
-            const refreshTimeout = setTimeout(() => {
-                this.hideLoadingIndicator();
-                this.showErrorNotification('Refresh timed out. Please manually refresh the page.');
-            }, 10000);
-            
-            // Attempt to refresh
-            try {
-                window.location.reload();
-            } catch (error) {
-                clearTimeout(refreshTimeout);
-                this.hideLoadingIndicator();
-                console.error('? [SCHEDULE] Error during refresh:', error);
-                this.showErrorNotification('Error refreshing scheduler. Please manually refresh the page.');
-            }
+            window.location.href = url.toString();
         },
         
         // Notification functions
@@ -1941,14 +992,58 @@
                 </div>
             `;
             
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 9999;
+                max-width: 400px;
+                border-radius: 8px;
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+                background-color: ${type === 'success' ? '#10b981' : '#ef4444'};
+                transform: translateX(100%);
+                transition: transform 0.3s ease;
+            `;
+            
             document.body.appendChild(notification);
+            
+            // Animate in
+            requestAnimationFrame(() => {
+                notification.style.transform = 'translateX(0)';
+            });
             
             // Auto remove
             setTimeout(() => {
                 if (notification.parentNode) {
-                    notification.remove();
+                    notification.style.transform = 'translateX(100%)';
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.remove();
+                        }
+                    }, 300);
                 }
             }, type === 'success' ? 5000 : 8000);
+        },
+        
+        // Loading indicator functions
+        showLoadingIndicator(message) {
+            const indicator = document.getElementById('loading-indicator');
+            if (indicator) {
+                const messageElement = indicator.querySelector('span');
+                if (messageElement) {
+                    messageElement.textContent = message || 'Loading...';
+                }
+                indicator.classList.remove('hidden');
+                this.isLoading = true;
+            }
+        },
+        
+        hideLoadingIndicator() {
+            const indicator = document.getElementById('loading-indicator');
+            if (indicator) {
+                indicator.classList.add('hidden');
+                this.isLoading = false;
+            }
         },
         
         // Debug logging
@@ -1980,19 +1075,21 @@
         }
     };
     
-    // Task 10: Global orientation toggle function
+    // Expose functions globally
+    window.SchedulerApp = SchedulerApp;
     window.toggleOrientation = function(orientation) {
         SchedulerApp.toggleOrientation(orientation);
     };
-    
-    // Expose functions globally
-    window.SchedulerApp = SchedulerApp;
     window.showLoadingIndicator = SchedulerApp.showLoadingIndicator.bind(SchedulerApp);
     window.hideLoadingIndicator = SchedulerApp.hideLoadingIndicator.bind(SchedulerApp);
     window.showSuccessNotification = SchedulerApp.showSuccessNotification.bind(SchedulerApp);
     window.showErrorNotification = SchedulerApp.showErrorNotification.bind(SchedulerApp);
-    window.navigatePeriod = SchedulerApp.navigatePeriod.bind(SchedulerApp);
-    window.navigateToToday = SchedulerApp.navigateToToday.bind(SchedulerApp);
+    window.navigatePeriod = function(direction) {
+        SchedulerApp.navigatePeriod(direction);
+    };
+    window.navigateToToday = function() {
+        SchedulerApp.navigateToToday(); 
+    };
     
     // Development debug helper
     @if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
@@ -2007,11 +1104,11 @@
     // Initialize on DOM ready
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('?? [INIT] DOM Content Loaded - Initializing Scheduler');
+            console.log('🚀 [INIT] DOM Content Loaded - Initializing Scheduler');
             SchedulerApp.init();
         });
     } else {
-        console.log('?? [INIT] DOM Already Ready - Initializing Scheduler');
+        console.log('🚀 [INIT] DOM Already Ready - Initializing Scheduler');
         SchedulerApp.init();
     }
     

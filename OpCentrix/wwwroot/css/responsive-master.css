@@ -1,0 +1,927 @@
+﻿/* OpCentrix Master Responsive Design System
+ * Consolidated @media queries from all site components
+ * Last Updated: January 30, 2025
+ */
+
+/* ==============================================
+   RESPONSIVE BREAKPOINTS SYSTEM
+   ============================================== */
+
+:root {
+    /* Breakpoint variables for consistency */
+    --mobile-max: 640px;
+    --tablet-min: 641px;
+    --tablet-max: 1024px;
+    --desktop-min: 1025px;
+    --large-desktop-min: 1440px;
+}
+
+/* ==============================================
+   MOBILE DEVICES (0-640px)
+   ============================================== */
+
+@media (max-width: 640px) {
+    /* GLOBAL MOBILE STYLES */
+    .opcentrix-card {
+        margin: 0.5rem;
+        border-radius: 0.5rem;
+    }
+
+    .btn, .parts-btn {
+        padding: 0.75rem 1rem;
+        font-size: 0.875rem;
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    /* NAVIGATION */
+    .nav-link {
+        padding: 0.75rem 1rem;
+        margin: 0.25rem 0;
+        border-radius: 0.5rem;
+        border-left: none;
+        border-left: 4px solid transparent;
+    }
+
+        .nav-link svg {
+            width: 1rem;
+            height: 1rem;
+        }
+
+    /* SCHEDULER GRID SYSTEM */
+    :root {
+        --machine-label-width: 80px;
+        --slot-width: 60px;
+    }
+
+    .scheduler-machine-label {
+        padding: 0.5rem;
+        font-size: 0.75rem;
+    }
+
+    .scheduler-grid-container {
+        --slot-width: 60px;
+    }
+
+    .job-block {
+        padding: 0.25rem;
+        font-size: 0.75rem;
+        min-height: 24px;
+    }
+
+    .job-block-title,
+    .job-block-details {
+        font-size: 0.75rem;
+    }
+
+    /* PRINT TRACKING */
+    #toast-container {
+        right: 0.5rem;
+        left: 0.5rem;
+        min-width: auto;
+        max-width: none;
+        top: 0.5rem;
+    }
+
+    .toast-notification {
+        min-width: auto;
+        max-width: none;
+    }
+
+    .fixed.bottom-4.right-4,
+    .fixed.bottom-6.right-6 {
+        right: 1rem;
+        bottom: 1rem;
+    }
+
+    .fixed.bottom-4.left-4,
+    .fixed.bottom-6.left-6 {
+        left: 1rem;
+        bottom: 1rem;
+    }
+
+    #start-print-btn,
+    #complete-print-btn {
+        padding: 0.75rem 1rem;
+        font-size: 0.875rem;
+    }
+
+    #help-panel {
+        width: calc(100vw - 2rem);
+        max-width: 20rem;
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: 5rem;
+    }
+
+    /* PARTS PAGE */
+    .parts-page-title {
+        font-size: 1.5rem !important;
+    }
+
+    .parts-stats-card {
+        margin-bottom: 1rem !important;
+    }
+
+    .parts-table th,
+    .parts-table td {
+        padding: 0.75rem !important;
+        font-size: 0.75rem !important;
+    }
+
+    /* MASTER SCHEDULE */
+    .master-schedule-container .max-w-full {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .alert-item {
+        padding: 0.5rem;
+    }
+
+    .machine-card {
+        padding: 1rem;
+    }
+
+    .timeline-slot {
+        min-height: 40px;
+        padding: 0.25rem;
+        font-size: 0.5rem;
+    }
+
+    /* ALERT NOTIFICATIONS */
+    .alert-notifications-container {
+        top: 8px !important;
+        right: 8px !important;
+        left: 8px !important;
+    }
+
+    .alert-notification {
+        padding: 14px !important;
+        min-height: 60px !important;
+    }
+
+    .alert-content {
+        gap: 10px !important;
+    }
+
+    /* STAGE STATUS INDICATORS */
+    .stage-status-indicator {
+        font-size: 0.625rem;
+        padding: 0.125rem 0.5rem;
+    }
+
+    /* MODAL ADJUSTMENTS */
+    .modal-dialog {
+        max-width: 95vw;
+        margin: 0.5rem;
+    }
+
+    #partFormTabsContent {
+        max-height: 50vh;
+        padding-right: 5px;
+    }
+
+        #partFormTabsContent [class*="col-"] {
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+        }
+
+    /* STAGE COHORT ENHANCEMENTS */
+    .stage-badge, .cohort-badge {
+        font-size: 8px;
+        padding: 1px 2px;
+    }
+
+    .cohort-summary-bar {
+        height: 20px;
+        font-size: 9px;
+    }
+
+    .cohort-summary-item {
+        font-size: 8px;
+        padding: 1px 3px;
+    }
+
+    .job-context-overlay {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1px;
+    }
+
+    .stage-progress-bar {
+        height: 2px;
+    }
+
+    /* SCHEDULER MAIN CONTENT */
+    .scheduler-main-content {
+        border-radius: 0.5rem;
+        margin: 0 -0.5rem;
+    }
+
+    .scroll-nav-btn {
+        width: 1.75rem;
+        height: 1.75rem;
+    }
+
+    .time-nav-btn {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.875rem;
+    }
+
+    /* Hide scroll navigation on very small screens */
+    .scroll-nav-container {
+        display: none;
+    }
+
+    /* Show swipe hint on mobile */
+    .scheduler-main-content::after {
+        content: 'Swipe horizontally to view more →';
+        position: absolute;
+        bottom: 0.5rem;
+        right: 0.5rem;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        opacity: 0.7;
+        z-index: 20;
+        pointer-events: none;
+        animation: fadeInOut 4s ease-in-out;
+    }
+
+    /* SCHEDULER GRID RESPONSIVE */
+    .empty-state {
+        padding: 2rem;
+        min-height: 300px;
+    }
+
+    .empty-state-title {
+        font-size: 1.25rem;
+    }
+
+    .empty-state-text {
+        font-size: 1rem;
+    }
+
+    .setup-instructions {
+        padding: 1rem;
+    }
+
+    /* BUTTONS */
+    .btn-group .btn,
+    .parts-btn-group .parts-btn {
+        flex: 1 !important;
+        min-width: 0 !important;
+    }
+}
+
+/* ==============================================
+   SMALL MOBILE DEVICES (0-480px)
+   ============================================== */
+
+@media (max-width: 480px) {
+    /* ALERT NOTIFICATIONS */
+    .alert-notifications-container {
+        top: 8px !important;
+        right: 8px !important;
+        left: 8px !important;
+    }
+
+    .alert-notification {
+        padding: 14px !important;
+        min-height: 60px !important;
+    }
+
+    .alert-content {
+        gap: 10px !important;
+    }
+
+    /* PARTS PAGE */
+    .parts-page-header {
+        padding: 1rem !important;
+    }
+
+    .parts-stats-card .card-body {
+        padding: 1rem !important;
+    }
+}
+
+/* ==============================================
+   TABLETS (641px - 1024px)
+   ============================================== */
+
+@media (min-width: 641px) and (max-width: 1024px) {
+    /* SCHEDULER GRID SYSTEM */
+    :root {
+        --machine-label-width: 120px;
+        --slot-width: 100px;
+    }
+
+    /* PRINT TRACKING */
+    .max-w-7xl {
+        max-width: 100%;
+        padding: 0 1rem;
+    }
+
+    #toast-container {
+        max-width: 400px;
+    }
+
+    #start-print-btn,
+    #complete-print-btn {
+        min-height: 52px;
+        min-width: 52px;
+    }
+
+    /* MODAL ADJUSTMENTS */
+    .form-section {
+        grid-template-columns: 1fr;
+    }
+
+    .modal-content {
+        max-width: 100%;
+        margin: 1rem;
+    }
+
+    .scroll-nav-container {
+        position: static;
+        margin-bottom: 0.5rem;
+        justify-content: flex-end;
+    }
+
+    .time-nav-shortcuts {
+        position: static;
+        margin-bottom: 0.5rem;
+        justify-content: center;
+    }
+
+    /* MASTER SCHEDULE */
+    .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .machine-status-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .timeline-grid {
+        font-size: 0.625rem;
+    }
+
+    .timeline-header,
+    .timeline-machine {
+        padding: 0.5rem 0.25rem;
+    }
+
+    /* STAGE PROGRESS */
+    .stage-progress-container {
+        flex-wrap: wrap;
+        gap: 0.25rem;
+    }
+
+    .nav-link {
+        font-size: 0.875rem;
+        padding: 0.5rem 0.75rem;
+    }
+}
+
+/* ==============================================
+   DESKTOP DEVICES (1025px+)
+   ============================================== */
+
+@media (min-width: 1025px) {
+    /* PRINT TRACKING */
+    .fixed.bottom-6.right-6 {
+        right: 2rem;
+        bottom: 2rem;
+    }
+
+    .fixed.bottom-6.left-6 {
+        left: 2rem;
+        bottom: 2rem;
+    }
+
+    #toast-container {
+        max-width: 480px;
+    }
+
+    /* ALERT NOTIFICATIONS */
+    .alert-notifications-container {
+        min-width: 360px !important;
+        max-width: 480px !important;
+    }
+
+    .alert-notification {
+        padding: 18px !important;
+        min-height: 70px !important;
+    }
+
+    .alert-text {
+        font-size: 15px !important;
+        line-height: 1.6 !important;
+    }
+}
+
+/* ==============================================
+   LARGE DESKTOP (1440px+)
+   ============================================== */
+
+@media (min-width: 1440px) {
+    /* Enhanced spacing for large screens */
+    .opcentrix-card {
+        margin: 1rem;
+    }
+
+    .container,
+    .max-w-7xl {
+        max-width: 1280px;
+    }
+}
+
+/* ==============================================
+   MOBILE RESPONSIVE HELPERS
+   ============================================== */
+
+@media (max-width: 768px) {
+    /* GENERAL MOBILE STYLES */
+    .scheduler-machine-label {
+        padding: 0.75rem;
+        font-size: 0.75rem;
+    }
+
+    .job-block {
+        padding: 0.375rem;
+        font-size: 0.75rem;
+        min-height: 28px;
+    }
+
+    .job-block-title {
+        font-size: 0.75rem;
+    }
+
+    .job-block-details {
+        font-size: 0.75rem;
+    }
+
+    /* ALERT NOTIFICATIONS */
+    .alert-notifications-container {
+        top: 10px !important;
+        right: 10px !important;
+        left: 10px !important;
+        max-width: none !important;
+        min-width: auto !important;
+    }
+
+    .alert-notification {
+        padding: 16px !important;
+        border-radius: 8px !important;
+        min-width: auto !important;
+    }
+
+    .alert-text {
+        font-size: 14px !important;
+        line-height: 1.5 !important;
+    }
+
+    .alert-svg {
+        width: 20px !important;
+        height: 20px !important;
+    }
+
+    .alert-close-svg {
+        width: 16px !important;
+        height: 16px !important;
+    }
+
+    /* BUG REPORT MODAL */
+    #bugStatsModal .bg-white,
+    #editBugModal .bg-white {
+        width: 95%;
+        margin: 1rem auto;
+    }
+
+    /* MASTER SCHEDULE */
+    .filters-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .export-buttons {
+        flex-direction: column;
+        width: 100%;
+    }
+
+        .export-buttons button {
+            width: 100%;
+        }
+
+    .timeline-container {
+        padding: 1rem;
+    }
+
+    .metric-card {
+        padding: 1rem;
+    }
+
+    .metric-value {
+        font-size: 1.5rem;
+    }
+
+    /* PARTS PAGE RESPONSIVE */
+    .parts-page-title {
+        font-size: 1.5rem !important;
+    }
+
+    .parts-stats-card {
+        margin-bottom: 1rem !important;
+    }
+
+    .parts-table th,
+    .parts-table td {
+        padding: 0.75rem !important;
+        font-size: 0.75rem !important;
+    }
+
+    /* MODAL RESPONSIVE */
+    .modal-dialog {
+        max-width: 95vw;
+        margin: 1rem;
+    }
+
+    #partFormTabsContent {
+        max-height: 50vh;
+        padding-right: 5px;
+    }
+
+        #partFormTabsContent [class*="col-"] {
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+        }
+
+    /* SCHEDULER MODAL */
+    .scheduler-main-content {
+        border-radius: 0.5rem;
+        margin: 0 -0.5rem;
+    }
+
+    .scroll-nav-btn {
+        width: 1.75rem;
+        height: 1.75rem;
+    }
+
+    .time-nav-btn {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.875rem;
+    }
+}
+
+/* ==============================================
+   HEIGHT-BASED MEDIA QUERIES
+   ============================================== */
+
+@media (max-height: 600px) {
+    /* BUG REPORT MODAL */
+    #bugReportModal .bg-white,
+    #bugStatsModal .bg-white,
+    #editBugModal .bg-white {
+        max-height: 90vh;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    /* GENERAL MODAL HEIGHT ADJUSTMENTS */
+    .modal-content {
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+}
+
+/* Landscape mobile phones */
+@media (orientation: landscape) and (max-height: 500px) {
+    #toast-container {
+        top: 0.25rem;
+        font-size: 0.875rem;
+    }
+
+    .fixed.bottom-4.right-4,
+    .fixed.bottom-6.right-6 {
+        bottom: 0.5rem;
+        right: 0.5rem;
+    }
+
+    .fixed.bottom-4.left-4,
+    .fixed.bottom-6.left-6 {
+        bottom: 0.5rem;
+        left: 0.5rem;
+    }
+}
+
+/* ==============================================
+   PRINT STYLES
+   ============================================== */
+
+@media print {
+    /* GENERAL PRINT STYLES */
+    .no-print,
+    #toast-container,
+    .fixed.bottom-4,
+    .fixed.bottom-6,
+    #help-panel,
+    #loading-indicator,
+    .alert-notifications-container,
+    .export-buttons,
+    .refresh-indicator,
+    button {
+        display: none !important;
+    }
+
+    .min-h-screen {
+        min-height: auto;
+    }
+
+    /* OPCENTRIX CARDS */
+    .opcentrix-card {
+        box-shadow: none !important;
+        border: 1px solid #e5e7eb;
+    }
+
+    /* JOB BLOCKS */
+    .job-block {
+        box-shadow: none !important;
+        border: 1px solid #000 !important;
+        background: white !important;
+        color: black !important;
+        text-shadow: none !important;
+    }
+
+    /* MACHINE HEADERS */
+    .machine-header,
+    .time-slot-header {
+        background: white !important;
+        color: black !important;
+        border-color: #000 !important;
+    }
+
+    /* SCHEDULER GRID */
+    .scheduler-grid-container {
+        box-shadow: none !important;
+        border: 1px solid #000 !important;
+    }
+
+    /* MASTER SCHEDULE */
+    .master-schedule-container {
+        background: white;
+    }
+
+    .timeline-container,
+    .metric-card,
+    .filters-panel {
+        box-shadow: none;
+        border: 1px solid #e5e7eb;
+    }
+
+    .alert-item {
+        break-inside: avoid;
+    }
+
+    /* STAGE COHORT PRINT STYLES */
+    .cohort-summary-bar {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .stage-badge, .cohort-badge {
+        border: 1px solid #000;
+        background: #fff !important;
+        color: #000 !important;
+    }
+
+    .stage-progress-bar {
+        border: 1px solid #000;
+        background: #fff;
+    }
+
+    .progress-fill {
+        background: #000 !important;
+    }
+}
+
+/* ==============================================
+   ACCESSIBILITY MEDIA QUERIES
+   ============================================== */
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .shadow-lg,
+    .opcentrix-card {
+        box-shadow: 0 0 0 2px currentColor;
+    }
+
+    .toast-notification,
+    .alert-notification {
+        border: 2px solid currentColor;
+        backdrop-filter: none;
+    }
+
+    .stage-badge, .cohort-badge {
+        border: 2px solid;
+        font-weight: 700;
+    }
+
+    .cohort-job-block {
+        border: 2px solid;
+    }
+
+    .stage-progress-bar {
+        border: 1px solid;
+    }
+
+    .scheduler-main-content {
+        border: 2px solid #000;
+    }
+
+    .scroll-nav-btn {
+        border: 1px solid #000;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    .nav-link,
+    .stage-status-indicator,
+    .stage-progress-step {
+        transition: none;
+    }
+
+    .toast-notification {
+        transition: opacity 200ms linear;
+    }
+
+    button:hover,
+    .btn:hover,
+    a.btn:hover {
+        transform: none;
+    }
+
+    .scheduler-main-content {
+        scroll-behavior: auto;
+    }
+
+    .scroll-nav-btn,
+    .time-nav-btn {
+        transition: none;
+    }
+
+    .scheduler-main-content::after {
+        animation: none;
+        opacity: 0.7;
+    }
+}
+
+/* ==============================================
+   TOUCH DEVICE OPTIMIZATIONS
+   ============================================== */
+
+@media (pointer: coarse) {
+    /* Larger touch targets for touch devices */
+    button, .btn, a.btn {
+        min-height: 48px;
+        min-width: 48px;
+        padding: 0.75rem 1rem;
+    }
+
+    /* Extra large touch targets for critical actions */
+    #start-print-btn,
+    #complete-print-btn {
+        min-height: 56px;
+        min-width: 56px;
+    }
+
+    /* Increase tap target spacing */
+    .space-y-2 > * + * {
+        margin-top: 0.75rem;
+    }
+}
+
+/* ==============================================
+   KEYFRAME ANIMATIONS
+   ============================================== */
+
+@keyframes fadeInOut {
+    0%, 100% {
+        opacity: 0;
+    }
+
+    20%, 80% {
+        opacity: 0.7;
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+/* ==============================================
+   UTILITY CLASSES FOR RESPONSIVE DESIGN
+   ============================================== */
+
+.mobile-only {
+    display: block;
+}
+
+.tablet-only {
+    display: none;
+}
+
+.desktop-only {
+    display: none;
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+    .mobile-only {
+        display: none;
+    }
+
+    .tablet-only {
+        display: block;
+    }
+
+    .desktop-only {
+        display: none;
+    }
+}
+
+@media (min-width: 1025px) {
+    .mobile-only {
+        display: none;
+    }
+
+    .tablet-only {
+        display: none;
+    }
+
+    .desktop-only {
+        display: block;
+    }
+}
+
+/* Hide elements on specific breakpoints */
+.hide-mobile {
+    display: block;
+}
+
+.hide-tablet {
+    display: block;
+}
+
+.hide-desktop {
+    display: block;
+}
+
+@media (max-width: 640px) {
+    .hide-mobile {
+        display: none !important;
+    }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+    .hide-tablet {
+        display: none !important;
+    }
+}
+
+@media (min-width: 1025px) {
+    .hide-desktop {
+        display: none !important;
+    }
+}

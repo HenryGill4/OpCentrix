@@ -2,6 +2,7 @@
     Shared Alert Notifications Partial
     Standardized alert system for all admin pages
     Supports TempData and ViewBag alerts with auto-hide and animations
+    FIXED: Improved positioning, z-index, and responsive styling
 *@
 
 @{
@@ -9,21 +10,21 @@
     var alerts = new List<(string Type, string Message)>();
     
     // TempData alerts
-    if (TempData["Success"] != null) alerts.Add(("success", TempData["Success"].ToString()));
-    if (TempData["Error"] != null) alerts.Add(("error", TempData["Error"].ToString()));
-    if (TempData["Warning"] != null) alerts.Add(("warning", TempData["Warning"].ToString()));
-    if (TempData["Info"] != null) alerts.Add(("info", TempData["Info"].ToString()));
+    if (TempData["Success"] != null) alerts.Add(("success", TempData["Success"].ToString() ?? string.Empty));
+    if (TempData["Error"] != null) alerts.Add(("error", TempData["Error"].ToString() ?? string.Empty));
+    if (TempData["Warning"] != null) alerts.Add(("warning", TempData["Warning"].ToString() ?? string.Empty));
+    if (TempData["Info"] != null) alerts.Add(("info", TempData["Info"].ToString() ?? string.Empty));
     
     // ViewBag alerts (fallback)
-    if (ViewBag.Success != null) alerts.Add(("success", ViewBag.Success.ToString()));
-    if (ViewBag.Error != null) alerts.Add(("error", ViewBag.Error.ToString()));
-    if (ViewBag.Warning != null) alerts.Add(("warning", ViewBag.Warning.ToString()));
-    if (ViewBag.Info != null) alerts.Add(("info", ViewBag.Info.ToString()));
+    if (ViewBag.Success != null) alerts.Add(("success", ViewBag.Success.ToString() ?? string.Empty));
+    if (ViewBag.Error != null) alerts.Add(("error", ViewBag.Error.ToString() ?? string.Empty));
+    if (ViewBag.Warning != null) alerts.Add(("warning", ViewBag.Warning.ToString() ?? string.Empty));
+    if (ViewBag.Info != null) alerts.Add(("info", ViewBag.Info.ToString() ?? string.Empty));
 }
 
 @if (alerts.Any())
 {
-    <div class="alert-notifications-container fixed top-4 right-4 z-50 space-y-2" id="alertContainer">
+    <div class="alert-notifications-container" id="alertContainer">
         @foreach (var alert in alerts)
         {
             var alertId = $"alert-{Guid.NewGuid().ToString("N")[..8]}";
@@ -37,52 +38,52 @@
             };
             
             <div id="@alertId" 
-                 class="alert-notification @bgColor @textColor border @borderColor rounded-lg p-4 shadow-lg transform translate-x-full transition-transform duration-300 ease-in-out max-w-sm"
+                 class="alert-notification @bgColor @textColor border @borderColor"
                  role="alert" 
                  aria-live="polite"
                  data-alert-type="@alert.Type"
                  data-auto-dismiss="true">
                 
-                <div class="flex items-start">
-                    <div class="flex-shrink-0">
+                <div class="alert-content">
+                    <div class="alert-icon">
                         @switch (icon)
                         {
                             case "check-circle":
-                                <svg class="h-5 w-5 @iconColor" fill="currentColor" viewBox="0 0 20 20">
+                                <svg class="alert-svg @iconColor" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                                 </svg>
                                 break;
                             case "x-circle":
-                                <svg class="h-5 w-5 @iconColor" fill="currentColor" viewBox="0 0 20 20">
+                                <svg class="alert-svg @iconColor" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
                                 </svg>
                                 break;
                             case "exclamation-triangle":
-                                <svg class="h-5 w-5 @iconColor" fill="currentColor" viewBox="0 0 20 20">
+                                <svg class="alert-svg @iconColor" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
                                 </svg>
                                 break;
                             default:
-                                <svg class="h-5 w-5 @iconColor" fill="currentColor" viewBox="0 0 20 20">
+                                <svg class="alert-svg @iconColor" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
                                 </svg>
                                 break;
                         }
                     </div>
                     
-                    <div class="ml-3 w-0 flex-1">
-                        <p class="text-sm font-medium">
+                    <div class="alert-message">
+                        <p class="alert-text">
                             @Html.Raw(Html.Encode(alert.Message))
                         </p>
                     </div>
                     
-                    <div class="ml-4 flex-shrink-0 flex">
+                    <div class="alert-dismiss">
                         <button type="button" 
-                                class="inline-flex @textColor hover:@textColor.Replace("800", "600") focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-@(alert.Type == "success" ? "green" : alert.Type == "error" ? "red" : alert.Type == "warning" ? "yellow" : "blue")-500"
+                                class="alert-close-btn @textColor"
                                 onclick="dismissAlert('@alertId')"
                                 aria-label="Dismiss alert">
                             <span class="sr-only">Dismiss</span>
-                            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                            <svg class="alert-close-svg" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
                             </svg>
                         </button>
@@ -93,7 +94,7 @@
     </div>
 
     <script>
-        // Alert Notification Management
+        // Alert Notification Management - Enhanced Version
         (function() {
             'use strict';
             
@@ -136,9 +137,8 @@
             function slideInAlert(alert) {
                 if (!alert) return;
                 
-                // Remove translate-x-full and add translate-x-0 for slide-in effect
-                alert.classList.remove('translate-x-full');
-                alert.classList.add('translate-x-0');
+                // Add slide-in classes
+                alert.classList.add('alert-slide-in');
                 
                 // Add a subtle bounce effect
                 setTimeout(() => {
@@ -157,8 +157,7 @@
                 if (!alert) return;
                 
                 // Add slide-out animation
-                alert.classList.remove('translate-x-0');
-                alert.classList.add('translate-x-full');
+                alert.classList.add('alert-slide-out');
                 
                 // Remove from DOM after animation
                 setTimeout(() => {
@@ -189,30 +188,30 @@
                 
                 const alertHtml = `
                     <div id="${alertId}" 
-                         class="alert-notification ${alertConfig.bgColor} ${alertConfig.textColor} border ${alertConfig.borderColor} rounded-lg p-4 shadow-lg transform translate-x-full transition-transform duration-300 ease-in-out max-w-sm"
+                         class="alert-notification ${alertConfig.bgColor} ${alertConfig.textColor} border ${alertConfig.borderColor}"
                          role="alert" 
                          aria-live="polite"
                          data-alert-type="${type}"
                          data-auto-dismiss="${autoHide}">
                         
-                        <div class="flex items-start">
-                            <div class="flex-shrink-0">
+                        <div class="alert-content">
+                            <div class="alert-icon">
                                 ${alertConfig.icon}
                             </div>
                             
-                            <div class="ml-3 w-0 flex-1">
-                                <p class="text-sm font-medium">
+                            <div class="alert-message">
+                                <p class="alert-text">
                                     ${escapeHtml(message)}
                                 </p>
                             </div>
                             
-                            <div class="ml-4 flex-shrink-0 flex">
+                            <div class="alert-dismiss">
                                 <button type="button" 
-                                        class="inline-flex ${alertConfig.textColor} hover:${alertConfig.textColor.replace('800', '600')} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-${alertConfig.ringColor}-500"
+                                        class="alert-close-btn ${alertConfig.textColor}"
                                         onclick="dismissAlert('${alertId}')"
                                         aria-label="Dismiss alert">
                                     <span class="sr-only">Dismiss</span>
-                                    <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                    <svg class="alert-close-svg" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
                                     </svg>
                                 </button>
@@ -223,6 +222,9 @@
                 
                 container.insertAdjacentHTML('beforeend', alertHtml);
                 const newAlert = document.getElementById(alertId);
+                
+                // Show container if hidden
+                container.style.display = 'block';
                 
                 // Animate in
                 setTimeout(() => slideInAlert(newAlert), 50);
@@ -246,7 +248,7 @@
                         borderColor: 'border-green-200',
                         iconColor: 'text-green-400',
                         ringColor: 'green',
-                        icon: `<svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                        icon: `<svg class="alert-svg text-green-400" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                               </svg>`
                     },
@@ -256,7 +258,7 @@
                         borderColor: 'border-red-200',
                         iconColor: 'text-red-400',
                         ringColor: 'red',
-                        icon: `<svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                        icon: `<svg class="alert-svg text-red-400" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
                               </svg>`
                     },
@@ -266,7 +268,7 @@
                         borderColor: 'border-yellow-200',
                         iconColor: 'text-yellow-400',
                         ringColor: 'yellow',
-                        icon: `<svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                        icon: `<svg class="alert-svg text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
                               </svg>`
                     },
@@ -276,7 +278,7 @@
                         borderColor: 'border-blue-200',
                         iconColor: 'text-blue-400',
                         ringColor: 'blue',
-                        icon: `<svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                        icon: `<svg class="alert-svg text-blue-400" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
                               </svg>`
                     }
@@ -310,28 +312,154 @@
 }
 
 <style>
-    /* Additional styles for alert animations */
+    /* ENHANCED ALERT NOTIFICATION STYLING - LARGER SIZE VERSION */
+    .alert-notifications-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999; /* Higher than most elements */
+        max-width: 480px; /* Increased from 400px */
+        min-width: 320px; /* Added minimum width */
+        width: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        pointer-events: none; /* Allow clicks through container */
+    }
+    
     .alert-notification {
-        z-index: 1000;
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
+        pointer-events: auto; /* Re-enable clicks on notifications */
+        display: flex;
+        min-height: 70px; /* Increased from 60px */
+        border-radius: 12px;
+        padding: 18px; /* Increased from 16px */
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15), 0 4px 6px rgba(0, 0, 0, 0.05);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-width: 1px;
+        border-style: solid;
+        background-clip: padding-box;
+        transform: translateX(100%);
+        opacity: 0;
+        transition: all 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+        position: relative;
+        overflow: hidden;
+        max-width: 100%;
+        word-wrap: break-word;
+        min-width: 300px; /* Added minimum width for notifications */
     }
     
+    /* Slide-in animation */
+    .alert-notification.alert-slide-in {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    
+    /* Slide-out animation */
+    .alert-notification.alert-slide-out {
+        transform: translateX(100%);
+        opacity: 0;
+        height: 0;
+        padding: 0;
+        margin: 0;
+        min-height: 0;
+    }
+    
+    /* Alert content layout */
+    .alert-content {
+        display: flex;
+        align-items: flex-start;
+        width: 100%;
+        gap: 14px; /* Increased from 12px */
+    }
+    
+    .alert-icon {
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+    
+    .alert-svg {
+        width: 22px; /* Increased from 20px */
+        height: 22px; /* Increased from 20px */
+        display: block;
+    }
+    
+    .alert-message {
+        flex: 1;
+        min-width: 0;
+        margin-right: 8px;
+    }
+    
+    .alert-text {
+        margin: 0;
+        font-size: 15px; /* Increased from 14px */
+        font-weight: 500;
+        line-height: 1.5; /* Improved from 1.4 */
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+    
+    .alert-dismiss {
+        flex-shrink: 0;
+        margin-top: -2px;
+    }
+    
+    .alert-close-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 6px; /* Increased from 4px */
+        border-radius: 6px;
+        transition: all 200ms ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .alert-close-btn:hover {
+        background-color: rgba(0, 0, 0, 0.1);
+        transform: scale(1.1);
+    }
+    
+    .alert-close-btn:focus {
+        outline: 2px solid currentColor;
+        outline-offset: 2px;
+    }
+    
+    .alert-close-svg {
+        width: 18px; /* Increased from 16px */
+        height: 18px; /* Increased from 16px */
+        display: block;
+    }
+    
+    /* Hover effects */
     .alert-notification:hover {
-        transform: translateX(-2px) !important;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        transform: translateX(-6px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2), 0 8px 12px rgba(0, 0, 0, 0.08);
     }
     
-    /* Responsive adjustments */
-    @@media (max-width: 640px) {
-        .alert-notifications-container {
-            left: 1rem;
-            right: 1rem;
-            top: 1rem;
-        }
-        
-        .alert-notification {
-            max-width: none;
-        }
+    .alert-notification.alert-slide-out:hover {
+        transform: translateX(100%);
+    }
+    
+    /* Type-specific styling enhancements */
+    .alert-notification.bg-green-50 {
+        background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(255, 255, 255, 0.95));
+        border-left: 4px solid #22c55e; 
+    }
+    
+    .alert-notification.bg-red-50 {
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(255, 255, 255, 0.95));
+        border-left: 4px solid #ef4444;
+    }
+    
+    .alert-notification.bg-yellow-50 {
+        background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(255, 255, 255, 0.95));
+        border-left: 4px solid #f59e0b;
+    }
+    
+    .alert-notification.bg-blue-50 {
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(255, 255, 255, 0.95));
+        border-left: 4px solid #3b82f6;
     }
 </style>
