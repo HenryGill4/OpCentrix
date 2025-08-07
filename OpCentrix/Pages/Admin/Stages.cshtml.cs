@@ -6,13 +6,14 @@ using OpCentrix.Data;
 using OpCentrix.Models;
 using OpCentrix.Models.JobStaging;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 
 namespace OpCentrix.Pages.Admin;
 
 /// <summary>
-/// Advanced Job Stage Management - Task 11: Modular Multi-Stage Scheduling
-/// Provides comprehensive CRUD operations for job stages with dependency management
-/// Enhanced for manufacturing workflow orchestration and resource allocation
+/// Enhanced Stage Management - Integrates ProductionStage templates with Job execution stages
+/// Provides unified workflow for stage configuration and job stage execution
+/// Refactored to align with B&T Manufacturing requirements
 /// </summary>
 [Authorize(Policy = "AdminOnly")]
 public class StagesModel : PageModel
@@ -26,50 +27,65 @@ public class StagesModel : PageModel
         _logger = logger;
     }
 
-    // Data properties for the page
-    public List<JobStage> JobStages { get; set; } = new List<JobStage>();
-    public List<JobStageDependency> StageDependencies { get; set; } = new List<JobStageDependency>();
+    // Production Stage Templates
+    public List<ProductionStage> ProductionStageTemplates { get; set; } = new List<ProductionStage>();
+    public Dictionary<int, StageUsageStats> StageTemplateUsage { get; set; } = new Dictionary<int, StageUsageStats>();
+
+    // Active Job Stages
+    public List<JobStage> ActiveJobStages { get; set; } = new List<JobStage>();
+    public List<JobStage> OverdueStages => ActiveJobStages.Where(s => s.IsOverdue).ToList();
+    public List<string> Departments => ActiveJobStages.Select(s => s.Department).Distinct().Where(d => !string.IsNullOrEmpty(d)).ToList();
+    public Dictionary<string, int> StatusCounts => ActiveJobStages.GroupBy(s => s.Status).ToDictionary(g => g.Key, g => g.Count());
+
+    // Available Resources
     public List<Machine> AvailableMachines { get; set; } = new List<Machine>();
     public List<Job> ActiveJobs { get; set; } = new List<Job>();
-    public Dictionary<string, int> StageStatistics { get; set; } = new Dictionary<string, int>();
 
-    // Additional properties needed by the Razor page
-    public List<JobStage> Stages => JobStages;
-    public List<JobStage> OverdueStages => JobStages.Where(s => s.IsOverdue).ToList();
-    public List<string> Departments => JobStages.Select(s => s.Department).Distinct().Where(d => !string.IsNullOrEmpty(d)).ToList();
-    public Dictionary<string, int> StatusCounts => JobStages.GroupBy(s => s.Status).ToDictionary(g => g.Key, g => g.Count());
-    public Dictionary<string, double> DepartmentUtilization => CalculateDepartmentUtilization();
-    
+    // Stage Dependencies
+    public List<JobStageDependency> StageDependencies { get; set; } = new List<JobStageDependency>();
+
     // Filter properties
     public string? SelectedDepartment { get; set; }
     public string? SelectedStatus { get; set; }
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
+    public string? SelectedView { get; set; } = "active"; // active, templates, dependencies
 
     // Form binding properties
     [BindProperty]
-    public CreateStageViewModel NewStage { get; set; } = new CreateStageViewModel();
+    public CreateStageFromTemplateViewModel NewStageFromTemplate { get; set; } = new CreateStageFromTemplateViewModel();
 
     [BindProperty]
-    public CreateDependencyViewModel NewDependency { get; set; } = new CreateDependencyViewModel();
+    public CreateJobStageViewModel NewJobStage { get; set; } = new CreateJobStageViewModel();
 
-    public async Task OnGetAsync(string? department = null, string? status = null, DateTime? startDate = null, DateTime? endDate = null)
+    [BindProperty]
+    public UpdateProductionStageViewModel UpdateStageTemplate { get; set; } = new UpdateProductionStageViewModel();
+
+    public async Task OnGetAsync(string? department = null, string? status = null, DateTime? startDate = null, 
+        DateTime? endDate = null, string? view = "active")
     {
         try
         {
-            _logger.LogInformation("Loading Job Stages Management page");
+            _logger.LogInformation("Loading Enhanced Stage Management page with view: {View}", view);
             
             // Set filter properties
             SelectedDepartment = department;
             SelectedStatus = status;
             StartDate = startDate;
             EndDate = endDate;
+            SelectedView = view ?? "active";
+            
+            // FIXED: Initialize form with proper default values
+            NewStageFromTemplate = new CreateStageFromTemplateViewModel
+            {
+                ScheduledStart = DateTime.Now.AddHours(1), // Default to 1 hour from now
+                Priority = 3 // Default priority
+            };
             
             await LoadStageDataAsync();
-            await LoadStageStatisticsAsync();
             
-            _logger.LogInformation("Loaded {StageCount} stages, {DependencyCount} dependencies", 
-                JobStages.Count, StageDependencies.Count);
+            _logger.LogInformation("Loaded {TemplateCount} stage templates, {ActiveStageCount} active job stages", 
+                ProductionStageTemplates.Count, ActiveJobStages.Count);
         }
         catch (Exception ex)
         {
@@ -78,233 +94,312 @@ public class StagesModel : PageModel
         }
     }
 
-    #region Stage Management
+    #region Stage Template Management
 
-    public async Task<IActionResult> OnPostCreateStageAsync()
+    public async Task<IActionResult> OnPostCreateStageFromTemplateAsync()
     {
         try
         {
-            _logger.LogInformation("Creating job stage: {StageName}", NewStage?.StageName ?? "null");
+            _logger.LogInformation("Creating job stage from template: {TemplateId} for Job: {JobId}", 
+                NewStageFromTemplate?.ProductionStageId ?? 0, NewStageFromTemplate?.JobId ?? 0);
             
-            if (NewStage == null)
+            // ENHANCED: Better validation and error messaging
+            if (NewStageFromTemplate == null)
             {
+                ModelState.AddModelError("", "Invalid stage data received.");
                 TempData["ErrorMessage"] = "Invalid stage data received.";
-                return RedirectToPage();
+                await LoadStageDataAsync(); // Reload data for display
+                return Page();
             }
 
-            // Validate stage data
-            if (string.IsNullOrWhiteSpace(NewStage.StageName))
+            // FIXED: Validate model state properly
+            if (!ModelState.IsValid)
             {
-                TempData["ErrorMessage"] = "Stage name is required.";
-                return RedirectToPage();
+                _logger.LogWarning("Model validation failed for new stage from template");
+                foreach (var error in ModelState.Values.SelectMany(v => v.Errors))
+                {
+                    _logger.LogDebug("Validation error: {Error}", error.ErrorMessage);
+                }
+                
+                // Reload data for display
+                await LoadStageDataAsync();
+                return Page();
+            }
+
+            // Validate job exists and is in correct status
+            var job = await _context.Jobs.FindAsync(NewStageFromTemplate.JobId);
+            if (job == null)
+            {
+                ModelState.AddModelError("NewStageFromTemplate.JobId", "Job not found.");
+                TempData["ErrorMessage"] = "Job not found.";
+                await LoadStageDataAsync();
+                return Page();
+            }
+
+            if (job.Status == "Completed" || job.Status == "Cancelled")
+            {
+                ModelState.AddModelError("NewStageFromTemplate.JobId", "Cannot add stages to completed or cancelled jobs.");
+                TempData["ErrorMessage"] = "Cannot add stages to completed or cancelled jobs.";
+                await LoadStageDataAsync();
+                return Page();
+            }
+
+            // Get the production stage template
+            var template = await _context.ProductionStages.FindAsync(NewStageFromTemplate.ProductionStageId);
+            if (template == null)
+            {
+                ModelState.AddModelError("NewStageFromTemplate.ProductionStageId", "Production stage template not found.");
+                TempData["ErrorMessage"] = "Production stage template not found.";
+                await LoadStageDataAsync();
+                return Page();
             }
 
             // Check for duplicate stage names within the same job
-            if (NewStage.JobId > 0)
+            var existingStage = await _context.JobStages
+                .FirstOrDefaultAsync(js => js.JobId == NewStageFromTemplate.JobId && 
+                                          js.StageName.ToLower() == template.Name.ToLower());
+            
+            if (existingStage != null)
             {
-                var existingStage = await _context.JobStages
-                    .FirstOrDefaultAsync(js => js.JobId == NewStage.JobId && 
-                                              js.StageName.ToLower() == NewStage.StageName.ToLower());
-                
-                if (existingStage != null)
-                {
-                    TempData["ErrorMessage"] = $"A stage with the name '{NewStage.StageName}' already exists for this job.";
-                    return RedirectToPage();
-                }
+                ModelState.AddModelError("NewStageFromTemplate.ProductionStageId", $"A stage with the name '{template.Name}' already exists for this job.");
+                TempData["ErrorMessage"] = $"A stage with the name '{template.Name}' already exists for this job.";
+                await LoadStageDataAsync();
+                return Page();
             }
 
-            // Create new job stage
+            // Get next execution order
+            var maxOrder = await _context.JobStages
+                .Where(js => js.JobId == NewStageFromTemplate.JobId)
+                .MaxAsync(js => (int?)js.ExecutionOrder) ?? 0;
+
+            // Create job stage from template
             var jobStage = new JobStage
             {
-                JobId = NewStage.JobId,
-                StageType = NewStage.StageType,
-                StageName = NewStage.StageName,
-                Department = NewStage.Department,
-                MachineId = NewStage.MachineId,
-                ExecutionOrder = NewStage.ExecutionOrder,
-                ScheduledStart = NewStage.ScheduledStart,
-                ScheduledEnd = NewStage.ScheduledEnd,
-                EstimatedDurationHours = NewStage.EstimatedDurationHours,
-                Priority = NewStage.Priority,
+                JobId = NewStageFromTemplate.JobId,
+                StageType = template.Name,
+                StageName = template.Name,
+                Department = template.Department ?? "Production",
+                MachineId = NewStageFromTemplate.MachineId ?? template.DefaultMachineId,
+                ExecutionOrder = NewStageFromTemplate.ExecutionOrder ?? (maxOrder + 1),
+                ScheduledStart = NewStageFromTemplate.ScheduledStart,
+                ScheduledEnd = NewStageFromTemplate.ScheduledStart.AddHours(template.DefaultDurationHours),
+                EstimatedDurationHours = template.DefaultDurationHours,
+                Priority = NewStageFromTemplate.Priority,
                 Status = "Scheduled",
-                CanStart = NewStage.ExecutionOrder == 1, // First stage can start immediately
-                SetupTimeHours = NewStage.SetupTimeHours,
-                CooldownTimeHours = NewStage.CooldownTimeHours,
-                AssignedOperator = NewStage.AssignedOperator,
-                Notes = NewStage.Notes,
-                QualityRequirements = NewStage.QualityRequirements,
-                RequiredMaterials = NewStage.RequiredMaterials,
-                RequiredTooling = NewStage.RequiredTooling,
-                EstimatedCost = NewStage.EstimatedCost,
-                IsBlocking = NewStage.IsBlocking,
-                AllowParallel = NewStage.AllowParallel,
+                CanStart = (NewStageFromTemplate.ExecutionOrder ?? (maxOrder + 1)) == 1,
+                SetupTimeHours = template.DefaultSetupMinutes / 60.0,
+                CooldownTimeHours = 0,
+                AssignedOperator = NewStageFromTemplate.AssignedOperator,
+                Notes = NewStageFromTemplate.Notes,
+                QualityRequirements = template.RequiresQualityCheck ? "Quality check required as per stage template" : null,
+                RequiredMaterials = "[]", // Will be populated from template custom fields
+                RequiredTooling = "",
+                EstimatedCost = template.GetTotalEstimatedCost(),
+                IsBlocking = !template.AllowSkip,
+                AllowParallel = template.AllowParallelExecution,
                 CreatedBy = User.Identity?.Name ?? "System",
                 CreatedDate = DateTime.UtcNow,
                 LastModifiedBy = User.Identity?.Name ?? "System",
                 LastModifiedDate = DateTime.UtcNow
             };
 
+            // Note: JobStage doesn't have StageParameters property, so we store custom field data in Notes
+            var customFields = template.GetCustomFields();
+            if (customFields.Any())
+            {
+                var customFieldsJson = JsonSerializer.Serialize(customFields.ToDictionary(
+                    cf => cf.Name,
+                    cf => cf.DefaultValue ?? ""
+                ));
+                jobStage.Notes = string.IsNullOrEmpty(jobStage.Notes) 
+                    ? $"Template custom fields: {customFieldsJson}"
+                    : $"{jobStage.Notes}\n\nTemplate custom fields: {customFieldsJson}";
+            }
+
             _context.JobStages.Add(jobStage);
             await _context.SaveChangesAsync();
 
+            // Create part stage requirement if this job has parts
+            var jobParts = await _context.Jobs
+                .Where(j => j.Id == NewStageFromTemplate.JobId)
+                .Select(j => j.PartNumber)
+                .FirstOrDefaultAsync();
+
+            if (!string.IsNullOrEmpty(jobParts))
+            {
+                var part = await _context.Parts.FirstOrDefaultAsync(p => p.PartNumber == jobParts);
+                if (part != null)
+                {
+                    var existingRequirement = await _context.PartStageRequirements
+                        .FirstOrDefaultAsync(psr => psr.PartId == part.Id && psr.ProductionStageId == template.Id);
+
+                    if (existingRequirement == null)
+                    {
+                        var partStageReq = new PartStageRequirement
+                        {
+                            PartId = part.Id,
+                            ProductionStageId = template.Id,
+                            ExecutionOrder = jobStage.ExecutionOrder,
+                            IsRequired = !template.IsOptional,
+                            IsActive = true,
+                            EstimatedHours = template.DefaultDurationHours,
+                            EstimatedCost = template.GetTotalEstimatedCost(),
+                            AssignedMachineId = jobStage.MachineId
+                        };
+                        _context.PartStageRequirements.Add(partStageReq);
+                        await _context.SaveChangesAsync();
+                    }
+                }
+            }
+
             _logger.LogInformation("Successfully created job stage: {StageName} with ID: {StageId}", 
                 jobStage.StageName, jobStage.Id);
-            TempData["SuccessMessage"] = $"Job stage '{jobStage.StageName}' created successfully.";
+            TempData["SuccessMessage"] = $"Job stage '{jobStage.StageName}' created successfully from template.";
             
-            return RedirectToPage();
+            return RedirectToPage(new { view = "active" });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating job stage: {StageName}", NewStage?.StageName ?? "null");
+            _logger.LogError(ex, "Error creating job stage from template");
+            ModelState.AddModelError("", $"Error creating job stage: {ex.Message}");
             TempData["ErrorMessage"] = $"Error creating job stage: {ex.Message}";
-            return RedirectToPage();
+            
+            // Reload data for display
+            await LoadStageDataAsync();
+            return Page();
         }
     }
 
-    public async Task<IActionResult> OnPostDeleteStageAsync(int stageId)
+    public async Task<IActionResult> OnPostUpdateStageTemplateAsync()
     {
         try
         {
-            _logger.LogInformation("Attempting to delete job stage with ID: {StageId}", stageId);
+            _logger.LogInformation("Updating production stage template: {StageId}", UpdateStageTemplate.Id);
             
-            var jobStage = await _context.JobStages
-                .Include(js => js.Dependencies)
-                .Include(js => js.Dependents)
-                .FirstOrDefaultAsync(js => js.Id == stageId);
-            
-            if (jobStage == null)
+            var stage = await _context.ProductionStages.FindAsync(UpdateStageTemplate.Id);
+            if (stage == null)
             {
-                TempData["ErrorMessage"] = "Job stage not found.";
+                TempData["ErrorMessage"] = "Production stage template not found.";
                 return RedirectToPage();
             }
 
-            // Check if stage has dependencies or dependents
-            if (jobStage.Dependencies.Any() || jobStage.Dependents.Any())
-            {
-                _logger.LogWarning("Cannot delete stage {StageId} - it has dependencies", stageId);
-                TempData["ErrorMessage"] = $"Cannot delete '{jobStage.StageName}' - it has dependencies. Please remove dependencies first.";
-                return RedirectToPage();
-            }
+            // Update basic properties
+            stage.Name = UpdateStageTemplate.Name;
+            stage.Description = UpdateStageTemplate.Description;
+            stage.Department = UpdateStageTemplate.Department;
+            stage.DefaultDurationHours = UpdateStageTemplate.DefaultDurationHours;
+            stage.DefaultSetupMinutes = UpdateStageTemplate.DefaultSetupMinutes;
+            stage.DefaultHourlyRate = UpdateStageTemplate.DefaultHourlyRate;
+            stage.DefaultMaterialCost = UpdateStageTemplate.DefaultMaterialCost;
+            stage.RequiresQualityCheck = UpdateStageTemplate.RequiresQualityCheck;
+            stage.RequiresApproval = UpdateStageTemplate.RequiresApproval;
+            stage.AllowSkip = UpdateStageTemplate.AllowSkip;
+            stage.IsOptional = UpdateStageTemplate.IsOptional;
+            stage.AllowParallelExecution = UpdateStageTemplate.AllowParallelExecution;
+            stage.RequiredRole = UpdateStageTemplate.RequiredRole;
+            stage.LastModifiedBy = User.Identity?.Name ?? "System";
+            stage.LastModifiedDate = DateTime.UtcNow;
 
-            // Check if stage is in progress or completed
-            if (jobStage.Status == "In-Progress" || jobStage.Status == "Completed")
-            {
-                _logger.LogWarning("Cannot delete stage {StageId} - it is {Status}", stageId, jobStage.Status);
-                TempData["ErrorMessage"] = $"Cannot delete '{jobStage.StageName}' - it is {jobStage.Status.ToLower()}. ";
-                return RedirectToPage();
-            }
-
-            _context.JobStages.Remove(jobStage);
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Successfully deleted job stage: {StageName}", jobStage.StageName);
-            TempData["SuccessMessage"] = $"Job stage '{jobStage.StageName}' deleted successfully.";
+            _logger.LogInformation("Successfully updated production stage template: {StageName}", stage.Name);
+            TempData["SuccessMessage"] = $"Production stage template '{stage.Name}' updated successfully.";
+            
+            return RedirectToPage(new { view = "templates" });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting job stage {StageId}", stageId);
-            TempData["ErrorMessage"] = "Error deleting job stage. Please try again.";
+            _logger.LogError(ex, "Error updating production stage template");
+            TempData["ErrorMessage"] = $"Error updating stage template: {ex.Message}";
+            return RedirectToPage();
         }
-
-        return RedirectToPage();
     }
 
     #endregion
 
-    #region Dependency Management
+    #region Job Stage Management
 
-    public async Task<IActionResult> OnPostCreateDependencyAsync()
+    public async Task<IActionResult> OnPostStartStageAsync(int stageId)
     {
         try
         {
-            _logger.LogInformation("Creating stage dependency: {DependentStage} depends on {RequiredStage}", 
-                NewDependency?.DependentStageId, NewDependency?.RequiredStageId);
-            
-            if (NewDependency == null)
+            var stage = await _context.JobStages.FindAsync(stageId);
+            if (stage == null)
             {
-                TempData["ErrorMessage"] = "Invalid dependency data received.";
-                return RedirectToPage();
+                return new JsonResult(new { success = false, message = "Stage not found" });
             }
 
-            // Validate dependency
-            if (NewDependency.DependentStageId == NewDependency.RequiredStageId)
+            if (!stage.CanStart)
             {
-                TempData["ErrorMessage"] = "A stage cannot depend on itself.";
-                return RedirectToPage();
+                return new JsonResult(new { success = false, message = "Stage cannot be started - dependencies not met" });
             }
 
-            // Check for duplicate dependencies
-            var existingDependency = await _context.StageDependencies
-                .FirstOrDefaultAsync(sd => sd.DependentStageId == NewDependency.DependentStageId &&
-                                          sd.RequiredStageId == NewDependency.RequiredStageId);
-            
-            if (existingDependency != null)
+            if (stage.Status != "Scheduled" && stage.Status != "Ready")
             {
-                TempData["ErrorMessage"] = "This dependency already exists.";
-                return RedirectToPage();
+                return new JsonResult(new { success = false, message = $"Stage is {stage.Status} and cannot be started" });
             }
 
-            // Check for circular dependencies
-            if (await WouldCreateCircularDependencyAsync(NewDependency.DependentStageId, NewDependency.RequiredStageId))
-            {
-                TempData["ErrorMessage"] = "This dependency would create a circular reference.";
-                return RedirectToPage();
-            }
+            stage.Status = "In-Progress";
+            stage.ActualStart = DateTime.UtcNow;
+            stage.ProgressPercent = 0;
+            stage.LastModifiedBy = User.Identity?.Name ?? "System";
+            stage.LastModifiedDate = DateTime.UtcNow;
 
-            // Create stage dependency
-            var stageDependency = new JobStageDependency
-            {
-                DependentStageId = NewDependency.DependentStageId,
-                RequiredStageId = NewDependency.RequiredStageId,
-                DependencyType = NewDependency.DependencyType,
-                LagTimeHours = NewDependency.LagTimeHours,
-                IsMandatory = NewDependency.IsMandatory,
-                Notes = NewDependency.Notes,
-                CreatedDate = DateTime.UtcNow
-            };
-
-            _context.StageDependencies.Add(stageDependency);
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Successfully created stage dependency with ID: {DependencyId}", stageDependency.Id);
-            TempData["SuccessMessage"] = "Stage dependency created successfully.";
-            
-            return RedirectToPage();
+            // Update dependent stages
+            await UpdateDependentStagesAsync(stageId);
+
+            return new JsonResult(new { success = true, message = "Stage started successfully" });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating stage dependency");
-            TempData["ErrorMessage"] = $"Error creating stage dependency: {ex.Message}";
-            return RedirectToPage();
+            _logger.LogError(ex, "Error starting stage {StageId}", stageId);
+            return new JsonResult(new { success = false, message = "Error starting stage" });
         }
     }
 
-    public async Task<IActionResult> OnPostDeleteDependencyAsync(int dependencyId)
+    public async Task<IActionResult> OnPostCompleteStageAsync(int stageId, decimal? actualCost)
     {
         try
         {
-            _logger.LogInformation("Attempting to delete stage dependency with ID: {DependencyId}", dependencyId);
-            
-            var stageDependency = await _context.StageDependencies.FindAsync(dependencyId);
-            if (stageDependency == null)
+            var stage = await _context.JobStages.FindAsync(stageId);
+            if (stage == null)
             {
-                TempData["ErrorMessage"] = "Stage dependency not found.";
-                return RedirectToPage();
+                return new JsonResult(new { success = false, message = "Stage not found" });
             }
 
-            _context.StageDependencies.Remove(stageDependency);
+            if (stage.Status != "In-Progress")
+            {
+                return new JsonResult(new { success = false, message = $"Stage is {stage.Status} and cannot be completed" });
+            }
+
+            stage.Status = "Completed";
+            stage.ActualEnd = DateTime.UtcNow;
+            stage.ProgressPercent = 100;
+            
+            // ActualDurationHours is a computed property, no need to set it directly
+            
+            if (actualCost.HasValue)
+            {
+                stage.ActualCost = actualCost.Value;
+            }
+
+            stage.LastModifiedBy = User.Identity?.Name ?? "System";
+            stage.LastModifiedDate = DateTime.UtcNow;
+
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Successfully deleted stage dependency");
-            TempData["SuccessMessage"] = "Stage dependency deleted successfully.";
+            // Update dependent stages
+            await UpdateDependentStagesAsync(stageId);
+
+            return new JsonResult(new { success = true, message = "Stage completed successfully" });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting stage dependency {DependencyId}", dependencyId);
-            TempData["ErrorMessage"] = "Error deleting stage dependency. Please try again.";
+            _logger.LogError(ex, "Error completing stage {StageId}", stageId);
+            return new JsonResult(new { success = false, message = "Error completing stage" });
         }
-
-        return RedirectToPage();
     }
 
     #endregion
@@ -313,38 +408,65 @@ public class StagesModel : PageModel
 
     private async Task LoadStageDataAsync()
     {
-        var query = _context.JobStages
+        // Load production stage templates
+        ProductionStageTemplates = await _context.ProductionStages
+            .Where(ps => ps.IsActive)
+            .OrderBy(ps => ps.DisplayOrder)
+            .ToListAsync();
+
+        // Calculate template usage statistics
+        foreach (var template in ProductionStageTemplates)
+        {
+            var usage = new StageUsageStats
+            {
+                PartUsageCount = await _context.PartStageRequirements.CountAsync(psr => psr.ProductionStageId == template.Id && psr.IsActive),
+                PrototypeUsageCount = await _context.ProductionStageExecutions.CountAsync(pse => pse.ProductionStageId == template.Id && pse.PrototypeJobId != null),
+                CompletedExecutions = await _context.ProductionStageExecutions.CountAsync(pse => pse.ProductionStageId == template.Id && pse.Status == "Completed")
+            };
+
+            // Get actual duration from ProductionStageExecutions, not JobStages
+            var completedExecutions = await _context.ProductionStageExecutions
+                .Where(pse => pse.ProductionStageId == template.Id && pse.ActualEndTime.HasValue && pse.ActualStartTime.HasValue)
+                .Select(pse => (pse.ActualEndTime!.Value - pse.ActualStartTime!.Value).TotalHours)
+                .ToListAsync();
+
+            usage.AverageActualHours = completedExecutions.Any() ? completedExecutions.Average() : 0;
+            StageTemplateUsage[template.Id] = usage;
+        }
+
+        // Load active job stages with filters
+        var jobStageQuery = _context.JobStages
             .Include(js => js.Job)
             .Include(js => js.Dependencies)
                 .ThenInclude(d => d.RequiredStage)
             .Include(js => js.Dependents)
                 .ThenInclude(d => d.DependentStage)
             .Include(js => js.StageNotes)
+            .Where(js => js.Status != "Completed" && js.Status != "Cancelled")
             .AsQueryable();
 
         // Apply filters
         if (!string.IsNullOrEmpty(SelectedDepartment))
         {
-            query = query.Where(js => js.Department == SelectedDepartment);
+            jobStageQuery = jobStageQuery.Where(js => js.Department == SelectedDepartment);
         }
 
         if (!string.IsNullOrEmpty(SelectedStatus))
         {
-            query = query.Where(js => js.Status == SelectedStatus);
+            jobStageQuery = jobStageQuery.Where(js => js.Status == SelectedStatus);
         }
 
         if (StartDate.HasValue)
         {
-            query = query.Where(js => js.ScheduledStart >= StartDate.Value);
+            jobStageQuery = jobStageQuery.Where(js => js.ScheduledStart >= StartDate.Value);
         }
 
         if (EndDate.HasValue)
         {
-            query = query.Where(js => js.ScheduledEnd <= EndDate.Value);
+            jobStageQuery = jobStageQuery.Where(js => js.ScheduledEnd <= EndDate.Value);
         }
 
-        // Load job stages with related data
-        JobStages = await query
+        ActiveJobStages = await jobStageQuery
             .OrderBy(js => js.JobId)
             .ThenBy(js => js.ExecutionOrder)
             .ToListAsync();
@@ -353,8 +475,8 @@ public class StagesModel : PageModel
         StageDependencies = await _context.StageDependencies
             .Include(sd => sd.DependentStage)
             .Include(sd => sd.RequiredStage)
-            .OrderBy(sd => sd.DependentStage.JobId)
-            .ThenBy(sd => sd.DependentStage.ExecutionOrder)
+            .Where(sd => ActiveJobStages.Select(js => js.Id).Contains(sd.DependentStageId) ||
+                        ActiveJobStages.Select(js => js.Id).Contains(sd.RequiredStageId))
             .ToListAsync();
 
         // Load available machines
@@ -370,167 +492,80 @@ public class StagesModel : PageModel
             .ToListAsync();
     }
 
-    private async Task LoadStageStatisticsAsync()
+    private async Task UpdateDependentStagesAsync(int completedStageId)
+    {
+        var dependentStages = await _context.StageDependencies
+            .Include(sd => sd.DependentStage)
+            .Where(sd => sd.RequiredStageId == completedStageId)
+            .Select(sd => sd.DependentStage)
+            .ToListAsync();
+
+        foreach (var stage in dependentStages)
+        {
+            if (stage.Status == "Scheduled")
+            {
+                // Check if all dependencies are met
+                var allDependencies = await _context.StageDependencies
+                    .Include(sd => sd.RequiredStage)
+                    .Where(sd => sd.DependentStageId == stage.Id && sd.IsMandatory)
+                    .ToListAsync();
+
+                var allMet = allDependencies.All(dep => dep.RequiredStage.Status == "Completed");
+                
+                if (allMet)
+                {
+                    stage.CanStart = true;
+                    stage.Status = "Ready";
+                    stage.LastModifiedDate = DateTime.UtcNow;
+                }
+            }
+        }
+
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<IActionResult> OnGetStageTemplateDetailsAsync(int stageId)
     {
         try
         {
-            StageStatistics["TotalStages"] = await _context.JobStages.CountAsync();
-            StageStatistics["ActiveStages"] = await _context.JobStages.CountAsync(js => js.Status == "In-Progress");
-            StageStatistics["CompletedStages"] = await _context.JobStages.CountAsync(js => js.Status == "Completed");
-            StageStatistics["ScheduledStages"] = await _context.JobStages.CountAsync(js => js.Status == "Scheduled");
-            StageStatistics["BlockedStages"] = await _context.JobStages.CountAsync(js => !js.CanStart && js.Status == "Scheduled");
-            StageStatistics["TotalDependencies"] = await _context.StageDependencies.CountAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error loading stage statistics");
-            // Continue without statistics rather than failing completely
-        }
-    }
-
-    private Dictionary<string, double> CalculateDepartmentUtilization()
-    {
-        var utilization = new Dictionary<string, double>();
-        
-        var departmentGroups = JobStages
-            .Where(s => !string.IsNullOrEmpty(s.Department))
-            .GroupBy(s => s.Department);
-
-        foreach (var group in departmentGroups)
-        {
-            var totalHours = group.Sum(s => s.EstimatedDurationHours);
-            var activeHours = group.Where(s => s.Status == "In-Progress").Sum(s => s.EstimatedDurationHours);
-            var utilizationPercent = totalHours > 0 ? (activeHours / totalHours) * 100 : 0;
-            utilization[group.Key] = utilizationPercent;
-        }
-
-        return utilization;
-    }
-
-    private async Task<bool> WouldCreateCircularDependencyAsync(int dependentStageId, int requiredStageId)
-    {
-        // Check if requiredStageId eventually depends on dependentStageId
-        var visited = new HashSet<int>();
-        var queue = new Queue<int>();
-        queue.Enqueue(requiredStageId);
-
-        while (queue.Count > 0)
-        {
-            var currentStageId = queue.Dequeue();
-            
-            if (currentStageId == dependentStageId)
-            {
-                return true; // Circular dependency found
-            }
-
-            if (visited.Contains(currentStageId))
-            {
-                continue;
-            }
-
-            visited.Add(currentStageId);
-
-            // Get all stages that depend on the current stage
-            var dependentStages = await _context.StageDependencies
-                .Where(sd => sd.RequiredStageId == currentStageId)
-                .Select(sd => sd.DependentStageId)
-                .ToListAsync();
-
-            foreach (var stage in dependentStages)
-            {
-                queue.Enqueue(stage);
-            }
-        }
-
-        return false;
-    }
-
-    public async Task<IActionResult> OnGetStageDetailsAsync(int stageId)
-    {
-        try
-        {
-            var stage = await _context.JobStages
-                .Include(js => js.Job)
-                .Include(js => js.Dependencies)
-                    .ThenInclude(d => d.RequiredStage)
-                .Include(js => js.Dependents)
-                    .ThenInclude(d => d.DependentStage)
-                .Include(js => js.StageNotes)
-                .FirstOrDefaultAsync(js => js.Id == stageId);
-            
+            var stage = await _context.ProductionStages.FindAsync(stageId);
             if (stage == null)
             {
-                return NotFound("Stage not found");
+                return NotFound("Production stage template not found");
             }
+
+            var customFields = stage.GetCustomFields();
+            var assignedMachines = stage.GetAssignedMachineIds();
 
             return new JsonResult(new
             {
                 id = stage.Id,
-                jobId = stage.JobId,
-                stageName = stage.StageName,
-                stageType = stage.StageType,
+                name = stage.Name,
+                description = stage.Description,
                 department = stage.Department,
-                status = stage.Status,
-                progressPercent = stage.ProgressPercent,
-                scheduledStart = stage.ScheduledStart,
-                scheduledEnd = stage.ScheduledEnd,
-                actualStart = stage.ActualStart,
-                actualEnd = stage.ActualEnd,
-                estimatedDurationHours = stage.EstimatedDurationHours,
-                actualDurationHours = stage.ActualDurationHours,
-                machineId = stage.MachineId,
-                assignedOperator = stage.AssignedOperator,
-                priority = stage.Priority,
-                executionOrder = stage.ExecutionOrder,
-                canStart = stage.CanStart,
-                isBlocking = stage.IsBlocking,
-                allowParallel = stage.AllowParallel,
-                notes = stage.Notes,
-                qualityRequirements = stage.QualityRequirements,
-                requiredMaterials = stage.RequiredMaterials,
-                requiredTooling = stage.RequiredTooling,
-                estimatedCost = stage.EstimatedCost,
-                actualCost = stage.ActualCost,
-                setupTimeHours = stage.SetupTimeHours,
-                cooldownTimeHours = stage.CooldownTimeHours,
-                isOverdue = stage.IsOverdue,
-                statusColor = stage.StatusColor,
-                departmentColor = stage.DepartmentColor,
-                dependencies = stage.Dependencies.Select(d => new
-                {
-                    id = d.Id,
-                    requiredStageId = d.RequiredStageId,
-                    requiredStageName = d.RequiredStage.StageName,
-                    dependencyType = d.DependencyType,
-                    lagTimeHours = d.LagTimeHours,
-                    isMandatory = d.IsMandatory
-                }),
-                dependents = stage.Dependents.Select(d => new
-                {
-                    id = d.Id,
-                    dependentStageId = d.DependentStageId,
-                    dependentStageName = d.DependentStage.StageName,
-                    dependencyType = d.DependencyType,
-                    lagTimeHours = d.LagTimeHours,
-                    isMandatory = d.IsMandatory
-                }),
-                stageNotes = stage.StageNotes.OrderByDescending(sn => sn.CreatedDate).Select(sn => new
-                {
-                    id = sn.Id,
-                    note = sn.Note,
-                    noteType = sn.NoteType,
-                    priority = sn.Priority,
-                    isPublic = sn.IsPublic,
-                    createdBy = sn.CreatedBy,
-                    createdDate = sn.CreatedDate,
-                    noteTypeColor = sn.NoteTypeColor
-                })
+                defaultDurationHours = stage.DefaultDurationHours,
+                defaultSetupMinutes = stage.DefaultSetupMinutes,
+                defaultHourlyRate = stage.DefaultHourlyRate,
+                defaultMaterialCost = stage.DefaultMaterialCost,
+                requiresQualityCheck = stage.RequiresQualityCheck,
+                requiresApproval = stage.RequiresApproval,
+                allowSkip = stage.AllowSkip,
+                isOptional = stage.IsOptional,
+                allowParallelExecution = stage.AllowParallelExecution,
+                requiredRole = stage.RequiredRole,
+                stageColor = stage.StageColor,
+                stageIcon = stage.StageIcon,
+                requiresMachineAssignment = stage.RequiresMachineAssignment,
+                assignedMachineIds = assignedMachines,
+                defaultMachineId = stage.DefaultMachineId,
+                customFields = customFields,
+                totalEstimatedCost = stage.GetTotalEstimatedCost()
             });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting stage details for {StageId}", stageId);
-            return BadRequest("Error loading stage details");
+            _logger.LogError(ex, "Error getting stage template details for {StageId}", stageId);
+            return BadRequest("Error loading stage template details");
         }
     }
 
@@ -539,115 +574,109 @@ public class StagesModel : PageModel
 
 #region View Models
 
-public class CreateStageViewModel
+public class CreateStageFromTemplateViewModel
+{
+    [Required(ErrorMessage = "Please select a production stage template.")]
+    public int ProductionStageId { get; set; }
+
+    [Required(ErrorMessage = "Please select a job.")]
+    public int JobId { get; set; }
+
+    public int? ExecutionOrder { get; set; }
+
+    [Required(ErrorMessage = "Please specify the scheduled start time.")]
+    public DateTime ScheduledStart { get; set; } = DateTime.Now.AddHours(1);
+
+    public string? MachineId { get; set; }
+
+    [Range(1, 5, ErrorMessage = "Priority must be between 1 and 5.")]
+    public int Priority { get; set; } = 3;
+
+    [StringLength(100, ErrorMessage = "Assigned operator name cannot exceed 100 characters.")]
+    public string? AssignedOperator { get; set; }
+
+    [StringLength(2000, ErrorMessage = "Notes cannot exceed 2000 characters.")]
+    public string? Notes { get; set; }
+}
+
+public class CreateJobStageViewModel
 {
     [Required]
-    [Display(Name = "Job ID")]
     public int JobId { get; set; }
 
     [Required]
     [StringLength(50)]
-    [Display(Name = "Stage Type")]
     public string StageType { get; set; } = string.Empty;
 
     [Required]
     [StringLength(100)]
-    [Display(Name = "Stage Name")]
     public string StageName { get; set; } = string.Empty;
 
     [Required]
     [StringLength(50)]
-    [Display(Name = "Department")]
     public string Department { get; set; } = string.Empty;
 
     [StringLength(50)]
-    [Display(Name = "Machine ID")]
     public string? MachineId { get; set; }
 
     [Range(1, 100)]
-    [Display(Name = "Execution Order")]
     public int ExecutionOrder { get; set; } = 1;
 
     [Required]
-    [Display(Name = "Scheduled Start")]
     public DateTime ScheduledStart { get; set; } = DateTime.Now;
 
-    [Required]
-    [Display(Name = "Scheduled End")]
-    public DateTime ScheduledEnd { get; set; } = DateTime.Now.AddHours(1);
-
     [Range(0.1, 168)]
-    [Display(Name = "Estimated Duration (hours)")]
     public double EstimatedDurationHours { get; set; } = 1.0;
 
     [Range(1, 5)]
-    [Display(Name = "Priority")]
     public int Priority { get; set; } = 3;
 
-    [Range(0, 24)]
-    [Display(Name = "Setup Time (hours)")]
-    public double SetupTimeHours { get; set; } = 0;
-
-    [Range(0, 24)]
-    [Display(Name = "Cooldown Time (hours)")]
-    public double CooldownTimeHours { get; set; } = 0;
-
     [StringLength(100)]
-    [Display(Name = "Assigned Operator")]
     public string? AssignedOperator { get; set; }
 
     [StringLength(2000)]
-    [Display(Name = "Notes")]
     public string? Notes { get; set; }
 
-    [StringLength(1000)]
-    [Display(Name = "Quality Requirements")]
-    public string? QualityRequirements { get; set; }
-
-    [StringLength(1000)]
-    [Display(Name = "Required Materials")]
-    public string? RequiredMaterials { get; set; }
-
-    [StringLength(1000)]
-    [Display(Name = "Required Tooling")]
-    public string? RequiredTooling { get; set; }
-
-    [Range(0, 100000)]
-    [Display(Name = "Estimated Cost")]
-    public decimal EstimatedCost { get; set; } = 0;
-
-    [Display(Name = "Is Blocking")]
     public bool IsBlocking { get; set; } = true;
-
-    [Display(Name = "Allow Parallel")]
     public bool AllowParallel { get; set; } = false;
 }
 
-public class CreateDependencyViewModel
+public class UpdateProductionStageViewModel
 {
     [Required]
-    [Display(Name = "Dependent Stage")]
-    public int DependentStageId { get; set; }
+    public int Id { get; set; }
 
     [Required]
-    [Display(Name = "Required Stage")]
-    public int RequiredStageId { get; set; }
-
-    [Required]
-    [StringLength(50)]
-    [Display(Name = "Dependency Type")]
-    public string DependencyType { get; set; } = "FinishToStart";
-
-    [Range(-24, 168)]
-    [Display(Name = "Lag Time (hours)")]
-    public double LagTimeHours { get; set; } = 0;
-
-    [Display(Name = "Is Mandatory")]
-    public bool IsMandatory { get; set; } = true;
+    [StringLength(100)]
+    public string Name { get; set; } = string.Empty;
 
     [StringLength(500)]
-    [Display(Name = "Notes")]
-    public string? Notes { get; set; }
+    public string? Description { get; set; }
+
+    [StringLength(100)]
+    public string? Department { get; set; }
+
+    public double DefaultDurationHours { get; set; } = 1.0;
+    public int DefaultSetupMinutes { get; set; } = 30;
+    public decimal DefaultHourlyRate { get; set; } = 85.00m;
+    public decimal DefaultMaterialCost { get; set; } = 0.00m;
+    public bool RequiresQualityCheck { get; set; } = true;
+    public bool RequiresApproval { get; set; } = false;
+    public bool AllowSkip { get; set; } = false;
+    public bool IsOptional { get; set; } = false;
+    public bool AllowParallelExecution { get; set; } = false;
+
+    [StringLength(50)]
+    public string? RequiredRole { get; set; }
 }
 
-#endregion
+public class StageUsageStats
+{
+    public int PartUsageCount { get; set; }
+    public int PrototypeUsageCount { get; set; }
+    public int CompletedExecutions { get; set; }
+    public double AverageActualHours { get; set; }
+    public int TotalUsageCount => PartUsageCount + PrototypeUsageCount + CompletedExecutions;
+}
+
+#endregion#region

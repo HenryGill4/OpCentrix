@@ -94,19 +94,19 @@
         <div class="flex flex-col sm:flex-row gap-4">
             <!-- Navigation Controls -->
             <div class="flex items-center space-x-2 bg-gray-50 rounded-lg p-2">
-                <button onclick="window.navigatePeriod(-1)" 
+                <button onclick="navigatePeriod(-1)" 
                         class="p-2 text-gray-600 hover:text-gray-900 hover:bg-white rounded-md transition-colors"
                         title="Previous period">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                     </svg>
                 </button>
-                <button onclick="window.navigateToToday()" 
+                <button onclick="navigateToToday()" 
                         class="px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-white rounded-md transition-colors"
                         title="Go to today">
                     Today
                 </button>
-                <button onclick="window.navigatePeriod(1)" 
+                <button onclick="navigatePeriod(1)" 
                         class="p-2 text-gray-600 hover:text-gray-900 hover:bg-white rounded-md transition-colors"
                         title="Next period">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -120,7 +120,7 @@
                 <span class="text-xs font-medium text-gray-500 px-2">Zoom:</span>
                 <button id="zoomOut" 
                         @(zoomIndex <= 0 ? "disabled" : "")
-                        onclick="SchedulerApp.changeZoom(-1)"
+                        onclick="changeZoom(-1)"
                         class="p-2 text-gray-600 hover:text-gray-900 hover:bg-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Zoom out">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -130,7 +130,7 @@
                 <span class="px-3 py-1 text-xs font-medium text-gray-700 bg-white rounded border">@zoom</span>
                 <button id="zoomIn" 
                         @(zoomIndex >= zoomLevels.Length - 1 ? "disabled" : "")
-                        onclick="SchedulerApp.changeZoom(1)"
+                        onclick="changeZoom(1)"
                         class="p-2 text-gray-600 hover:text-gray-900 hover:bg-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Zoom in">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -145,7 +145,7 @@
                 <div class="orientation-toggle">
                     <div class="slider">
                         <div class="slider-option @(currentOrientation == "horizontal" ? "active" : "")" 
-                             onclick="window.toggleOrientation('horizontal')"
+                             onclick="toggleOrientation('horizontal')"
                              title="Horizontal layout (machines on left)">
                             <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
@@ -153,7 +153,7 @@
                             Horizontal
                         </div>
                         <div class="slider-option @(currentOrientation == "vertical" ? "active" : "")" 
-                             onclick="window.toggleOrientation('vertical')"
+                             onclick="toggleOrientation('vertical')"
                              title="Vertical layout (machines on top)">
                             <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 4v16M12 4v16M18 4v16"></path>
@@ -212,7 +212,7 @@
             </div>
             
             <div class="flex space-x-4">
-                <button onclick="window.seedDefaultMachines()" class="opcentrix-button opcentrix-button-primary">
+                <button onclick="seedDefaultMachines()" class="opcentrix-button opcentrix-button-primary">
                     Create Demo Machines
                 </button>
                 <a href="/Admin/Machines" class="opcentrix-button opcentrix-button-secondary">
@@ -570,6 +570,183 @@
 (function() {
     'use strict';
     
+    // CRITICAL FIX: Define ALL global functions immediately for HTML onclick handlers
+    console.log('📋 [SCHEDULER] Defining global functions for HTML onclick handlers');
+    
+    // Navigation functions - MUST be global for HTML onclick
+    window.navigatePeriod = function(direction) {
+        console.log('🔄 [NAV] navigatePeriod called with direction:', direction);
+        try {
+            @{
+                var firstDate = viewModel.Dates.FirstOrDefault();
+                var firstDateStr = firstDate != default(DateTime) ? firstDate.ToString("yyyy-MM-dd") : DateTime.Today.ToString("yyyy-MM-dd");
+            }
+            const currentDate = new Date('@Html.Raw(firstDateStr)');
+            const newDate = new Date(currentDate);
+            
+            // Adjust based on current zoom level
+            const currentZoom = '@zoom';
+            if (currentZoom.includes('month')) {
+                newDate.setMonth(newDate.getMonth() + direction);
+            } else if (currentZoom === 'week') {
+                newDate.setDate(newDate.getDate() + (direction * 7));
+            } else {
+                newDate.setDate(newDate.getDate() + direction);
+            }
+            
+            const url = new URL(window.location);
+            url.searchParams.set('startDate', newDate.toISOString().split('T')[0]);
+            
+            if (window.showLoadingIndicator) {
+                window.showLoadingIndicator('Loading...');
+            }
+            
+            window.location.href = url.toString();
+            return true;
+        } catch (error) {
+            console.error('❌ [NAV] Error in navigatePeriod:', error);
+            if (window.showErrorNotification) {
+                window.showErrorNotification('Navigation error. Please try again.');
+            }
+            return false;
+        }
+    };
+    
+    window.navigateToToday = function() {
+        console.log('🏠 [NAV] navigateToToday called');
+        try {
+            const url = new URL(window.location);
+            url.searchParams.delete('startDate'); // Remove to default to today
+            
+            if (window.showLoadingIndicator) {
+                window.showLoadingIndicator('Going to today...');
+            }
+            
+            window.location.href = url.toString();
+            return true;
+        } catch (error) {
+            console.error('❌ [NAV] Error in navigateToToday:', error);
+            if (window.showErrorNotification) {
+                window.showErrorNotification('Navigation error. Please try again.');
+            }
+            return false;
+        }
+    };
+    
+    // Zoom functions - MUST be global for HTML onclick
+    window.changeZoom = function(direction) {
+        console.log('🔍 [ZOOM] changeZoom called with direction:', direction);
+        try {
+            const zoomLevels = ['2month', 'month', 'week', '12h', '6h', '4h', '2h', '1h', '30min', '15min'];
+            const currentZoom = '@zoom';
+            const currentIndex = zoomLevels.indexOf(currentZoom);
+            const newIndex = currentIndex + direction;
+            
+            if (newIndex >= 0 && newIndex < zoomLevels.length) {
+                const newZoom = zoomLevels[newIndex];
+                const url = new URL(window.location);
+                url.searchParams.set('zoom', newZoom);
+                
+                if (window.showLoadingIndicator) {
+                    window.showLoadingIndicator(`Switching to ${newZoom} view...`);
+                }
+                
+                window.location.href = url.toString();
+                return true;
+            } else {
+                console.log('🔍 [ZOOM] Cannot zoom further in that direction');
+                return false;
+            }
+        } catch (error) {
+            console.error('❌ [ZOOM] Error in changeZoom:', error);
+            if (window.showErrorNotification) {
+                window.showErrorNotification('Zoom error. Please try again.');
+            }
+            return false;
+        }
+    };
+    
+    // Orientation toggle - MUST be global for HTML onclick
+    window.toggleOrientation = function(orientation) {
+        console.log('🔄 [ORIENTATION] toggleOrientation called with:', orientation);
+        try {
+            if (orientation !== 'horizontal' && orientation !== 'vertical') {
+                console.error('❌ [ORIENTATION] Invalid orientation value:', orientation);
+                return false;
+            }
+            
+            const url = new URL(window.location);
+            url.searchParams.set('orientation', orientation);
+            
+            if (window.showLoadingIndicator) {
+                window.showLoadingIndicator(`Switching to ${orientation} layout...`);
+            }
+            
+            window.location.href = url.toString();
+            return true;
+        } catch (error) {
+            console.error('❌ [ORIENTATION] Error in toggleOrientation:', error);
+            if (window.showErrorNotification) {
+                window.showErrorNotification('Layout change error. Please try again.');
+            }
+            return false;
+        }
+    };
+    
+    // Seed demo machines - MUST be global for HTML onclick
+    window.seedDefaultMachines = function() {
+        console.log('🌱 [SEED] seedDefaultMachines called');
+        try {
+            if (window.showLoadingIndicator) {
+                window.showLoadingIndicator('Setting up demo machines...');
+            }
+            
+            // Use HTMX to seed default machines
+            if (typeof htmx !== 'undefined') {
+                htmx.ajax('POST', '/Scheduler?handler=SeedDefaultMachines', {
+                    target: '#scheduler-main-content',
+                    swap: 'outerHTML'
+                }).then(() => {
+                    if (window.hideLoadingIndicator) {
+                        window.hideLoadingIndicator();
+                    }
+                    if (window.showSuccessNotification) {
+                        window.showSuccessNotification('Demo machines created successfully! You can now add jobs and explore the scheduler.');
+                    }
+                    // Refresh the page to show the new state
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                }).catch((error) => {
+                    if (window.hideLoadingIndicator) {
+                        window.hideLoadingIndicator();
+                    }
+                    console.error('❌ [SEED] Error seeding default machines:', error);
+                    if (window.showErrorNotification) {
+                        window.showErrorNotification('Error creating demo machines. Please try again or contact support.');
+                    }
+                });
+            } else {
+                if (window.hideLoadingIndicator) {
+                    window.hideLoadingIndicator();
+                }
+                if (window.showErrorNotification) {
+                    window.showErrorNotification('System error: HTMX not loaded. Please refresh the page.');
+                }
+            }
+            return true;
+        } catch (error) {
+            console.error('❌ [SEED] Error in seedDefaultMachines:', error);
+            if (window.hideLoadingIndicator) {
+                window.hideLoadingIndicator();
+            }
+            if (window.showErrorNotification) {
+                window.showErrorNotification('Error setting up demo machines');
+            }
+            return false;
+        }
+    };
+    
     // CRITICAL FIX: Define openJobModal function immediately with enhanced error handling
     window.openJobModal = function(machineId, date, jobId = null) {
         console.log('📅 [MODAL] Opening job modal for:', { machineId, date, jobId });
@@ -697,59 +874,6 @@
             }
         } catch (error) {
             console.error('❌ [MODAL] Error closing modal:', error);
-        }
-    };
-    
-    // Quick start with demo machines function with enhanced error handling
-    window.seedDefaultMachines = function() {
-        console.log('🌱 [SEED] Starting demo machine creation');
-        
-        try {
-            if (window.showLoadingIndicator) {
-                window.showLoadingIndicator('Setting up demo machines...');
-            }
-            
-            // Use HTMX to seed default machines
-            if (typeof htmx !== 'undefined') {
-                htmx.ajax('POST', '/Scheduler?handler=SeedDefaultMachines', {
-                    target: '#scheduler-main-content',
-                    swap: 'outerHTML'
-                }).then(() => {
-                    if (window.hideLoadingIndicator) {
-                        window.hideLoadingIndicator();
-                    }
-                    if (window.showSuccessNotification) {
-                        window.showSuccessNotification('Demo machines created successfully! You can now add jobs and explore the scheduler.');
-                    }
-                    // Refresh the page to show the new state
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1500);
-                }).catch((error) => {
-                    if (window.hideLoadingIndicator) {
-                        window.hideLoadingIndicator();
-                    }
-                    console.error('❌ [SEED] Error seeding default machines:', error);
-                    if (window.showErrorNotification) {
-                        window.showErrorNotification('Error creating demo machines. Please try again or contact support.');
-                    }
-                });
-            } else {
-                if (window.hideLoadingIndicator) {
-                    window.hideLoadingIndicator();
-                }
-                if (window.showErrorNotification) {
-                    window.showErrorNotification('System error: HTMX not loaded. Please refresh the page.');
-                }
-            }
-        } catch (error) {
-            console.error('❌ [SEED] Error in seedDefaultMachines:', error);
-            if (window.hideLoadingIndicator) {
-                window.hideLoadingIndicator();
-            }
-            if (window.showErrorNotification) {
-                window.showErrorNotification('Error setting up demo machines');
-            }
         }
     };
     
@@ -928,37 +1052,6 @@
             this.isModalOpen = false;
         },
         
-        // Navigation functions
-        navigatePeriod(direction) {
-            @{
-                var firstDate = viewModel.Dates.FirstOrDefault();
-                var firstDateStr = firstDate != default(DateTime) ? firstDate.ToString("yyyy-MM-dd") : DateTime.Today.ToString("yyyy-MM-dd");
-            }
-            const currentDate = new Date('@Html.Raw(firstDateStr)');
-            const newDate = new Date(currentDate);
-            
-            // Adjust based on current zoom level
-            if (this.currentZoom.includes('month')) {
-                newDate.setMonth(newDate.getMonth() + direction);
-            } else if (this.currentZoom === 'week') {
-                newDate.setDate(newDate.getDate() + (direction * 7));
-            } else {
-                newDate.setDate(newDate.getDate() + direction);
-            }
-            
-            const url = new URL(window.location);
-            url.searchParams.set('date', newDate.toISOString().split('T')[0]);
-            
-            window.location.href = url.toString();
-        },
-        
-        navigateToToday() {
-            const url = new URL(window.location);
-            url.searchParams.set('date', new Date().toISOString().split('T')[0]);
-            
-            window.location.href = url.toString();
-        },
-        
         // Notification functions
         showSuccessNotification(message) {
             this.showNotification(message, 'success');
@@ -1063,6 +1156,11 @@
                 console.log('Is empty state:', @isEmptyState.ToString().ToLower());
                 console.log('Has real machines:', @hasRealMachines.ToString().ToLower());
                 console.log('openJobModal function available:', typeof window.openJobModal === 'function');
+                console.log('navigatePeriod function available:', typeof window.navigatePeriod === 'function');
+                console.log('navigateToToday function available:', typeof window.navigateToToday === 'function');
+                console.log('changeZoom function available:', typeof window.changeZoom === 'function');
+                console.log('toggleOrientation function available:', typeof window.toggleOrientation === 'function');
+                console.log('seedDefaultMachines function available:', typeof window.seedDefaultMachines === 'function');
                 console.log('Pre-populate data:', {
                     shouldOpen: '@ViewData["ShouldOpenModal"]' === 'True',
                     partId: '@ViewData["PrePopulatePartId"]',
@@ -1077,19 +1175,10 @@
     
     // Expose functions globally
     window.SchedulerApp = SchedulerApp;
-    window.toggleOrientation = function(orientation) {
-        SchedulerApp.toggleOrientation(orientation);
-    };
     window.showLoadingIndicator = SchedulerApp.showLoadingIndicator.bind(SchedulerApp);
     window.hideLoadingIndicator = SchedulerApp.hideLoadingIndicator.bind(SchedulerApp);
     window.showSuccessNotification = SchedulerApp.showSuccessNotification.bind(SchedulerApp);
     window.showErrorNotification = SchedulerApp.showErrorNotification.bind(SchedulerApp);
-    window.navigatePeriod = function(direction) {
-        SchedulerApp.navigatePeriod(direction);
-    };
-    window.navigateToToday = function() {
-        SchedulerApp.navigateToToday(); 
-    };
     
     // Development debug helper
     @if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
@@ -1111,6 +1200,8 @@
         console.log('🚀 [INIT] DOM Already Ready - Initializing Scheduler');
         SchedulerApp.init();
     }
+    
+    console.log('✅ [SCHEDULER] All global functions defined and ready');
     
 })();
 </script>
