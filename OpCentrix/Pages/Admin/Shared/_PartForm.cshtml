@@ -1,6 +1,6 @@
 ﻿@model OpCentrix.Pages.Admin.PartsModel
 
-<!-- Enhanced Parts Form with Working Bootstrap Tabs -->
+<!-- Production-Ready Parts Form with Complete Stage Management -->
 <div class="modal-header bg-primary text-white">
     <h5 class="modal-title">
         <i class="fas fa-cogs me-2"></i>
@@ -25,14 +25,13 @@
         </div>
     }
 
-    <!-- FIXED: Clean HTMX-only form submission -->
-    <form id="partForm" 
-          hx-post="@("/Admin/Parts?handler=" + (Model.Part.Id == 0 ? "Create" : "Update"))"
+    <!-- Production Parts Form with Stage Management -->
+    <form method="post" id="partForm" 
+          hx-post="/Admin/Parts?handler=@(Model.Part.Id == 0 ? "Create" : "Update")"
           hx-target="#partModalContent"
-          hx-swap="innerHTML"
-          hx-indicator="#partSubmitSpinner"
-          hx-on::after-request="handlePartFormResponse(event)">
-        
+          hx-swap="outerHTML"
+          hx-encoding="multipart/form-data"
+          data-part-id="@Model.Part.Id">
         <input type="hidden" asp-for="Part.Id" />
         @if (Model.Part.Id > 0)
         {
@@ -40,27 +39,54 @@
             <input type="hidden" asp-for="Part.CreatedBy" />
         }
         
-        <!-- Modern Tab Navigation -->
-        <ul class="nav nav-tabs nav-justified mb-4" id="partFormTabs" role="tablist">
+        <!-- Tab Navigation -->
+        <ul class="nav nav-tabs nav-justified mb-3" id="partFormTabs" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="basic-tab" data-bs-toggle="tab" data-bs-target="#basic" 
-                        type="button" role="tab" aria-controls="basic" aria-selected="true">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <span class="part-tab-text">Basic Information</span>
+                <button class="nav-link active" id="basic-tab" type="button" 
+                        data-bs-toggle="tab" data-bs-target="#basic" role="tab">
+                    <i class="fas fa-info-circle me-1"></i>
+                    <span class="d-none d-md-inline">Basic Information</span>
+                    <span class="d-md-none">Basic</span>
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="material-tab" data-bs-toggle="tab" data-bs-target="#material" 
-                        type="button" role="tab" aria-controls="material" aria-selected="false">
-                    <i class="fas fa-flask me-2"></i>
-                    <span class="part-tab-text">Material & Process</span>
+                <button class="nav-link" id="stages-tab" type="button" 
+                        data-bs-toggle="tab" data-bs-target="#stages" role="tab">
+                    <i class="fas fa-tasks me-1"></i>
+                    <span class="d-none d-md-inline">Manufacturing Stages</span>
+                    <span class="d-md-none">Stages</span>
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="manufacturing-tab" data-bs-toggle="tab" data-bs-target="#manufacturing" 
-                        type="button" role="tab" aria-controls="manufacturing" aria-selected="false">
-                    <i class="fas fa-industry me-2"></i>
-                    <span class="part-tab-text">Manufacturing Stages</span>
+                <button class="nav-link" id="material-tab" type="button" 
+                        data-bs-toggle="tab" data-bs-target="#material" role="tab">
+                    <i class="fas fa-flask me-1"></i>
+                    <span class="d-none d-md-inline">Material & Process</span>
+                    <span class="d-md-none">Material</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="physical-tab" type="button" 
+                        data-bs-toggle="tab" data-bs-target="#physical" role="tab">
+                    <i class="fas fa-cube me-1"></i>
+                    <span class="d-none d-md-inline">Physical Properties</span>
+                    <span class="d-md-none">Physical</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="bt-tab" type="button" 
+                        data-bs-toggle="tab" data-bs-target="#bt" role="tab">
+                    <i class="fas fa-shield-alt me-1"></i>
+                    <span class="d-none d-md-inline">B&T Compliance</span>
+                    <span class="d-md-none">B&T</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="summary-tab" type="button" 
+                        data-bs-toggle="tab" data-bs-target="#summary" role="tab">
+                    <i class="fas fa-calculator me-1"></i>
+                    <span class="d-none d-md-inline">Summary</span>
+                    <span class="d-md-none">Summary</span>
                 </button>
             </li>
         </ul>
@@ -69,32 +95,33 @@
         <div class="tab-content" id="partFormTabsContent">
             
             <!-- TAB 1: Basic Information -->
-            <div class="tab-pane fade show active" id="basic" role="tabpanel" aria-labelledby="basic-tab">
+            <div class="tab-pane fade show active" id="basic" role="tabpanel">
                 <div class="row g-3">
                     <div class="col-12">
-                        <h6 class="part-section-header">
+                        <h6 class="text-primary border-bottom pb-2 mb-3">
                             <i class="fas fa-info-circle me-2"></i>Essential Part Information
                         </h6>
                     </div>
                     
                     <div class="col-md-4">
-                        <label asp-for="Part.PartNumber" class="form-label part-required">Part Number</label>
+                        <label asp-for="Part.PartNumber" class="form-label required">Part Number</label>
                         <input asp-for="Part.PartNumber" class="form-control" required 
-                               placeholder="e.g., PT-001-2024" />
+                               placeholder="e.g., BT-SUP-001" />
                         <span asp-validation-for="Part.PartNumber" class="text-danger"></span>
+                        <div class="form-text">Unique identifier for this part</div>
                     </div>
                     
                     <div class="col-md-8">
-                        <label asp-for="Part.Name" class="form-label part-required">Part Name</label>
+                        <label asp-for="Part.Name" class="form-label required">Part Name</label>
                         <input asp-for="Part.Name" class="form-control" required 
-                               placeholder="e.g., Titanium Bracket Assembly" />
+                               placeholder="e.g., B&T Suppressor Baffle Stack" />
                         <span asp-validation-for="Part.Name" class="text-danger"></span>
                     </div>
                     
                     <div class="col-12">
-                        <label asp-for="Part.Description" class="form-label part-required">Description</label>
+                        <label asp-for="Part.Description" class="form-label required">Description</label>
                         <textarea asp-for="Part.Description" class="form-control" rows="3" required 
-                                  placeholder="Detailed description of the part..."></textarea>
+                                  placeholder="Detailed description of the part including specifications, applications, and special requirements..."></textarea>
                         <span asp-validation-for="Part.Description" class="text-danger"></span>
                     </div>
                     
@@ -106,30 +133,33 @@
                     </div>
                     
                     <div class="col-md-4">
-                        <label asp-for="Part.Industry" class="form-label part-required">Industry</label>
+                        <label asp-for="Part.Industry" class="form-label required">Industry</label>
                         <select asp-for="Part.Industry" class="form-select" required>
                             <option value="">Select Industry</option>
+                            <option value="Firearms">Firearms</option>
                             <option value="Aerospace">Aerospace</option>
                             <option value="Automotive">Automotive</option>
+                            <option value="Medical">Medical</option>
                             <option value="Defense">Defense</option>
                             <option value="Energy">Energy</option>
-                            <option value="Manufacturing">Manufacturing</option>
-                            <option value="Medical">Medical</option>
-                            <option value="Research">Research</option>
+                            <option value="General Manufacturing">General Manufacturing</option>
+                            <option value="Research & Development">Research & Development</option>
                         </select>
                         <span asp-validation-for="Part.Industry" class="text-danger"></span>
                     </div>
                     
                     <div class="col-md-4">
-                        <label asp-for="Part.Application" class="form-label part-required">Application</label>
+                        <label asp-for="Part.Application" class="form-label required">Application</label>
                         <select asp-for="Part.Application" class="form-select" required>
                             <option value="">Select Application</option>
-                            <option value="General">General</option>
-                            <option value="Prototype">Prototype</option>
-                            <option value="Production">Production</option>
-                            <option value="Tooling">Tooling</option>
-                            <option value="Replacement">Replacement</option>
-                            <option value="Custom">Custom</option>
+                            <option value="B&T Manufacturing">B&T Manufacturing</option>
+                            <option value="General Component">General Component</option>
+                            <option value="Structural Component">Structural Component</option>
+                            <option value="Prototype Development">Prototype Development</option>
+                            <option value="Production Tooling">Production Tooling</option>
+                            <option value="Replacement Parts">Replacement Parts</option>
+                            <option value="Custom Component">Custom Component</option>
+                            <option value="Research & Testing">Research & Testing</option>
                         </select>
                         <span asp-validation-for="Part.Application" class="text-danger"></span>
                     </div>
@@ -156,44 +186,180 @@
                     </div>
                     
                     <div class="col-md-3">
-                        <div class="form-check mt-4 pt-2">
+                        <div class="form-check mt-4">
                             <input asp-for="Part.IsActive" class="form-check-input" type="checkbox" />
-                            <label asp-for="Part.IsActive" class="form-check-label">Active Part</label>
+                            <label asp-for="Part.IsActive" class="form-check-label">Active</label>
                         </div>
                     </div>
 
                     <div class="col-md-3">
-                        <div class="form-check mt-4 pt-2">
-                            <input asp-for="Part.RequiresInspection" class="form-check-input" type="checkbox" 
-                                   id="requiresInspectionBasic" />
-                            <label asp-for="Part.RequiresInspection" class="form-check-label">Requires Inspection</label>
+                        <div class="form-check mt-4">
+                            <input asp-for="Part.IsAssemblyComponent" class="form-check-input" type="checkbox" />
+                            <label asp-for="Part.IsAssemblyComponent" class="form-check-label">Assembly Component</label>
+                        </div>
+                    </div>
+
+                    <!-- Quality Standards -->
+                    <div class="col-12 mt-4">
+                        <h6 class="text-info border-bottom pb-2 mb-3">
+                            <i class="fas fa-certificate me-2"></i>Quality Standards
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input asp-for="Part.RequiresFDA" class="form-check-input" type="checkbox" />
+                            <label asp-for="Part.RequiresFDA" class="form-check-label">
+                                <i class="fas fa-shield-alt me-1"></i>FDA Compliance Required
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input asp-for="Part.RequiresAS9100" class="form-check-input" type="checkbox" />
+                            <label asp-for="Part.RequiresAS9100" class="form-check-label">
+                                <i class="fas fa-certificate me-1"></i>AS9100 Compliance Required
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input asp-for="Part.RequiresNADCAP" class="form-check-input" type="checkbox" />
+                            <label asp-for="Part.RequiresNADCAP" class="form-check-label">
+                                <i class="fas fa-award me-1"></i>NADCAP Compliance Required
+                            </label>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- TAB 2: Material & Process -->
-            <div class="tab-pane fade" id="material" role="tabpanel" aria-labelledby="material-tab">
+            <!-- TAB 2: Manufacturing Stages -->
+            <div class="tab-pane fade" id="stages" role="tabpanel">
                 <div class="row g-3">
                     <div class="col-12">
-                        <h6 class="part-section-header">
+                        <h6 class="text-primary border-bottom pb-2 mb-3">
+                            <i class="fas fa-tasks me-2"></i>Manufacturing Process Stages
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="Part.ManufacturingStage" class="form-label">Current Stage</label>
+                        <select asp-for="Part.ManufacturingStage" class="form-select">
+                            <option value="Design">Design</option>
+                            <option value="SLS-Primary">SLS Primary</option>
+                            <option value="Secondary-Ops">Secondary Operations</option>
+                            <option value="Multi-Stage">Multi-Stage</option>
+                            <option value="Assembly">Assembly</option>
+                            <option value="Finishing">Finishing</option>
+                            <option value="Complete">Complete</option>
+                        </select>
+                        <span asp-validation-for="Part.ManufacturingStage" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="Part.StageOrder" class="form-label">Stage Order</label>
+                        <input asp-for="Part.StageOrder" type="number" min="1" max="10" class="form-control" />
+                        <span asp-validation-for="Part.StageOrder" class="text-danger"></span>
+                    </div>
+                    
+                    <!-- Required Stages -->
+                    <div class="col-12 mt-4">
+                        <h6 class="text-info">Required Manufacturing Stages</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input asp-for="Part.RequiresSLSPrinting" class="form-check-input" type="checkbox" />
+                                    <label asp-for="Part.RequiresSLSPrinting" class="form-check-label">
+                                        <i class="fas fa-print me-1"></i>SLS Printing
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input asp-for="Part.RequiresCNCMachining" class="form-check-input" type="checkbox" />
+                                    <label asp-for="Part.RequiresCNCMachining" class="form-check-label">
+                                        <i class="fas fa-cogs me-1"></i>CNC Machining
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input asp-for="Part.RequiresEDMOperations" class="form-check-input" type="checkbox" />
+                                    <label asp-for="Part.RequiresEDMOperations" class="form-check-label">
+                                        <i class="fas fa-bolt me-1"></i>EDM Operations
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input asp-for="Part.RequiresAssembly" class="form-check-input" type="checkbox" />
+                                    <label asp-for="Part.RequiresAssembly" class="form-check-label">
+                                        <i class="fas fa-puzzle-piece me-1"></i>Assembly
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input asp-for="Part.RequiresFinishing" class="form-check-input" type="checkbox" />
+                                    <label asp-for="Part.RequiresFinishing" class="form-check-label">
+                                        <i class="fas fa-brush me-1"></i>Finishing
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-12">
+                        <label asp-for="Part.StageDetails" class="form-label">Stage Details (JSON)</label>
+                        <textarea asp-for="Part.StageDetails" class="form-control" rows="3" 
+                                  placeholder='{"setup_time": 30, "special_requirements": "..."}'></textarea>
+                        <span asp-validation-for="Part.StageDetails" class="text-danger"></span>
+                        <div class="form-text">JSON format for stage-specific parameters</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: Material & Process -->
+            <div class="tab-pane fade" id="material" role="tabpanel">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <h6 class="text-primary border-bottom pb-2 mb-3">
                             <i class="fas fa-flask me-2"></i>Material Selection & Process Parameters
                         </h6>
                     </div>
                     
                     <div class="col-md-6">
-                        <label asp-for="Part.Material" class="form-label part-required">Primary Material</label>
-                        <select asp-for="Part.Material" class="form-select" id="materialSelect" required>
+                        <label asp-for="Part.Material" class="form-label required">Primary Material</label>
+                        <select asp-for="Part.Material" class="form-select" id="materialSelect" 
+                                onchange="window.updateSlsMaterial && window.updateSlsMaterial()" required>
                             <option value="">Select Material</option>
-                            <option value="Ti-6Al-4V Grade 5">Ti-6Al-4V Grade 5</option>
-                            <option value="Ti-6Al-4V ELI Grade 23">Ti-6Al-4V ELI Grade 23</option>
-                            <option value="Inconel 718">Inconel 718</option>
-                            <option value="Inconel 625">Inconel 625</option>
-                            <option value="316L Stainless Steel">316L Stainless Steel</option>
-                            <option value="17-4 PH Stainless Steel">17-4 PH Stainless Steel</option>
-                            <option value="AlSi10Mg">AlSi10Mg</option>
+                            <optgroup label="Titanium Alloys">
+                                <option value="Ti-6Al-4V Grade 5">Ti-6Al-4V Grade 5 (Standard)</option>
+                                <option value="Ti-6Al-4V ELI Grade 23">Ti-6Al-4V ELI Grade 23 (Medical)</option>
+                                <option value="CP Titanium Grade 2">CP Titanium Grade 2</option>
+                            </optgroup>
+                            <optgroup label="Nickel Superalloys">
+                                <option value="Inconel 718">Inconel 718 (High Temperature)</option>
+                                <option value="Inconel 625">Inconel 625 (Corrosion Resistant)</option>
+                            </optgroup>
+                            <optgroup label="Stainless Steels">
+                                <option value="316L Stainless Steel">316L Stainless Steel</option>
+                                <option value="17-4 PH Stainless Steel">17-4 PH Stainless Steel</option>
+                            </optgroup>
+                            <optgroup label="Aluminum Alloys">
+                                <option value="AlSi10Mg">AlSi10Mg (Lightweight)</option>
+                            </optgroup>
                         </select>
                         <span asp-validation-for="Part.Material" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="Part.SlsMaterial" class="form-label">SLS Processing Material</label>
+                        <input asp-for="Part.SlsMaterial" class="form-control" id="slsMaterialInput" />
+                        <span asp-validation-for="Part.SlsMaterial" class="text-danger"></span>
+                        <div class="form-text">Auto-filled from material selection</div>
                     </div>
                     
                     <div class="col-md-6">
@@ -210,85 +376,288 @@
                     </div>
                     
                     <div class="col-md-6">
-                        <label asp-for="Part.EstimatedHours" class="form-label part-required">Estimated Hours</label>
-                        <input asp-for="Part.EstimatedHours" type="number" step="0.1" min="0.1" 
-                               class="form-control" id="estimatedHoursInput" required />
+                        <label asp-for="Part.SurfaceFinishRequirement" class="form-label">Surface Finish Requirement</label>
+                        <select asp-for="Part.SurfaceFinishRequirement" class="form-select">
+                            <option value="As-built">As-built</option>
+                            <option value="Machined">Machined</option>
+                            <option value="Polished">Polished</option>
+                            <option value="Sandblasted">Sandblasted</option>
+                            <option value="Coated">Coated</option>
+                            <option value="Anodized">Anodized</option>
+                        </select>
+                        <span asp-validation-for="Part.SurfaceFinishRequirement" class="text-danger"></span>
+                    </div>
+                    
+                    <!-- Time & Cost Estimates -->
+                    <div class="col-12 mt-4">
+                        <h6 class="text-info">Time & Cost Estimates</h6>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="Part.EstimatedHours" class="form-label required">Estimated Hours</label>
+                        <input asp-for="Part.EstimatedHours" type="number" step="0.1" min="0.1" class="form-control" required />
                         <span asp-validation-for="Part.EstimatedHours" class="text-danger"></span>
-                        <div class="form-text">Auto-filled based on material selection</div>
                     </div>
                     
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <label asp-for="Part.MaterialCostPerKg" class="form-label">Material Cost ($/kg)</label>
-                        <input asp-for="Part.MaterialCostPerKg" type="number" step="0.01" 
-                               class="form-control" id="materialCostInput" />
+                        <input asp-for="Part.MaterialCostPerKg" type="number" step="0.01" class="form-control" />
                         <span asp-validation-for="Part.MaterialCostPerKg" class="text-danger"></span>
-                        <div class="form-text">Auto-filled based on material selection</div>
                     </div>
                     
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <label asp-for="Part.StandardLaborCostPerHour" class="form-label">Labor Cost ($/hour)</label>
-                        <input asp-for="Part.StandardLaborCostPerHour" type="number" step="0.01" 
-                               class="form-control" />
+                        <input asp-for="Part.StandardLaborCostPerHour" type="number" step="0.01" class="form-control" />
                         <span asp-validation-for="Part.StandardLaborCostPerHour" class="text-danger"></span>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label asp-for="Part.RequiredMachineType" class="form-label">Required Machine Type</label>
-                        <input asp-for="Part.RequiredMachineType" class="form-control" 
-                               placeholder="e.g., TruPrint 3000" />
-                        <span asp-validation-for="Part.RequiredMachineType" class="text-danger"></span>
                     </div>
                 </div>
             </div>
-            
-            <!-- TAB 3: Manufacturing Stages (simplified for now) -->
-            <div class="tab-pane fade" id="manufacturing" role="tabpanel" aria-labelledby="manufacturing-tab">
+
+            <!-- TAB 4: Physical Properties -->
+            <div class="tab-pane fade" id="physical" role="tabpanel">
                 <div class="row g-3">
                     <div class="col-12">
-                        <h6 class="part-section-header">
-                            <i class="fas fa-industry me-2"></i>Manufacturing Requirements
+                        <h6 class="text-primary border-bottom pb-2 mb-3">
+                            <i class="fas fa-cube me-2"></i>Physical Properties & Dimensions
                         </h6>
                     </div>
                     
-                    <div class="col-md-4">
-                        <div class="form-check">
-                            <input asp-for="Part.RequiresSLSPrinting" class="form-check-input" type="checkbox" />
-                            <label asp-for="Part.RequiresSLSPrinting" class="form-check-label">Requires SLS Printing</label>
-                        </div>
+                    <div class="col-md-3">
+                        <label asp-for="Part.LengthMm" class="form-label">Length (mm)</label>
+                        <input asp-for="Part.LengthMm" type="number" step="0.1" class="form-control" 
+                               placeholder="0.0" onchange="window.calculateVolume && window.calculateVolume()" />
+                        <span asp-validation-for="Part.LengthMm" class="text-danger"></span>
                     </div>
                     
-                    <div class="col-md-4">
-                        <div class="form-check">
-                            <input asp-for="Part.RequiresCNCMachining" class="form-check-input" type="checkbox" />
-                            <label asp-for="Part.RequiresCNCMachining" class="form-check-label">Requires CNC Machining</label>
-                        </div>
+                    <div class="col-md-3">
+                        <label asp-for="Part.WidthMm" class="form-label">Width (mm)</label>
+                        <input asp-for="Part.WidthMm" type="number" step="0.1" class="form-control" 
+                               placeholder="0.0" onchange="window.calculateVolume && window.calculateVolume()" />
+                        <span asp-validation-for="Part.WidthMm" class="text-danger"></span>
                     </div>
                     
-                    <div class="col-md-4">
-                        <div class="form-check">
-                            <input asp-for="Part.RequiresFinishing" class="form-check-input" type="checkbox" />
-                            <label asp-for="Part.RequiresFinishing" class="form-check-label">Requires Finishing</label>
-                        </div>
+                    <div class="col-md-3">
+                        <label asp-for="Part.HeightMm" class="form-label">Height (mm)</label>
+                        <input asp-for="Part.HeightMm" type="number" step="0.1" class="form-control" 
+                               placeholder="0.0" onchange="window.calculateVolume && window.calculateVolume()" />
+                        <span asp-validation-for="Part.HeightMm" class="text-danger"></span>
                     </div>
                     
-                    <div class="col-md-4">
-                        <div class="form-check">
-                            <input asp-for="Part.RequiresInspection" class="form-check-input" type="checkbox" />
-                            <label asp-for="Part.RequiresInspection" class="form-check-label">Requires Inspection</label>
-                        </div>
+                    <div class="col-md-3">
+                        <label asp-for="Part.WeightGrams" class="form-label">Weight (g)</label>
+                        <input asp-for="Part.WeightGrams" type="number" step="0.1" class="form-control" 
+                               placeholder="0.0" />
+                        <span asp-validation-for="Part.WeightGrams" class="text-danger"></span>
                     </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="Part.VolumeMm3" class="form-label">Volume (mm³)</label>
+                        <input asp-for="Part.VolumeMm3" type="number" step="1" class="form-control" 
+                               id="volumeInput" readonly />
+                        <span asp-validation-for="Part.VolumeMm3" class="text-danger"></span>
+                        <div class="form-text">Auto-calculated from L × W × H</div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="Part.Dimensions" class="form-label">Dimensions String</label>
+                        <input asp-for="Part.Dimensions" class="form-control" 
+                               placeholder="e.g., 100 × 50 × 25 mm" id="dimensionsInput" readonly />
+                        <span asp-validation-for="Part.Dimensions" class="text-danger"></span>
+                        <div class="form-text">Auto-generated from dimensions</div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="Part.MaxSurfaceRoughnessRa" class="form-label">Max Surface Roughness Ra (μm)</label>
+                        <input asp-for="Part.MaxSurfaceRoughnessRa" type="number" step="0.1" class="form-control" />
+                        <span asp-validation-for="Part.MaxSurfaceRoughnessRa" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
 
+            <!-- TAB 5: B&T Compliance -->
+            <div class="tab-pane fade" id="bt" role="tabpanel">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <h6 class="text-primary border-bottom pb-2 mb-3">
+                            <i class="fas fa-shield-alt me-2"></i>B&T Manufacturing & Compliance
+                        </h6>
+                    </div>
+                    
+                    <!-- B&T Component Classification -->
+                    <div class="col-12">
+                        <h6 class="text-info">Component Classification</h6>
+                    </div>
+                    
                     <div class="col-md-4">
-                        <div class="form-check">
-                            <input asp-for="Part.RequiresFDA" class="form-check-input" type="checkbox" />
-                            <label asp-for="Part.RequiresFDA" class="form-check-label">FDA Compliance Required</label>
+                        <label asp-for="Part.BTComponentType" class="form-label">B&T Component Type</label>
+                        <select asp-for="Part.BTComponentType" class="form-select">
+                            <option value="General">General</option>
+                            <option value="Suppressor">Suppressor</option>
+                            <option value="Receiver">Receiver</option>
+                            <option value="Barrel">Barrel</option>
+                            <option value="Trigger">Trigger</option>
+                            <option value="Safety">Safety</option>
+                        </select>
+                        <span asp-validation-for="Part.BTComponentType" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="Part.BTFirearmCategory" class="form-label">Firearm Category</label>
+                        <select asp-for="Part.BTFirearmCategory" class="form-select">
+                            <option value="Component">Component</option>
+                            <option value="Firearm">Firearm</option>
+                            <option value="NFA_Item">NFA Item</option>
+                            <option value="Accessory">Accessory</option>
+                        </select>
+                        <span asp-validation-for="Part.BTFirearmCategory" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="Part.BTSuppressorType" class="form-label">Suppressor Type</label>
+                        <select asp-for="Part.BTSuppressorType" class="form-select">
+                            <option value="">Not a Suppressor</option>
+                            <option value="Baffle">Baffle</option>
+                            <option value="EndCap">End Cap</option>
+                            <option value="Tube">Tube</option>
+                            <option value="Mount">Mount</option>
+                            <option value="Internal">Internal</option>
+                        </select>
+                        <span asp-validation-for="Part.BTSuppressorType" class="text-danger"></span>
+                    </div>
+                    
+                    <!-- Regulatory Compliance -->
+                    <div class="col-12 mt-4">
+                        <h6 class="text-warning">Regulatory Compliance</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input asp-for="Part.RequiresATFForm1" class="form-check-input" type="checkbox" />
+                                    <label asp-for="Part.RequiresATFForm1" class="form-check-label">
+                                        <i class="fas fa-file-alt me-1"></i>Requires ATF Form 1
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input asp-for="Part.RequiresATFForm4" class="form-check-input" type="checkbox" />
+                                    <label asp-for="Part.RequiresATFForm4" class="form-check-label">
+                                        <i class="fas fa-file-alt me-1"></i>Requires ATF Form 4
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input asp-for="Part.RequiresTaxStamp" class="form-check-input" type="checkbox" />
+                                    <label asp-for="Part.RequiresTaxStamp" class="form-check-label">
+                                        <i class="fas fa-stamp me-1"></i>Requires Tax Stamp
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input asp-for="Part.RequiresExportLicense" class="form-check-input" type="checkbox" />
+                                    <label asp-for="Part.RequiresExportLicense" class="form-check-label">
+                                        <i class="fas fa-globe me-1"></i>Requires Export License
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                     </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="Part.ATFClassification" class="form-label">ATF Classification</label>
+                        <input asp-for="Part.ATFClassification" class="form-control" 
+                               placeholder="e.g., Firearm, Silencer, SBR, etc." />
+                        <span asp-validation-for="Part.ATFClassification" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="Part.TaxStampAmount" class="form-label">Tax Stamp Amount ($)</label>
+                        <input asp-for="Part.TaxStampAmount" type="number" step="0.01" class="form-control" 
+                               placeholder="200.00" />
+                        <span asp-validation-for="Part.TaxStampAmount" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
 
-                    <div class="col-md-4">
-                        <div class="form-check">
-                            <input asp-for="Part.RequiresAS9100" class="form-check-input" type="checkbox" />
-                            <label asp-for="Part.RequiresAS9100" class="form-check-label">AS9100 Certification</label>
+            <!-- TAB 6: Summary -->
+            <div class="tab-pane fade" id="summary" role="tabpanel">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <h6 class="text-primary border-bottom pb-2 mb-3">
+                            <i class="fas fa-calculator me-2"></i>Manufacturing Summary
+                        </h6>
+                    </div>
+                    
+                    <!-- Summary Cards -->
+                    <div class="col-md-3">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body text-center">
+                                <i class="fas fa-tasks fa-2x mb-2"></i>
+                                <h4 class="mb-0" id="summary-total-stages">0</h4>
+                                <small>Manufacturing Stages</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="card bg-info text-white">
+                            <div class="card-body text-center">
+                                <i class="fas fa-clock fa-2x mb-2"></i>
+                                <h4 class="mb-0" id="summary-total-duration">0.0h</h4>
+                                <small>Estimated Duration</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body text-center">
+                                <i class="fas fa-dollar-sign fa-2x mb-2"></i>
+                                <h4 class="mb-0" id="summary-total-cost">$0.00</h4>
+                                <small>Estimated Cost</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-white">
+                            <div class="card-body text-center">
+                                <i class="fas fa-layer-group fa-2x mb-2"></i>
+                                <h4 class="mb-0" id="summary-complexity">Simple</h4>
+                                <small>Complexity Level</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Administrative Override Section -->
+                    <div class="col-12 mt-4">
+                        <div class="card border-warning admin-override-section">
+                            <div class="card-header bg-warning text-dark">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-user-shield me-2"></i>Administrative Override (Optional)
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <label asp-for="Part.AdminEstimatedHoursOverride" class="form-label">Duration Override (hours)</label>
+                                        <input asp-for="Part.AdminEstimatedHoursOverride" type="number" step="0.1" min="0.1" 
+                                               class="form-control" id="adminOverrideInput" />
+                                        <span asp-validation-for="Part.AdminEstimatedHoursOverride" class="text-danger"></span>
+                                        <div class="form-text">Leave blank to use calculated value</div>
+                                    </div>
+                                    
+                                    <div class="col-md-8">
+                                        <label asp-for="Part.AdminOverrideReason" class="form-label">Override Justification</label>
+                                        <textarea asp-for="Part.AdminOverrideReason" class="form-control" rows="2" 
+                                                  placeholder="Required when using override values..." 
+                                                  id="overrideReasonText"></textarea>
+                                        <span asp-validation-for="Part.AdminOverrideReason" class="text-danger"></span>
+                                        <div class="form-text text-danger">Required when override hours are specified</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -304,268 +673,731 @@
     <button type="submit" form="partForm" class="btn btn-primary" id="savePartBtn">
         <i class="fas fa-save me-1"></i>
         <span class="btn-text">@(Model.Part.Id == 0 ? "Create Part" : "Update Part")</span>
-        <span id="partSubmitSpinner" class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true"></span>
+        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
     </button>
 </div>
 
 <script>
-console.log('🔧 [PARTS] Loading enhanced parts form with fixed submission...' );
-
-// Material defaults configuration
-const MATERIAL_DEFAULTS = {
-    'Ti-6Al-4V Grade 5': { estimatedHours: 8.0, materialCostPerKg: 450.00 },
-    'Ti-6Al-4V ELI Grade 23': { estimatedHours: 9.0, materialCostPerKg: 520.00 },
-    'Inconel 718': { estimatedHours: 12.0, materialCostPerKg: 750.00 },
-    'Inconel 625': { estimatedHours: 14.0, materialCostPerKg: 850.00 },
-    '316L Stainless Steel': { estimatedHours: 6.0, materialCostPerKg: 280.00 },
-    '17-4 PH Stainless Steel': { estimatedHours: 7.0, materialCostPerKg: 320.00 },
-    'AlSi10Mg': { estimatedHours: 5.0, materialCostPerKg: 180.00 }
-};
-
-// FIXED: Enhanced HTMX response handler
-window.handlePartFormResponse = function(event) {
-    console.log('📋 [PARTS] Form response received:', event.detail.xhr.status);
+// Production-Ready Parts Form JavaScript
+(function() {
+    'use strict';
     
-    try {
-        const xhr = event.detail.xhr;
-        const response = xhr.responseText;
-        
-        // Reset submit button state
-        const submitBtn = document.getElementById('savePartBtn');
-        const spinner = document.getElementById('partSubmitSpinner');
-        
-        if (submitBtn && spinner) {
-            submitBtn.disabled = false;
-            spinner.classList.add('d-none');
-        }
-        
-        // Check for success (2xx status codes)
-        if (xhr.status >= 200 && xhr.status < 300) {
+    document.addEventListener('DOMContentLoaded', function() {
+        initializePartsForm();
+    });
+    
+    function initializePartsForm() {
+        try {
+            setupTabs();
+            setupMaterialAutoFill();
+            setupVolumeCalculation();
+            setupAdminOverrideValidation();
+            setupStageCalculations();
+            setupFormSubmission();
+            setupFormValidation(); // NEW: Comprehensive form validation
             
-            // Check if response contains JavaScript (success response)
-            if (response.includes('<script>') || response.includes('window.location.reload')) {
-                console.log('✅ [PARTS] Success response received');
+            console.log('[PARTS] Form initialized successfully with validation');
+        } catch (error) {
+            console.error('[PARTS] Error initializing form:', error);
+        }
+    }
+    
+    function setupTabs() {
+        const tabTriggers = document.querySelectorAll('[data-bs-toggle="tab"]');
+        
+        tabTriggers.forEach(trigger => {
+            trigger.addEventListener('click', function(e) {
+                e.preventDefault();
                 
-                // Execute the JavaScript response (contains modal close + reload)
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = response;
-                const scripts = tempDiv.querySelectorAll('script');
-                
-                scripts.forEach(script => {
-                    try {
-                        eval(script.textContent);
-                        console.log('✅ [PARTS] Success script executed');
-                    } catch (error) {
-                        console.error('❌ [PARTS] Error executing success script:', error);
-                    }
+                // Remove active classes
+                document.querySelectorAll('.nav-link').forEach(tab => tab.classList.remove('active'));
+                document.querySelectorAll('.tab-pane').forEach(pane => {
+                    pane.classList.remove('show', 'active');
                 });
-                return;
-            }
-            
-            // Check for validation errors (form with errors)
-            if (response.includes('ValidationErrors') || response.includes('alert-danger')) {
-                console.log('⚠️ [PARTS] Validation errors in response');
-                // Response contains the form with validation errors - HTMX will display it
-                return;
-            }
-            
-            // Unexpected success response
-            console.log('✅ [PARTS] Unexpected success response, closing modal');
-            closePartModal();
-            showPartToast('success', 'Part saved successfully');
-            setTimeout(() => window.location.reload(), 1000);
-            
-        } else {
-            // Error response
-            console.error('❌ [PARTS] Server error:', xhr.status, xhr.statusText);
-            showPartToast('error', `Server error: ${xhr.status} ${xhr.statusText}`);
-        }
-        
-    } catch (error) {
-        console.error('❌ [PARTS] Error handling form response:', error);
-        showPartToast('error', 'Unexpected error processing response');
-    }
-};
-
-// FIXED: Robust modal close functionality
-function closePartModal() {
-    console.log('❌ [PARTS] Closing part modal');
-    
-    try {
-        const modal = document.getElementById('partModal');
-        if (modal) {
-            // Try Bootstrap modal instance first
-            if (typeof bootstrap !== 'undefined') {
-                const bsModal = bootstrap.Modal.getInstance(modal);
-                if (bsModal) {
-                    bsModal.hide();
-                    console.log('✅ [PARTS] Modal closed via Bootstrap instance');
-                    return;
+                
+                // Add active class to clicked tab
+                this.classList.add('active');
+                
+                // Show corresponding tab content
+                const targetId = this.getAttribute('data-bs-target');
+                const targetPane = document.querySelector(targetId);
+                if (targetPane) {
+                    targetPane.classList.add('show', 'active');
                 }
-            }
-            
-            // Fallback modal close
-            modal.style.display = 'none';
-            modal.classList.remove('show');
-            document.body.classList.remove('modal-open');
-            
-            // Remove backdrop
-            const backdrop = document.querySelector('.modal-backdrop');
-            if (backdrop) {
-                backdrop.remove();
-            }
-            
-            console.log('✅ [PARTS] Modal closed via fallback method');
-        }
-    } catch (error) {
-        console.error('❌ [PARTS] Error closing modal:', error);
-    }
-}
-
-// FIXED: Enhanced toast notifications
-function showPartToast(type, message) {
-    console.log(`📢 [PARTS] Showing ${type} toast:`, message);
-    
-    try {
-        // Try using existing global toast function first
-        if (typeof window.showToast === 'function') {
-            window.showToast(type, message);
-            return;
-        }
-        
-        // Fallback to Bootstrap toast
-        if (typeof bootstrap !== 'undefined') {
-            const toastId = 'part-toast-' + Date.now();
-            const toastHtml = `
-                <div id="${toastId}" class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0" 
-                     role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true" data-bs-delay="4000">
-                    <div class="d-flex">
-                        <div class="toast-body">
-                            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
-                            ${message}
-                        </div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                    </div>
-                </div>
-            `;
-            
-            let toastContainer = document.getElementById('toast-container');
-            if (!toastContainer) {
-                toastContainer = document.createElement('div');
-                toastContainer.id = 'toast-container';
-                toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
-                toastContainer.style.zIndex = '1055';
-                document.body.appendChild(toastContainer);
-            }
-            
-            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
-            const toastElement = document.getElementById(toastId);
-            const toast = new bootstrap.Toast(toastElement);
-            toast.show();
-            
-            toastElement.addEventListener('hidden.bs.toast', () => toastElement.remove());
-            
-        } else {
-            // Ultimate fallback
-            alert(`${type.toUpperCase()}: ${message}`);
-        }
-        
-    } catch (error) {
-        console.error('❌ [PARTS] Error showing toast:', error);
-        alert(`${type.toUpperCase()}: ${message}`);
-    }
-}
-
-// Material defaults handler
-function updateMaterialDefaults(selectedMaterial) {
-    console.log('🧪 [PARTS] Updating material defaults for:', selectedMaterial);
-    
-    const estimatedHoursInput = document.getElementById('estimatedHoursInput');
-    const materialCostInput = document.getElementById('materialCostInput');
-    
-    if (!estimatedHoursInput || !materialCostInput) {
-        console.warn('⚠️ [PARTS] Material inputs not found');
-        return;
+                
+                console.log('[PARTS] Tab switched to:', targetId);
+            });
+        });
     }
     
-    const defaults = MATERIAL_DEFAULTS[selectedMaterial];
-    
-    if (defaults) {
-        if (!estimatedHoursInput.value || parseFloat(estimatedHoursInput.value) <= 1) {
-            estimatedHoursInput.value = defaults.estimatedHours;
-        }
-        
-        if (!materialCostInput.value || parseFloat(materialCostInput.value) <= 1) {
-            materialCostInput.value = defaults.materialCostPerKg;
-        }
-        
-        console.log(`✅ [PARTS] Material defaults applied for: ${selectedMaterial}`);
-    }
-}
-
-// Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 [PARTS] Initializing parts form...');
-    
-    try {
-        // Setup material selection handler
+    function setupMaterialAutoFill() {
         const materialSelect = document.getElementById('materialSelect');
         if (materialSelect) {
-            materialSelect.addEventListener('change', (e) => {
-                updateMaterialDefaults(e.target.value);
+            materialSelect.addEventListener('change', function() {
+                window.updateSlsMaterial && window.updateSlsMaterial();
             });
         }
-        
-        // Setup form submit button management
-        const form = document.getElementById('partForm');
-        const submitBtn = document.getElementById('savePartBtn');
-        const spinner = document.getElementById('partSubmitSpinner');
-        
-        if (form && submitBtn && spinner) {
-            form.addEventListener('submit', () => {
-                submitBtn.disabled = true;
-                spinner.classList.remove('d-none');
-                console.log('📤 [PARTS] Form submitted, showing loading state');
-            });
-        }
-        
-        console.log('✅ [PARTS] Parts form initialized successfully');
-        
-    } catch (error) {
-        console.error('❌ [PARTS] Error initializing parts form:', error);
     }
-});
+    
+    function setupVolumeCalculation() {
+        const lengthInput = document.querySelector('input[name="Part.LengthMm"]');
+        const widthInput = document.querySelector('input[name="Part.WidthMm"]');
+        const heightInput = document.querySelector('input[name="Part.HeightMm"]');
+        
+        if (lengthInput && widthInput && heightInput) {
+            [lengthInput, widthInput, heightInput].forEach(input => {
+                input.addEventListener('change', window.calculateVolume);
+            });
+        }
+    }
+    
+    function setupAdminOverrideValidation() {
+        const overrideInput = document.getElementById('adminOverrideInput');
+        const reasonTextarea = document.getElementById('overrideReasonText');
+        
+        if (overrideInput && reasonTextarea) {
+            overrideInput.addEventListener('input', function() {
+                const hasOverride = parseFloat(this.value) > 0;
+                reasonTextarea.required = hasOverride;
+                
+                // Show/hide validation message
+                const helpText = reasonTextarea.closest('.col-md-8').querySelector('.form-text');
+                if (helpText) {
+                    helpText.style.display = hasOverride ? 'block' : 'none';
+                    helpText.style.color = hasOverride ? '#dc3545' : '#6c757d';
+                }
+                
+                // Add visual indicators
+                if (hasOverride) {
+                    reasonTextarea.classList.add('border-warning');
+                    if (!reasonTextarea.value.trim()) {
+                        reasonTextarea.classList.add('is-invalid');
+                    }
+                } else {
+                    reasonTextarea.classList.remove('border-warning', 'is-invalid');
+                }
+            });
+            
+            reasonTextarea.addEventListener('input', function() {
+                const hasOverride = parseFloat(overrideInput.value) > 0;
+                if (hasOverride && this.value.trim()) {
+                    this.classList.remove('is-invalid');
+                    this.classList.add('is-valid');
+                } else if (hasOverride && !this.value.trim()) {
+                    this.classList.add('is-invalid');
+                    this.classList.remove('is-valid');
+                }
+            });
+        }
+    }
+    
+    function setupFormSubmission() {
+        const form = document.getElementById('partForm');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                console.log('[PARTS] Form submission started');
+                
+                // Disable submit button to prevent double submission
+                const submitBtn = document.getElementById('savePartBtn');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    const spinner = submitBtn.querySelector('.spinner-border');
+                    const btnText = submitBtn.querySelector('.btn-text');
+                    
+                    if (spinner) spinner.classList.remove('d-none');
+                    if (btnText) btnText.textContent = 'Saving...';
+                }
+                
+                // Validate admin override if specified
+                const overrideInput = document.getElementById('adminOverrideInput');
+                const reasonTextarea = document.getElementById('overrideReasonText');
+                
+                if (overrideInput && reasonTextarea) {
+                    const hasOverride = parseFloat(overrideInput.value) > 0;
+                    if (hasOverride && !reasonTextarea.value.trim()) {
+                        e.preventDefault();
+                        reasonTextarea.classList.add('is-invalid');
+                        reasonTextarea.focus();
+                        
+                        // Re-enable submit button
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            const spinner = submitBtn.querySelector('.spinner-border');
+                            const btnText = submitBtn.querySelector('.btn-text');
+                            
+                            if (spinner) spinner.classList.add('d-none');
+                            if (btnText) btnText.textContent = form.dataset.partId === '0' ? 'Create Part' : 'Update Part';
+                        }
+                        
+                        return false;
+                    }
+                }
+                
+                console.log('[PARTS] Form validation passed, submitting via HTMX');
+            });
+        }
+    }
+    
+    function setupStageCalculations() {
+        // Listen for stage changes to update summary
+        const stageCheckboxes = document.querySelectorAll('input[type="checkbox"][name^="Part.Requires"]');
+        const estimatedHoursInput = document.querySelector('input[name="Part.EstimatedHours"]');
+        const materialCostInput = document.querySelector('input[name="Part.MaterialCostPerKg"]');
+        const laborCostInput = document.querySelector('input[name="Part.StandardLaborCostPerHour"]');
+        
+        // Add event listeners for all inputs that affect calculations
+        [stageCheckboxes, [estimatedHoursInput], [materialCostInput], [laborCostInput]].flat().forEach(element => {
+            if (element) {
+                element.addEventListener('change', updateStageSummary);
+                element.addEventListener('input', debounce(updateStageSummary, 300));
+            }
+        });
+        
+        // Initial calculation
+        setTimeout(updateStageSummary, 100);
+    }
+    
+    function setupFormValidation() {
+        const form = document.getElementById('partForm');
+        if (!form) return;
 
-// Expose functions globally for HTML event handlers
-window.closePartModal = closePartModal;
-window.showPartToast = showPartToast;
-window.updateMaterialDefaults = updateMaterialDefaults;
+        // Setup real-time validation for all form fields
+        setupFieldValidation();
+        setupPartNumberValidation();
+        setupBusinessLogicValidation();
+        
+        // Form submission validation
+        form.addEventListener('submit', function(e) {
+            if (!validateFormBeforeSubmit()) {
+                e.preventDefault();
+                return false;
+            }
+        });
+    }
+    
+    function setupFieldValidation() {
+        // Required field validation
+        const requiredFields = [
+            { selector: 'input[name="Part.PartNumber"]', name: 'Part Number', maxLength: 50, pattern: /^[A-Z0-9][A-Z0-9\-_]{2,49}$/i },
+            { selector: 'input[name="Part.Name"]', name: 'Part Name', maxLength: 200 },
+            { selector: 'textarea[name="Part.Description"]', name: 'Description', maxLength: 500 },
+            { selector: 'select[name="Part.Industry"]', name: 'Industry' },
+            { selector: 'select[name="Part.Application"]', name: 'Application' },
+            { selector: 'select[name="Part.Material"]', name: 'Material' }
+        ];
 
-console.log('✅ [PARTS] Enhanced parts form script loaded successfully');
+        requiredFields.forEach(field => {
+            const element = document.querySelector(field.selector);
+            if (element) {
+                setupFieldValidationEvents(element, field);
+            }
+        });
+
+        // Numeric field validation
+        const numericFields = [
+            { selector: 'input[name="Part.EstimatedHours"]', name: 'Estimated Hours', min: 0.1, max: 200 },
+            { selector: 'input[name="Part.MaterialCostPerKg"]', name: 'Material Cost', min: 0, max: 10000 },
+            { selector: 'input[name="Part.StandardLaborCostPerHour"]', name: 'Labor Cost', min: 0, max: 500 },
+            { selector: 'input[name="Part.WeightGrams"]', name: 'Weight', min: 0 },
+            { selector: 'input[name="Part.LengthMm"]', name: 'Length', min: 0, max: 1000 },
+            { selector: 'input[name="Part.WidthMm"]', name: 'Width', min: 0, max: 1000 },
+            { selector: 'input[name="Part.HeightMm"]', name: 'Height', min: 0, max: 1000 }
+        ];
+
+        numericFields.forEach(field => {
+            const element = document.querySelector(field.selector);
+            if (element) {
+                setupNumericFieldValidation(element, field);
+            }
+        });
+    }
+
+    function setupFieldValidationEvents(element, field) {
+        const validationDiv = createValidationFeedback(element);
+        
+        element.addEventListener('blur', () => validateField(element, field, validationDiv));
+        element.addEventListener('input', debounce(() => validateField(element, field, validationDiv), 300));
+    }
+
+    function setupNumericFieldValidation(element, field) {
+        const validationDiv = createValidationFeedback(element);
+        
+        element.addEventListener('input', () => {
+            const value = parseFloat(element.value);
+            let isValid = true;
+            let message = '';
+
+            if (element.value && isNaN(value)) {
+                isValid = false;
+                message = `${field.name} must be a valid number`;
+            } else if (value < field.min) {
+                isValid = false;
+                message = `${field.name} must be at least ${field.min}`;
+            } else if (field.max && value > field.max) {
+                isValid = false;
+                message = `${field.name} cannot exceed ${field.max}`;
+            }
+
+            updateFieldValidation(element, validationDiv, isValid, message);
+        });
+    }
+
+    function setupPartNumberValidation() {
+        const partNumberInput = document.querySelector('input[name="Part.PartNumber"]');
+        if (!partNumberInput) return;
+
+        const validationDiv = createValidationFeedback(partNumberInput);
+        let duplicateCheckTimeout;
+
+        partNumberInput.addEventListener('input', () => {
+            clearTimeout(duplicateCheckTimeout);
+            
+            const value = partNumberInput.value.trim();
+            if (value.length >= 3) {
+                showValidationStatus(validationDiv, 'checking', 'Checking availability...');
+                
+                duplicateCheckTimeout = setTimeout(() => {
+                    checkPartNumberDuplicate(partNumberInput, value, validationDiv);
+                }, 500);
+            }
+        });
+    }
+
+    async function checkPartNumberDuplicate(input, partNumber, validationDiv) {
+        try {
+            const formData = new FormData(document.getElementById('partForm'));
+            const excludeId = formData.get('Part.Id') || '';
+            
+            const response = await fetch(`/Admin/Parts?handler=CheckDuplicate&partNumber=${encodeURIComponent(partNumber)}&excludeId=${excludeId}`, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                
+                if (result.isDuplicate) {
+                    updateFieldValidation(input, validationDiv, false, `Part number already exists: ${result.existingPartName}`);
+                } else {
+                    updateFieldValidation(input, validationDiv, true, 'Part number is available');
+                }
+            } else {
+                showValidationStatus(validationDiv, 'warning', 'Could not verify part number');
+            }
+        } catch (error) {
+            console.error('[PARTS] Error checking duplicate:', error);
+            showValidationStatus(validationDiv, 'warning', 'Could not verify part number');
+        }
+    }
+
+    function setupBusinessLogicValidation() {
+        // B&T specific validation
+        const atfForm1 = document.querySelector('input[name="Part.RequiresATFForm1"]');
+        const atfForm4 = document.querySelector('input[name="Part.RequiresATFForm4"]');
+        const atfClassification = document.querySelector('input[name="Part.ATFClassification"]');
+        
+        const taxStamp = document.querySelector('input[name="Part.RequiresTaxStamp"]');
+        const taxStampAmount = document.querySelector('input[name="Part.TaxStampAmount"]');
+        
+        const exportLicense = document.querySelector('input[name="Part.RequiresExportLicense"]');
+        const itarCategory = document.querySelector('input[name="Part.ITARCategory"]');
+
+        if (atfForm1 && atfForm4 && atfClassification) {
+            [atfForm1, atfForm4].forEach(checkbox => {
+                checkbox.addEventListener('change', () => {
+                    const needsClassification = atfForm1.checked || atfForm4.checked;
+                    atfClassification.required = needsClassification;
+                    
+                    if (needsClassification) {
+                        atfClassification.classList.add('border-warning');
+                        showFieldMessage(atfClassification, 'ATF Classification is required when ATF forms are needed', 'warning');
+                    } else {
+                        atfClassification.classList.remove('border-warning');
+                        hideFieldMessage(atfClassification);
+                    }
+                });
+            });
+        }
+
+        if (taxStamp && taxStampAmount) {
+            taxStamp.addEventListener('change', () => {
+                taxStampAmount.required = taxStamp.checked;
+                
+                if (taxStamp.checked) {
+                    taxStampAmount.classList.add('border-warning');
+                    showFieldMessage(taxStampAmount, 'Tax stamp amount is required', 'warning');
+                } else {
+                    taxStampAmount.classList.remove('border-warning');
+                    hideFieldMessage(taxStampAmount);
+                }
+            });
+        }
+
+        if (exportLicense && itarCategory) {
+            exportLicense.addEventListener('change', () => {
+                itarCategory.required = exportLicense.checked;
+                
+                if (exportLicense.checked) {
+                    itarCategory.classList.add('border-warning');
+                    showFieldMessage(itarCategory, 'ITAR Category is required for export controlled items', 'warning');
+                } else {
+                    itarCategory.classList.remove('border-warning');
+                    hideFieldMessage(itarCategory);
+                }
+            });
+        }
+
+        // Suppressor validation
+        const btComponentType = document.querySelector('select[name="Part.BTComponentType"]');
+        const requiresTaxStamp = document.querySelector('input[name="Part.RequiresTaxStamp"]');
+        const requiresSoundTesting = document.querySelector('input[name="Part.RequiresSoundTesting"]');
+
+        if (btComponentType && requiresTaxStamp && requiresSoundTesting) {
+            btComponentType.addEventListener('change', () => {
+                if (btComponentType.value === 'Suppressor') {
+                    if (!requiresTaxStamp.checked) {
+                        showFieldMessage(requiresTaxStamp.parentElement, 'Suppressor components typically require tax stamp', 'info');
+                    }
+                    if (!requiresSoundTesting.checked) {
+                        showFieldMessage(requiresSoundTesting.parentElement, 'Suppressor components should include sound testing', 'info');
+                    }
+                }
+            });
+        }
+    }
+
+    function validateFormBeforeSubmit() {
+        let isValid = true;
+        const errors = [];
+
+        // Validate required fields
+        const requiredFields = document.querySelectorAll('#partForm [required]');
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                isValid = false;
+                field.classList.add('is-invalid');
+                errors.push(`${getFieldLabel(field)} is required`);
+            }
+        });
+
+        // Validate manufacturing stages
+        const stageCheckboxes = document.querySelectorAll('input[type="checkbox"][name^="Part.Requires"]:checked');
+        if (stageCheckboxes.length === 0) {
+            isValid = false;
+            errors.push('At least one manufacturing stage must be selected');
+            
+            // Highlight stages tab
+            const stagesTab = document.querySelector('#stages-tab');
+            if (stagesTab) {
+                stagesTab.classList.add('text-danger');
+                setTimeout(() => stagesTab.classList.remove('text-danger'), 3000);
+            }
+        }
+
+        // Validate admin override
+        const adminOverride = document.querySelector('input[name="Part.AdminEstimatedHoursOverride"]');
+        const overrideReason = document.querySelector('textarea[name="Part.AdminOverrideReason"]');
+        
+        if (adminOverride && adminOverride.value && (!overrideReason || !overrideReason.value.trim())) {
+            isValid = false;
+            overrideReason.classList.add('is-invalid');
+            errors.push('Admin override reason is required when override hours are specified');
+        }
+
+        // Show validation summary
+        if (!isValid) {
+            showValidationSummary(errors);
+            
+            // Focus first invalid field
+            const firstInvalid = document.querySelector('.is-invalid');
+            if (firstInvalid) {
+                firstInvalid.focus();
+                firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        return isValid;
+    }
+
+    function createValidationFeedback(element) {
+        let validationDiv = element.parentElement.querySelector('.validation-feedback');
+        
+        if (!validationDiv) {
+            validationDiv = document.createElement('div');
+            validationDiv.className = 'validation-feedback';
+            element.parentElement.appendChild(validationDiv);
+        }
+        
+        return validationDiv;
+    }
+
+    function updateFieldValidation(element, validationDiv, isValid, message) {
+        element.classList.remove('is-valid', 'is-invalid');
+        
+        if (isValid) {
+            element.classList.add('is-valid');
+            showValidationStatus(validationDiv, 'success', message);
+        } else {
+            element.classList.add('is-invalid');
+            showValidationStatus(validationDiv, 'error', message);
+        }
+    }
+
+    function showValidationStatus(validationDiv, type, message) {
+        const icons = {
+            success: 'fas fa-check-circle text-success',
+            error: 'fas fa-times-circle text-danger',
+            warning: 'fas fa-exclamation-triangle text-warning',
+            checking: 'fas fa-spinner fa-spin text-info'
+        };
+
+        validationDiv.innerHTML = `
+            <small class="d-flex align-items-center mt-1">
+                <i class="${icons[type]} me-1"></i>
+                ${message}
+            </small>
+        `;
+    }
+
+    function showFieldMessage(element, message, type = 'info') {
+        const existingMessage = element.parentElement.querySelector('.field-message');
+        if (existingMessage) {
+            existingMessage.remove();
+        }
+
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `field-message alert alert-${type} alert-sm mt-1 p-1`;
+        messageDiv.innerHTML = `<small><i class="fas fa-info-circle me-1"></i>${message}</small>`;
+        
+        element.parentElement.appendChild(messageDiv);
+    }
+
+    function hideFieldMessage(element) {
+        const existingMessage = element.parentElement.querySelector('.field-message');
+        if (existingMessage) {
+            existingMessage.remove();
+        }
+    }
+
+    function showValidationSummary(errors) {
+        // Remove existing summary
+        const existingSummary = document.querySelector('.validation-summary');
+        if (existingSummary) {
+            existingSummary.remove();
+        }
+
+        // Create new summary
+        const summaryDiv = document.createElement('div');
+        summaryDiv.className = 'validation-summary alert alert-danger';
+        summaryDiv.innerHTML = `
+            <h6><i class="fas fa-exclamation-triangle me-1"></i>Please fix the following errors:</h6>
+            <ul class="mb-0">
+                ${errors.map(error => `<li>${error}</li>`).join('')}
+            </ul>
+        `;
+
+        // Insert at top of modal body
+        const modalBody = document.querySelector('.modal-body');
+        modalBody.insertBefore(summaryDiv, modalBody.firstChild);
+
+        // Auto-remove after 10 seconds
+        setTimeout(() => {
+            if (summaryDiv.parentElement) {
+                summaryDiv.remove();
+            }
+        }, 10000);
+    }
+
+    function getFieldLabel(field) {
+        const label = field.parentElement.querySelector('label');
+        return label ? label.textContent.replace('*', '').trim() : field.name;
+    }
+
+    function validateField(element, field, validationDiv) {
+        const value = element.value.trim();
+        let isValid = true;
+        let message = '';
+
+        // Required field check
+        if (!value) {
+            isValid = false;
+            message = `${field.name} is required`;
+        } else {
+            // Length validation
+            if (field.maxLength && value.length > field.maxLength) {
+                isValid = false;
+                message = `${field.name} cannot exceed ${field.maxLength} characters`;
+            }
+            
+            // Pattern validation
+            if (field.pattern && !field.pattern.test(value)) {
+                isValid = false;
+                message = `${field.name} format is invalid`;
+            }
+        }
+
+        updateFieldValidation(element, validationDiv, isValid, message);
+        return isValid;
+    }
 </script>
 
 <style>
-    .part-section-header {
-        color: #495057;
-        font-weight: 600;
-        border-bottom: 2px solid #e9ecef;
-        padding-bottom: 8px;
-        margin-bottom: 16px;
-    }
-
-    .part-required::after {
+    .required:after {
         content: " *";
-        color: #dc3545;
+        color: red;
     }
-
-    .part-tab-text {
-        font-size: 0.9rem;
-        font-weight: 500;
+    
+    .tab-pane {
+        min-height: 400px;
     }
-
-    @@media (max-width: 768px) {
-        .part-tab-text {
-            display: none;
+    
+    .card {
+        transition: all 0.3s ease;
+    }
+    
+    .card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .nav-tabs .nav-link {
+        position: relative;
+        border: none;
+        background: transparent;
+        color: #6c757d;
+        transition: all 0.3s ease;
+    }
+    
+    .nav-tabs .nav-link:hover,
+    .nav-tabs .nav-link.active {
+        color: #007bff;
+        background: transparent;
+        border: none;
+        border-bottom: 3px solid #007bff;
+    }
+    
+    .tab-content {
+        background: #f8f9fa;
+        border-radius: 0.375rem;
+        padding: 1.5rem;
+        border: 1px solid #dee2e6;
+    }
+    
+    .summary-card {
+        transition: transform 0.2s ease;
+    }
+    
+    .summary-card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+    }
+    
+    .is-invalid {
+        border-color: #dc3545;
+        box-shadow: 0 0 0 0.2rem rgba(220,53,69,.25);
+    }
+    
+    .is-valid {
+        border-color: #198754;
+        box-shadow: 0 0 0 0.2rem rgba(25,135,84,.25);
+    }
+    
+    .border-warning {
+        border-color: #ffc107 !important;
+    }
+    
+    #savePartBtn:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+    
+    .stage-checkbox {
+        transform: scale(1.1);
+        margin-right: 8px;
+    }
+    
+    .admin-override-section {
+        background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+        border: 2px solid #ffc107;
+        border-radius: 8px;
+    }
+    
+    .modal-xl .modal-dialog {
+        max-width: 1200px;
+    }
+    
+    /* Validation styles */
+    .validation-feedback {
+        display: block;
+    }
+    
+    .validation-summary {
+        border-left: 4px solid #dc3545;
+        animation: slideDown 0.3s ease-out;
+    }
+    
+    @keyframes slideDown {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .field-message {
+        border: none;
+        margin-bottom: 0;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8rem;
+    }
+    
+    .alert-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    .form-control.is-valid {
+        border-color: #198754;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23198754' d='m2.3 6.73.94-.94 1.94 1.94 3.53-3.53.94.94L4.93 9.5z'/%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right calc(0.375em + 0.1875rem) center;
+        background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+    }
+    
+    .form-control.is-invalid {
+        border-color: #dc3545;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath d='m5.8 4.6 2.4 2.4m0-2.4L5.8 7'/%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right calc(0.375em + 0.1875rem) center;
+        background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+    }
+    
+    .form-select.is-valid,
+    .form-select.is-invalid {
+        background-position: right 0.75rem center, center right 1.75rem;
+        background-size: 16px 12px, calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+    }
+    
+    @media (max-width: 768px) {
+        .modal-xl .modal-dialog {
+            max-width: 95%;
+            margin: 10px auto;
+        }
+        
+        .tab-content {
+            padding: 1rem;
+        }
+        
+        .nav-tabs .nav-link {
+            font-size: 0.875rem;
+            padding: 0.5rem 0.75rem;
+        }
+        
+        .validation-summary {
+            font-size: 0.9rem;
         }
     }
 </style>

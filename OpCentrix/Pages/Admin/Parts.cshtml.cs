@@ -253,15 +253,8 @@ namespace OpCentrix.Pages.Admin
                         _logger.LogInformation("✅ [PARTS-{OperationId}] Part created successfully: {PartNumber} (ID: {PartId}) with {StageCount} stages",
                             operationId, Part.PartNumber, Part.Id, SelectedStageIds.Count);
 
-                        // For HTMX requests, return success response
-                        if (Request.Headers.ContainsKey("HX-Request"))
-                        {
-                            return await HandleHtmxSuccess($"Part '{Part.PartNumber}' created successfully with {SelectedStageIds.Count} manufacturing stages");
-                        }
-
-                        // For standard requests, redirect with success message
-                        TempData["SuccessMessage"] = $"Part '{Part.PartNumber}' created successfully";
-                        return RedirectToPage();
+                        // Return success response that works for both HTMX and standard forms
+                        return await HandleFormSuccess($"Part '{Part.PartNumber}' created successfully with {SelectedStageIds.Count} manufacturing stages");
                     }
                     else
                     {
@@ -350,15 +343,8 @@ namespace OpCentrix.Pages.Admin
                         _logger.LogInformation("✅ [PARTS-{OperationId}] Part updated successfully: {PartNumber} (ID: {PartId}) with {StageCount} stages",
                             operationId, Part.PartNumber, Part.Id, SelectedStageIds.Count);
 
-                        // For HTMX requests, return success response
-                        if (Request.Headers.ContainsKey("HX-Request"))
-                        {
-                            return await HandleHtmxSuccess($"Part '{Part.PartNumber}' updated successfully with {SelectedStageIds.Count} manufacturing stages");
-                        }
-
-                        // For standard requests, redirect with success message
-                        TempData["SuccessMessage"] = $"Part '{Part.PartNumber}' updated successfully";
-                        return RedirectToPage();
+                        // Return success response that works for both HTMX and standard forms
+                        return await HandleFormSuccess($"Part '{Part.PartNumber}' updated successfully with {SelectedStageIds.Count} manufacturing stages");
                     }
                     else
                     {
@@ -546,20 +532,120 @@ namespace OpCentrix.Pages.Admin
                 PartNumber = "",
                 Name = "",
                 Description = "",
-                Industry = "General Manufacturing",
-                Application = "General Component",
+                Industry = "Firearms", // Updated to match B&T focus
+                Application = "B&T Manufacturing", // Updated to match B&T focus
                 Material = "Ti-6Al-4V Grade 5",
+                SlsMaterial = "Ti-6Al-4V Grade 5", // Ensure SLS material matches
                 EstimatedHours = 8.0,
                 MaterialCostPerKg = 450.00m,
                 StandardLaborCostPerHour = 85.00m,
                 PartCategory = "Production",
                 PartClass = "B",
                 ProcessType = "SLS Metal",
+                RequiredMachineType = "TruPrint 3000",
                 IsActive = true,
                 RequiresSLSPrinting = true,
                 RequiresInspection = true,
                 CreatedDate = DateTime.UtcNow,
-                CreatedBy = User.Identity?.Name ?? "System"
+                CreatedBy = User.Identity?.Name ?? "System",
+                
+                // B&T Manufacturing defaults
+                BTComponentType = "General",
+                BTFirearmCategory = "Component",
+                ManufacturingStage = "Design",
+                StageDetails = "{}",
+                StageOrder = 1,
+                
+                // Ensure all required string fields have defaults
+                CustomerPartNumber = "",
+                Dimensions = "",
+                SurfaceFinishRequirement = "As-built",
+                PowderSpecification = "15-45 micron particle size",
+                PreferredMachines = "TI1,TI2",
+                RequiredSkills = "SLS Operation,Powder Handling,Inert Gas Safety,Post-Processing",
+                RequiredCertifications = "SLS Operation Certification,Powder Safety Training",
+                RequiredTooling = "Build Platform,Powder Sieve,Support Removal Tools",
+                ConsumableMaterials = "Argon Gas,Build Platform Coating",
+                SupportStrategy = "Minimal supports on overhangs > 45°",
+                QualityStandards = "ASTM F3001, ISO 17296",
+                ToleranceRequirements = "±0.1mm typical, ±0.05mm critical dimensions",
+                ProcessParameters = "{}",
+                QualityCheckpoints = "{}",
+                BuildFileTemplate = "",
+                CadFilePath = "",
+                CadFileVersion = "",
+                AvgDuration = "8h 0m",
+                AvgDurationDays = 1,
+                AdminOverrideReason = "",
+                AdminOverrideBy = "",
+                
+                // B&T specific defaults
+                BTSuppressorType = "",
+                BTBafflePosition = "",
+                BTCaliberCompatibility = "",
+                BTThreadPitch = "",
+                SerialNumberFormat = "BT-{YYYY}-{####}",
+                BatchControlMethod = "Standard",
+                MaxBatchSize = 1,
+                ParentComponents = "[]",
+                ChildComponents = "[]",
+                WorkflowTemplate = "BT_Standard_Workflow",
+                ApprovalWorkflow = "Standard",
+                ATFClassification = "",
+                FFLRequirements = "",
+                ITARCategory = "",
+                EARClassification = "",
+                ExportControlNotes = "",
+                ExportClassification = "",
+                ComponentType = "",
+                FirearmType = "",
+                BTTestingProtocol = "",
+                BTQualitySpecification = "",
+                BTTestingRequirements = "",
+                BTQualityStandards = "",
+                BTRegulatoryNotes = "",
+                
+                // Initialize numeric fields with safe defaults
+                PowderRequirementKg = 0.5,
+                RecommendedLaserPower = 200,
+                RecommendedScanSpeed = 1200,
+                RecommendedLayerThickness = 30,
+                RecommendedHatchSpacing = 120,
+                RecommendedBuildTemperature = 180,
+                RequiredArgonPurity = 99.9,
+                MaxOxygenContent = 50,
+                WeightGrams = 0,
+                VolumeMm3 = 0,
+                HeightMm = 0,
+                LengthMm = 0,
+                WidthMm = 0,
+                MaxSurfaceRoughnessRa = 25,
+                SetupCost = 150.00m,
+                PostProcessingCost = 75.00m,
+                QualityInspectionCost = 50.00m,
+                MachineOperatingCostPerHour = 125.00m,
+                ArgonCostPerHour = 15.00m,
+                SetupTimeMinutes = 45,
+                PowderChangeoverTimeMinutes = 30,
+                PreheatingTimeMinutes = 60,
+                CoolingTimeMinutes = 240,
+                PostProcessingTimeMinutes = 45,
+                SupportRemovalTimeMinutes = 0,
+                AverageActualHours = 0,
+                AverageEfficiencyPercent = 100,
+                AverageQualityScore = 100,
+                AverageDefectRate = 0,
+                AveragePowderUtilization = 85,
+                TotalJobsCompleted = 0,
+                TotalUnitsProduced = 0,
+                AverageCostPerUnit = 0,
+                StandardSellingPrice = 0,
+                
+                // B&T cost defaults
+                BTLicensingCost = 0.00m,
+                ComplianceCost = 0.00m,
+                TestingCost = 0.00m,
+                DocumentationCost = 0.00m
             };
         }
 
@@ -594,10 +680,13 @@ namespace OpCentrix.Pages.Admin
         {
             var errors = new List<string>();
 
+            // Required field validation
             if (string.IsNullOrWhiteSpace(part.PartNumber))
                 errors.Add("Part Number is required");
             else if (part.PartNumber.Length > 50)
                 errors.Add("Part Number cannot exceed 50 characters");
+            else if (!System.Text.RegularExpressions.Regex.IsMatch(part.PartNumber, @"^[A-Z0-9][A-Z0-9\-_]{2,49}$", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                errors.Add("Part Number must be 3-50 characters, alphanumeric with hyphens/underscores only");
 
             if (string.IsNullOrWhiteSpace(part.Name))
                 errors.Add("Part Name is required");
@@ -606,28 +695,97 @@ namespace OpCentrix.Pages.Admin
 
             if (string.IsNullOrWhiteSpace(part.Description))
                 errors.Add("Description is required");
+            else if (part.Description.Length > 500)
+                errors.Add("Description cannot exceed 500 characters");
 
             if (string.IsNullOrWhiteSpace(part.Industry))
                 errors.Add("Industry is required");
+            else if (part.Industry.Length > 100)
+                errors.Add("Industry cannot exceed 100 characters");
 
             if (string.IsNullOrWhiteSpace(part.Application))
                 errors.Add("Application is required");
+            else if (part.Application.Length > 100)
+                errors.Add("Application cannot exceed 100 characters");
 
             if (string.IsNullOrWhiteSpace(part.Material))
                 errors.Add("Material is required");
+            else if (part.Material.Length > 100)
+                errors.Add("Material cannot exceed 100 characters");
 
+            // Numeric field validation
             if (part.EstimatedHours <= 0)
                 errors.Add("Estimated Hours must be greater than 0");
+            else if (part.EstimatedHours > 200)
+                errors.Add("Estimated Hours cannot exceed 200 hours");
+
+            if (part.MaterialCostPerKg < 0)
+                errors.Add("Material Cost cannot be negative");
+            else if (part.MaterialCostPerKg > 10000)
+                errors.Add("Material Cost seems unreasonably high (over $10,000/kg)");
+
+            if (part.StandardLaborCostPerHour < 0)
+                errors.Add("Labor Cost cannot be negative");
+            else if (part.StandardLaborCostPerHour > 500)
+                errors.Add("Labor Cost seems unreasonably high (over $500/hour)");
+
+            // Physical properties validation
+            if (part.WeightGrams < 0)
+                errors.Add("Weight cannot be negative");
+
+            if (part.LengthMm < 0 || part.WidthMm < 0 || part.HeightMm < 0)
+                errors.Add("Dimensions cannot be negative");
+
+            if (part.LengthMm > 1000 || part.WidthMm > 1000 || part.HeightMm > 1000)
+                errors.Add("Dimensions seem unreasonably large (over 1000mm)");
+
+            // Manufacturing stages validation
+            var stageCount = 0;
+            if (part.RequiresSLSPrinting) stageCount++;
+            if (part.RequiresCNCMachining) stageCount++;
+            if (part.RequiresEDMOperations) stageCount++;
+            if (part.RequiresAssembly) stageCount++;
+            if (part.RequiresFinishing) stageCount++;
+
+            if (stageCount == 0)
+                errors.Add("At least one manufacturing stage must be selected");
+
+            // B&T specific validation
+            if (part.RequiresATFForm1 || part.RequiresATFForm4)
+            {
+                if (string.IsNullOrWhiteSpace(part.ATFClassification))
+                    errors.Add("ATF Classification is required when ATF forms are needed");
+            }
+
+            if (part.RequiresTaxStamp && !part.TaxStampAmount.HasValue)
+                errors.Add("Tax Stamp Amount is required when tax stamp is needed");
+
+            if (part.RequiresExportLicense && string.IsNullOrWhiteSpace(part.ITARCategory))
+                errors.Add("ITAR Category is required for export controlled items");
 
             // Admin override validation
             if (part.AdminEstimatedHoursOverride.HasValue)
             {
                 if (part.AdminEstimatedHoursOverride.Value <= 0)
                     errors.Add("Admin override hours must be greater than 0");
+                else if (part.AdminEstimatedHoursOverride.Value > 200)
+                    errors.Add("Admin override hours cannot exceed 200 hours");
 
                 if (string.IsNullOrWhiteSpace(part.AdminOverrideReason))
                     errors.Add("Admin override reason is required when override hours are specified");
+                else if (part.AdminOverrideReason.Length > 500)
+                    errors.Add("Admin override reason cannot exceed 500 characters");
             }
+
+            // Business logic validation
+            if (part.BTComponentType == "Suppressor" && !part.RequiresTaxStamp)
+                errors.Add("Suppressor components typically require a tax stamp");
+
+            if (part.BTFirearmCategory == "Firearm" && !part.RequiresUniqueSerialNumber)
+                errors.Add("Firearm components require unique serial numbers");
+
+            if (!string.IsNullOrEmpty(part.BTSuppressorType) && !part.RequiresSoundTesting)
+                errors.Add("Suppressor components should include sound testing");
 
             return errors;
         }
@@ -666,12 +824,81 @@ namespace OpCentrix.Pages.Admin
             return Partial("Shared/_PartForm", this);
         }
 
+        private async Task<IActionResult> HandleFormSuccess(string message)
+        {
+            // Check if this is an HTMX request
+            if (Request.Headers.ContainsKey("HX-Request"))
+            {
+                // For HTMX requests, return JavaScript that closes modal and shows success message
+                var successScript = $@"
+                    <script>
+                        console.log('[PARTS] HTMX Success handler executed');
+                        
+                        // Close modal with multiple fallback methods
+                        const modal = document.getElementById('partModal');
+                        if (modal) {{
+                            try {{
+                                if (typeof bootstrap !== 'undefined') {{
+                                    const bsModal = bootstrap.Modal.getInstance(modal);
+                                    if (bsModal) {{
+                                        bsModal.hide();
+                                        console.log('[PARTS] Modal closed via Bootstrap');
+                                    }}
+                                }}
+                                
+                                // Fallback modal close
+                                modal.style.display = 'none';
+                                modal.classList.remove('show');
+                                document.body.classList.remove('modal-open');
+                                
+                                // Remove backdrop if exists
+                                const backdrop = document.querySelector('.modal-backdrop');
+                                if (backdrop) {{
+                                    backdrop.remove();
+                                }}
+                            }} catch (e) {{
+                                console.error('Modal close error:', e);
+                            }}
+                        }}
+                        
+                        // Show success message
+                        try {{
+                            if (typeof window.showToast === 'function') {{
+                                window.showToast('success', '{message}');
+                                console.log('[PARTS] Success toast displayed');
+                            }} else if (typeof window.showPartToast === 'function') {{
+                                window.showPartToast('success', '{message}');
+                            }} else {{
+                                alert('SUCCESS: {message}');
+                            }}
+                        }} catch (e) {{
+                            console.error('Toast error:', e);
+                            alert('SUCCESS: {message}');
+                        }}
+                        
+                        // Reload page to refresh data
+                        setTimeout(() => {{
+                            console.log('[PARTS] Reloading page to refresh data');
+                            window.location.reload();
+                        }}, 1500);
+                    </script>";
+
+                return Content(successScript, "text/html");
+            }
+            else
+            {
+                // For standard form requests, redirect with success message
+                TempData["SuccessMessage"] = message;
+                return RedirectToPage();
+            }
+        }
+
         private async Task<IActionResult> HandleHtmxSuccess(string message)
         {
             // Return JavaScript that closes modal and shows success message
             var successScript = $@"
                 <script>
-                    console.log('✅ [PARTS] HTMX Success handler executed');
+                    console.log('[PARTS] HTMX Success handler executed');
                     
                     // Close modal
                     const modal = document.getElementById('partModal');
@@ -680,7 +907,7 @@ namespace OpCentrix.Pages.Admin
                             const bsModal = bootstrap.Modal.getInstance(modal);
                             if (bsModal) {{
                                 bsModal.hide();
-                                console.log('✅ [PARTS] Modal closed via Bootstrap');
+                                console.log('[PARTS] Modal closed via Bootstrap');
                             }}
                         }}
 
@@ -699,46 +926,20 @@ namespace OpCentrix.Pages.Admin
                     // Show success message
                     if (typeof window.showToast === 'function') {{
                         window.showToast('success', '{message}');
-                        console.log('✅ [PARTS] Success toast displayed');
+                        console.log('[PARTS] Success toast displayed');
                     }} else {{
                         alert('SUCCESS: {message}');
                     }}
                     
                     // Reload page to refresh data
                     setTimeout(() => {{
-                        console.log('🔄 [PARTS] Reloading page to refresh data');
+                        console.log('[PARTS] Reloading page to refresh data');
                         window.location.reload();
                     }}, 1500);
                 </script>";
 
             return Content(successScript, "text/html");
         }
-
-        private Task<IActionResult> HandleSuccess(string message)
-        {
-            var successScript = $@"
-                <script>
-                    // Close modal
-                    const modal = document.getElementById('partModal');
-                    if (modal && typeof bootstrap !== 'undefined') {{
-                        const bsModal = bootstrap.Modal.getInstance(modal);
-                        if (bsModal) bsModal.hide();
-                    }}
-                    
-                    // Show success message
-                    if (typeof window.showToast === 'function') {{
-                        window.showToast('success', '{message}');
-                    }}
-                    
-                    // Redirect after delay
-                    setTimeout(() => {{
-                        window.location.href = '/Admin/Parts';
-                    }}, 1500);
-                </script>";
-
-            return Task.FromResult<IActionResult>(Content(successScript, "text/html"));
-        }
-
         private string GetFriendlyErrorMessage(Exception ex)
         {
             if (ex.Message.Contains("UNIQUE") || ex.Message.Contains("duplicate"))
@@ -927,6 +1128,44 @@ namespace OpCentrix.Pages.Admin
         }
 
         #endregion
+
+        /// <summary>
+        /// Check if part number already exists (AJAX endpoint)
+        /// </summary>
+        public async Task<IActionResult> OnGetCheckDuplicateAsync(string partNumber, int? excludeId = null)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(partNumber))
+                {
+                    return new JsonResult(new { isDuplicate = false, message = "Part number is empty" });
+                }
+
+                var query = _context.Parts.Where(p => p.PartNumber == partNumber);
+                
+                // Exclude current part when editing
+                if (excludeId.HasValue && excludeId.Value > 0)
+                {
+                    query = query.Where(p => p.Id != excludeId.Value);
+                }
+
+                var existingPart = await query.FirstOrDefaultAsync();
+                var isDuplicate = existingPart != null;
+
+                return new JsonResult(new 
+                { 
+                    isDuplicate, 
+                    message = isDuplicate ? $"Part number '{partNumber}' already exists" : "Part number is available",
+                    existingPartId = existingPart?.Id,
+                    existingPartName = existingPart?.Name
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking duplicate part number: {PartNumber}", partNumber);
+                return new JsonResult(new { isDuplicate = false, message = "Error checking duplicate" });
+            }
+        }
     }
 
     /// <summary>

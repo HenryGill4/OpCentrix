@@ -388,6 +388,10 @@ using (var scope = app.Services.CreateScope())
             // FIXED: Seed materials for machine management
             await materialService.SeedDefaultMaterialsAsync();
             logger.LogInformation("✅ Material seeding completed successfully");
+            
+            // NEW: Seed comprehensive parts and stage data
+            await OpCentrix.SeedDatabase.SeedAsync(initScope.ServiceProvider);
+            logger.LogInformation("✅ Comprehensive parts database seeding completed");
 
             // Seed B&T part classifications (Segment 7)
             await partClassificationService.SeedDefaultClassificationsAsync();
