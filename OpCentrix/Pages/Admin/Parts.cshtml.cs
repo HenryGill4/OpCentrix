@@ -829,7 +829,7 @@ namespace OpCentrix.Pages.Admin
             // Check if this is an HTMX request
             if (Request.Headers.ContainsKey("HX-Request"))
             {
-                // For HTMX requests, return JavaScript that closes modal and shows success message
+                // For HTMX requests, return JavaScript that closes modal and refreshes list
                 var successScript = $@"
                     <script>
                         console.log('[PARTS] HTMX Success handler executed');
@@ -876,9 +876,21 @@ namespace OpCentrix.Pages.Admin
                             alert('SUCCESS: {message}');
                         }}
                         
-                        // Reload page to refresh data
+                        // Clear any validation messages
+                        const validationSummary = document.querySelector('.validation-summary');
+                        if (validationSummary) {{
+                            validationSummary.remove();
+                        }}
+                        
+                        // Clear form validation states
+                        const validationElements = document.querySelectorAll('.is-valid, .is-invalid');
+                        validationElements.forEach(el => {{
+                            el.classList.remove('is-valid', 'is-invalid');
+                        }});
+                        
+                        // Reload page to refresh parts list
                         setTimeout(() => {{
-                            console.log('[PARTS] Reloading page to refresh data');
+                            console.log('[PARTS] Reloading page to refresh parts list');
                             window.location.reload();
                         }}, 1500);
                     </script>";
