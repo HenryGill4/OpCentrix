@@ -112,7 +112,7 @@
                         {
                             var machineJobs = Model.Jobs.Where(j => j.MachineId == machine).OrderBy(j => j.ScheduledStart).ToList();
                             var cellClasses = new List<string> { 
-                                "machine-column", "scheduler-grid-cell", "group", "relative", "cursor-pointer", "border-b", "border-r"
+                                "machine-column", "scheduler-grid-cell", "group", "relative", "cursor-pointer", "border-b", "border-r", "overflow-hidden"
                             };
                             
                             if (isCurrentTimeSlot) cellClasses.Add("current-time");
@@ -124,49 +124,83 @@
                                  title="Click to add job at @slotDateTime.ToString("MMM dd, yyyy HH:mm")"
                                  data-slot-time="@slotDateTime.ToString("yyyy-MM-ddTHH:mm")"
                                  data-machine="@machine"
-                                 style="min-height: 60px; min-width: 150px;">
+                                 style="min-height: 60px; min-width: 150px; max-height: 60px;">
                                  
-                                <!-- Jobs that start in this slot -->
+                                <!-- Jobs in this slot -->
                                 @{ 
+                                    // Find jobs that overlap with this time slot
+                                    var slotEndDateTime = slotDateTime.Add(TimeSpan.FromMinutes(slotMinutes));
                                     var slotJobs = machineJobs.Where(job => 
-                                        job.ScheduledStart < slotDateTime.Add(TimeSpan.FromMinutes(slotMinutes)) &&
+                                        job.ScheduledStart < slotEndDateTime &&
                                         job.ScheduledEnd > slotDateTime).ToList();
                                 }
                                 
                                 @foreach (var job in slotJobs)
                                 {
-                                    // Calculate job position using similar logic to horizontal layout
-                                    var startDate = Model.Dates.Count > 0 ? Model.Dates[0].Date : DateTime.Today;
-                                    var jobStartPosition = job.CalculateGridPosition(startDate, slotMinutes);
-                                    var jobHeightSlots = job.CalculateGridWidth(slotMinutes); // Duration in slots
+                                    // Check if this job starts in this slot
+                                    var isJobStartSlot = job.ScheduledStart >= slotDateTime && job.ScheduledStart < slotEndDateTime;
                                     
-                                    // Only render the job if this is the starting slot (similar to horizontal)
-                                    var jobStartSlot = (int)Math.Floor(jobStartPosition);
-                                    var currentSlot = d * slotsPerDay + s;
+                                    // Check if this job continues from previous slots
+                                    var isJobContinuation = job.ScheduledStart < slotDateTime && job.ScheduledEnd > slotDateTime;
                                     
-                                    @if (jobStartSlot == currentSlot)
+                                    @if (isJobStartSlot || isJobContinuation)
                                     {
-                                        // Calculate vertical positioning (similar to how horizontal calculates horizontal positioning)
-                                        var topOffset = (jobStartPosition - currentSlot) * 60; // 60px per slot
-                                        var heightPx = jobHeightSlots * 60; // Height based on duration
+                                        // Calculate the portion of the job that appears in this slot
+                                        var jobVisibleStart = job.ScheduledStart < slotDateTime ? slotDateTime : job.ScheduledStart;
+                                        var jobVisibleEnd = job.ScheduledEnd > slotEndDateTime ? slotEndDateTime : job.ScheduledEnd;
+                                        var visibleDurationMinutes = (jobVisibleEnd - jobVisibleStart).TotalMinutes;
+                                        var slotFillPercentage = Math.Min(100, (visibleDurationMinutes / slotMinutes) * 100);
                                         
-                                        // Ensure minimum height and prevent overflow
-                                        var minHeight = 40;
-                                        var maxAvailableHeight = (totalSlots - currentSlot) * 60;
-                                        heightPx = Math.Max(minHeight, Math.Min(heightPx, maxAvailableHeight));
-                                        
-                                        <!-- Continuous job block spanning multiple time slots vertically -->
+                                        <!-- Job indicator that fits within the cell -->
                                         <div class="absolute job-block @machine.ToLower() status-@job.Status.ToLower().Replace(" ", "-")"
-                                             style="top: @(topOffset.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture))px; 
-                                                    height: @(heightPx.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture))px; 
-                                                    left: 2px; right: 2px; z-index: 10; min-height: @(minHeight)px;"
+                                             style="top: 2px; left: 2px; right: 2px; height: calc(100% - 4px); max-height: 56px; z-index: 10;"
                                              data-material="@job.SlsMaterial"
                                              data-priority="@job.Priority"
                                              data-status="@job.Status"
                                              onclick="event.stopPropagation(); openJobModal('@machine', '@job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")', @job.Id)"
                                              title="@job.PartNumber - @job.Status (@job.DurationHours.ToString("F1")h) - @job.SlsMaterial"
                                              data-job-id="@job.Id">
-                                            <partial name="_EnhancedJobBlock" model="job" />
+                                            
+                                            <!-- Job content that fits in cell -->
+                                            <div class="job-block-content p-1">
+                                                <div class="job-block-title text-xs truncate">@job.PartNumber</div>
+                                                @if (isJobStartSlot)
+                                                {
+                                                    <!-- Only show full details in starting slot -->
+                                                    <div class="job-block-subtitle text-xs truncate opacity-90">
+                                                        @if (!string.IsNullOrEmpty(job.SlsMaterial))
+                                                        {
+                                                            @job.SlsMaterial.Substring(0, Math.Min(job.SlsMaterial.Length, 10))@(job.SlsMaterial.Length > 10 ? "..." : "")
+                                                        }
+                                                    </div>
+                                                    <div class="job-block-meta text-xs flex justify-between">
+                                                        <span>@job.DurationHours.ToString("F1")h</span>
+                                                        <span>@job.Status</span>
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <!-- Continuation indicator -->
+                                                    <div class="job-block-subtitle text-xs opacity-75">...continues</div>
+                                                }
+                                            </div>
+                                            
+                                            <!-- Progress indicator for active jobs -->
+                                            @if (job.Status == "Building" || job.Status == "Running")
+                                            {
+                                                <div class="absolute bottom-0 left-0 h-1 bg-white bg-opacity-40 rounded-b" 
+                                                     style="width: @(slotFillPercentage)%;"></div>
+                                            }
+                                            
+                                            <!-- Visual indicator for job continuation -->
+                                            @if (isJobContinuation && !isJobStartSlot)
+                                            {
+                                                <div class="absolute top-0 left-0 w-full h-1 bg-white bg-opacity-60"></div>
+                                            }
+                                            @if (job.ScheduledEnd > slotEndDateTime)
+                                            {
+                                                <div class="absolute bottom-0 left-0 w-full h-1 bg-white bg-opacity-60"></div>
+                                            }
                                         </div>
                                     }
                                 }

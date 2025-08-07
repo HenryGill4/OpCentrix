@@ -6,9 +6,10 @@
     <title>@ViewData["Title"] - OpCentrix</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/navigation-enhancements.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/OpCentrix.styles.css" asp-append-version="true" />
     
-    @* Font Awesome for icons (including fas fa-calendar-plus) *@
+    @* Font Awesome for icons *@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     
     <script src="https://unpkg.com/htmx.org@1.9.2"></script>
@@ -17,8 +18,8 @@
 </head>
 <body class="bg-gray-50 overflow-hidden">
     <div class="flex h-screen">
-        <!-- Sidebar Navigation -->
-        <div id="sidebar" class="bg-white shadow-lg w-64 fixed inset-y-0 left-0 z-50 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
+        <!-- Enhanced Manufacturing Operations Sidebar -->
+        <div id="sidebar" class="bg-white shadow-lg w-80 fixed inset-y-0 left-0 z-50 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
             <!-- Logo and Brand -->
             <div class="flex items-center justify-center h-16 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
                 <div class="flex items-center">
@@ -29,7 +30,7 @@
                     </div>
                     <div>
                         <div class="text-lg font-bold">OpCentrix</div>
-                        <div class="text-xs opacity-75">User Account</div>
+                        <div class="text-xs opacity-75">Manufacturing Operations</div>
                     </div>
                 </div>
             </div>
@@ -42,70 +43,104 @@
                     </div>
                     <div class="ml-3">
                         <div class="text-sm font-medium text-gray-900">@(User.Identity?.Name ?? "User")</div>
-                        <div class="text-xs text-gray-500">@(User.FindFirst("Role")?.Value ?? "User")</div>
+                        <div class="text-xs text-gray-500">@(User.FindFirst("Role")?.Value ?? "Operator")</div>
                     </div>
                 </div>
             </div>
 
             <!-- Navigation Menu -->
             <nav class="mt-4 px-2 space-y-1 flex-1 overflow-y-auto">
-                <!-- Main Operations -->
+                <!-- Production Overview -->
                 <div class="mb-6">
-                    <h3 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Operations</h3>
-                    <a href="/Scheduler" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Scheduler/Index" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
+                    <h3 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Production Overview</h3>
+                    <a href="/" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Index" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5v4M12 5v4M16 5v4"></path>
+                        </svg>
+                        Dashboard
+                    </a>
+                    <a href="/Analytics" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        Production Analytics
+                    </a>
+                </div>
+
+                <!-- Production Scheduling -->
+                <div class="mb-6">
+                    <h3 class="px-3 text-xs font-semibold text-indigo-600 uppercase tracking-wider mb-2">Production Scheduling</h3>
+                    <a href="/Scheduler" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Scheduler/Index" ? "bg-indigo-100 text-indigo-700" : "text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50")">
                         <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                         </svg>
-                        Job Scheduler
+                        Production Scheduler
                     </a>
-                    <a href="/Scheduler/MasterSchedule" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100">
+                    <a href="/Scheduler/MasterSchedule" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Scheduler/MasterSchedule" ? "bg-indigo-100 text-indigo-700" : "text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50")">
                         <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                         </svg>
                         Master Schedule
                     </a>
-                    <a href="/PrintTracking" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100">
+                    <a href="/Scheduler/Resources" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50">
                         <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
                         </svg>
-                        Print Tracking
-                    </a>
-                    <a href="/Printing" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100">
-                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                        </svg>
-                        Printing Status
+                        Resource Planning
                     </a>
                 </div>
 
-                <!-- Workflow Modules -->
+                <!-- Manufacturing Operations -->
                 <div class="mb-6">
-                    <h3 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Workflow</h3>
-                    <a href="/EDM" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100">
+                    <h3 class="px-3 text-xs font-semibold text-blue-600 uppercase tracking-wider mb-2">Manufacturing Operations</h3>
+                    <a href="/PrintTracking" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/PrintTracking/Index" ? "bg-blue-100 text-blue-700" : "text-blue-600 hover:text-blue-700 hover:bg-blue-50")">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                        </svg>
+                        SLS Print Tracking
+                    </a>
+                    <a href="/Printing" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        Machine Status
+                    </a>
+                </div>
+
+                <!-- Post-Processing Workflow -->
+                <div class="mb-6">
+                    <h3 class="px-3 text-xs font-semibold text-purple-600 uppercase tracking-wider mb-2">Post-Processing</h3>
+                    <a href="/EDM" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/EDM/Index" ? "bg-purple-100 text-purple-700" : "text-purple-600 hover:text-purple-700 hover:bg-purple-50")">
                         <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                         </svg>
                         EDM Processing
                     </a>
-                    <a href="/Coating" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100">
+                    <a href="/Coating" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-purple-600 hover:text-purple-700 hover:bg-purple-50">
                         <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM7 21h10a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 002 2z"></path>
                         </svg>
                         Coating & Finishing
                     </a>
-                    <a href="/Assembly" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100">
+                    <a href="/Assembly" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-purple-600 hover:text-purple-700 hover:bg-purple-50">
                         <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
                         </svg>
                         Assembly
                     </a>
-                    <a href="/Quality" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100">
+                </div>
+
+                <!-- Quality & Compliance -->
+                <div class="mb-6">
+                    <h3 class="px-3 text-xs font-semibold text-green-600 uppercase tracking-wider mb-2">Quality & Compliance</h3>
+                    <a href="/Quality" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Quality/Index" ? "bg-green-100 text-green-700" : "text-green-600 hover:text-green-700 hover:bg-green-50")">
                         <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
                         Quality Control
                     </a>
-                    <a href="/Shipping" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100">
+                    <a href="/Shipping" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-green-600 hover:text-green-700 hover:bg-green-50">
                         <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
                         </svg>
@@ -113,16 +148,10 @@
                     </a>
                 </div>
 
-                <!-- Analytics & Reports -->
+                <!-- Reporting & Analytics -->
                 <div class="mb-6">
-                    <h3 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Analytics</h3>
-                    <a href="/Analytics" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100">
-                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                        </svg>
-                        Production Analytics
-                    </a>
-                    <a href="/Reports" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100">
+                    <h3 class="px-3 text-xs font-semibold text-orange-600 uppercase tracking-wider mb-2">Reporting</h3>
+                    <a href="/Reports" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-orange-600 hover:text-orange-700 hover:bg-orange-50">
                         <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                         </svg>
@@ -130,9 +159,9 @@
                     </a>
                 </div>
 
-                <!-- Account Management -->
+                <!-- User Management -->
                 <div class="mb-6">
-                    <h3 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Account</h3>
+                    <h3 class="px-3 text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">User</h3>
                     <a href="/Account/Settings" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Account/Settings" ? "nav-item-active" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")">
                         <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
@@ -158,12 +187,12 @@
                 @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
                 {
                     <div class="mb-6">
-                        <h3 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Administration</h3>
-                        <a href="/Admin" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100">
+                        <h3 class="px-3 text-xs font-semibold text-red-600 uppercase tracking-wider mb-2">Administration</h3>
+                        <a href="/Admin" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString().StartsWith("/Admin") == true ? "bg-red-100 text-red-700" : "text-red-600 hover:text-red-700 hover:bg-red-50")">
                             <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100-4m0 4v2m0-6V4"></path>
                             </svg>
-                            Admin Panel
+                            Admin Control Center
                             <span class="ml-auto bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">Admin</span>
                         </a>
                     </div>
@@ -173,6 +202,10 @@
             <!-- Sidebar Footer -->
             <div class="p-4 border-t border-gray-200 bg-gray-50">
                 <div class="space-y-2">
+                    <div class="flex items-center space-x-2 text-xs text-gray-500">
+                        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span>System Online</span>
+                    </div>
                     <a href="/Account/Logout" class="flex items-center w-full px-3 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors">
                         <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
@@ -184,7 +217,7 @@
         </div>
 
         <!-- Main Content Area -->
-        <div class="flex-1 md:ml-64">
+        <div class="flex-1 md:ml-80">
             <!-- Top Header Bar -->
             <header class="bg-white shadow-sm border-b border-gray-200 h-16 flex items-center justify-between px-6">
                 <!-- Mobile menu button -->
@@ -253,7 +286,7 @@
                                         <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100-4m0 4v2m0-6V4"></path>
                                         </svg>
-                                        Admin Panel
+                                        Admin Control Center
                                     </a>
                                 }
                                 <div class="border-t border-gray-100"></div>
@@ -327,6 +360,20 @@
             if (e.key === 'Escape') {
                 closeSidebar();
             }
+        });
+
+        // Enhanced navigation highlighting
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get current path and highlight active navigation items
+            const currentPath = window.location.pathname;
+            const navItems = document.querySelectorAll('.nav-item');
+            
+            navItems.forEach(item => {
+                const href = item.getAttribute('href');
+                if (href && (currentPath === href || currentPath.startsWith(href + '/'))) {
+                    item.classList.add('nav-item-active');
+                }
+            });
         });
     </script>
 
