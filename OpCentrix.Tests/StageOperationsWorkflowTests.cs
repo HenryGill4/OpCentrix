@@ -109,7 +109,7 @@ public class StageOperationsWorkflowTests : IClassFixture<OpCentrixWebApplicatio
             Status = "InProgress",
             StartDate = DateTime.UtcNow.AddHours(-2),
             ActualStartTime = DateTime.UtcNow.AddHours(-2),
-            EstimatedHours = (double?)4.0m,
+            EstimatedHours = 4.0m,
             CreatedBy = "TestOperator",
             CreatedDate = DateTime.UtcNow.AddHours(-2)
         };
@@ -608,7 +608,7 @@ public class StageOperationsWorkflowTests : IClassFixture<OpCentrixWebApplicatio
             Status = "Scheduled",
             ScheduledStart = DateTime.Today.AddHours(8),
             ScheduledEnd = DateTime.Today.AddHours(16),
-            EstimatedHours = 4.0,
+            EstimatedHours = (double)4.0m,
             MachineId = "TEST-MACHINE",
             CreatedDate = DateTime.UtcNow,
             CreatedBy = "Test"
@@ -680,7 +680,7 @@ public class StageOperationsWorkflowTests : IClassFixture<OpCentrixWebApplicatio
             ProductionStageId = slsStage.Id,
             IsRequired = true,
             ExecutionOrder = 1,
-            EstimatedHours = 6.0,
+            EstimatedHours = (double?)6.0m,
             CreatedDate = DateTime.UtcNow,
             CreatedBy = "Test"
         };
@@ -698,7 +698,7 @@ public class StageOperationsWorkflowTests : IClassFixture<OpCentrixWebApplicatio
             Status = "Scheduled",
             ScheduledStart = DateTime.Today.AddHours(8),
             ScheduledEnd = DateTime.Today.AddHours(16),
-            EstimatedHours = 6.0,
+            EstimatedHours = (double)6.0m,
             MachineId = "SLS-001",
             CreatedDate = DateTime.UtcNow,
             CreatedBy = "Test"

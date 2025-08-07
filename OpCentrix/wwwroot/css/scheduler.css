@@ -109,6 +109,140 @@
         border-right: 1px solid #e5e7eb;
     }
 
+    .scheduler-horizontal .scheduler-time-rows {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+    }
+
+    .scheduler-horizontal .time-row {
+        display: flex;
+        flex-direction: row;
+        min-height: 60px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+        .scheduler-horizontal .time-row:hover {
+            background-color: rgba(59, 130, 246, 0.02);
+        }
+
+/* Vertical scheduler specific layout */
+.scheduler-vertical {
+    display: flex;
+    flex-direction: column;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+    .scheduler-vertical .scheduler-machines-header {
+        display: flex;
+        flex-direction: row;
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        background: white;
+        border-bottom: 2px solid #e5e7eb;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .scheduler-vertical .scheduler-time-column {
+        width: 120px;
+        flex-shrink: 0;
+        background: #f8fafc;
+        border-right: 2px solid #e5e7eb;
+    }
+
+    .scheduler-vertical .scheduler-machine-columns {
+        display: flex;
+        flex-direction: row;
+        overflow-x: auto;
+        flex-grow: 1;
+    }
+
+    .scheduler-vertical .machine-column {
+        min-width: 180px;
+        max-width: 250px;
+        flex: 1;
+        border-right: 1px solid #e5e7eb;
+        background: white;
+    }
+
+    .scheduler-vertical .scheduler-time-rows {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+        position: relative;
+    }
+
+    .scheduler-vertical .time-row {
+        display: flex;
+        flex-direction: row;
+        min-height: 60px;
+        border-bottom: 1px solid #e5e7eb;
+        position: relative;
+    }
+
+        .scheduler-vertical .time-row:hover {
+            background-color: rgba(59, 130, 246, 0.02);
+        }
+
+    .scheduler-vertical .scheduler-grid-cell {
+        position: relative;
+        min-height: 60px;
+        background: linear-gradient(to bottom, #ffffff 0%, #f8fafc 100%);
+        transition: background-color 0.2s ease;
+        display: flex;
+        align-items: stretch;
+        overflow: visible; /* Allow job blocks to extend beyond cell boundaries */
+    }
+
+        .scheduler-vertical .scheduler-grid-cell:hover {
+            background: linear-gradient(to bottom, #f0f9ff 0%, #e0f2fe 100%);
+        }
+
+        .scheduler-vertical .scheduler-grid-cell.current-time {
+            background: linear-gradient(to bottom, #fef3c7 0%, #fde68a 100%);
+            border-left: 3px solid #f59e0b;
+        }
+
+        .scheduler-vertical .scheduler-grid-cell.weekend {
+            background: linear-gradient(to bottom, #fafafa 0%, #f4f4f5 100%);
+        }
+
+        .scheduler-vertical .scheduler-grid-cell.off-hours {
+            background: linear-gradient(to bottom, #f9fafb 0%, #f3f4f6 100%);
+            opacity: 0.8;
+        }
+
+    /* Allow continuous job blocks in vertical layout */
+    .scheduler-vertical .job-block {
+        /* Remove height restrictions to allow vertical spanning */
+        max-height: unset !important;
+        overflow: visible;
+        display: flex;
+        align-items: flex-start;
+        padding-top: 8px;
+    }
+
+    .scheduler-vertical .job-block-content {
+        width: 100%;
+        overflow: visible;
+    }
+
+    .scheduler-vertical .job-block-title,
+    .scheduler-vertical .job-block-subtitle {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.2;
+    }
+
+    .scheduler-vertical .job-block-meta {
+        font-size: 10px;
+        line-height: 1;
+        margin-top: 4px;
+    }
+
 /* Enhanced job block styling with improved visual hierarchy */
 .job-block {
     position: absolute;
@@ -134,7 +268,7 @@
     .job-block:hover {
         transform: translateY(-2px) scale(1.02);
         box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-        z-index: 10;
+        z-index: 100;
         border-color: rgba(255, 255, 255, 0.4);
     }
 

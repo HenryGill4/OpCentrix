@@ -192,26 +192,26 @@ namespace OpCentrix.Pages.Scheduler
                         operationId, savedJob.Id, savedJob.PartNumber);
                 }
 
-                // Return JSON response for successful operations with page refresh
+                // CRITICAL FIX: Return HTMX success handler that closes modal and refreshes page like Admin/Parts
                 var successMessage = jobRequest.Id == 0 
                     ? $"Job scheduled successfully for {savedJob.PartNumber}" 
                     : $"Job updated successfully for {savedJob.PartNumber}";
 
-                return new JsonResult(new 
-                { 
-                    success = true, 
-                    jobId = savedJob.Id,
-                    partNumber = savedJob.PartNumber,
-                    machineId = savedJob.MachineId,
-                    message = successMessage,
-                    refreshPage = true // Signal frontend to refresh
-                });
+                // Check if this is an HTMX request
+                if (Request.Headers.ContainsKey("HX-Request"))
+                {
+                    return await HandleSchedulerSuccess(successMessage);
+                }
+
+                // For non-HTMX requests, redirect with success message
+                TempData["SuccessMessage"] = successMessage;
+                return RedirectToPage();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error processing job", operationId);
                 
-                // CRITICAL FIX: Return proper JSON error response instead of throwing
+                // CRITICAL FIX: Return proper error handling instead of JSON
                 try
                 {
                     // Try to return modal with error if possible
@@ -231,16 +231,12 @@ namespace OpCentrix.Pages.Scheduler
                 {
                     _logger.LogError(innerEx, "❌ [SCHEDULER-{OperationId}] Critical error in error handling", operationId);
                     
-                    // Last resort: return JSON error to prevent 500
-                    return new JsonResult(new 
-                    { 
-                        success = false, 
-                        error = "An error occurred while saving the job. Please try again.",
-                        details = ex.Message 
-                    })
-                    {
-                        StatusCode = 200 // Return 200 to prevent HTMX from treating as network error
-                    };
+                    // Last resort: return HTML error response
+                    return Content($@"
+                        <script>
+                            alert('Error saving job: {ex.Message.Replace("'", "\\'")}');
+                            setTimeout(() => {{ window.location.reload(); }}, 1000);
+                        </script>", "text/html");
                 }
             }
         }
@@ -865,6 +861,53 @@ namespace OpCentrix.Pages.Scheduler
                 Machines = AvailableMachines,
                 Errors = new List<string> { errorMessage }
             });
+        }
+
+        private async Task<IActionResult> HandleSchedulerSuccess(string message)
+        {
+            // Return JavaScript that closes modal and shows success message like Admin/Parts
+            var successScript = $@"
+                <script>
+                    console.log('✅ [SCHEDULER] HTMX Success handler executed');
+                    
+                    // Close modal
+                    const modalContainer = document.getElementById('modal-container');
+                    if (modalContainer) {{
+                        modalContainer.style.display = 'none';
+                        modalContainer.classList.add('hidden');
+                        modalContainer.innerHTML = '';
+                        console.log('✅ [SCHEDULER] Modal container closed and cleared');
+                    }}
+                    
+                    // Remove modal backdrop if it exists
+                    const backdrop = document.querySelector('.modal-backdrop');
+                    if (backdrop) {{
+                        backdrop.remove();
+                    }}
+                    
+                    // Reset body overflow
+                    document.body.style.overflow = '';
+                    document.body.classList.remove('modal-open');
+                    
+                    // Show success message
+                    if (typeof window.showSuccessNotification === 'function') {{
+                        window.showSuccessNotification('{message}');
+                        console.log('✅ [SCHEDULER] Success notification displayed');
+                    }} else if (typeof window.showToast === 'function') {{
+                        window.showToast('success', '{message}');
+                        console.log('✅ [SCHEDULER] Success toast displayed');
+                    }} else {{
+                        alert('SUCCESS: {message}');
+                    }}
+                    
+                    // Reload page to refresh scheduler data
+                    setTimeout(() => {{
+                        console.log('🔄 [SCHEDULER] Reloading page to refresh data');
+                        window.location.reload();
+                    }}, 1000);
+                </script>";
+
+            return Content(successScript, "text/html");
         }
 
         public async Task<IActionResult> OnGetSuggestNextTimeAsync(string machineId, double durationHours, DateTime? preferredStart = null)
