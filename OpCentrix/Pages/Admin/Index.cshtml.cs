@@ -277,30 +277,38 @@ namespace OpCentrix.Pages.Admin
         {
             try
             {
-                // Re-seed sample data
-                await _seedingService.SeedPartsAsync();
-                await _seedingService.SeedJobsAsync();
+                _logger.LogInformation("Sample data seeding requested but is DISABLED");
 
-                _logger.LogInformation("Sample data added successfully");
+                // DISABLED: Part and machine seeding has been removed per user request
+                // await _seedingService.SeedPartsAsync();
+                // await _seedingService.SeedJobsAsync();
 
                 return Content($@"
-                    <div class='bg-green-50 border border-green-200 rounded-lg p-4'>
+                    <div class='bg-yellow-50 border border-yellow-200 rounded-lg p-4'>
                         <div class='flex items-center'>
-                            <svg class='w-5 h-5 text-green-500 mr-2' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                                <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M5 13l4 4L19 7'></path>
+                            <svg class='w-5 h-5 text-yellow-500 mr-2' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                                <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z'></path>
                             </svg>
-                            <span class='text-green-800 font-medium'>Success!</span>
+                            <span class='text-yellow-800 font-medium'>?? Sample Data Seeding Disabled</span>
                         </div>
-                        <p class='text-green-700 mt-1'>
-                            Sample data added for testing and demonstration. 
-                            <a href='/Admin' class='underline'>Refresh page</a> to see updated statistics.
-                        </p>
+                        <div class='text-yellow-700 mt-2'>
+                            <p class='font-medium'>Part and machine seeding has been disabled per user request.</p>
+                            <p class='mt-1 text-sm'>Please use the admin pages to add data manually:</p>
+                            <ul class='list-disc list-inside mt-2 text-sm'>
+                                <li><a href='/Admin/Parts' class='underline font-medium'>?? Add Parts via /Admin/Parts</a></li>
+                                <li><a href='/Admin/Machines' class='underline font-medium'>?? Add Machines via /Admin/Machines</a></li>
+                                <li><a href='/Scheduler' class='underline font-medium'>?? Create Jobs via /Scheduler</a></li>
+                            </ul>
+                            <p class='mt-3 text-sm bg-yellow-100 p-2 rounded border-l-4 border-yellow-400'>
+                                <strong>?? Alternative:</strong> Use the ""Create Print Tracking Test Jobs"" button below to create minimal test data for testing the print tracking system.
+                            </p>
+                        </div>
                     </div>
                 ");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error adding sample data");
+                _logger.LogError(ex, "Error in disabled sample data method");
                 return Content($@"
                     <div class='bg-red-50 border border-red-200 rounded-lg p-4'>
                         <div class='flex items-center'>
@@ -309,7 +317,7 @@ namespace OpCentrix.Pages.Admin
                             </svg>
                             <span class='text-red-800 font-medium'>Error</span>
                         </div>
-                        <p class='text-red-700 mt-1'>Failed to add sample data: {ex.Message}</p>
+                        <p class='text-red-700 mt-1'>Method disabled: {ex.Message}</p>
                     </div>
                 ");
             }

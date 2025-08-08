@@ -379,7 +379,7 @@ using (var scope = app.Services.CreateScope())
             // Ensure database is created and up to date
             await context.Database.EnsureCreatedAsync();
 
-            // Seed initial data
+            // Seed initial data (DEPRECATED - already disabled in service)
             await seedingService.SeedDataAsync();
 
             // Seed admin control system data (Task 2)
@@ -389,9 +389,9 @@ using (var scope = app.Services.CreateScope())
             await materialService.SeedDefaultMaterialsAsync();
             logger.LogInformation("✅ Material seeding completed successfully");
             
-            // NEW: Seed comprehensive parts and stage data
-            await OpCentrix.SeedDatabase.SeedAsync(initScope.ServiceProvider);
-            logger.LogInformation("✅ Comprehensive parts database seeding completed");
+            // REMOVED: Parts and machine seeding disabled per user request
+            // await OpCentrix.SeedDatabase.SeedAsync(initScope.ServiceProvider);
+            logger.LogInformation("✅ Parts and machine seeding DISABLED - use Admin pages to add data manually");
 
             // Seed B&T part classifications (Segment 7)
             await partClassificationService.SeedDefaultClassificationsAsync();
@@ -434,6 +434,7 @@ using (var scope = app.Services.CreateScope())
         logger.LogInformation("   - B&T Manufacturing Section (Amber)");
         logger.LogInformation("   - Advanced Workflows Section (Purple)");
         logger.LogInformation("   - Enhanced Admin B&T Management");
+        logger.LogInformation("NOTICE: Part and machine seeding is DISABLED - use /Admin/Parts and /Admin/Machines to add data");
     }
     catch (Exception ex)
     {
