@@ -120,7 +120,7 @@ namespace OpCentrix.Pages.Admin
                 await LoadStatisticsAsync();
                 await LoadStageDataAsync();
 
-                _logger.LogInformation("✅ [PARTS-{OperationId}] Parts page loaded successfully", operationId);
+                _logger.LogInformation("✅ [PARTS-{OperationId}] Parts page loaded successfully. Parts count: {PartsCount}", operationId, Parts.Count);
                 return Page();
             }
             catch (Exception ex)
@@ -829,73 +829,9 @@ namespace OpCentrix.Pages.Admin
             // Check if this is an HTMX request
             if (Request.Headers.ContainsKey("HX-Request"))
             {
-                // For HTMX requests, return JavaScript that closes modal and refreshes list
-                var successScript = $@"
-                    <script>
-                        console.log('[PARTS] HTMX Success handler executed');
-                        
-                        // Close modal with multiple fallback methods
-                        const modal = document.getElementById('partModal');
-                        if (modal) {{
-                            try {{
-                                if (typeof bootstrap !== 'undefined') {{
-                                    const bsModal = bootstrap.Modal.getInstance(modal);
-                                    if (bsModal) {{
-                                        bsModal.hide();
-                                        console.log('[PARTS] Modal closed via Bootstrap');
-                                    }}
-                                }}
-                                
-                                // Fallback modal close
-                                modal.style.display = 'none';
-                                modal.classList.remove('show');
-                                document.body.classList.remove('modal-open');
-                                
-                                // Remove backdrop if exists
-                                const backdrop = document.querySelector('.modal-backdrop');
-                                if (backdrop) {{
-                                    backdrop.remove();
-                                }}
-                            }} catch (e) {{
-                                console.error('Modal close error:', e);
-                            }}
-                        }}
-                        
-                        // Show success message
-                        try {{
-                            if (typeof window.showToast === 'function') {{
-                                window.showToast('success', '{message}');
-                                console.log('[PARTS] Success toast displayed');
-                            }} else if (typeof window.showPartToast === 'function') {{
-                                window.showPartToast('success', '{message}');
-                            }} else {{
-                                alert('SUCCESS: {message}');
-                            }}
-                        }} catch (e) {{
-                            console.error('Toast error:', e);
-                            alert('SUCCESS: {message}');
-                        }}
-                        
-                        // Clear any validation messages
-                        const validationSummary = document.querySelector('.validation-summary');
-                        if (validationSummary) {{
-                            validationSummary.remove();
-                        }}
-                        
-                        // Clear form validation states
-                        const validationElements = document.querySelectorAll('.is-valid, .is-invalid');
-                        validationElements.forEach(el => {{
-                            el.classList.remove('is-valid', 'is-invalid');
-                        }});
-                        
-                        // Reload page to refresh parts list
-                        setTimeout(() => {{
-                            console.log('[PARTS] Reloading page to refresh parts list');
-                            window.location.reload();
-                        }}, 1500);
-                    </script>";
-
-                return Content(successScript, "text/html");
+                // For HTMX requests, return an HX-Redirect to refresh the page properly
+                Response.Headers.Add("HX-Redirect", "/Admin/Parts");
+                return Content("", "text/html");
             }
             else
             {
@@ -905,53 +841,6 @@ namespace OpCentrix.Pages.Admin
             }
         }
 
-        private async Task<IActionResult> HandleHtmxSuccess(string message)
-        {
-            // Return JavaScript that closes modal and shows success message
-            var successScript = $@"
-                <script>
-                    console.log('[PARTS] HTMX Success handler executed');
-                    
-                    // Close modal
-                    const modal = document.getElementById('partModal');
-                    if (modal) {{
-                        if (typeof bootstrap !== 'undefined') {{
-                            const bsModal = bootstrap.Modal.getInstance(modal);
-                            if (bsModal) {{
-                                bsModal.hide();
-                                console.log('[PARTS] Modal closed via Bootstrap');
-                            }}
-                        }}
-
-                        // Fallback modal close
-                        modal.style.display = 'none';
-                        modal.classList.remove('show');
-                        document.body.classList.remove('modal-open');
-                        
-                        // Remove backdrop if exists
-                        const backdrop = document.querySelector('.modal-backdrop');
-                        if (backdrop) {{
-                            backdrop.remove();
-                        }}
-                    }}
-                    
-                    // Show success message
-                    if (typeof window.showToast === 'function') {{
-                        window.showToast('success', '{message}');
-                        console.log('[PARTS] Success toast displayed');
-                    }} else {{
-                        alert('SUCCESS: {message}');
-                    }}
-                    
-                    // Reload page to refresh data
-                    setTimeout(() => {{
-                        console.log('[PARTS] Reloading page to refresh data');
-                        window.location.reload();
-                    }}, 1500);
-                </script>";
-
-            return Content(successScript, "text/html");
-        }
         private string GetFriendlyErrorMessage(Exception ex)
         {
             if (ex.Message.Contains("UNIQUE") || ex.Message.Contains("duplicate"))

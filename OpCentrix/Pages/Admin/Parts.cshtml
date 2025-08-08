@@ -1008,21 +1008,21 @@
 @if(TempData["SuccessMessage"] != null)
 {
     <script>
-        setTimeout(() => {
+        document.addEventListener('DOMContentLoaded', function() {
             if (window.showToast) {
                 window.showToast('success', '@Html.Raw(Html.Encode(TempData["SuccessMessage"]))');
             }
-        }, 500);
+        });
     </script>
 }
 
 @if(TempData["ErrorMessage"] != null)
 {
     <script>
-        setTimeout(() => {
+        document.addEventListener('DOMContentLoaded', function() {
             if (window.showToast) {
                 window.showToast('error', '@Html.Raw(Html.Encode(TempData["ErrorMessage"]))');
             }
-        }, 500);
+        });
     </script>
 }
