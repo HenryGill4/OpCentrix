@@ -498,7 +498,7 @@
     // ===================================================================
 
     window.handleAddPartClick = function() {
-        console.log('?? [PARTS] Add part button clicked');
+        console.log('? [PARTS] Add part button clicked');
         loadPartForm('add');
     };
 
@@ -639,6 +639,7 @@
             headers: {
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                 'X-Requested-With': 'XMLHttpRequest',
+                'HX-Request': 'true',
                 'Cache-Control': 'no-cache'
             },
             signal: controller.signal,
@@ -849,6 +850,14 @@
                         ${errorMessage}
                     </div>
                 </div>
+                <div class="mt-3">
+                    <h6 class="text-muted">What you can do:</h6>
+                    <ul class="text-muted small">
+                        <li>Try refreshing the page and attempting again</li>
+                        <li>Check your internet connection</li>
+                        <li>Contact support if the problem persists</li>
+                    </ul>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
@@ -856,6 +865,9 @@
                 </button>
                 <button type="button" class="btn btn-primary" onclick="window.location.reload()">
                     <i class="fas fa-sync-alt me-2"></i>Refresh Page
+                </button>
+                <button type="button" class="btn btn-info" onclick="window.open('${fallbackUrl}', '_blank')">
+                    <i class="fas fa-external-link-alt me-2"></i>Open in New Tab
                 </button>
             </div>
         `;
@@ -869,6 +881,19 @@
             return error.message;
         }
         return 'An unexpected error occurred.';
+    }
+
+    // Add debounce utility function
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
     }
 
     // ===================================================================
@@ -885,7 +910,7 @@
             
             if (tokenInput) {
                 antiforgeryToken = tokenInput.value;
-                console.log('? [PARTS] Antiforgery token initialized');
+                console.log('?? [PARTS] Antiforgery token initialized');
             } else {
                 console.warn('?? [PARTS] Antiforgery token not found');
             }
