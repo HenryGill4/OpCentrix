@@ -1,7 +1,7 @@
 /* 
  * OpCentrix Parts Form Styles
  * Enhanced styling for parts administration form with validation feedback
- * @version 2.0
+ * @version 2.1
  */
 
 .required:after {
@@ -63,7 +63,7 @@
 }
 
 .summary-card:hover {
-    transform: translateY(-2px);
+    transform: scale(1.05);
 }
 
 .form-control:focus,
@@ -423,5 +423,298 @@
     .is-valid {
         border: 1px solid #000;
         background-image: none;
+    }
+}
+
+/* Modern Stage Management Styles */
+.stage-requirement-card {
+    transition: all 0.3s ease;
+    border: 1px solid #dee2e6;
+}
+
+.stage-requirement-card:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.stage-requirement-card .card-header {
+    background: linear-gradient(45deg, #f8f9fa, #e9ecef);
+    border-bottom: 1px solid #dee2e6;
+}
+
+.stage-requirement-card .badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+}
+
+/* Stage Selection Modal */
+.modal-content {
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+    border-bottom: 2px solid #dee2e6;
+}
+
+.modal-footer {
+    border-top: 2px solid #dee2e6;
+}
+
+/* Form Enhancements */
+.form-label.required::after {
+    content: " *";
+    color: #dc3545;
+}
+
+.tab-content {
+    background: #fff;
+    border-radius: 0 0 8px 8px;
+    min-height: 400px;
+}
+
+.nav-tabs {
+    border-bottom: 2px solid #dee2e6;
+}
+
+.nav-tabs .nav-link {
+    border: none;
+    color: #6c757d;
+    font-weight: 500;
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+}
+
+.nav-tabs .nav-link:hover {
+    border: none;
+    color: #0d6efd;
+    background: #f8f9fa;
+}
+
+.nav-tabs .nav-link.active {
+    border: none;
+    border-bottom: 3px solid #0d6efd;
+    color: #0d6efd;
+    background: #fff;
+    font-weight: 600;
+}
+
+/* Legacy Form Warning */
+.card.border-warning {
+    background: #fff3cd;
+}
+
+.card.border-warning .card-header {
+    background: #ffeaa7;
+    border-bottom: 1px solid #f1c40f;
+}
+
+/* Summary Cards */
+.summary-card {
+    transition: transform 0.3s ease;
+}
+
+.summary-card:hover {
+    transform: scale(1.05);
+}
+
+/* Admin Override Section */
+.admin-override-section {
+    margin-top: 1rem;
+}
+
+.admin-override-section .card-header {
+    background: #fff3cd;
+    border-bottom: 1px solid #f1c40f;
+}
+
+/* Stage Summary Cards */
+.stage-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stage-summary-card {
+    text-align: center;
+    padding: 1rem;
+    border-radius: 8px;
+    color: white;
+    transition: transform 0.3s ease;
+}
+
+.stage-summary-card:hover {
+    transform: translateY(-3px);
+}
+
+.stage-summary-card i {
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.stage-summary-card h4 {
+    margin: 0;
+    font-weight: bold;
+}
+
+.stage-summary-card small {
+    opacity: 0.9;
+    font-weight: 500;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #6c757d;
+}
+
+.empty-state i {
+    display: block;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-state h6 {
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.empty-state p {
+    margin-bottom: 1.5rem;
+}
+
+/* Loading States */
+.loading-spinner {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+    flex-direction: column;
+    color: #6c757d;
+}
+
+.loading-spinner i {
+    margin-bottom: 1rem;
+}
+
+/* Button Enhancements */
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+.btn.btn-outline-secondary:hover {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: white;
+}
+
+.btn.btn-outline-danger:hover {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: white;
+}
+
+/* Toast Container */
+#toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1055;
+    max-width: 350px;
+}
+
+.alert {
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Form Validation */
+.is-invalid {
+    border-color: #dc3545;
+}
+
+.is-valid {
+    border-color: #198754;
+}
+
+.text-danger {
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+/* Modern Form Controls */
+.form-control, .form-select {
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.form-text {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .stage-requirement-card {
+        margin-bottom: 1rem;
+    }
+    
+    .nav-tabs .nav-link {
+        padding: 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+    
+    .stage-summary-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .btn-group-sm .btn {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.8rem;
+    }
+}
+
+/* Dark mode support (future enhancement) */
+@media (prefers-color-scheme: dark) {
+    .stage-requirement-card {
+        background-color: #2d3748;
+        border-color: #4a5568;
+        color: #e2e8f0;
+    }
+    
+    .stage-requirement-card .card-header {
+        background: linear-gradient(45deg, #2d3748, #4a5568);
+        border-color: #4a5568;
+    }
+    
+    .modal-content {
+        background-color: #2d3748;
+        color: #e2e8f0;
+    }
+    
+    .form-control, .form-select {
+        background-color: #4a5568;
+        border-color: #718096;
+        color: #e2e8f0;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        background-color: #4a5568;
+        border-color: #63b3ed;
+        color: #e2e8f0;
     }
 }

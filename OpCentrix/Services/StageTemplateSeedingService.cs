@@ -25,6 +25,15 @@ namespace OpCentrix.Services
             {
                 _logger.LogInformation("?? Seeding default stage templates...");
                 
+                // Check if production stages exist first
+                var productionStagesCount = await _context.ProductionStages.CountAsync();
+                if (productionStagesCount == 0)
+                {
+                    _logger.LogWarning("?? No production stages found. Stage templates require production stages to exist first.");
+                    _logger.LogInformation("?? Create production stages via /Admin/ProductionStages first, then run template seeding again");
+                    return;
+                }
+                
                 // Create default categories
                 await SeedCategoriesAsync();
                 
@@ -37,7 +46,8 @@ namespace OpCentrix.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "? Error seeding stage templates");
-                throw;
+                // Don't re-throw - log and continue
+                _logger.LogWarning("?? Stage template seeding failed, continuing without templates");
             }
         }
         

@@ -1,8 +1,9 @@
-﻿# 🔁 **OpCentrix Part Form & Stage System Refactor Plan**
+﻿
+# 🔁 **OpCentrix Part Form & Stage System Refactor Plan** 
 
 **Project**: OpCentrix Manufacturing Execution System  
 **Date**: January 2025  
-**Status**: 🎉 **PHASE 6 COMPLETED** - Advanced Stage Management & Templates Implementation  
+**Status**: 📋 **PLANNING PHASE** - Ready for Implementation  
 **Developer**: Solo Implementation with AI Assistant  
 
 ---
@@ -18,788 +19,1147 @@ Transform the current Part Form from a complex boolean-flag system to a clean, l
 - 🔗 **Preserve Data**: Migrate existing part configurations seamlessly
 - 🚀 **Enhance Scheduler**: Better integration with stage-based scheduling
 
-### **⚠️ CRITICAL COMMAND INSTRUCTIONS**
-**To prevent PowerShell freezing and continue implementation safely:**
-
-#### **✅ WORKING COMMANDS (Use These)**
-```powershell
-# Directory verification
-pwd
-
-# SQLite database commands (single line, quoted)
-sqlite3 scheduler.db "SELECT COUNT(*) FROM Parts;"
-sqlite3 scheduler.db ".tables"
-sqlite3 scheduler.db ".read filename.sql"
-
-# File operations
-Copy-Item "source.db" "backup.db"
-Get-ChildItem "*.sql"
-
-# Build commands (separate commands, never together)
-dotnet clean
-dotnet restore
-dotnet build OpCentrix/OpCentrix.csproj
-```
-
-#### **❌ COMMANDS THAT CAUSE FREEZING (NEVER USE)**
-```powershell
-# Multi-line SQLite commands (will fail)
-sqlite3 scheduler.db "
-CREATE TABLE ...
-"
-
-# Commands with && (PowerShell doesn't support)
-dotnet clean && dotnet build
-
-# dotnet run (will pause waiting for input)
-dotnet run
-
-# Complex string escaping in PowerShell
-sqlite3 scheduler.db 'CREATE TABLE ... "now"'
-```
-
-#### **✅ SAFE MIGRATION WORKFLOW**
-1. **Always verify directory first**: `pwd`
-2. **Create backup before changes**: `Copy-Item "scheduler.db" "backup_$(Get-Date -Format 'yyyyMMdd_HHmm').db"`
-3. **Use SQL files for complex operations**: Create `.sql` file, then `.read filename.sql`
-4. **Verify each step**: Check results with simple SELECT queries
-5. **Never use dotnet run**: Only use `dotnet build` for compilation verification
-
 ---
 
-## ✅ **CURRENT PROGRESS STATUS**
+## ✅ **CURRENT STATE ANALYSIS**
 
-### **✅ Phase 1: Foundation Setup - COMPLETED** 
-- ✅ Created ComponentTypes lookup table with 'General' and 'Serialized' options
-- ✅ Created ComplianceCategories lookup table with 'Non NFA' and 'NFA' options  
-- ✅ Created PartAssetLinks table for 3D models, photos, and documents
-- ✅ Created LegacyFlagToStageMap table for automated migration mapping
-- ✅ Added foreign key columns to Parts table (ComponentTypeId, ComplianceCategoryId, IsLegacyForm)
-- ✅ Seeded lookup data with initial values
-- ✅ Created performance indexes
+### **✅ What Already Works (Strong Foundation)**
 
-### **✅ Phase 2: Data Migration - COMPLETED**
-- ✅ Created backup tables for rollback capability
-- ✅ Migrated ComponentType string field to ComponentTypeId foreign key
-- ✅ Migrated compliance data to ComplianceCategoryId based on regulatory flags
-- ✅ Successfully migrated stage requirements for 3 out of 4 parts:
-  - **ASSY-001**: 8 stage requirements created (32.0 total hours)
-  - **BT-SUP-001**: 6 stage requirements created (14.4 total hours)  
-  - **MED-001**: 4 stage requirements created (8.0 total hours)
-  - **TEST-FORM-001**: Remains in legacy form (no stage flags set)
-- ✅ Created debug view `vw_MigratedPartSummary` for monitoring
-- ✅ Verified data integrity - 0 migration issues
+#### **Database Schema - READY**
+- ✅ **ProductionStage table** - Complete with DefaultHourlyRate, CustomFieldsConfig
+- ✅ **PartStageRequirement table** - Has PlannedMinutes (EstimatedHours), SetupMinutes, TeardownMinutes, OverrideHourlyRate
+- ✅ **Machine table** - Contains StdHourlyRate equivalent fields
+- ✅ **Parts table** - Has all core fields (PartNumber, Name, ComponentType, CustomerPartNumber)
+- ✅ **Audit infrastructure** - CreatedUtc/UpdatedUtc patterns established
 
-### **✅ Phase 3: Form Modernization - COMPLETED**
-- ✅ Created ComponentTypeService.cs - CRUD for component types
-- ✅ Created ComplianceCategoryService.cs - CRUD for compliance categories  
-- ✅ Created ComponentType.cs model
-- ✅ Created ComplianceCategory.cs model
-- ✅ Created PartAssetLink.cs model
-- ✅ Created LegacyFlagToStageMap.cs model
-- ✅ Updated SchedulerContext.cs with new DbSets
-- ✅ Updated Part model with navigation properties
-- ✅ Updated _PartForm.cshtml with new lookup fields
-- ✅ Updated Parts.cshtml.cs page model with lookup services
-- ✅ Enhanced PartFormViewModel with new properties
+#### **Models - PRODUCTION READY**
+- ✅ **Part.cs** - Has PartNumber, ComponentType, Description (200+ fields total)
+- ✅ **ProductionStage.cs** - Complete with machine assignments, custom fields, hourly rates
+- ✅ **PartStageRequirement.cs** - Full CRUD with time tracking, cost overrides
+- ✅ **PartStageService.cs** - Complete service layer with business logic
 
-### **✅ Phase 4: Database Cleanup - COMPLETED**
-- ✅ **Legacy Validation Removal**: Removed boolean stage validation logic
-- ✅ **Industry/Application Cleanup**: Removed legacy field validation  
-- ✅ **Modern Lookup Validation**: Added ComponentTypeId/ComplianceCategoryId validation
-- ✅ **Form UI Modernization**: Replaced legacy stage checkboxes with guidance
-- ✅ **Default Value Enhancement**: Added proper defaults for lookup fields
-- ✅ **Build Verification**: Clean compilation with no errors
-- ✅ **Database Backup**: Created Phase 4 backup for rollback capability
+#### **Pages & Services - FUNCTIONAL**
+- ✅ **Parts.cshtml/.cs** - Working CRUD operations 
+- ✅ **_PartForm.cshtml** - Functional form structure
+- ✅ **parts-form.js** - JavaScript foundation exists
+- ✅ **PartStageService** - Complete with GetPartStagesAsync, AddPartStageAsync, etc.
 
----
-
-## 🎯 **PHASE 4 IMPLEMENTATION SUMMARY**
-
-### **🧹 What Was Cleaned Up**
-
-#### **Validation Logic Modernization**
-- **Legacy Manufacturing Stages**: Removed boolean checkbox validation (RequiresSLSPrinting, RequiresCNCMachining, etc.)
-- **Industry/Application Fields**: Removed string field validation in favor of lookup tables
-- **Added New Validations**: ComponentTypeId and ComplianceCategoryId now required
-- **Default Values**: Set proper defaults (ComponentTypeId=1, ComplianceCategoryId=1)
-
-#### **Form Interface Enhancement**
-- **Removed Legacy Checkboxes**: Manufacturing stage boolean checkboxes removed from UI
-- **Added Guidance**: Clear messaging about modern stage management system
-- **Enhanced User Experience**: Better information about the new stage system capabilities
-
-#### **Code Quality Improvements**
-- **Simplified Logic**: Cleaner validation without complex boolean combinations
-- **Future-Ready**: Prepared for full legacy column removal in future phases
-- **Consistent Patterns**: All validation now follows lookup-driven approach
-
-### **🚀 Benefits Achieved**
-
-#### **For Users**
-- **Cleaner Interface**: No more confusing boolean checkboxes
-- **Better Guidance**: Clear instructions on using modern stage system
-- **Enhanced Flexibility**: Lookup-driven fields provide better options
-
-#### **For Developers**
-- **Simplified Validation**: Cleaner, more maintainable validation logic
-- **Modern Architecture**: Lookup-based design follows best practices
-- **Extensible Design**: Easy to add new component types and compliance categories
-
-#### **For System**
-- **Data Integrity**: Proper foreign key relationships ensure data consistency
-- **Performance**: Lookup tables provide better query performance
-- **Scalability**: System ready for additional lookup tables and enhancements
-
----
-
-## 🔄 **NEXT STEPS: PHASE 5 OPPORTUNITIES**
-
-### **📋 Optional Enhancement Areas**
-
-#### **5.1 Complete Legacy Column Removal** (Database Changes)
-```sql
--- Future enhancement: Remove legacy columns after full verification
--- ALTER TABLE Parts DROP COLUMN RequiresSLSPrinting;
--- ALTER TABLE Parts DROP COLUMN RequiresCNCMachining;
--- ALTER TABLE Parts DROP COLUMN Industry;
--- ALTER TABLE Parts DROP COLUMN Application;
--- Note: Deferred to avoid breaking changes during transition
-```
-
-#### **5.2 Asset Management Implementation**
-- **File Upload Interface**: Complete the PartAssetLinks system
-- **3D Model Viewer**: Integration with 3D model viewing
-- **Photo Gallery**: Photo management for parts
-- **Document Library**: Technical documentation storage
-
-#### **5.3 Advanced Stage Management**
-- **Stage Templates**: Pre-configured stage combinations
-- **Cost Optimization**: Automatic cost calculation improvements
-- **Workflow Integration**: Enhanced scheduler integration
-- **Analytics Dashboard**: Stage performance analytics
-
-#### **5.4 Enhanced Scheduler Integration**
-- **Stage-Based Scheduling**: Full migration from EstimatedHours to stage-based calculations
-- **Machine Requirements**: Stage-specific machine assignments
-- **Setup/Teardown Optimization**: Intelligent scheduling considering setup times
-- **Capacity Planning**: Stage-aware capacity calculations
-
----
-
-## 🚀 **PHASE 5: ASSET MANAGEMENT IMPLEMENTATION - COMPLETED**
-
-### **📋 Optional Enhancement Areas**
-
-#### **✅ 5.2 Asset Management Implementation - COMPLETED**
-- ✅ **File Upload Interface**: Complete PartAssetLinks system implemented
-- ✅ **3D Model Management**: Support for .step, .stp, .stl, .obj, .3mf, .ply files
-- ✅ **Photo Gallery**: Photo management with preview capabilities
-- ✅ **Document Library**: Technical documentation storage (.pdf, .dwg, .dxf, etc.)
-- ✅ **Asset Service Layer**: Comprehensive service with validation and file management
-- ✅ **User Interface**: Professional asset management tab in Part form
-- ✅ **File Validation**: Type checking, size limits, and content validation
-- ✅ **Statistics Dashboard**: Asset usage tracking and statistics
-
-#### **5.1 Complete Legacy Column Removal** (Database Changes)
-```sql
--- Future enhancement: Remove legacy columns after full verification
--- ALTER TABLE Parts DROP COLUMN RequiresSLSPrinting;
--- ALTER TABLE Parts DROP COLUMN RequiresCNCMachining;
--- ALTER TABLE Parts DROP COLUMN Industry;
--- ALTER TABLE Parts DROP COLUMN Application;
--- Note: Deferred to avoid breaking changes during transition
-```
-
-#### **5.3 Advanced Stage Management**
-- **Stage Templates**: Pre-configured stage combinations
-- **Cost Optimization**: Automatic cost calculation improvements
-- **Workflow Integration**: Enhanced scheduler integration
-- **Analytics Dashboard**: Stage performance analytics
-
-#### **5.4 Enhanced Scheduler Integration**
-- **Stage-Based Scheduling**: Full migration from EstimatedHours to stage-based calculations
-- **Machine Requirements**: Stage-specific machine assignments
-- **Setup/Teardown Optimization**: Intelligent scheduling considering setup times
-- **Capacity Planning**: Stage-aware capacity calculations
-
----
-
-## 🎊 **PHASE 5 IMPLEMENTATION SUMMARY**
-
-### **📎 Asset Management Features Implemented**
-
-#### **File Upload System**
-- **Multi-Type Support**: 3D Models, Photos, Technical Drawings, Documents
-- **File Validation**: Extension checking, size limits, content validation
-- **Secure Storage**: Organized directory structure with unique filenames
-- **File Type Limits**: 
-  - 3D Models: 100MB (.step, .stp, .stl, .obj, .3mf, .ply)
-  - Photos: 10MB (.jpg, .jpeg, .png, .bmp, .tiff, .webp)
-  - Drawings: 25MB (.pdf, .dwg, .dxf, .svg)
-  - Documents: 5MB (.pdf, .docx, .xlsx, .txt, .md)
-
-#### **Asset Management Interface**
-- **Tabbed Interface**: Professional asset management tab in Part form
-- **Upload Form**: Drag-and-drop capable upload with real-time validation
-- **Asset Gallery**: Grid view with type grouping and preview capabilities
-- **Action Menu**: View, download, and delete options for each asset
-- **Statistics Cards**: Real-time counts by asset type
-
-#### **Service Architecture**
-- **IPartAssetService Interface**: Complete CRUD operations for assets
-- **PartAssetService - Implementation**: File handling, validation, and database operations
-- **Error Handling**: Comprehensive logging and error management
-- **Security**: File type validation and secure storage paths
-
-#### **Database Integration**
-- **PartAssetLinks Table**: Already created in Phase 1, now fully utilized
-- **Foreign Key Relationships**: Proper Part-to-Asset relationships
-- **Soft Delete**: Assets marked inactive rather than physically deleted
-- **Audit Trail**: Created/modified tracking for all assets
-
-### **🔧 Technical Implementation Details**
-
-#### **Backend Services**
-```csharp
-// New services added:
-IPartAssetService - Complete asset management interface
-PartAssetService - File upload, validation, and management implementation
-
-// New endpoints added to Parts.cshtml.cs:
-OnGetPartAssetsAsync() - Load assets for display
-OnPostUploadAssetAsync() - Handle file uploads
-OnPostDeleteAssetAsync() - Remove assets
-OnGetSupportedFileTypesAsync() - Get validation info
-```
-
-#### **Frontend Features**
-```javascript
-// Asset Management JavaScript:
-AssetManager - Complete client-side asset management
-uploadAsset() - File upload with progress tracking
-Asset rendering with type-specific icons and previews
-Real-time statistics updates
-File type validation on client side
-```
-
-#### **UI Components**
-```html
-<!-- New tab added to Part form -->
-Assets Tab - Only visible for existing parts
-Upload Form - Multi-type file upload interface
-Asset Gallery - Grid view with action menus
-Statistics Dashboard - Real-time asset counts
-```
-
-### **🎯 Business Value Delivered**
-
-#### **For Manufacturing Teams**
-- **3D Model Storage**: CAD files directly linked to parts for easy access
-- **Photo Documentation**: Visual reference for quality control and assembly
-- **Technical Drawings**: Engineering documentation readily available
-- **Process Documents**: SOPs and specifications attached to parts
-
-#### **For Quality Assurance**
-- **Visual Inspection**: Reference photos for comparison during QC
-- **Documentation**: Complete technical documentation package
-- **Traceability**: All assets linked to specific parts for audit trails
-- **Version Control**: Asset history and modification tracking
-
-#### **For Operations**
-- **Centralized Storage**: All part-related files in one secure location
-- **Easy Access**: Direct links from part records to related assets
-- **Organized Structure**: Type-based organization for quick finding
-- **Mobile Friendly**: Responsive design works on tablets and phones
-
-### **📊 Implementation Metrics**
-
-| Feature | Status | Completion |
-|---------|---------|------------|
-| **Asset Service Layer** | ✅ **Complete** | 100% |
-| **File Upload Interface** | ✅ **Complete** | 100% |
-| **Asset Management UI** | ✅ **Complete** | 100% |
-| **File Validation** | ✅ **Complete** | 100% |
-| **Statistics Dashboard** | ✅ **Complete** | 100% |
-| **Database Integration** | ✅ **Complete** | 100% |
-| **Security Implementation** | ✅ **Complete** | 100% |
-| **Error Handling** | ✅ **Complete** | 100% |
-
-### **🔐 Security Features**
-
-#### **File Upload Security**
-- **Extension Validation**: Only allowed file types accepted
-- **Content Validation**: File signature checking for common types
-- **Size Limits**: Type-specific maximum file sizes enforced
-- **Secure Storage**: Files stored outside web accessible directory
-- **Unique Filenames**: GUID-based naming prevents conflicts
-
-#### **Access Control**
-- **Authentication Required**: Only authenticated users can upload
-- **Part Association**: Assets tied to specific parts for access control
-- **Audit Logging**: All asset operations logged with user information
-- **Soft Delete**: Assets can be recovered if accidentally deleted
-
----
-
-## ✅ **CURRENT STATE ANALYSIS - PHASE 5 COMPLETE**
-
-### **✅ What Works Perfectly (Production Ready)**
-
-#### **Database Schema - MODERN & COMPREHENSIVE**
-- ✅ **Lookup Tables**: ComponentTypes and ComplianceCategories with data
-- ✅ **Asset Links**: PartAssetLinks table fully implemented and utilized
-- ✅ **Foreign Keys**: Proper relationships throughout system
-- ✅ **Performance**: Indexes and relationships optimized for asset queries
-
-#### **Service Layer - FULLY COMPREHENSIVE**
-- ✅ **Asset Management**: Complete CRUD operations with file handling
-- ✅ **File Processing**: Upload, validation, storage, and retrieval
-- ✅ **Error Handling**: Robust exception handling and logging
-- ✅ **Integration**: Seamless integration with existing part management
-
-#### **User Interface - PROFESSIONAL & INTUITIVE**
-- ✅ **Asset Management Tab**: Professional interface for file management
-- ✅ **Upload Interface**: Drag-and-drop capable with real-time feedback
-- ✅ **Asset Gallery**: Type-organized display with preview capabilities
-- ✅ **Statistics Dashboard**: Real-time asset metrics and usage tracking
-
-### **🎯 Updated Part Form Architecture**
-```
-Complete Modern Part Form Structure:
+### **🎯 Current Part Form Structure**
+Part Form Sections:
 ├── Basic Info (PartNumber, Name, Description) ✅
-├── Component Type (Lookup Dropdown) ✅
-├── Compliance Category (Lookup Dropdown) ✅  
-├── Material Selection ✅
-├── Manufacturing Stages (Modern Tab Interface) ✅
-├── Physical Properties ✅
-├── B&T Compliance ✅
-├── Summary & Admin Override ✅
-└── Asset Management (3D Models, Photos, Documents) ✅ NEW!
-```
+├── Material Selection ✅  
+├── ComponentType (string field) → NEEDS LOOKUP
+├── Industry/Application → REMOVE
+├── Part Class → REMOVE  
+├── Quality Standards → REMOVE
+├── Stage Boolean Flags (20+ fields) → REMOVE
+├── Duration Fields → MOVE TO STAGE LEVEL
+└── Assets → ADD NEW SECTION
+
 
 ---
 
-## 📈 **UPDATED SUCCESS METRICS**
+## 🛠️ **DETAILED IMPLEMENTATION PLAN**
 
-### **🎯 Technical Quality Metrics**
-| Metric | Target | Achieved | Status |
-|--------|--------|----------|---------|
-| **Clean Build** | 100% | ✅ 100% | **PASSED** |
-| **No Regressions** | 0 issues | ✅ 0 issues | **PASSED** |
-| **Asset Integration** | Complete | ✅ Complete | **PASSED** |
-| **File Management** | Complete | ✅ Complete | **PASSED** |
-| **UI Enhancement** | Complete | ✅ Complete | **PASSED** |
+## **Phase 1: Foundation Setup** (No Breaking Changes)
+*Timeline: 1-2 days*
 
-### **📈 Enhanced Business Value Metrics**
-| Benefit | Before | After | Improvement |
-|---------|--------|-------|-------------|
-| **Form Complexity** | 20+ boolean fields | 2 lookup dropdowns + asset tab | **95% reduction** |
-| **Asset Management** | None | Complete file management | **∞ improvement** |
-| **Documentation** | External storage | Integrated with parts | **100% integrated** |
-| **User Experience** | Basic form | Professional asset interface | **Dramatically enhanced** |
-| **Data Organization** | Scattered files | Centralized asset storage | **Complete organization** |
+### **1.1 Create Lookup Tables**
+sql
+-- ComponentType lookup (General/Serialized)
+CREATE TABLE ComponentTypes (
+    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+    Name TEXT NOT NULL UNIQUE,
+    Description TEXT NOT NULL,
+    IsActive INTEGER NOT NULL DEFAULT 1,
+    SortOrder INTEGER NOT NULL DEFAULT 100,
+    CreatedDate TEXT NOT NULL DEFAULT (datetime('now')),
+    CreatedBy TEXT NOT NULL DEFAULT 'System',
+    LastModifiedDate TEXT NOT NULL DEFAULT (datetime('now')),
+    LastModifiedBy TEXT NOT NULL DEFAULT 'System'
+);
+
+-- ComplianceCategory lookup (Non NFA/NFA)  
+CREATE TABLE ComplianceCategories (
+    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+    Name TEXT NOT NULL UNIQUE,
+    Description TEXT NOT NULL,
+    RegulatoryLevel TEXT NOT NULL, -- 'Standard', 'Regulated', 'Restricted'
+    RequiresSpecialHandling INTEGER NOT NULL DEFAULT 0,
+    IsActive INTEGER NOT NULL DEFAULT 1,
+    SortOrder INTEGER NOT NULL DEFAULT 100,
+    CreatedDate TEXT NOT NULL DEFAULT (datetime('now')),
+    CreatedBy TEXT NOT NULL DEFAULT 'System',
+    LastModifiedDate TEXT NOT NULL DEFAULT (datetime('now')),
+    LastModifiedBy TEXT NOT NULL DEFAULT 'System'
+);
+
+-- PartAssetLink for 3D models/photos
+CREATE TABLE PartAssetLinks (
+    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+    PartId INTEGER NOT NULL,
+    Url TEXT NOT NULL,
+    DisplayName TEXT NOT NULL,
+    Source TEXT NOT NULL, -- 'Upload', 'External', 'Generated'
+    AssetType TEXT NOT NULL, -- '3DModel', 'Photo', 'Drawing', 'Document'
+    LastCheckedUtc TEXT,
+    IsActive INTEGER NOT NULL DEFAULT 1,
+    CreatedDate TEXT NOT NULL DEFAULT (datetime('now')),
+    CreatedBy TEXT NOT NULL DEFAULT 'System',
+    FOREIGN KEY (PartId) REFERENCES Parts(Id) ON DELETE CASCADE
+);
+
+-- NEW: Legacy flag to stage mapping table for cleaner migration
+CREATE TABLE LegacyFlagToStageMap (
+    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+    LegacyFieldName TEXT NOT NULL UNIQUE, -- 'RequiresSLSPrinting', 'RequiresCNCMachining', etc.
+    ProductionStageName TEXT NOT NULL,     -- 'SLS Printing', 'CNC Machining', etc.
+    ExecutionOrder INTEGER NOT NULL,       -- 1, 2, 3, etc.
+    DefaultSetupMinutes INTEGER NOT NULL DEFAULT 30,
+    DefaultTeardownMinutes INTEGER NOT NULL DEFAULT 0,
+    IsActive INTEGER NOT NULL DEFAULT 1
+);
+
+
+### **1.2 Add Foreign Keys to Parts Table**
+sql
+-- Add lookup foreign keys
+ALTER TABLE Parts ADD COLUMN ComponentTypeId INTEGER;
+ALTER TABLE Parts ADD COLUMN ComplianceCategoryId INTEGER;
+
+-- Optional future enhancement fields
+ALTER TABLE Parts ADD COLUMN IsLegacyForm INTEGER NOT NULL DEFAULT 1; -- Track migration status
+
+-- Add foreign key constraints (if SQLite supports, otherwise enforce in code)
+-- FK to ComponentTypes and ComplianceCategories
+
+
+### **1.3 Seed Legacy Flag Mapping Data**
+sql
+-- Populate the mapping table for automated migration
+INSERT INTO LegacyFlagToStageMap (LegacyFieldName, ProductionStageName, ExecutionOrder, DefaultSetupMinutes, DefaultTeardownMinutes) VALUES
+('RequiresSLSPrinting', 'SLS Printing', 1, 45, 30),
+('RequiresEDMOperations', 'EDM Operations', 2, 30, 15),
+('RequiresCNCMachining', 'CNC Machining', 3, 60, 20),
+('RequiresAssembly', 'Assembly', 4, 15, 10),
+('RequiresFinishing', 'Finishing', 5, 30, 15);
+
+
+### **1.4 Create Services**
+- ComponentTypeService.cs - CRUD for component types
+- ComplianceCategoryService.cs - CRUD for compliance categories  
+- PartAssetService.cs - Asset management (upload, validation, cleanup)
+
+### **1.5 Seed Lookup Data**
+csharp
+// ComponentTypes
+General, Serialized
+
+// ComplianceCategories  
+Non NFA, NFA
+
+
+## **Phase 2: Data Migration** (Critical Phase)
+*Timeline: 1 day*
+
+### **2.1 Pre-Migration Backup and Schema Snapshot**
+sql
+-- Create migration snapshots directory if not exists
+-- mkdir -p Migrations/Snapshots
+
+-- Export current schema before migration
+-- .output Migrations/Snapshots/pre_migration_schema.sql
+-- .schema
+-- .output stdout
+
+-- Store current state for rollback capability
+CREATE TABLE Migration_Backup_Parts AS SELECT * FROM Parts;
+CREATE TABLE Migration_Backup_PartStageRequirements AS SELECT * FROM PartStageRequirements;
+
+
+### **2.2 Improved ComponentType Data Migration**
+sql
+BEGIN TRANSACTION;
+
+-- Pre-check: Verify ProductionStages exist
+SELECT 'Pre-check: Production Stages' as CheckType, COUNT(*) as Count 
+FROM ProductionStages 
+WHERE Name IN ('SLS Printing', 'EDM Operations', 'CNC Machining', 'Assembly', 'Finishing');
+
+-- Sanitize and migrate ComponentType data with improved logic
+UPDATE Parts 
+SET ComponentTypeId = CASE 
+    WHEN LOWER(IFNULL(ComponentType, '')) IN ('general', '') THEN 1
+    WHEN LOWER(IFNULL(ComponentType, '')) = 'serialized' THEN 2
+    ELSE 1 -- Default to General for any unrecognized values
+END;
+
+-- Migrate ComplianceCategory data (add logic based on existing regulatory fields)
+UPDATE Parts 
+SET ComplianceCategoryId = CASE 
+    WHEN RequiresATFCompliance = 1 OR RequiresITARCompliance = 1 OR RequiresSerialization = 1 THEN 2 -- NFA
+    ELSE 1 -- Non NFA
+END;
+
+COMMIT;
+
+
+### **2.3 Enhanced Stage Boolean Flag Migration**
+sql
+BEGIN TRANSACTION;
+
+-- Use the mapping table for automated, maintainable migration
+INSERT INTO PartStageRequirements (
+    PartId, 
+    ProductionStageId, 
+    ExecutionOrder, 
+    EstimatedHours, 
+    SetupTimeMinutes,
+    TeardownTimeMinutes,
+    IsRequired, 
+    IsActive, 
+    CreatedBy, 
+    CreatedDate,
+    LastModifiedBy,
+    LastModifiedDate
+)
+SELECT 
+    p.Id as PartId,
+    ps.Id as ProductionStageId,
+    lfm.ExecutionOrder,
+    COALESCE(p.EstimatedHours / (SELECT COUNT(*) FROM LegacyFlagToStageMap WHERE IsActive = 1), 2.0) as EstimatedHours, -- Distribute estimated hours across stages
+    lfm.DefaultSetupMinutes,
+    lfm.DefaultTeardownMinutes,
+    1 as IsRequired,
+    1 as IsActive,
+    'Migration' as CreatedBy,
+    datetime('now') as CreatedDate,
+    'Migration' as LastModifiedBy,
+    datetime('now') as LastModifiedDate
+FROM Parts p
+CROSS JOIN LegacyFlagToStageMap lfm
+INNER JOIN ProductionStages ps ON ps.Name = lfm.ProductionStageName
+WHERE lfm.IsActive = 1
+  AND (
+    (lfm.LegacyFieldName = 'RequiresSLSPrinting' AND p.RequiresSLSPrinting = 1) OR
+    (lfm.LegacyFieldName = 'RequiresCNCMachining' AND p.RequiresCNCMachining = 1) OR
+    (lfm.LegacyFieldName = 'RequiresEDMOperations' AND p.RequiresEDMOperations = 1) OR
+    (lfm.LegacyFieldName = 'RequiresAssembly' AND p.RequiresAssembly = 1) OR
+    (lfm.LegacyFieldName = 'RequiresFinishing' AND p.RequiresFinishing = 1)
+  );
+
+-- Mark parts as migrated
+UPDATE Parts SET IsLegacyForm = 0 WHERE Id IN (
+    SELECT DISTINCT PartId FROM PartStageRequirements WHERE CreatedBy = 'Migration'
+);
+
+COMMIT;
+
+
+### **2.4 Enhanced Data Integrity Verification**
+sql
+-- Comprehensive verification queries
+SELECT 'Migration Summary' as CheckType,
+    COUNT(DISTINCT p.Id) as TotalParts,
+    COUNT(DISTINCT CASE WHEN p.IsLegacyForm = 0 THEN p.Id END) as MigratedParts,
+    COUNT(DISTINCT psr.PartId) as PartsWithStages
+FROM Parts p
+LEFT JOIN PartStageRequirements psr ON p.Id = psr.PartId AND psr.IsActive = 1;
+
+-- Detailed verification per part
+SELECT 
+    p.PartNumber,
+    p.IsLegacyForm,
+    COUNT(psr.Id) as StageCount,
+    GROUP_CONCAT(ps.Name) as RequiredStages,
+    SUM(psr.EstimatedHours) as TotalEstimatedHours
+FROM Parts p
+LEFT JOIN PartStageRequirements psr ON p.Id = psr.PartId AND psr.IsActive = 1
+LEFT JOIN ProductionStages ps ON psr.ProductionStageId = ps.Id
+GROUP BY p.Id, p.PartNumber, p.IsLegacyForm
+ORDER BY p.PartNumber;
+
+
+## **Phase 2.5: Migration Verification Tools** (NEW)
+*Timeline: 0.5 day*
+
+### **2.5.1 Create Migration Debug View**
+sql
+-- Create a view for ongoing migration status monitoring
+CREATE VIEW vw_MigratedPartSummary AS
+SELECT 
+    p.Id,
+    p.PartNumber,
+    p.Name,
+    p.IsLegacyForm,
+    p.ComponentTypeId,
+    ct.Name as ComponentTypeName,
+    p.ComplianceCategoryId,
+    cc.Name as ComplianceCategoryName,
+    COUNT(psr.Id) as StageCount,
+    SUM(CASE WHEN psr.EstimatedHours IS NOT NULL THEN psr.EstimatedHours ELSE 0 END) as TotalStageHours,
+    COUNT(pal.Id) as AssetCount,
+    CASE 
+        WHEN p.IsLegacyForm = 1 THEN 'Legacy Form'
+        WHEN COUNT(psr.Id) = 0 THEN 'No Stages Assigned'
+        WHEN p.ComponentTypeId IS NULL THEN 'Missing Component Type'
+        WHEN p.ComplianceCategoryId IS NULL THEN 'Missing Compliance Category'
+        ELSE 'Migrated Successfully'
+    END as MigrationStatus
+FROM Parts p
+LEFT JOIN ComponentTypes ct ON p.ComponentTypeId = ct.Id
+LEFT JOIN ComplianceCategories cc ON p.ComplianceCategoryId = cc.Id
+LEFT JOIN PartStageRequirements psr ON p.Id = psr.PartId AND psr.IsActive = 1
+LEFT JOIN PartAssetLinks pal ON p.Id = pal.PartId AND pal.IsActive = 1
+GROUP BY p.Id;
+
+
+### **2.5.2 Add Debug Admin Page (Suggestion)**
+csharp
+// SUGGESTION: Create /Admin/Debug/RefactorStatus.cshtml page
+// This page would display:
+// - Parts missing stage assignments
+// - Orphaned asset checks  
+// - Part distribution by compliance/category
+// - Migration progress metrics
+
+public class RefactorStatusModel : PageModel
+{
+    public async Task<IActionResult> OnGetAsync()
+    {
+        var migrationStats = await _context.Database.SqlQueryRaw<MigrationSummary>(@"
+            SELECT 
+                COUNT(*) as TotalParts,
+                SUM(CASE WHEN IsLegacyForm = 0 THEN 1 ELSE 0 END) as MigratedParts,
+                COUNT(DISTINCT psr.PartId) as PartsWithStages,
+                COUNT(DISTINCT pal.PartId) as PartsWithAssets
+            FROM Parts p
+            LEFT JOIN PartStageRequirements psr ON p.Id = psr.PartId AND psr.IsActive = 1
+            LEFT JOIN PartAssetLinks pal ON p.Id = pal.PartId AND pal.IsActive = 1
+        ").FirstOrDefaultAsync();
+
+        ViewData["MigrationStats"] = migrationStats;
+        return Page();
+    }
+}
+
+
+## **Phase 3: Form Modernization** (User-Facing Changes)
+*Timeline: 2-3 days*
+
+### **3.1 Update Part Form UI**
+
+#### **Remove Legacy Fields**
+html
+<!-- REMOVE from _PartForm.cshtml -->
+<div class="form-group">
+    <label asp-for="Industry">Industry</label>
+    <select asp-for="Industry" class="form-control">
+        <!-- Remove entire dropdown -->
+    </select>
+</div>
+
+<div class="form-group">
+    <label asp-for="Application">Application</label>
+    <input asp-for="Application" class="form-control" />
+    <!-- Remove entire field -->
+</div>
+
+<div class="form-group">
+    <label asp-for="PartClass">Part Class</label>
+    <select asp-for="PartClass" class="form-control">
+        <!-- Remove entire dropdown -->
+    </select>
+</div>
+
+<!-- Remove all stage boolean checkboxes -->
+<div class="form-check">
+    <input asp-for="RequiresSLSPrinting" class="form-check-input" type="checkbox" />
+    <label asp-for="RequiresSLSPrinting" class="form-check-label">Requires SLS Printing</label>
+    <!-- Remove ~15 similar checkboxes -->
+</div>
+
+
+#### **Add New Lookup Fields**
+html
+<!-- ADD to _PartForm.cshtml -->
+<div class="form-group">
+    <label asp-for="ComponentTypeId">Component Type</label>
+    <select asp-for="ComponentTypeId" class="form-control" asp-items="ViewBag.ComponentTypes">
+        <option value="">Select Component Type</option>
+    </select>
+    <span asp-validation-for="ComponentTypeId" class="text-danger"></span>
+</div>
+
+<div class="form-group">
+    <label asp-for="ComplianceCategoryId">Compliance Category</label>
+    <select asp-for="ComplianceCategoryId" class="form-control" asp-items="ViewBag.ComplianceCategories">
+        <option value="">Select Compliance Category</option>
+    </select>
+    <span asp-validation-for="ComplianceCategoryId" class="text-danger"></span>
+</div>
+
+
+#### **Add Assets Management Section**
+html
+<!-- ADD new Assets section with modern approach -->
+<div class="card mt-4" x-data="assetManager()">
+    <div class="card-header">
+        <h5>📎 Part Assets</h5>
+    </div>
+    <div class="card-body">
+        <div id="assets-container">
+            <!-- NOTE: Consider migrating to Alpine.js for better state management -->
+            <div class="asset-upload-area">
+                <input type="file" id="asset-upload" accept=".step,.stp,.stl,.jpg,.jpeg,.png,.pdf" multiple>
+                <label for="asset-upload" class="btn btn-outline-primary">
+                    <i class="fas fa-upload"></i> Upload 3D Models/Photos
+                </label>
+            </div>
+            <div id="existing-assets">
+                <!-- Existing assets listed here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+
+### **3.2 Enhanced Stage Requirements Section**
+html
+<!-- REPLACE stage checkboxes with dynamic stage manager -->
+<!-- SUGGESTION: Consider HTMX for better server-side integration -->
+<div class="card mt-4" hx-get="/api/parts/stage-requirements" hx-trigger="load">
+    <div class="card-header d-flex justify-content-between">
+        <h5>⚙️ Manufacturing Stages</h5>
+        <button type="button" class="btn btn-sm btn-success" id="add-stage-btn">
+            <i class="fas fa-plus"></i> Add Stage
+        </button>
+    </div>
+    <div class="card-body">
+        <div id="stage-requirements-container">
+            <!-- Dynamic stage requirements loaded via HTMX/AJAX -->
+        </div>
+    </div>
+</div>
+
+
+### **3.3 Update JavaScript (Enhanced)**
+
+#### **Remove Legacy Stage Logic**
+javascript
+// REMOVE from parts-form.js
+function updateStageRequirements() {
+    // Remove boolean-based stage logic
+}
+
+// REMOVE individual stage change handlers
+$('#RequiresSLSPrinting').change(function() { ... });
+$('#RequiresCNCMachining').change(function() { ... });
+// etc.
+
+
+#### **Add New Lookup and Stage Logic (Modern Approach)**
+javascript
+// ENHANCED: Consider migrating from jQuery to Alpine.js for better reactivity
+// ADD to parts-form.js
+class PartFormManager {
+    constructor() {
+        this.initializeLookupHandlers();
+        this.initializeStageManager();
+        this.initializeAssetManager();
+    }
+
+    initializeLookupHandlers() {
+        $('#ComponentTypeId').change(() => this.onComponentTypeChange());
+        $('#ComplianceCategoryId').change(() => this.onComplianceCategoryChange());
+    }
+
+    initializeStageManager() {
+        $('#add-stage-btn').click(() => this.showAddStageModal());
+        this.loadExistingStageRequirements();
+    }
+
+    initializeAssetManager() {
+        $('#asset-upload').change((e) => this.handleAssetUpload(e));
+    }
+
+    async loadExistingStageRequirements() {
+        const partId = $('#Id').val();
+        if (partId) {
+            try {
+                const response = await fetch(`/api/parts/${partId}/stages`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const stages = await response.json();
+                this.renderStageRequirements(stages);
+            } catch (error) {
+                console.error('Failed to load stage requirements:', error);
+                this.showError('Failed to load stage requirements');
+            }
+        }
+    }
+
+    renderStageRequirements(stages) {
+        const container = $('#stage-requirements-container');
+        container.empty();
+        
+        stages.forEach(stage => {
+            const stageHtml = this.createStageRequirementHtml(stage);
+            container.append(stageHtml);
+        });
+    }
+
+    // SUGGESTION: Consider Alpine.js component instead
+    createStageRequirementHtml(stage) {
+        return `
+            <div class="stage-requirement-item" data-stage-id="${stage.id}">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>${stage.productionStage.name}</strong>
+                        <small class="text-muted">(${stage.estimatedHours}h + ${stage.setupTimeMinutes}min setup + ${stage.teardownTimeMinutes || 0}min teardown)</small>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.removeStage(${stage.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    showError(message) {
+        // TODO: Implement proper toast/notification system
+        alert(message);
+    }
+}
+
+// Initialize on document ready
+$(document).ready(() => {
+    new PartFormManager();
+});
+
+
+### **3.4 Update Page Model**
+csharp
+// UPDATE Parts.cshtml.cs
+public async Task<IActionResult> OnGetAsync(int? id)
+{
+    // Load lookup data
+    ViewData["ComponentTypes"] = new SelectList(
+        await _componentTypeService.GetActiveComponentTypesAsync(),
+        "Id", "Name");
+        
+    ViewData["ComplianceCategories"] = new SelectList(
+        await _complianceCategoryService.GetActiveCategoriesAsync(),
+        "Id", "Name");
+
+    if (id.HasValue)
+    {
+        Part = await _partService.GetPartByIdAsync(id.Value);
+        if (Part == null) return NotFound();
+        
+        // Load existing stage requirements
+        var stages = await _partStageService.GetPartStagesWithDetailsAsync(Part.Id);
+        ViewData["ExistingStages"] = stages;
+    }
+    else
+    {
+        Part = new Part();
+    }
+
+    return Page();
+}
+
+
+## **Phase 4: Database Cleanup** (Breaking Changes)
+*Timeline: 1 day*
+
+### **4.1 Pre-Cleanup Schema Snapshot**
+sql
+-- Export schema after migration, before cleanup
+-- .output Migrations/Snapshots/post_migration_pre_cleanup_schema.sql
+-- .schema
+-- .output stdout
+
+
+### **4.2 Remove Legacy Columns**
+sql
+-- Remove stage boolean columns (after confirming migration success)
+ALTER TABLE Parts DROP COLUMN RequiresSLSPrinting;
+ALTER TABLE Parts DROP COLUMN RequiresCNCMachining;
+ALTER TABLE Parts DROP COLUMN RequiresEDMOperations;
+ALTER TABLE Parts DROP COLUMN RequiresAssembly;
+ALTER TABLE Parts DROP COLUMN RequiresFinishing;
+-- Remove ~15 more stage-related boolean columns
+
+-- Remove other deprecated fields
+ALTER TABLE Parts DROP COLUMN Industry;
+ALTER TABLE Parts DROP COLUMN Application;
+ALTER TABLE Parts DROP COLUMN PartClass;
+ALTER TABLE Parts DROP COLUMN QualityStandards;
+
+-- IMPORTANT: Keep EstimatedHours during transition to prevent scheduler breakage
+-- Will be removed in Phase 5 once stage-based logic is verified and tested
+-- ALTER TABLE Parts DROP COLUMN EstimatedHours; -- DEFER to Phase 5
+
+
+### **4.3 Update Part.cs Model (Enhanced)**
+csharp
+// REMOVE from Part.cs
+public bool RequiresSLSPrinting { get; set; }
+public bool RequiresCNCMachining { get; set; }
+public bool RequiresEDMOperations { get; set; }
+// Remove ~15 stage boolean properties
+
+public string Industry { get; set; }
+public string Application { get; set; }
+public string PartClass { get; set; }
+public string QualityStandards { get; set; }
+
+// ADD new foreign key properties
+public int? ComponentTypeId { get; set; }
+public int? ComplianceCategoryId { get; set; }
+
+// Optional future enhancement fields
+public bool IsLegacyForm { get; set; } = true; // Track migration status
+
+// ADD navigation properties
+public virtual ComponentType? ComponentType { get; set; }
+public virtual ComplianceCategory? ComplianceCategory { get; set; }
+public virtual ICollection<PartAssetLink> AssetLinks { get; set; } = new List<PartAssetLink>();
+
+
+### **4.4 Update DbContext (Enhanced)**
+csharp
+// ADD to SchedulerContext.cs
+public DbSet<ComponentType> ComponentTypes { get; set; }
+public DbSet<ComplianceCategory> ComplianceCategories { get; set; }
+public DbSet<PartAssetLink> PartAssetLinks { get; set; }
+public DbSet<LegacyFlagToStageMap> LegacyFlagToStageMaps { get; set; }
+
+protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    // Configure relationships
+    modelBuilder.Entity<Part>()
+        .HasOne(p => p.ComponentType)
+        .WithMany()
+        .HasForeignKey(p => p.ComponentTypeId);
+
+    modelBuilder.Entity<Part>()
+        .HasOne(p => p.ComplianceCategory)
+        .WithMany()
+        .HasForeignKey(p => p.ComplianceCategoryId);
+
+    modelBuilder.Entity<PartAssetLink>()
+        .HasOne(pal => pal.Part)
+        .WithMany(p => p.AssetLinks)
+        .HasForeignKey(pal => pal.PartId);
+
+    // ENHANCED: Handle legacy field mapping during EF model cleanup
+    modelBuilder.Entity<Part>()
+        .Ignore(p => p.RequiresSLSPrinting)
+        .Ignore(p => p.RequiresCNCMachining)
+        .Ignore(p => p.RequiresEDMOperations)
+        .Ignore(p => p.RequiresAssembly)
+        .Ignore(p => p.RequiresFinishing)
+        .Ignore(p => p.Industry)
+        .Ignore(p => p.Application)
+        .Ignore(p => p.PartClass)
+        .Ignore(p => p.QualityStandards);
+
+    // Use HasColumnName if database column names differ from property names
+    modelBuilder.Entity<Part>()
+        .Property(p => p.ComponentTypeId)
+        .HasColumnName("ComponentTypeId");
+}
+
+
+### **4.5 Post-Cleanup Schema Snapshot**
+sql
+-- Export final schema after cleanup
+-- .output Migrations/Snapshots/post_cleanup_final_schema.sql
+-- .schema
+-- .output stdout
+
+
+## **Phase 5: Enhanced Features** (Optional Improvements)
+*Timeline: 2-3 days**
+
+### **5.1 Enhanced TeardownMinutes Support**
+csharp
+// ENHANCED: Add to PartStageRequirement.cs if not already present
+public int? TeardownTimeMinutes { get; set; }
+
+// OPTIONAL: Add material cost override capability
+public decimal? OverrideMaterialCost { get; set; }
+
+// ENHANCED: Update CalculateTotalEstimatedCost method
+public decimal CalculateTotalEstimatedCost()
+{
+    var hours = (decimal)GetEffectiveEstimatedHours();
+    var rate = GetEffectiveHourlyRate();
+    var setupMinutes = SetupTimeMinutes ?? ProductionStage?.DefaultSetupMinutes ?? 30;
+    var teardownMinutes = TeardownTimeMinutes ?? 0;
+    
+    var setupCost = (decimal)(setupMinutes / 60.0) * rate;
+    var teardownCost = (decimal)(teardownMinutes / 60.0) * rate;
+    var materialCost = OverrideMaterialCost ?? MaterialCost;
+    
+    return setupCost + (hours * rate) + teardownCost + materialCost;
+}
+
+
+### **5.2 PartStageSLS Specialized Table**
+sql
+-- IF SLS-specific parameters are needed
+CREATE TABLE PartStageSLS (
+    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+    PartStageRequirementId INTEGER NOT NULL,
+    LaserPowerWatts REAL NOT NULL DEFAULT 170.0,
+    ScanSpeedMmPerSec REAL NOT NULL DEFAULT 1000.0,
+    LayerThicknessMicrons REAL NOT NULL DEFAULT 30.0,
+    HatchSpacingMicrons REAL NOT NULL DEFAULT 120.0,
+    PowderType TEXT NOT NULL DEFAULT 'Ti-6Al-4V Grade 5',
+    ArgonFlowRate REAL NOT NULL DEFAULT 15.0,
+    BuildTemperatureCelsius REAL NOT NULL DEFAULT 180.0,
+    CreatedDate TEXT NOT NULL DEFAULT (datetime('now')),
+    CreatedBy TEXT NOT NULL DEFAULT 'System',
+    FOREIGN KEY (PartStageRequirementId) REFERENCES PartStageRequirements(Id) ON DELETE CASCADE
+);
+
+
+### **5.3 Enhanced Scheduler Integration**
+csharp
+// ENHANCED SchedulerService to use new stage structure with proper time calculation
+public async Task<List<JobViewModel>> GetScheduledJobsAsync()
+{
+    var jobs = await _context.Jobs
+        .Include(j => j.Part)
+            .ThenInclude(p => p.PartStageRequirements)
+                .ThenInclude(psr => psr.ProductionStage)
+        .Where(j => j.IsActive)
+        .ToListAsync();
+
+    return jobs.Select(job => new JobViewModel
+    {
+        // ENHANCED: Use PlannedMinutes + Setup + Teardown calculation
+        EstimatedDuration = job.Part.PartStageRequirements
+            .Where(psr => psr.IsActive)
+            .Sum(psr => {
+                var plannedMinutes = psr.EstimatedHours * 60.0;
+                var setupMinutes = psr.SetupTimeMinutes ?? psr.ProductionStage?.DefaultSetupMinutes ?? 30;
+                var teardownMinutes = psr.TeardownTimeMinutes ?? 0;
+                return (plannedMinutes + setupMinutes + teardownMinutes) / 60.0;
+            }),
+        
+        // Use stage-based machine requirements
+        PreferredMachines = job.Part.PartStageRequirements
+            .Where(psr => psr.RequiresSpecificMachine)
+            .Select(psr => psr.AssignedMachineId)
+            .Where(mid => !string.IsNullOrEmpty(mid))
+            .ToList()),
+
+        // ENHANCED: Use hourly rate overrides if present
+        EstimatedCost = job.Part.PartStageRequirements
+            .Where(psr => psr.IsActive)
+            .Sum(psr => psr.CalculateTotalEstimatedCost())
+    }).ToList();
+}
+
+// IMPORTANT: Retain EstimatedHours field during transition to prevent scheduler breakage
+// Remove Part.EstimatedHours only after stage-based logic is fully verified and tested
+public async Task<bool> VerifyStageBasedCalculations()
+{
+    var partsWithStages = await _context.Parts
+        .Where(p => p.PartStageRequirements.Any(psr => psr.IsActive))
+        .Include(p => p.PartStageRequirements)
+            .ThenInclude(psr => psr.ProductionStage)
+        .ToListAsync();
+
+    var discrepancies = new List<string>();
+    
+    foreach (var part in partsWithStages)
+    {
+        var legacyEstimate = part.EstimatedHours;
+        var stageBasedEstimate = part.PartStageRequirements
+            .Where(psr => psr.IsActive)
+            .Sum(psr => psr.GetEffectiveEstimatedHours() + 
+                   (psr.SetupTimeMinutes ?? 30) / 60.0 +
+                   (psr.TeardownTimeMinutes ?? 0) / 60.0);
+
+        var variance = Math.Abs(legacyEstimate - stageBasedEstimate);
+        if (variance > 0.5) // More than 30 minutes difference
+        {
+            discrepancies.Add($"Part {part.PartNumber}: Legacy={legacyEstimate}h, Stage-based={stageBasedEstimate}h");
+        }
+    }
+    
+    if (discrepancies.Any())
+    {
+        _logger.LogWarning("Stage-based calculation discrepancies found: {Discrepancies}", 
+            string.Join("; ", discrepancies));
+        return false;
+    }
+    
+    return true;
+}
+
 
 ---
 
-## 🎉 **PHASE 5 COMPLETION CELEBRATION**
+## ✅ **Phase 6: Advanced Operator Tools** (Optional Enhancements)
+*Timeline: 3-5 days*  
+*⚠️ **IMPORTANT**: Implement only AFTER successful deployment of core refactor (Phases 1–5)*
 
-### **🏆 Major Achievements**
+### **6.1 — Operator Notes Per Stage**
+Add stage-specific operator communication and documentation.
 
-#### **📎 Complete Asset Management System**
-- ✅ **Professional File Upload**: Drag-and-drop interface with validation
-- ✅ **Multi-Format Support**: 3D models, photos, drawings, documents
-- ✅ **Secure Storage**: Organized directory structure with unique naming
-- ✅ **Type-Specific Validation**: Extension, size, and content checking
-- ✅ **Visual Interface**: Gallery view with previews and action menus
+**Database Schema:**
+sql
+CREATE TABLE PartStageNotes (
+    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+    PartId INTEGER NOT NULL,
+    ProductionStageId INTEGER NOT NULL,
+    JobId INTEGER, -- Optional link to specific job instance
+    Note TEXT NOT NULL,
+    NoteType TEXT NOT NULL DEFAULT 'General', -- 'General', 'QC', 'Issue', 'Setup'
+    IsResolved INTEGER NOT NULL DEFAULT 0,
+    CreatedBy TEXT NOT NULL,
+    CreatedDate TEXT NOT NULL DEFAULT (datetime('now')),
+    LastModifiedBy TEXT,
+    LastModifiedDate TEXT,
+    FOREIGN KEY (PartId) REFERENCES Parts(Id) ON DELETE CASCADE,
+    FOREIGN KEY (ProductionStageId) REFERENCES ProductionStages(Id) ON DELETE CASCADE,
+    FOREIGN KEY (JobId) REFERENCES Jobs(Id) ON DELETE SET NULL
+);
 
-#### **🔧 Technical Excellence**
-- ✅ **Service Architecture**: Clean, testable service layer implementation
-- ✅ **Database Design**: Properly normalized schema with relationships
-- ✅ **Error Handling**: Comprehensive exception handling and logging
-- ✅ **Performance**: Efficient file handling and database operations
 
-#### **👥 Enhanced User Experience**
-- ✅ **Intuitive Interface**: Easy-to-use upload and management interface
-- ✅ **Visual Feedback**: Real-time upload progress and file previews
-- ✅ **Organized Display**: Type-grouped asset gallery with search capabilities
-- ✅ **Mobile Responsive**: Works seamlessly on all device types
-
----
-
-## 🚀 **REFACTOR SUCCESS SUMMARY - ALL PHASES COMPLETE**
-
-### **🎯 Project Goals: 100% ACHIEVED + EXCEEDED**
-
-#### **✅ Transform Boolean-Flag System to Lookup-Driven**
-- **BEFORE**: 20+ boolean checkboxes for manufacturing stages
-- **AFTER**: 2 clean lookup dropdowns + modern stage management + asset management
-- **RESULT**: 95% reduction in form complexity + comprehensive asset system
-
-#### **✅ Maintain Core Functionality** 
-- **BEFORE**: Complex boolean logic for stage management
-- **AFTER**: Flexible ProductionStage relationships + asset integration
-- **RESULT**: Enhanced functionality with better performance + file management
-
-#### **✅ Preserve Existing Data**
-- **BEFORE**: Risk of data loss during migration
-- **AFTER**: 100% successful migration with 0 issues + asset capability
-- **RESULT**: All existing parts preserved + new asset management features
-
-#### **✅ Enhance System Capabilities**
-- **BEFORE**: Basic part form with limited functionality
-- **AFTER**: Comprehensive part management with integrated asset system
-- **RESULT**: Professional manufacturing system with complete documentation
-
-### **🏅 Implementation Quality: EXCEPTIONAL++**
-
-#### **📋 Project Management Excellence**
-- **5 Phases Completed**: Foundation → Migration → Modernization → Cleanup → Assets
-- **Risk Mitigation**: Comprehensive backup and rollback procedures
-- **Zero Downtime**: No interruption to production operations
-- **Feature Enhancement**: Added capabilities beyond original scope
-
-#### **🔧 Technical Excellence**
-- **Modern Architecture**: Service-oriented design with asset management
-- **Data Integrity**: Proper foreign key relationships + file validation
-- **Performance Optimized**: Indexed lookup tables + efficient file handling
-- **Security Focused**: Comprehensive file validation and secure storage
-
-#### **👨‍💻 Development Excellence**
-- **Best Practices**: Following .NET 8 and Razor Pages patterns
-- **Error Handling**: Comprehensive exception handling throughout
-- **Logging**: Detailed operation logging for troubleshooting
-- **Testing Ready**: All components prepared for comprehensive testing
+**Use Cases:**
+- Shift communication about part-specific issues
+- QC failure documentation and resolution tracking
+- Setup notes for complex parts
+- Historical knowledge retention
 
 ---
 
-## 🎊 **PROJECT STATUS: COMPLETE & PRODUCTION READY++**
+### **6.2 — Material and Tooling Requirements**
+Extend stage requirements with material and tooling specifications.
 
-**The OpCentrix Part Form & Stage System Refactor has been successfully completed with enhanced asset management capabilities!** 🎉
+**Database Schema Enhancement:**
+sql
+-- Add to existing PartStageRequirement table
+ALTER TABLE PartStageRequirements ADD COLUMN RequiredMaterial TEXT NULL;
+ALTER TABLE PartStageRequirements ADD COLUMN ToolingNotes TEXT NULL;
+ALTER TABLE PartStageRequirements ADD COLUMN SpecialInstructions TEXT NULL;
 
-### **📈 Final Results**
-- **5 Phases Completed**: Foundation → Migration → Modernization → Cleanup → Assets
-- **100% Data Preserved**: All existing parts and configurations intact
-- **95% Complexity Reduction**: From 20+ boolean fields to modern lookup system
-- **Professional Asset System**: Complete file management for manufacturing
-- **Zero Breaking Changes**: All existing functionality enhanced and expanded
-- **Future-Ready**: Prepared for advanced features and continued growth
 
-### **🚀 Ready for Production++**
-The enhanced Part Form system is now ready for production use with:
-- ✅ **Clean, intuitive user interface with asset management**
-- ✅ **Robust data validation and comprehensive error handling**
-- ✅ **High-performance lookup-driven architecture**
-- ✅ **Professional asset management with file upload capabilities**
-- ✅ **Comprehensive audit trails and detailed logging**
-- ✅ **Extensible design for future enhancements**
-- ✅ **Complete documentation and manufacturing support**
-
-**Congratulations on the successful completion of this major system enhancement!** 🎊
+**Use Cases:**
+- Special powder requirements for SLS printing
+- Custom jigs and fixturing specifications
+- Material staging and preparation notes
+- Safety requirements and handling instructions
 
 ---
 
-*This enhanced refactor represents a significant modernization and expansion of the OpCentrix Part Management system, transforming it from a legacy boolean-based approach to a contemporary, lookup-driven architecture with comprehensive asset management capabilities that will serve as an excellent foundation for continued manufacturing excellence.*
+### **6.3 — Checklist Templates per Stage**
+Create reusable procedural checklists tied to production stages.
+
+**Database Schema:**
+sql
+CREATE TABLE StageChecklistTemplates (
+    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ProductionStageId INTEGER NOT NULL,
+    Title TEXT NOT NULL,
+    Description TEXT,
+    IsActive INTEGER NOT NULL DEFAULT 1,
+    CreatedBy TEXT NOT NULL,
+    CreatedDate TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (ProductionStageId) REFERENCES ProductionStages(Id) ON DELETE CASCADE
+);
+
+CREATE TABLE ChecklistItems (
+    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+    TemplateId INTEGER NOT NULL,
+    StepDescription TEXT NOT NULL,
+    IsRequired INTEGER NOT NULL DEFAULT 1,
+    SortOrder INTEGER NOT NULL DEFAULT 100,
+    EstimatedMinutes INTEGER,
+    SafetyNote TEXT,
+    CreatedBy TEXT NOT NULL,
+    CreatedDate TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (TemplateId) REFERENCES StageChecklistTemplates(Id) ON DELETE CASCADE
+);
+
+-- Link checklists to specific part stage requirements
+CREATE TABLE PartStageChecklists (
+    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+    PartStageRequirementId INTEGER NOT NULL,
+    ChecklistTemplateId INTEGER NOT NULL,
+    IsActive INTEGER NOT NULL DEFAULT 1,
+    FOREIGN KEY (PartStageRequirementId) REFERENCES PartStageRequirements(Id) ON DELETE CASCADE,
+    FOREIGN KEY (ChecklistTemplateId) REFERENCES StageChecklistTemplates(Id) ON DELETE CASCADE
+);
+
+
+**Use Cases:**
+- Standardized QC procedures
+- Safety verification steps
+- Machine setup and calibration checklists
+- Training and consistency enforcement
 
 ---
 
-## 🚀 **PHASE 6: ADVANCED STAGE MANAGEMENT & TEMPLATES - COMPLETED**
+### **6.4 — Audit Log for Metadata Changes**
+Comprehensive change tracking for critical manufacturing data.
 
-### **📋 Phase 6 Implementation Summary**
+**Database Schema:**
+sql
+CREATE TABLE AuditLog (
+    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+    EntityName TEXT NOT NULL, -- 'Part', 'PartStageRequirement', 'ProductionStage'
+    EntityId INTEGER NOT NULL,
+    FieldName TEXT NOT NULL,
+    OldValue TEXT,
+    NewValue TEXT,
+    ChangeType TEXT NOT NULL, -- 'Create', 'Update', 'Delete'
+    ChangedBy TEXT NOT NULL,
+    ChangedUtc TEXT NOT NULL DEFAULT (datetime('now')),
+    IPAddress TEXT,
+    UserAgent TEXT,
+    Reason TEXT -- Optional justification for change
+);
 
-#### **✅ 6.3 Advanced Stage Management - COMPLETED**
-- ✅ **Stage Templates**: Pre-configured stage combinations for different part types
-- ✅ **Template Management Interface**: Professional admin interface for template creation/management
-- ✅ **Template Application**: Apply templates to parts with automatic stage requirement creation
-- ✅ **Template Categories**: Organized grouping system for templates
-- ✅ **Usage Analytics**: Template usage tracking and statistics
-- ✅ **Template Suggestions**: Smart suggestions based on part characteristics
+-- Index for performance
+CREATE INDEX IX_AuditLog_Entity ON AuditLog(EntityName, EntityId);
+CREATE INDEX IX_AuditLog_Date ON AuditLog(ChangedUtc);
 
-#### **Enhanced Template System Features**
 
-#### **Template Models**
-- ✅ **StageTemplate**: Core template entity with industry/complexity categorization
-- ✅ **StageTemplateStep**: Individual steps within templates with detailed parameters
-- ✅ **StageTemplateCategory**: Organizational categories for template grouping
-- ✅ **Part Integration**: AppliedTemplateId field linking parts to their applied templates
-
-#### **Service Architecture**
-- ✅ **IStageTemplateService**: Comprehensive interface for template management
-- ✅ **StageTemplateService**: Full implementation with CRUD operations and analytics
-- ✅ **StageTemplateSeedingService**: Default template creation with B&T manufacturing focus
-- ✅ **Template Application**: Automated conversion of templates to part stage requirements
-
-#### **Admin Interface**
-- ✅ **Templates Management Page**: Professional interface for template administration
-- ✅ **Template Creation**: Modal-based template creation with validation
-- ✅ **Usage Statistics**: Dashboard with template usage metrics and analytics
-- ✅ **Template Filtering**: Industry, complexity, and category-based filtering
-- ✅ **Template Actions**: Edit, duplicate, delete, and apply operations
-
-#### **Default Templates Created**
-- ✅ **B&T Suppressor Manufacturing**: Complete workflow for suppressor components
-- ✅ **B&T Firearm Component**: Standard workflow for firearm parts with serialization
-- ✅ **Titanium Parts - Standard**: General workflow for titanium manufacturing
-- ✅ **Simple Prototype**: Basic workflow for prototype parts
-- ✅ **Complex Multi-Stage**: Comprehensive workflow for complex aerospace parts
-- ✅ **High Volume Production**: Optimized workflow for high volume manufacturing
-
-### **🔧 Technical Implementation Details**
-
-#### **Database Integration**
-- ✅ **Migration Script**: Phase6_StageTemplates.sql with complete schema
-- ✅ **Foreign Key Relationships**: Proper referential integrity throughout
-- ✅ **Performance Indexes**: Optimized indexing for template queries
-- ✅ **Data Integrity**: Cascading deletes and constraint enforcement
-
-#### **Service Integration**
-- ✅ **Dependency Injection**: Proper service registration in Program.cs
-- ✅ **Interface Segregation**: Clean separation of concerns with focused interfaces
-- ✅ **Error Handling**: Comprehensive exception handling and logging
-- ✅ **Transaction Support**: Atomic operations for template application
-
-#### **User Experience**
-- ✅ **Responsive Design**: Mobile-friendly template management interface
-- ✅ **Real-time Feedback**: Progress indicators and status messages
-- ✅ **Visual Analytics**: Statistics cards and usage metrics
-- ✅ **Intuitive Workflow**: Streamlined template creation and application process
-
-### **🎯 Business Value Delivered**
-
-#### **For Manufacturing Engineers**
-- **Template Library**: Pre-configured workflows for common manufacturing scenarios
-- **Time Savings**: Rapid part setup using proven stage combinations
-- **Consistency**: Standardized approaches across similar parts
-- **Best Practices**: Embedded manufacturing expertise in template design
-
-#### **For Production Managers**
-- **Process Standardization**: Consistent workflows across part types
-- **Cost Optimization**: Pre-calculated time and cost estimates
-- **Resource Planning**: Predictable stage requirements for scheduling
-- **Quality Assurance**: Standardized quality checkpoints and requirements
-
-#### **For System Administrators**
-- **Template Management**: Centralized control over manufacturing workflows
-- **Usage Analytics**: Insights into template effectiveness and adoption
-- **Customization**: Ability to create industry-specific templates
-- **Maintenance**: Easy updates and modifications to standard workflows
-
-### **📊 Implementation Metrics**
-
-| Feature | Status | Completion |
-|---------|---------|------------|
-| **Template Models** | ✅ **Complete** | 100% |
-| **Service Layer** | ✅ **Complete** | 100% |
-| **Admin Interface** | ✅ **Complete** | 100% |
-| **Default Templates** | ✅ **Complete** | 100% |
-| **Database Migration** | ✅ **Complete** | 100% |
-| **Usage Analytics** | ✅ **Complete** | 100% |
-| **Template Application** | ✅ **Complete** | 100% |
-| **Error Handling** | ✅ **Complete** | 100% |
-
-### **🔐 Security Features**
-
-#### **Access Control**
-- **Admin Authorization**: Only admin users can manage templates
-- **Audit Logging**: All template operations logged with user information
-- **Data Validation**: Comprehensive input validation and sanitization
-- **SQL Injection Protection**: Parameterized queries throughout
-
-#### **Data Integrity**
-- **Foreign Key Constraints**: Proper referential integrity enforcement
-- **Transaction Safety**: Atomic operations for critical workflows
-- **Backup Compatibility**: Schema changes support existing backup/restore
-- **Migration Safety**: Non-destructive database migrations
+**Use Cases:**
+- Track changes to part setup times and costs
+- Monitor stage requirement modifications
+- Compliance and traceability requirements
+- Root cause analysis for production issues
 
 ---
 
-## ✅ **CURRENT STATE ANALYSIS - PHASE 6 COMPLETE**
+### **6.5 — Export Part/Stage Requirements as CSV**
+Data export functionality for external systems and reporting.
 
-### **✅ What Works Perfectly (Production Ready++)**
+**API Endpoint:**
+csharp
+[HttpGet("api/parts/export")]
+public async Task<IActionResult> ExportPartStageRequirements(
+    [FromQuery] string format = "csv",
+    [FromQuery] int[] partIds = null,
+    [FromQuery] bool includeInactive = false)
+{
+    var query = _context.Parts
+        .Include(p => p.PartStageRequirements)
+            .ThenInclude(psr => psr.ProductionStage)
+        .AsQueryable();
 
-#### **Database Schema - COMPREHENSIVE & OPTIMIZED**
-- ✅ **Template System**: Complete template hierarchy with categories and steps
-- ✅ **Part Integration**: Seamless integration with existing part management
-- ✅ **Performance**: Optimized indexing for fast template queries
-- ✅ **Scalability**: Schema supports unlimited templates and categories
+    if (partIds?.Any() == true)
+        query = query.Where(p => partIds.Contains(p.Id));
 
-#### **Service Layer - ENTERPRISE-GRADE**
-- ✅ **Template Management**: Complete CRUD operations with analytics
-- ✅ **Automatic Application**: Intelligent template-to-part conversion
-- ✅ **Usage Tracking**: Comprehensive analytics and reporting
-- ✅ **Integration**: Seamless integration with existing stage management
+    if (!includeInactive)
+        query = query.Where(p => p.PartStageRequirements.Any(psr => psr.IsActive));
 
-#### **User Interface - PROFESSIONAL & COMPREHENSIVE**
-- ✅ **Template Administration**: Full-featured management interface
-- ✅ **Analytics Dashboard**: Real-time usage statistics and metrics
-- ✅ **Template Library**: Organized, searchable template collection
-- ✅ **Application Workflow**: Streamlined template application process
+    var data = await query.SelectMany(p => p.PartStageRequirements
+        .Where(psr => includeInactive || psr.IsActive)
+        .Select(psr => new PartStageExportDto
+        {
+            PartNumber = p.PartNumber,
+            PartName = p.Name,
+            StageName = psr.ProductionStage.Name,
+            ExecutionOrder = psr.ExecutionOrder,
+            EstimatedHours = psr.EstimatedHours,
+            SetupMinutes = psr.SetupTimeMinutes,
+            TeardownMinutes = psr.TeardownTimeMinutes,
+            RequiredMaterial = psr.RequiredMaterial,
+            ToolingNotes = psr.ToolingNotes,
+            HourlyRate = psr.HourlyRateOverride ?? psr.ProductionStage.DefaultHourlyRate
+        }))
+        .ToListAsync();
 
-### **🎯 Enhanced Part Form Architecture**
-```
-Complete Advanced Part Form Structure:
-├── Basic Info (PartNumber, Name, Description) ✅
-├── Component Type (Lookup Dropdown) ✅
-├── Compliance Category (Lookup Dropdown) ✅  
-├── Material Selection ✅
-├── Manufacturing Stages ✅ Enhanced All Phases
-│   ├── Template Selection ✅ Phase 6
-│   ├── One-Click Application ✅ Phase 6
-│   ├── Custom Stage Management ✅ Phases 1-4
-│   └── Usage Analytics ✅ Phase 6
-├── Physical Properties ✅
-├── B&T Compliance ✅
-├── Summary & Admin Override ✅
-├── Asset Management ✅ Phase 5
-│   ├── 3D Models (.step, .stl, .obj) ✅
-│   ├── Photos (.jpg, .png, .bmp) ✅
-│   ├── Technical Drawings (.pdf, .dwg) ✅
-│   └── Documents (.docx, .xlsx, .txt) ✅
-└── Stage Templates ✅ Phase 6
-    ├── Template Library (4 default templates) ✅
-    ├── Template Application ✅
-    ├── Usage Statistics ✅
-    └── Custom Template Creation ✅
-```
+    return File(GenerateCsv(data), "text/csv", $"part-stage-requirements-{DateTime.Now:yyyyMMdd}.csv");
+}
 
----
 
-## 🎉 **FINAL PROJECT COMPLETION CELEBRATION+++**
-
-### **🏆 EXCEPTIONAL ACHIEVEMENTS - ALL 6 PHASES COMPLETE**
-
-#### **🎯 Complete System Transformation**
-- ✅ **6 Major Phases Completed**: Foundation → Migration → Modernization → Cleanup → Assets → Templates
-- ✅ **Template-Driven Architecture**: From 20+ boolean fields to intelligent workflow automation
-- ✅ **Enterprise Asset Management**: Comprehensive file management with security validation
-- ✅ **Advanced Template System**: 4 pre-configured manufacturing workflows with analytics
-- ✅ **100% Data Preservation**: All existing parts and configurations intact throughout transformation
-- ✅ **Zero Breaking Changes**: Enhanced functionality with complete backward compatibility
-
-#### **🔧 Technical Excellence+++**
-- ✅ **Modern Database Schema**: Lookup tables, foreign keys, optimized indexing (21+ new indexes)
-- ✅ **Service Architecture**: Enterprise-grade service layer with comprehensive error handling
-- ✅ **Professional UI**: Template management interface with real-time analytics
-- ✅ **Security Implementation**: File validation, access control, audit logging
-- ✅ **Performance Optimization**: Indexed queries, efficient template application
-
-#### **👥 User Experience Revolution++**
-- ✅ **One-Click Workflows**: Template application reduces setup time by 90%
-- ✅ **Visual Analytics**: Real-time template usage statistics and metrics
-- ✅ **Professional Interface**: Mobile-responsive design for all device types
-- ✅ **Asset Integration**: Seamless 3D model, photo, and document management
-- ✅ **Smart Suggestions**: AI-powered template recommendations
-
-### **📊 FINAL SUCCESS METRICS - OUTSTANDING**
-
-| Metric | Before Refactor | After Refactor | Improvement |
-|--------|----------------|---------------|-------------|
-| **Form Complexity** | 20+ boolean checkboxes | Template selection + asset management | **98% reduction** |
-| **Setup Time** | Manual stage configuration | One-click template application | **90% time savings** |
-| **Data Organization** | Boolean flags | Normalized lookup tables | **Complete modernization** |
-| **Asset Management** | External file storage | Integrated file management | **∞ improvement** |
-| **Workflow Standardization** | Ad-hoc configurations | 4 proven template workflows | **100% standardization** |
-| **System Scalability** | Limited by boolean constraints | Unlimited templates & stages | **Unlimited growth** |
-
-### **🎯 Enhanced System Architecture**
-
-```
-FINAL PART FORM ARCHITECTURE (All 6 Phases):
-├── Basic Info (PartNumber, Name, Description) ✅
-├── Component Type (Lookup Dropdown) ✅ Phase 3
-├── Compliance Category (Lookup Dropdown) ✅ Phase 3
-├── Material Selection ✅
-├── Manufacturing Stages ✅ Enhanced All Phases
-│   ├── Template Selection ✅ Phase 6
-│   ├── One-Click Application ✅ Phase 6
-│   ├── Custom Stage Management ✅ Phases 1-4
-│   └── Usage Analytics ✅ Phase 6
-├── Physical Properties ✅
-├── B&T Compliance ✅
-├── Summary & Admin Override ✅
-├── Asset Management ✅ Phase 5
-│   ├── 3D Models (.step, .stl, .obj) ✅
-│   ├── Photos (.jpg, .png, .bmp) ✅
-│   ├── Technical Drawings (.pdf, .dwg) ✅
-│   └── Documents (.docx, .xlsx, .txt) ✅
-└── Stage Templates ✅ Phase 6
-    ├── Template Library (4 default templates) ✅
-    ├── Template Application ✅
-    ├── Usage Statistics ✅
-    └── Custom Template Creation ✅
-```
+**Use Cases:**
+- Job traveler creation
+- External backup and archival
+- ERP system integration
+- Offline analysis and reporting
 
 ---
 
-## 🎉 **PROJECT STATUS: EXCEPTIONAL COMPLETION+++**
+### **6.6 — Flag for Admin Review**
+Allow users to flag parts or stages that need administrative attention.
 
-**The OpCentrix Part Form & Stage System Refactor is now COMPLETELY FINISHED with enterprise-grade template management and comprehensive workflow automation!** 🎊
+**Database Schema Enhancement:**
+sql
+-- Add to existing Parts table
+ALTER TABLE Parts ADD COLUMN FlagForReview INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE Parts ADD COLUMN ReviewComment TEXT NULL;
+ALTER TABLE Parts ADD COLUMN FlaggedBy TEXT NULL;
+ALTER TABLE Parts ADD COLUMN FlaggedDate TEXT NULL;
 
-### **🚀 Production Ready - Enterprise Grade**
-The OpCentrix system is now equipped with:
-- ✅ **Template-Driven Manufacturing**: 4 proven workflows for immediate use
-- ✅ **Intelligent Asset Management**: Secure file handling with validation
-- ✅ **Real-Time Analytics**: Template usage tracking and performance metrics
-- ✅ **Scalable Architecture**: Support for unlimited templates and workflows
-- ✅ **Professional User Interface**: Mobile-responsive design for all users
-- ✅ **Complete Audit Trails**: Comprehensive logging and change tracking
-- ✅ **Enterprise Security**: Role-based access control and data validation
-- ✅ **Future-Ready Design**: Extensible architecture for continued growth
+-- Add to existing PartStageRequirements table
+ALTER TABLE PartStageRequirements ADD COLUMN FlagForReview INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE PartStageRequirements ADD COLUMN ReviewComment TEXT NULL;
+ALTER TABLE PartStageRequirements ADD COLUMN FlaggedBy TEXT NULL;
+ALTER TABLE PartStageRequirements ADD COLUMN FlaggedDate TEXT NULL;
 
-### **🏅 Business Impact - Transformational**
 
-#### **For Manufacturing Teams**
-- **90% Time Savings**: One-click template application vs manual configuration
-- **100% Consistency**: Standardized workflows eliminate setup variations
-- **Enhanced Quality**: Built-in quality checkpoints and special instructions
-- **Asset Integration**: 3D models, photos, and documents directly linked to parts
+**UI Enhancement:**
+html
+<!-- Add to Parts dashboard -->
+<div class="alert alert-warning" v-if="flaggedPartsCount > 0">
+    <i class="fas fa-flag"></i>
+    <strong>{{ flaggedPartsCount }}</strong> parts flagged for review
+    <a href="/Admin/Parts?filter=flagged" class="btn btn-sm btn-outline-warning ms-2">
+        Review Flagged Items
+    </a>
+</div>
 
-#### **For Management**
-- **Predictable Costs**: Accurate time and cost estimates from proven templates
-- **Process Optimization**: Template usage analytics identify best practices
-- **Risk Reduction**: Standardized workflows minimize setup errors
-- **Scalable Operations**: System supports unlimited growth and complexity
 
-#### **For System Administrators**
-- **Centralized Control**: Complete template library management
-- **Usage Analytics**: Real-time insights into template effectiveness
-- **Easy Customization**: Simple creation of industry-specific templates
-- **Enterprise Features**: Audit trails, security, and performance monitoring
-
-### **📈 Technology Position - Industry Leading**
-OpCentrix now provides:
-- **Modern Database Architecture**: Normalized schemas with optimized performance
-- **Service-Oriented Design**: Scalable, maintainable, and testable codebase
-- **Professional User Experience**: Contemporary interface following best practices
-- **Enterprise Security**: Comprehensive validation and access control
-- **Template Intelligence**: Smart recommendations and usage analytics
-- **Complete Asset Management**: Integrated file handling with security validation
+**Use Cases:**
+- User-initiated escalation for complex parts
+- Quality issue reporting
+- Setup time dispute resolution
+- Process improvement suggestions
 
 ---
 
-## 🌟 **CONGRATULATIONS ON EXCEPTIONAL PROJECT SUCCESS!**
+### **6.7 — Operator Tags**
+Visual labeling system for parts with special handling requirements.
 
-**This comprehensive 6-phase refactor represents one of the most successful manufacturing system transformations completed to date!**
+**Database Schema:**
+sql
+CREATE TABLE PartTags (
+    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+    Name TEXT NOT NULL UNIQUE,
+    Color TEXT NOT NULL DEFAULT '#6c757d', -- Bootstrap color codes
+    Icon TEXT, -- Font Awesome icon class
+    Description TEXT,
+    Priority INTEGER NOT NULL DEFAULT 0, -- Higher = more prominent
+    IsActive INTEGER NOT NULL DEFAULT 1,
+    CreatedBy TEXT NOT NULL,
+    CreatedDate TEXT NOT NULL DEFAULT (datetime('now'))
+);
 
-### **🎯 Key Success Factors**
-1. **Systematic Approach**: Each phase built upon previous foundations
-2. **Zero Downtime**: All upgrades completed without system interruption
-3. **Data Preservation**: 100% of existing data maintained throughout
-4. **User-Centric Design**: Features designed for actual manufacturing workflows
-5. **Enterprise Quality**: Professional-grade implementation with full testing
-6. **Future-Proofing**: Extensible architecture ready for continued enhancement
+CREATE TABLE PartTagAssignments (
+    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+    PartId INTEGER NOT NULL,
+    TagId INTEGER NOT NULL,
+    AssignedBy TEXT NOT NULL,
+    AssignedDate TEXT NOT NULL DEFAULT (datetime('now')),
+    ExpiresDate TEXT, -- Optional expiration
+    FOREIGN KEY (PartId) REFERENCES Parts(Id) ON DELETE CASCADE,
+    FOREIGN KEY (TagId) REFERENCES PartTags(Id) ON DELETE CASCADE,
+    UNIQUE(PartId, TagId)
+);
 
-### **🚀 Ready for Continued Excellence**
-The OpCentrix system is now positioned as a world-class manufacturing execution platform, ready to:
-- **Scale Operations**: Support unlimited parts, templates, and workflows
-- **Enhance Productivity**: Streamline manufacturing with proven templates
-- **Ensure Quality**: Built-in quality controls and documentation
-- **Drive Innovation**: Foundation for AI/ML and advanced analytics
-- **Support Growth**: Scalable architecture for expanding operations
+-- Seed common tags
+INSERT INTO PartTags (Name, Color, Icon, Description, Priority) VALUES
+('Titanium', '#dc3545', 'fas fa-atom', 'Titanium alloy parts requiring special handling', 3),
+('Time Sensitive', '#fd7e14', 'fas fa-clock', 'Rush order - prioritize scheduling', 5),
+('Do Not Stack', '#198754', 'fas fa-layer-group', 'Parts that cannot be stacked in builds', 2),
+('Fragile', '#ffc107', 'fas fa-fragile', 'Handle with extra care', 4),
+('High Value', '#6f42c1', 'fas fa-gem', 'Expensive parts requiring special tracking', 3);
 
-**This project demonstrates the successful transformation of a legacy system into a modern, efficient, and user-friendly manufacturing platform that will serve as the foundation for years of operational excellence!** 🎊
+
+**UI Enhancement:**
+html
+<!-- Display tags as badges in parts list and scheduler -->
+<div class="part-tags">
+    <span v-for="tag in part.tags" 
+          :key="tag.id" 
+          :class="'badge me-1'" 
+          :style="{ backgroundColor: tag.color }">
+        <i :class="tag.icon" v-if="tag.icon"></i>
+        {{ tag.name }}
+    </span>
+</div>
+
+
+**Use Cases:**
+- Visual indicators in scheduler interface
+- Special handling requirements communication
+- Priority and risk level identification
+- Quality and material categorization
 
 ---
 
-*Final completion documented on: January 25, 2025*  
-*OpCentrix Part Form & Stage System Refactor: **EXCEPTIONALLY COMPLETE** ✨*
+### **Phase 6 Implementation Notes**
+
+#### **Prerequisites:**
+- ✅ Core refactor (Phases 1-5) successfully deployed
+- ✅ System stability verified
+- ✅ User adoption of new part form interface
+- ✅ No critical issues from core implementation
+
+#### **Implementation Priority:**
+1. **High Priority**: Operator Notes (6.1), Material Requirements (6.2)
+2. **Medium Priority**: Audit Log (6.4), Flag for Review (6.6)
+3. **Low Priority**: Checklist Templates (6.3), CSV Export (6.5), Operator Tags (6.7)
+
+#### **Integration Points:**
+- **Scheduler**: Tags and flags should be visible in job scheduling interface
+- **Mobile**: Operator notes and checklists need mobile-optimized interfaces
+- **Reporting**: Audit logs and export functions integrate with existing analytics
+- **API**: All features should have corresponding REST endpoints for future integrations
+
+#### **Success Metrics for Phase 6:**
+- **Operator Notes**: Reduced miscommunication incidents by 40%
+- **Material Requirements**: Decreased setup time by 15%
+- **Checklists**: Improved QC consistency score by 25%
+- **Audit Log**: 100% traceability for critical data changes
+- **Export**: Successful integration with at least 1 external system
+- **Flags**: Average flag resolution time < 48 hours
+- **Tags**: 90% of applicable parts properly tagged within 30 days
+
+---
+
+## 📞 **SUPPORT & ESCALATION**
+
+### **Technical Issues**
+- **Database**: Check migration logs, verify data integrity queries, use debug views
+- **Form Issues**: Browser developer tools, JavaScript console errors  
+- **Performance**: SQL query analysis, index optimization
+- **Scheduler**: Compare legacy vs stage-based calculations
+
+### **User Issues**
+- **Training**: Provide new form walkthrough and field mapping guide
+- **Data**: Help users understand stage requirements vs old boolean flags
+- **Workflow**: Assist with new part creation and stage assignment process
+- **Migration Status**: Use /Admin/Debug/RefactorStatus page for progress tracking
+
+### **Rollback Procedures**
+If critical issues arise:
+1. **Stop Migration**: Immediate halt of Phase 2+ if data corruption detected
+2. **Restore Database**: Use Phase 1 backup to restore to pre-migration state
+3. **Revert Code**: Roll back to previous Part.cs and form versions
+4. **Use Schema Snapshots**: Reference pre-migration schema dumps for restoration
+5. **User Communication**: Notify users of temporary reversion and timeline
+
+---
+
+## ✅ **READY FOR IMPLEMENTATION**
+
+This enhanced plan provides:
+- **Robust Migration Logic**: Transaction-wrapped, verified migration with mapping tables
+- **Comprehensive Verification**: Debug views and admin pages for progress tracking
+- **Enhanced Models**: Proper audit fields and future-ready enhancements
+- **Modern Frontend**: Migration path to Alpine.js/HTMX for better UX
+- **Schema Management**: Complete snapshots before/after each phase
+- **Scheduler Safety**: Retain EstimatedHours until stage-based logic is verified
+- **Clear Phase Structure**: Step-by-step implementation with minimal risk
+- **Comprehensive Testing**: Unit, integration, and user acceptance testing
+- **Risk Mitigation**: Detailed backup and rollback procedures  
+- **Success Metrics**: Measurable outcomes for technical and business value
+- **Future Roadmap**: Clear path for continued enhancement
+
+**The OpCentrix Part Form & Stage System refactor is fully planned and ready for execution!** 🚀
+
+---
+
+*This document will be updated as implementation progresses and requirements evolve.*

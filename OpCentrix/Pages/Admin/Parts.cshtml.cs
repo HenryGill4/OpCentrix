@@ -493,42 +493,120 @@ namespace OpCentrix.Pages.Admin
         {
             try
             {
-                if (SelectedStageIds?.Any() != true)
+                _logger.LogInformation("Processing stage assignments for part {PartId}, operation {OperationId}", partId, operationId);
+
+                // Skip if no stage data provided
+                if (SelectedStageIds == null || !SelectedStageIds.Any())
                 {
-                    _logger.LogInformation("📋 [PARTS-{OperationId}] No stages selected for part {PartId}", operationId, partId);
+                    _logger.LogInformation("No stage assignments to process for part {PartId}", partId);
                     return;
                 }
 
-                // Remove existing stage assignments
-                await _partStageService.RemoveAllPartStagesAsync(partId);
-
-                // Add new stage assignments
-                for (int i = 0; i < SelectedStageIds.Count; i++)
+                // Validate that all arrays have the same length
+                var stageCount = SelectedStageIds.Count;
+                if (StageExecutionOrders?.Count != stageCount ||
+                    StageEstimatedHours?.Count != stageCount ||
+                    StageHourlyRates?.Count != stageCount ||
+                    StageMaterialCosts?.Count != stageCount)
                 {
-                    var stageRequirement = new PartStageRequirement
-                    {
-                        PartId = partId,
-                        ProductionStageId = SelectedStageIds[i],
-                        ExecutionOrder = i < StageExecutionOrders.Count ? StageExecutionOrders[i] : i + 1,
-                        EstimatedHours = i < StageEstimatedHours.Count ? StageEstimatedHours[i] : null,
-                        HourlyRateOverride = i < StageHourlyRates.Count ? StageHourlyRates[i] : null,
-                        MaterialCost = i < StageMaterialCosts.Count ? StageMaterialCosts[i] : 0,
-                        IsRequired = true,
-                        IsActive = true,
-                        CreatedBy = User.Identity?.Name ?? "System",
-                        LastModifiedBy = User.Identity?.Name ?? "System"
-                    };
-
-                    await _partStageService.AddPartStageAsync(stageRequirement);
+                    _logger.LogWarning("Stage data arrays have mismatched lengths for part {PartId}", partId);
+                    throw new InvalidOperationException("Stage data is incomplete or mismatched");
                 }
 
-                _logger.LogInformation("✅ [PARTS-{OperationId}] Processed {StageCount} stage assignments for part {PartId}", 
-                    operationId, SelectedStageIds.Count, partId);
+                // Begin transaction for atomicity
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                
+                try
+                {
+                    // Step 1: Deactivate existing stage requirements
+                    var existingStages = await _context.PartStageRequirements
+                        .Where(psr => psr.PartId == partId)
+                        .ToListAsync();
+
+                    foreach (var existingStage in existingStages)
+                    {
+                        existingStage.IsActive = false;
+                        existingStage.LastModifiedBy = User.Identity?.Name ?? "System";
+                        existingStage.LastModifiedDate = DateTime.UtcNow;
+                    }
+
+                    // Step 2: Create new stage requirements
+                    for (int i = 0; i < stageCount; i++)
+                    {
+                        var stageId = SelectedStageIds[i];
+                        var executionOrder = StageExecutionOrders?[i] ?? (i + 1);
+                        var estimatedHours = StageEstimatedHours?[i] ?? 1.0;
+                        var hourlyRate = StageHourlyRates?[i] ?? 85.00m;
+                        var materialCost = StageMaterialCosts?[i] ?? 0.00m;
+
+                        // Validate that the production stage exists
+                        var productionStage = await _context.ProductionStages.FindAsync(stageId);
+                        if (productionStage == null)
+                        {
+                            _logger.LogWarning("Production stage {StageId} not found for part {PartId}", stageId, partId);
+                            continue;
+                        }
+
+                        var stageRequirement = new PartStageRequirement
+                        {
+                            PartId = partId,
+                            ProductionStageId = stageId,
+                            ExecutionOrder = executionOrder,
+                            EstimatedHours = estimatedHours,
+                            SetupTimeMinutes = productionStage.DefaultSetupMinutes,
+                            HourlyRateOverride = hourlyRate != productionStage.DefaultHourlyRate ? hourlyRate : null,
+                            MaterialCost = materialCost,
+                            IsRequired = true,
+                            IsActive = true,
+                            IsBlocking = true,
+                            AllowParallelExecution = false,
+                            RequiresSpecificMachine = false,
+                            EstimatedCost = 0.0m, // Will be calculated
+                            CreatedBy = User.Identity?.Name ?? "System",
+                            CreatedDate = DateTime.UtcNow,
+                            LastModifiedBy = User.Identity?.Name ?? "System",
+                            LastModifiedDate = DateTime.UtcNow,
+                            CustomFieldValues = "{}",
+                            QualityRequirements = "{}",
+                            RequiredMaterials = "[]",
+                            RequiredTooling = string.Empty,
+                            RequirementNotes = $"Added via modern stage management - {operationId}",
+                            SpecialInstructions = string.Empty,
+                            StageParameters = "{}"
+                        };
+
+                        _context.PartStageRequirements.Add(stageRequirement);
+
+                        _logger.LogInformation("Added stage requirement: Part {PartId}, Stage {StageId}, Order {Order}", 
+                            partId, stageId, executionOrder);
+                    }
+
+                    // Step 3: Mark part as using modern form (not legacy)
+                    var part = await _context.Parts.FindAsync(partId);
+                    if (part != null)
+                    {
+                        part.IsLegacyForm = false;
+                        part.LastModifiedBy = User.Identity?.Name ?? "System";
+                        part.LastModifiedDate = DateTime.UtcNow;
+                    }
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    _logger.LogInformation("Successfully processed {Count} stage assignments for part {PartId}", 
+                        stageCount, partId);
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    _logger.LogError(ex, "Error processing stage assignments for part {PartId}, rolling back transaction", partId);
+                    throw;
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ [PARTS-{OperationId}] Error processing stage assignments for part {PartId}", operationId, partId);
-                throw;
+                _logger.LogError(ex, "Failed to process stage assignments for part {PartId}", partId);
+                throw new InvalidOperationException($"Failed to process stage assignments: {ex.Message}", ex);
             }
         }
 

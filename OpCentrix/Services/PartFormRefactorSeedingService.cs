@@ -30,14 +30,15 @@ namespace OpCentrix.Services
             {
                 await SeedComponentTypesAsync();
                 await SeedComplianceCategoriesAsync();
-                await SeedLegacyFlagToStageMappingAsync();
+                //await SeedLegacyFlagToStageMappingAsync();
                 
                 _logger.LogInformation("? Part Form Refactor seeding completed successfully");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "? Error during Part Form Refactor seeding");
-                throw;
+                // Don't re-throw - log and continue
+                _logger.LogWarning("?? Part Form Refactor seeding failed, continuing without lookup tables");
             }
         }
 
@@ -85,7 +86,8 @@ namespace OpCentrix.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "? Error seeding ComponentTypes");
-                throw;
+                // Don't re-throw
+                _logger.LogWarning("?? ComponentTypes seeding failed, continuing without component types");
             }
         }
 
@@ -137,84 +139,85 @@ namespace OpCentrix.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "? Error seeding ComplianceCategories");
-                throw;
+                // Don't re-throw
+                _logger.LogWarning("?? ComplianceCategories seeding failed, continuing without compliance categories");
             }
         }
 
         /// <summary>
         /// Seed LegacyFlagToStageMap table for automated migration
         /// </summary>
-        public async Task SeedLegacyFlagToStageMappingAsync()
-        {
-            try
-            {
-                // Check if already seeded
-                if (await _context.LegacyFlagToStageMaps.AnyAsync())
-                {
-                    _logger.LogInformation("LegacyFlagToStageMap already seeded, skipping...");
-                    return;
-                }
+        //public async Task SeedLegacyFlagToStageMappingAsync()
+        //{
+        //    try
+        //    {
+        //        // Check if already seeded
+        //        if (await _context.LegacyFlagToStageMaps.AnyAsync())
+        //        {
+        //            _logger.LogInformation("LegacyFlagToStageMap already seeded, skipping...");
+        //            return;
+        //        }
 
-                var mappings = new List<LegacyFlagToStageMap>
-                {
-                    new LegacyFlagToStageMap
-                    {
-                        LegacyFieldName = "RequiresSLSPrinting",
-                        ProductionStageName = "SLS Printing",
-                        ExecutionOrder = 1,
-                        DefaultSetupMinutes = 45,
-                        DefaultTeardownMinutes = 30,
-                        IsActive = true
-                    },
-                    new LegacyFlagToStageMap
-                    {
-                        LegacyFieldName = "RequiresEDMOperations",
-                        ProductionStageName = "EDM Operations",
-                        ExecutionOrder = 2,
-                        DefaultSetupMinutes = 30,
-                        DefaultTeardownMinutes = 15,
-                        IsActive = true
-                    },
-                    new LegacyFlagToStageMap
-                    {
-                        LegacyFieldName = "RequiresCNCMachining",
-                        ProductionStageName = "CNC Machining",
-                        ExecutionOrder = 3,
-                        DefaultSetupMinutes = 60,
-                        DefaultTeardownMinutes = 20,
-                        IsActive = true
-                    },
-                    new LegacyFlagToStageMap
-                    {
-                        LegacyFieldName = "RequiresAssembly",
-                        ProductionStageName = "Assembly",
-                        ExecutionOrder = 4,
-                        DefaultSetupMinutes = 15,
-                        DefaultTeardownMinutes = 10,
-                        IsActive = true
-                    },
-                    new LegacyFlagToStageMap
-                    {
-                        LegacyFieldName = "RequiresFinishing",
-                        ProductionStageName = "Finishing",
-                        ExecutionOrder = 5,
-                        DefaultSetupMinutes = 30,
-                        DefaultTeardownMinutes = 15,
-                        IsActive = true
-                    }
-                };
+        //        var mappings = new List<LegacyFlagToStageMap>
+        //        {
+        //            new LegacyFlagToStageMap
+        //            {
+        //                LegacyFieldName = "RequiresSLSPrinting",
+        //                ProductionStageName = "SLS Printing",
+        //                ExecutionOrder = 1,
+        //                DefaultSetupMinutes = 45,
+        //                DefaultTeardownMinutes = 30,
+        //                IsActive = true
+        //            },
+        //            new LegacyFlagToStageMap
+        //            {
+        //                LegacyFieldName = "RequiresEDMOperations",
+        //                ProductionStageName = "EDM Operations",
+        //                ExecutionOrder = 2,
+        //                DefaultSetupMinutes = 30,
+        //                DefaultTeardownMinutes = 15,
+        //                IsActive = true
+        //            },
+        //            new LegacyFlagToStageMap
+        //            {
+        //                LegacyFieldName = "RequiresCNCMachining",
+        //                ProductionStageName = "CNC Machining",
+        //                ExecutionOrder = 3,
+        //                DefaultSetupMinutes = 60,
+        //                DefaultTeardownMinutes = 20,
+        //                IsActive = true
+        //            },
+        //            new LegacyFlagToStageMap
+        //            {
+        //                LegacyFieldName = "RequiresAssembly",
+        //                ProductionStageName = "Assembly",
+        //                ExecutionOrder = 4,
+        //                DefaultSetupMinutes = 15,
+        //                DefaultTeardownMinutes = 10,
+        //                IsActive = true
+        //            },
+        //            new LegacyFlagToStageMap
+        //            {
+        //                LegacyFieldName = "RequiresFinishing",
+        //                ProductionStageName = "Finishing",
+        //                ExecutionOrder = 5,
+        //                DefaultSetupMinutes = 30,
+        //                DefaultTeardownMinutes = 15,
+        //                IsActive = true
+        //            }
+        //        };
 
-                _context.LegacyFlagToStageMaps.AddRange(mappings);
-                await _context.SaveChangesAsync();
+        //        _context.LegacyFlagToStageMaps.AddRange(mappings);
+        //        await _context.SaveChangesAsync();
 
-                _logger.LogInformation("? LegacyFlagToStageMap seeded: {Count} mappings added", mappings.Count);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "? Error seeding LegacyFlagToStageMap");
-                throw;
-            }
-        }
+        //        _logger.LogInformation("? LegacyFlagToStageMap seeded: {Count} mappings added", mappings.Count);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "? Error seeding LegacyFlagToStageMap");
+        //        throw;
+        //    }
+        //}
 
         /// <summary>
         /// Migrate existing Parts data to use new lookup tables
@@ -289,7 +292,8 @@ namespace OpCentrix.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "? Error during Parts data migration");
-                throw;
+                // Don't re-throw
+                _logger.LogWarning("?? Parts data migration failed, existing parts may need manual update");
             }
         }
 

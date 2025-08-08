@@ -380,58 +380,120 @@ using (var scope = app.Services.CreateScope())
 
     try
     {
-        // Initialize database with seeded data
-        logger.LogInformation("Initializing database...");
-        using (var initScope = app.Services.CreateScope())
+        // DEBUGGING: Skip all seeding if this flag is set to false
+        var enableSeeding = builder.Configuration.GetValue<bool>("EnableSeeding", true);
+        
+        if (!enableSeeding)
         {
-            var context = initScope.ServiceProvider.GetRequiredService<SchedulerContext>();
-            var seedingService = initScope.ServiceProvider.GetRequiredService<SlsDataSeedingService>();
-            var adminSeedingService = initScope.ServiceProvider.GetRequiredService<OpCentrix.Services.Admin.IAdminDataSeedingService>();
-            var partClassificationService = initScope.ServiceProvider.GetRequiredService<IPartClassificationService>();
-
-            // FIXED: Add material service for material seeding
-            var materialService = initScope.ServiceProvider.GetRequiredService<IMaterialService>();
-
-            // Ensure database is created and up to date
-            await context.Database.EnsureCreatedAsync();
-
-            // Seed initial data (DEPRECATED - already disabled in service)
-            // await seedingService.SeedDataAsync();
-
-            // Seed admin control system data (Task 2)
-            await adminSeedingService.SeedAllDefaultDataAsync();
-
-            // FIXED: Seed materials for machine management
-            await materialService.SeedDefaultMaterialsAsync();
-            logger.LogInformation("✅ Material seeding completed successfully");
+            logger.LogWarning("🔒 SEEDING DISABLED: EnableSeeding configuration is false");
+            logger.LogInformation("💡 To enable seeding, set 'EnableSeeding': true in appsettings.json or environment variable");
+            logger.LogInformation("🚀 Application starting without data seeding for debugging");
             
-            // REMOVED: Parts and machine seeding disabled per user request
-            // await OpCentrix.SeedDatabase.SeedAsync(initScope.ServiceProvider);
-            logger.LogInformation("✅ Parts and machine seeding DISABLED - use Admin pages to add data manually");
+            // Still ensure database exists
+            using (var initScope = app.Services.CreateScope())
+            {
+                var context = initScope.ServiceProvider.GetRequiredService<SchedulerContext>();
+                await context.Database.EnsureCreatedAsync();
+                logger.LogInformation("✅ Database creation completed (seeding skipped)");
+            }
+        }
+        else
+        {
+            // Initialize database with seeded data
+            logger.LogInformation("Initializing database...");
+            using (var initScope = app.Services.CreateScope())
+            {
+                var context = initScope.ServiceProvider.GetRequiredService<SchedulerContext>();
+                
+                // Ensure database is created and up to date
+                await context.Database.EnsureCreatedAsync();
+                logger.LogInformation("✅ Database creation/update completed");
 
-            // Seed B&T part classifications (Segment 7)
-            await partClassificationService.SeedDefaultClassificationsAsync();
+                // Basic seeding that is essential for app functionality
+                try
+                {
+                    var adminSeedingService = initScope.ServiceProvider.GetRequiredService<OpCentrix.Services.Admin.IAdminDataSeedingService>();
+                    await adminSeedingService.SeedAllDefaultDataAsync();
+                    logger.LogInformation("✅ Admin data seeding completed");
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "⚠️ Admin data seeding failed, continuing without it: {Message}", ex.Message);
+                }
 
-            // PHASE 3: Seed Part Form Refactor lookup data
-            var partFormRefactorSeeding = initScope.ServiceProvider.GetRequiredService<PartFormRefactorSeedingService>();
-            await partFormRefactorSeeding.SeedAllDataAsync();
-            await partFormRefactorSeeding.MigrateExistingPartsDataAsync();
+                // Material seeding (essential for operations)
+                try
+                {
+                    var materialService = initScope.ServiceProvider.GetRequiredService<IMaterialService>();
+                    await materialService.SeedDefaultMaterialsAsync();
+                    logger.LogInformation("✅ Material seeding completed");
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "⚠️ Material seeding failed, continuing without it: {Message}", ex.Message);
+                }
 
-            // PHASE 6: Seed Stage Templates
-            var stageTemplateSeeding = initScope.ServiceProvider.GetRequiredService<StageTemplateSeedingService>();
-            await stageTemplateSeeding.SeedDefaultTemplatesAsync();
+                // B&T part classifications (optional)
+                try
+                {
+                    var partClassificationService = initScope.ServiceProvider.GetRequiredService<IPartClassificationService>();
+                    await partClassificationService.SeedDefaultClassificationsAsync();
+                    logger.LogInformation("✅ B&T classification seeding completed");
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "⚠️ B&T classification seeding failed, continuing without it: {Message}", ex.Message);
+                }
 
-            // Initialize production stages for prototype tracking (Phase 0.5)
-            var productionStageService = initScope.ServiceProvider.GetRequiredService<ProductionStageService>();
-            await productionStageService.CreateDefaultStagesAsync();
+                // Production stages (required for other features)
+                try
+                {
+                    var productionStageService = initScope.ServiceProvider.GetRequiredService<ProductionStageService>();
+                    await productionStageService.CreateDefaultStagesAsync();
+                    logger.LogInformation("✅ Production stage seeding completed");
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "⚠️ Production stage seeding failed, continuing without it: {Message}", ex.Message);
+                }
 
-            logger.LogInformation("✅ Database initialization completed successfully");
+                // Part Form Refactor data (optional but useful)
+                try
+                {
+                    var partFormRefactorSeeding = initScope.ServiceProvider.GetRequiredService<PartFormRefactorSeedingService>();
+                    await partFormRefactorSeeding.SeedAllDataAsync();
+                    await partFormRefactorSeeding.MigrateExistingPartsDataAsync();
+                    logger.LogInformation("✅ Part form refactor seeding completed");
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "⚠️ Part form refactor seeding failed, continuing without it: {Message}", ex.Message);
+                }
+
+                // Stage Templates (depends on production stages, so do last)
+                try
+                {
+                    var stageTemplateSeeding = initScope.ServiceProvider.GetRequiredService<StageTemplateSeedingService>();
+                    await stageTemplateSeeding.SeedDefaultTemplatesAsync();
+                    logger.LogInformation("✅ Stage template seeding completed");
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "⚠️ Stage template seeding failed, continuing without it: {Message}", ex.Message);
+                }
+
+                // REMOVED: Parts and machine seeding disabled per user request
+                logger.LogInformation("✅ Parts and machine seeding DISABLED - use Admin pages to add data manually");
+
+                logger.LogInformation("✅ Database initialization completed successfully");
+            }
         }
     }
     catch (Exception ex)
     {
         logger.LogError(ex, "❌ Database initialization failed: {ErrorMessage}", ex.Message);
-        throw;
+        // Don't throw - allow app to start even if seeding fails
+        logger.LogWarning("⚠️ Application starting without complete data seeding - some features may require manual setup");
     }
 }
 
