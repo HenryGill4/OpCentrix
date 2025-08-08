@@ -1,720 +1,537 @@
-/* 
- * OpCentrix Parts Form Styles
- * Enhanced styling for parts administration form with validation feedback
- * @version 2.1
- */
-
-.required:after {
-    content: " *";
-    color: red;
-}
-
-.tab-pane {
-    min-height: 400px;
-}
-
-.card {
-    transition: all 0.3s ease;
-}
-
-.card:hover {
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-
-.nav-tabs .nav-link {
-    position: relative;
-    border: none;
-    background: transparent;
-    color: #6c757d;
-    transition: all 0.3s ease;
-}
-
-.nav-tabs .nav-link:hover,
-.nav-tabs .nav-link.active {
-    color: #007bff;
-    background: transparent;
-    border: none;
-    border-bottom: 3px solid #007bff;
-}
-
-/* Enhanced tab error indication */
-.nav-tabs .nav-link.text-danger {
-    color: #dc3545 !important;
-    background-color: rgba(220, 53, 69, 0.1);
-    border-bottom: 3px solid #dc3545 !important;
-    animation: pulse-error 1s ease-in-out 3;
-}
-
-@keyframes pulse-error {
-    0% { background-color: rgba(220, 53, 69, 0.1); }
-    50% { background-color: rgba(220, 53, 69, 0.2); }
-    100% { background-color: rgba(220, 53, 69, 0.1); }
-}
-
-.tab-content {
-    background: #f8f9fa;
-    border-radius: 0.375rem;
-    padding: 1.5rem;
-    border: 1px solid #dee2e6;
-}
-
-.summary-card {
-    transition: transform 0.2s ease;
-}
-
-.summary-card:hover {
-    transform: scale(1.05);
-}
-
-.form-control:focus,
-.form-select:focus {
-    border-color: #007bff;
-    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
-}
-
-/* Enhanced validation states */
-.is-invalid {
-    border-color: #dc3545 !important;
-    box-shadow: 0 0 0 0.2rem rgba(220,53,69,.25) !important;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath d='m5.8 4.6 2.4 2.4m0-2.4L5.8 7'/%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right calc(0.375em + 0.1875rem) center;
-    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
-}
-
-.is-valid {
-    border-color: #198754 !important;
-    box-shadow: 0 0 0 0.2rem rgba(25,135,84,.25) !important;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23198754' d='m2.3 6.73.94-.94 1.94 1.94 3.53-3.53.94.94L4.93 9.5z'/%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right calc(0.375em + 0.1875rem) center;
-    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
-}
-
-.form-select.is-valid,
-.form-select.is-invalid {
-    background-position: right 0.75rem center, center right 1.75rem;
-    background-size: 16px 12px, calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
-}
-
-.border-warning {
-    border-color: #ffc107 !important;
-    box-shadow: 0 0 0 0.2rem rgba(255,193,7,.25) !important;
-}
-
-#savePartBtn:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-}
-
-.stage-checkbox {
-    transform: scale(1.1);
-    margin-right: 8px;
-}
-
-.admin-override-section {
-    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-    border: 2px solid #ffc107;
-    border-radius: 8px;
-}
-
-.modal-xl .modal-dialog {
-    max-width: 1200px;
-}
-
-/* Enhanced validation styles */
-.validation-summary {
-    border-left: 4px solid #dc3545;
-    animation: slideDown 0.3s ease-out;
-    margin-bottom: 1rem;
-}
-
-@keyframes slideDown {
-    from { 
-        opacity: 0; 
-        transform: translateY(-10px); 
-    }
-    to { 
-        opacity: 1; 
-        transform: translateY(0); 
-    }
-}
-
-.field-validation-message {
-    border: none;
-    margin-bottom: 0;
-    padding: 0.25rem 0.5rem;
-    font-size: 0.8rem;
-    margin-top: 0.25rem;
-    border-radius: 0.25rem;
-    animation: fadeIn 0.3s ease-in;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-.field-validation-message.alert-danger {
-    background-color: #f8d7da;
-    border-color: #f5c6cb;
-    color: #721c24;
-}
-
-.field-validation-message.alert-warning {
-    background-color: #fff3cd;
-    border-color: #ffecb5;
-    color: #856404;
-}
-
-.alert-sm {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.875rem;
-}
-
-/* Error field highlighting */
-.has-error {
-    animation: shake 0.5s ease-in-out;
-}
-
-@keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-2px); }
-    75% { transform: translateX(2px); }
-}
-
-/* Loading state enhancements */
-.form-loading {
-    position: relative;
-    overflow: hidden;
-}
-
-.form-loading::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(
-        90deg, 
-        transparent, 
-        rgba(0, 123, 255, 0.1), 
-        transparent
-    );
-    animation: loading-shimmer 1.5s infinite;
-}
-
-@keyframes loading-shimmer {
-    0% { left: -100%; }
-    100% { left: 100%; }
-}
-
-/* Enhanced focus states */
-.form-control:focus-visible,
-.form-select:focus-visible {
-    outline: 2px solid #007bff;
-    outline-offset: 2px;
-}
-
-/* Required field indicators */
-.form-label.required {
-    position: relative;
-}
-
-.form-label.required::after {
-    content: " *";
-    color: #dc3545;
-    font-weight: bold;
-}
-
-/* Validation progress indicator */
-.validation-progress {
-    height: 4px;
-    background-color: #e9ecef;
-    border-radius: 2px;
-    overflow: hidden;
-    margin-bottom: 1rem;
-}
-
-.validation-progress-bar {
-    height: 100%;
-    background-color: #28a745;
-    transition: width 0.3s ease;
-    border-radius: 2px;
-}
-
-.validation-progress-bar.invalid {
-    background-color: #dc3545;
-}
-
-/* Phase 5: Asset Management Styles */
-.asset-card {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    height: 100%;
-}
-
-.asset-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-
-.asset-group {
-    border-left: 3px solid #007bff;
-    padding-left: 1rem;
-    margin-left: 0.5rem;
-}
-
-.asset-upload-area {
-    border: 2px dashed #dee2e6;
-    border-radius: 0.375rem;
-    padding: 2rem;
-    text-align: center;
-    transition: border-color 0.2s ease;
-}
-
-.asset-upload-area:hover {
-    border-color: #007bff;
-    background-color: #f8f9fa;
-}
-
-.asset-upload-area.dragover {
-    border-color: #007bff;
-    background-color: #e7f3ff;
-}
-
-.file-type-info {
-    background-color: #f8f9fa;
-    border-radius: 0.25rem;
-    padding: 0.5rem;
-    font-size: 0.875rem;
-}
-
-/* Asset type icons */
-.asset-icon-3dmodel { color: #007bff; }
-.asset-icon-photo { color: #28a745; }
-.asset-icon-drawing { color: #17a2b8; }
-.asset-icon-document { color: #ffc107; }
-
-/* Upload progress */
-.upload-progress {
-    height: 4px;
-    background-color: #e9ecef;
-    border-radius: 2px;
-    overflow: hidden;
-}
-
-.upload-progress-bar {
-    height: 100%;
-    background-color: #007bff;
-    transition: width 0.3s ease;
-}
-
-/* Asset grid responsive adjustments */
-@media (max-width: 576px) {
-    .asset-card .card-body {
-        padding: 1rem;
-    }
-    
-    .asset-group {
-        margin-left: 0;
-        border-left: none;
-        border-top: 3px solid #007bff;
-        padding-left: 0;
-        padding-top: 0.5rem;
-    }
-}
-
-/* File type badges */
-.file-type-badge {
-    font-size: 0.75rem;
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.375rem;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.file-type-badge.step,
-.file-type-badge.stp,
-.file-type-badge.stl { background-color: #e3f2fd; color: #1976d2; }
-
-.file-type-badge.jpg,
-.file-type-badge.jpeg,
-.file-type-badge.png { background-color: #e8f5e8; color: #2e7d32; }
-
-.file-type-badge.pdf { background-color: #fff3e0; color: #f57c00; }
-
-.file-type-badge.dwg,
-.file-type-badge.dxf { background-color: #f3e5f5; color: #7b1fa2; }
-
-/* Mobile responsive validation */
-@media (max-width: 768px) {
-    .modal-xl .modal-dialog {
-        max-width: 95%;
-        margin: 10px auto;
-    }
-    
-    .tab-content {
-        padding: 1rem;
-    }
-    
-    .nav-tabs .nav-link {
-        font-size: 0.875rem;
-        padding: 0.5rem 0.75rem;
-    }
-    
-    .validation-summary {
-        font-size: 0.9rem;
-        margin-left: -0.5rem;
-        margin-right: -0.5rem;
-    }
-    
-    .field-validation-message {
-        font-size: 0.75rem;
-        padding: 0.2rem 0.4rem;
-    }
-}
-
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-    .is-invalid {
-        border-width: 2px;
-        border-color: #cc0000 !important;
-    }
-    
-    .is-valid {
-        border-width: 2px;
-        border-color: #006600 !important;
-    }
-    
-    .field-validation-message.alert-danger {
-        background-color: #ffcccc;
-        color: #cc0000;
-        border: 1px solid #cc0000;
-    }
-}
-
-/* Reduced motion support */
-@media (prefers-reduced-motion: reduce) {
-    .validation-summary,
-    .field-validation-message,
-    .nav-tabs .nav-link,
-    .card,
-    .summary-card {
-        animation: none;
-        transition: none;
-    }
-    
-    .has-error {
-        animation: none;
-        border-color: #dc3545;
-    }
-}
-
-/* Print styles */
-@media print {
-    .validation-summary,
-    .field-validation-message {
-        border: 1px solid #000;
-        background: none;
-    }
-    
-    .is-invalid,
-    .is-valid {
-        border: 1px solid #000;
-        background-image: none;
-    }
-}
-
-/* Modern Stage Management Styles */
-.stage-requirement-card {
-    transition: all 0.3s ease;
-    border: 1px solid #dee2e6;
-}
-
-.stage-requirement-card:hover {
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    transform: translateY(-2px);
-}
-
-.stage-requirement-card .card-header {
-    background: linear-gradient(45deg, #f8f9fa, #e9ecef);
-    border-bottom: 1px solid #dee2e6;
-}
-
-.stage-requirement-card .badge {
-    font-size: 0.75rem;
-    padding: 0.25rem 0.5rem;
-}
-
-/* Stage Selection Modal */
-.modal-content {
-    border-radius: 8px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-}
-
-.modal-header {
-    border-bottom: 2px solid #dee2e6;
-}
-
-.modal-footer {
-    border-top: 2px solid #dee2e6;
-}
-
-/* Form Enhancements */
-.form-label.required::after {
-    content: " *";
-    color: #dc3545;
-}
-
-.tab-content {
+/* ===================================
+   PRODUCTION-READY PARTS FORM STYLES
+   Phase 3: Modern Stage Management & Enhanced UX
+   =================================== */
+
+/* Form Structure & Layout */
+.parts-form-container {
     background: #fff;
-    border-radius: 0 0 8px 8px;
-    min-height: 400px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
+/* Tab Navigation Enhancements */
 .nav-tabs {
     border-bottom: 2px solid #dee2e6;
 }
 
 .nav-tabs .nav-link {
     border: none;
+    border-radius: 0;
     color: #6c757d;
     font-weight: 500;
-    padding: 0.75rem 1rem;
+    padding: 12px 16px;
     transition: all 0.3s ease;
+    position: relative;
 }
 
 .nav-tabs .nav-link:hover {
-    border: none;
     color: #0d6efd;
-    background: #f8f9fa;
+    background-color: #f8f9fa;
+    border-bottom: 3px solid #0d6efd;
 }
 
 .nav-tabs .nav-link.active {
-    border: none;
-    border-bottom: 3px solid #0d6efd;
     color: #0d6efd;
-    background: #fff;
+    background-color: #fff;
+    border-bottom: 3px solid #0d6efd;
     font-weight: 600;
 }
 
-/* Legacy Form Warning */
-.card.border-warning {
-    background: #fff3cd;
+.nav-tabs .nav-link i {
+    margin-right: 6px;
 }
 
-.card.border-warning .card-header {
-    background: #ffeaa7;
-    border-bottom: 1px solid #f1c40f;
-}
-
-/* Summary Cards */
-.summary-card {
-    transition: transform 0.3s ease;
-}
-
-.summary-card:hover {
-    transform: scale(1.05);
-}
-
-/* Admin Override Section */
-.admin-override-section {
-    margin-top: 1rem;
-}
-
-.admin-override-section .card-header {
-    background: #fff3cd;
-    border-bottom: 1px solid #f1c40f;
-}
-
-/* Stage Summary Cards */
-.stage-summary-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-}
-
-.stage-summary-card {
-    text-align: center;
-    padding: 1rem;
-    border-radius: 8px;
-    color: white;
-    transition: transform 0.3s ease;
-}
-
-.stage-summary-card:hover {
-    transform: translateY(-3px);
-}
-
-.stage-summary-card i {
-    display: block;
-    margin-bottom: 0.5rem;
-}
-
-.stage-summary-card h4 {
-    margin: 0;
-    font-weight: bold;
-}
-
-.stage-summary-card small {
-    opacity: 0.9;
-    font-weight: 500;
-}
-
-/* Empty State */
-.empty-state {
-    text-align: center;
-    padding: 3rem 1rem;
-    color: #6c757d;
-}
-
-.empty-state i {
-    display: block;
-    margin-bottom: 1rem;
-    opacity: 0.5;
-}
-
-.empty-state h6 {
-    margin-bottom: 0.5rem;
+/* Phase 3: Enhanced Form Controls */
+.form-label.required::after {
+    content: " *";
+    color: #dc3545;
     font-weight: 600;
 }
 
-.empty-state p {
-    margin-bottom: 1.5rem;
+.form-control:focus,
+.form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.1);
 }
 
-/* Loading States */
-.loading-spinner {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+.form-control.is-invalid,
+.form-select.is-invalid {
+    border-color: #dc3545;
+    padding-right: calc(1.5em + 0.75rem);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath d='m5.8 4.6l1.4 1.4M5.8 7.4l1.4-1.4'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right calc(0.375em + 0.1875rem) center;
+    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+}
+
+/* Phase 3: Modern Stage Management Styles */
+.min-height-200 {
     min-height: 200px;
-    flex-direction: column;
-    color: #6c757d;
 }
 
-.loading-spinner i {
-    margin-bottom: 1rem;
+.stage-requirement-card {
+    transition: all 0.2s ease-in-out;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    overflow: hidden;
 }
 
-/* Button Enhancements */
-.btn-group-sm .btn {
-    padding: 0.25rem 0.5rem;
+.stage-requirement-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-color: #0d6efd;
+}
+
+.stage-requirement-card .card-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-bottom: 1px solid #dee2e6;
+    padding: 10px 15px;
+}
+
+.stage-requirement-card .badge {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    min-width: 24px;
+    text-align: center;
+}
+
+.stage-requirement-card .btn-group-sm .btn {
+    padding: 2px 6px;
     font-size: 0.75rem;
 }
 
-.btn.btn-outline-secondary:hover {
-    background-color: #6c757d;
-    border-color: #6c757d;
-    color: white;
+/* Phase 3: Enhanced Asset Management */
+.border-dashed {
+    border-style: dashed !important;
+    border-width: 2px !important;
 }
 
-.btn.btn-outline-danger:hover {
-    background-color: #dc3545;
-    border-color: #dc3545;
-    color: white;
-}
-
-/* Toast Container */
-#toast-container {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 1055;
-    max-width: 350px;
-}
-
-.alert {
+.asset-dropzone {
+    transition: all 0.3s ease-in-out;
+    cursor: pointer;
     border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 2rem 1rem;
+    position: relative;
+    overflow: hidden;
 }
 
-/* Form Validation */
-.is-invalid {
-    border-color: #dc3545;
+.asset-dropzone::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, transparent 49%, rgba(13, 110, 253, 0.05) 50%, transparent 51%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
 
-.is-valid {
-    border-color: #198754;
+.asset-dropzone:hover::before,
+.asset-dropzone.dragover::before {
+    opacity: 1;
 }
 
-.text-danger {
-    font-size: 0.875rem;
-    margin-top: 0.25rem;
+.asset-dropzone:hover {
+    border-color: #0d6efd !important;
+    background-color: rgba(13, 110, 253, 0.05) !important;
+    transform: scale(1.02);
 }
 
-/* Modern Form Controls */
-.form-control, .form-select {
+.asset-dropzone.dragover {
+    border-color: #198754 !important;
+    background-color: rgba(25, 135, 84, 0.05) !important;
+    transform: scale(1.05);
+}
+
+/* Alert & Status Improvements */
+.alert {
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.alert-warning {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    color: #856404;
+    border-left: 4px solid #ffc107;
+}
+
+.alert-success {
+    background: linear-gradient(135deg, #d1e7dd 0%, #b6dfb8 100%);
+    color: #0f5132;
+    border-left: 4px solid #198754;
+}
+
+.alert-danger {
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c2c7 100%);
+    color: #721c24;
+    border-left: 4px solid #dc3545;
+}
+
+.alert-info {
+    background: linear-gradient(135deg, #d1ecf1 0%, #b8daff 100%);
+    color: #055160;
+    border-left: 4px solid #0dcaf0;
+}
+
+/* Phase 3: Summary Cards Enhancement */
+.card.bg-primary {
+    background: linear-gradient(135deg, #0d6efd 0%, #6610f2 100%) !important;
+    border: none;
+    transform: scale(1);
+    transition: transform 0.2s ease;
+}
+
+.card.bg-primary:hover {
+    transform: scale(1.05);
+}
+
+.card.bg-success {
+    background: linear-gradient(135deg, #198754 0%, #20c997 100%) !important;
+    border: none;
+    transform: scale(1);
+    transition: transform 0.2s ease;
+}
+
+.card.bg-success:hover {
+    transform: scale(1.05);
+}
+
+.card.bg-info {
+    background: linear-gradient(135deg, #0dcaf0 0%, #6f42c1 100%) !important;
+    border: none;
+    transform: scale(1);
+    transition: transform 0.2s ease;
+}
+
+.card.bg-info:hover {
+    transform: scale(1.05);
+}
+
+.card.bg-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%) !important;
+    color: #000 !important;
+    border: none;
+    transform: scale(1);
+    transition: transform 0.2s ease;
+}
+
+.card.bg-warning:hover {
+    transform: scale(1.05);
+}
+
+/* Phase 3: Button Enhancements */
+.btn {
     border-radius: 6px;
-    border: 1px solid #ced4da;
-    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    font-weight: 500;
+    transition: all 0.2s ease;
 }
 
-.form-control:focus, .form-select:focus {
-    border-color: #86b7fe;
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+.btn-primary {
+    background: linear-gradient(135deg, #0d6efd 0%, #6610f2 100%);
+    border: none;
+    box-shadow: 0 2px 4px rgba(13, 110, 253, 0.3);
 }
 
-.form-text {
-    font-size: 0.8rem;
+.btn-primary:hover {
+    background: linear-gradient(135deg, #0b5ed7 0%, #5a0fb5 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(13, 110, 253, 0.4);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #198754 0%, #20c997 100%);
+    border: none;
+    box-shadow: 0 2px 4px rgba(25, 135, 84, 0.3);
+}
+
+.btn-success:hover {
+    background: linear-gradient(135deg, #157347 0%, #1ba085 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(25, 135, 84, 0.4);
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+    border: none;
+    color: #000;
+    box-shadow: 0 2px 4px rgba(255, 193, 7, 0.3);
+}
+
+.btn-warning:hover {
+    background: linear-gradient(135deg, #e0a800 0%, #e8680f 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(255, 193, 7, 0.4);
+    color: #000;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #e74c3c 100%);
+    border: none;
+    box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
+}
+
+.btn-danger:hover {
+    background: linear-gradient(135deg, #bb2d3b 0%, #c0392b 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.4);
+}
+
+.btn-outline-secondary {
+    border-color: #6c757d;
     color: #6c757d;
-    margin-top: 0.25rem;
 }
 
-/* Responsive Design */
+.btn-outline-secondary:hover {
+    background-color: #6c757d;
+    transform: translateY(-1px);
+}
+
+.btn-outline-danger {
+    border-color: #dc3545;
+    color: #dc3545;
+}
+
+.btn-outline-danger:hover {
+    background-color: #dc3545;
+    transform: translateY(-1px);
+}
+
+/* Phase 3: Loading States */
+.btn .spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+    margin-left: 0.5rem;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    transform: none !important;
+    cursor: not-allowed;
+}
+
+/* Phase 3: Badge Improvements */
+.badge {
+    font-weight: 500;
+    letter-spacing: 0.025em;
+    border-radius: 4px;
+}
+
+.badge.bg-primary {
+    background: linear-gradient(135deg, #0d6efd 0%, #6610f2 100%) !important;
+}
+
+.badge.bg-success {
+    background: linear-gradient(135deg, #198754 0%, #20c997 100%) !important;
+}
+
+.badge.bg-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%) !important;
+    color: #000 !important;
+}
+
+.badge.bg-info {
+    background: linear-gradient(135deg, #0dcaf0 0%, #6f42c1 100%) !important;
+}
+
+.badge.bg-light {
+    background-color: #f8f9fa !important;
+    color: #6c757d !important;
+    border: 1px solid #dee2e6;
+}
+
+/* Phase 3: Form Section Headers */
+.border-bottom {
+    border-bottom: 2px solid #dee2e6 !important;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+}
+
+.text-primary {
+    color: #0d6efd !important;
+}
+
+.text-info {
+    color: #0dcaf0 !important;
+}
+
+.text-warning {
+    color: #ffc107 !important;
+}
+
+/* Phase 3: Mobile Responsiveness */
 @media (max-width: 768px) {
+    .nav-tabs .nav-link {
+        padding: 8px 12px;
+        font-size: 0.875rem;
+    }
+    
+    .nav-tabs .nav-link .d-md-none {
+        display: inline !important;
+    }
+    
+    .nav-tabs .nav-link .d-none.d-md-inline {
+        display: none !important;
+    }
+    
     .stage-requirement-card {
         margin-bottom: 1rem;
     }
     
-    .nav-tabs .nav-link {
-        padding: 0.5rem;
-        font-size: 0.9rem;
+    .asset-dropzone {
+        padding: 1.5rem 1rem;
     }
     
-    .modal-dialog {
-        margin: 0.5rem;
-    }
-    
-    .stage-summary-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .btn-group-sm .btn {
-        padding: 0.375rem 0.75rem;
-        font-size: 0.8rem;
+    .card.bg-primary,
+    .card.bg-success,
+    .card.bg-info,
+    .card.bg-warning {
+        margin-bottom: 1rem;
     }
 }
 
-/* Dark mode support (future enhancement) */
+/* Phase 3: Print Styles */
+@media print {
+    .nav-tabs,
+    .btn,
+    .modal-header,
+    .modal-footer {
+        display: none !important;
+    }
+    
+    .tab-content .tab-pane {
+        display: block !important;
+    }
+    
+    .card {
+        break-inside: avoid;
+        margin-bottom: 1rem;
+    }
+}
+
+/* Phase 3: Focus and Accessibility */
+.form-control:focus,
+.form-select:focus,
+.btn:focus {
+    outline: 2px solid #0d6efd;
+    outline-offset: 2px;
+}
+
+.btn:focus:not(:focus-visible) {
+    outline: none;
+}
+
+/* Phase 3: Tooltip Styling */
+.tooltip {
+    font-size: 0.875rem;
+}
+
+.tooltip .tooltip-inner {
+    background-color: #212529;
+    border-radius: 6px;
+    padding: 8px 12px;
+}
+
+/* Phase 3: Custom Checkbox and Radio Styling */
+.form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.form-check-input:focus {
+    border-color: #86b7fe;
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Phase 3: Animation Classes */
+.fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.slide-up {
+    animation: slideUp 0.3s ease-in-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Phase 3: Validation Visual Feedback */
+.was-validated .form-control:valid,
+.was-validated .form-select:valid {
+    border-color: #198754;
+    padding-right: calc(1.5em + 0.75rem);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23198754' d='m2.3 6.73l.4-.4l1.15-1.15l.88-.88l1.47-1.47L6.7 2.3l-.4-.4l-1.15 1.15l-.88.88l-1.47 1.47L2.3 6.73z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right calc(0.375em + 0.1875rem) center;
+    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+}
+
+.was-validated .form-control:valid:focus,
+.was-validated .form-select:valid:focus {
+    border-color: #198754;
+    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+}
+
+/* Phase 3: Dark Mode Support (Optional) */
 @media (prefers-color-scheme: dark) {
+    .parts-form-container {
+        background: #212529;
+        color: #fff;
+    }
+    
+    .form-control,
+    .form-select {
+        background-color: #495057;
+        border-color: #6c757d;
+        color: #fff;
+    }
+    
+    .nav-tabs .nav-link {
+        color: #adb5bd;
+    }
+    
+    .nav-tabs .nav-link:hover,
+    .nav-tabs .nav-link.active {
+        color: #fff;
+    }
+}
+
+/* Phase 3: High Contrast Mode Support */
+@media (prefers-contrast: high) {
+    .btn,
+    .form-control,
+    .form-select {
+        border-width: 2px;
+    }
+    
     .stage-requirement-card {
-        background-color: #2d3748;
-        border-color: #4a5568;
-        color: #e2e8f0;
+        border-width: 2px;
     }
     
-    .stage-requirement-card .card-header {
-        background: linear-gradient(45deg, #2d3748, #4a5568);
-        border-color: #4a5568;
-    }
-    
-    .modal-content {
-        background-color: #2d3748;
-        color: #e2e8f0;
-    }
-    
-    .form-control, .form-select {
-        background-color: #4a5568;
-        border-color: #718096;
-        color: #e2e8f0;
-    }
-    
-    .form-control:focus, .form-select:focus {
-        background-color: #4a5568;
-        border-color: #63b3ed;
-        color: #e2e8f0;
+    .alert {
+        border-width: 2px;
     }
 }

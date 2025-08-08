@@ -622,8 +622,7 @@ namespace OpCentrix.Pages.Admin
                 PartNumber = "",
                 Name = "",
                 Description = "",
-                Industry = "Firearms", // Updated to match B&T focus
-                Application = "B&T Manufacturing", // Updated to match B&T focus
+                // PHASE 3: Remove legacy Industry/Application defaults - now using lookup tables
                 Material = "Ti-6Al-4V Grade 5",
                 SlsMaterial = "Ti-6Al-4V Grade 5", // Ensure SLS material matches
                 EstimatedHours = 8.0,
@@ -646,9 +645,10 @@ namespace OpCentrix.Pages.Admin
                 StageDetails = "{}",
                 StageOrder = 1,
                 
-                // PHASE 4: Set lookup field defaults to avoid validation errors
-                ComponentTypeId = 1, // Default to "General" component type
-                ComplianceCategoryId = 1, // Default to "Non NFA" compliance
+                // PHASE 3: Modern lookup field defaults - these will be populated from dropdown selections
+                ComponentTypeId = null, // Will be selected from dropdown - General = 1, Serialized = 2
+                ComplianceCategoryId = null, // Will be selected from dropdown - Non NFA = 1, NFA = 2
+                IsLegacyForm = false, // New parts use modern form by default
                 
                 // Ensure all required string fields have defaults
                 CustomerPartNumber = "",
@@ -738,7 +738,11 @@ namespace OpCentrix.Pages.Admin
                 BTLicensingCost = 0.00m,
                 ComplianceCost = 0.00m,
                 TestingCost = 0.00m,
-                DocumentationCost = 0.00m
+                DocumentationCost = 0.00m,
+                
+                // Legacy fields - kept for compatibility but set to empty/default values
+                Industry = "", // Will be mapped from ComponentType
+                Application = "" // Will be mapped from ComplianceCategory 
             };
         }
 
@@ -810,10 +814,7 @@ namespace OpCentrix.Pages.Admin
             else if (part.Description.Length > 500)
                 errors.Add("Description cannot exceed 500 characters");
 
-            // PHASE 4: Removed Industry and Application validation - now using lookup tables
-            // ComponentType and ComplianceCategory validation will be handled by the form
-
-            // PHASE 4: Add validation for new lookup fields
+            // PHASE 3: Modern lookup field validation (ComponentType and ComplianceCategory are now required)
             if (!part.ComponentTypeId.HasValue)
                 errors.Add("Component Type is required");
 
@@ -851,11 +852,6 @@ namespace OpCentrix.Pages.Admin
             if (part.LengthMm > 1000 || part.WidthMm > 1000 || part.HeightMm > 1000)
                 errors.Add("Dimensions seem unreasonably large (over 1000mm)");
 
-            // Manufacturing stages validation - UPDATED FOR PHASE 4
-            // Removed legacy boolean checks, now using PartStageRequirements
-            // Stage validation will be handled through the stage management system
-            // This ensures at least one stage is selected through the modern interface
-
             // B&T specific validation
             if (part.RequiresATFForm1 || part.RequiresATFForm4)
             {
@@ -883,15 +879,27 @@ namespace OpCentrix.Pages.Admin
                     errors.Add("Admin override reason cannot exceed 500 characters");
             }
 
-            // Business logic validation
-            if (part.BTComponentType == "Suppressor" && !part.RequiresTaxStamp)
-                errors.Add("Suppressor components typically require a tax stamp");
+            // Business logic validation based on Component Type and Compliance Category
+            // Only validate if these lookup values are properly set
+            if (part.ComponentTypeId.HasValue && part.ComplianceCategoryId.HasValue)
+            {
+                // Enhanced business logic validation using lookup relationships
+                if (part.BTComponentType == "Suppressor" && !part.RequiresTaxStamp)
+                    errors.Add("Suppressor components typically require a tax stamp");
 
-            if (part.BTFirearmCategory == "Firearm" && !part.RequiresUniqueSerialNumber)
-                errors.Add("Firearm components require unique serial numbers");
+                if (part.BTFirearmCategory == "Firearm" && !part.RequiresUniqueSerialNumber)
+                    errors.Add("Firearm components require unique serial numbers");
 
-            if (!string.IsNullOrEmpty(part.BTSuppressorType) && !part.RequiresSoundTesting)
-                errors.Add("Suppressor components should include sound testing");
+                if (!string.IsNullOrEmpty(part.BTSuppressorType) && !part.RequiresSoundTesting)
+                    errors.Add("Suppressor components should include sound testing");
+
+                // Validate compliance category consistency
+                if (part.ComplianceCategoryId == 2) // Assuming 2 = NFA category
+                {
+                    if (!part.RequiresATFForm1 && !part.RequiresATFForm4)
+                        errors.Add("NFA items typically require ATF forms");
+                }
+            }
 
             return errors;
         }

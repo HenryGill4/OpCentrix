@@ -109,7 +109,7 @@
         <!-- Tab Content -->
         <div class="tab-content" id="partFormTabsContent">
             
-            <!-- TAB 1: Basic Information -->
+            <!-- TAB 1: Basic Information - MODERNIZED -->
             <div class="tab-pane fade show active" id="basic" role="tabpanel">
                 <div class="row g-3">
                     <div class="col-12">
@@ -140,47 +140,15 @@
                         <span asp-validation-for="Part.Description" class="text-danger"></span>
                     </div>
                     
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <label asp-for="Part.CustomerPartNumber" class="form-label">Customer Part Number</label>
                         <input asp-for="Part.CustomerPartNumber" class="form-control" 
                                placeholder="Customer's internal part number" />
                         <span asp-validation-for="Part.CustomerPartNumber" class="text-danger"></span>
                     </div>
-                    
-                    <div class="col-md-4">
-                        <label asp-for="Part.Industry" class="form-label required">Industry</label>
-                        <select asp-for="Part.Industry" class="form-select" required>
-                            <option value="">Select Industry</option>
-                            <option value="Firearms">Firearms</option>
-                            <option value="Aerospace">Aerospace</option>
-                            <option value="Automotive">Automotive</option>
-                            <option value="Medical">Medical</option>
-                            <option value="Defense">Defense</option>
-                            <option value="Energy">Energy</option>
-                            <option value="General Manufacturing">General Manufacturing</option>
-                            <option value="Research & Development">Research & Development</option>
-                        </select>
-                        <span asp-validation-for="Part.Industry" class="text-danger"></span>
-                    </div>
-                    
-                    <div class="col-md-4">
-                        <label asp-for="Part.Application" class="form-label required">Application</label>
-                        <select asp-for="Part.Application" class="form-select" required>
-                            <option value="">Select Application</option>
-                            <option value="B&T Manufacturing">B&T Manufacturing</option>
-                            <option value="General Component">General Component</option>
-                            <option value="Structural Component">Structural Component</option>
-                            <option value="Prototype Development">Prototype Development</option>
-                            <option value="Production Tooling">Production Tooling</option>
-                            <option value="Replacement Parts">Replacement Parts</option>
-                            <option value="Custom Component">Custom Component</option>
-                            <option value="Research & Testing">Research & Testing</option>
-                        </select>
-                        <span asp-validation-for="Part.Application" class="text-danger"></span>
-                    </div>
 
-                    <!-- PHASE 3: New Lookup Fields - MODERNIZED -->
-                    <div class="col-md-4">
+                    <!-- PHASE 3: NEW LOOKUP FIELDS - Replace Industry/Application -->
+                    <div class="col-md-3">
                         <label asp-for="Part.ComponentTypeId" class="form-label required">Component Type</label>
                         <select asp-for="Part.ComponentTypeId" class="form-select" required>
                             <option value="">Select Component Type</option>
@@ -188,7 +156,7 @@
                             {
                                 @foreach (var componentType in Model.PartFormData.ComponentTypes)
                                 {
-                                    <option value="@componentType.Id">@componentType.Name - @componentType.Description</option>
+                                    <option value="@componentType.Id">@componentType.Name</option>
                                 }
                             }
                         </select>
@@ -196,7 +164,7 @@
                         <div class="form-text">Determines serialization and tracking requirements</div>
                     </div>
                     
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label asp-for="Part.ComplianceCategoryId" class="form-label required">Compliance Category</label>
                         <select asp-for="Part.ComplianceCategoryId" class="form-select" required>
                             <option value="">Select Compliance Category</option>
@@ -206,10 +174,6 @@
                                 {
                                     <option value="@category.Id" data-regulatory-level="@category.RegulatoryLevel">
                                         @category.Name (@category.RegulatoryLevel)
-                                        @if (category.RequiresSpecialHandling) 
-                                        { 
-                                            <span>- Special Handling Required</span> 
-                                        }
                                     </option>
                                 }
                             }
@@ -243,12 +207,19 @@
                         </div>
                     </div>
 
-                    <div class="col-md-3">
-                        <div class="form-check mt-4">
-                            <input asp-for="Part.IsLegacyForm" class="form-check-input" type="checkbox" disabled />
-                            <label asp-for="Part.IsLegacyForm" class="form-check-label text-muted">Legacy Form (Read-only)</label>
+                    <!-- Phase 3: Show legacy form status for reference -->
+                    @if (Model.Part.IsLegacyForm)
+                    {
+                        <div class="col-12">
+                            <div class="alert alert-warning d-flex align-items-center">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <div>
+                                    <strong>Legacy Part Configuration:</strong> This part was created before the modern stage management system. 
+                                    Please review the Manufacturing Stages tab to update to the new workflow system.
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    }
 
                     <!-- Quality Standards -->
                     <div class="col-12 mt-4">
@@ -286,7 +257,7 @@
                 </div>
             </div>
 
-            <!-- TAB 2: Manufacturing Stages - MODERNIZED -->
+            <!-- TAB 2: Manufacturing Stages - ENHANCED -->
             <div class="tab-pane fade" id="stages" role="tabpanel">
                 <div class="row g-3">
                     <div class="col-12">
@@ -298,11 +269,15 @@
                                 <i class="fas fa-plus me-1"></i>Add Stage
                             </button>
                         </div>
+                        <div class="text-muted mb-3">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Configure the manufacturing workflow by adding production stages. Each stage defines duration, costs, and execution order.
+                        </div>
                     </div>
 
                     <!-- Modern Stage Requirements Container -->
                     <div class="col-12">
-                        <div id="stage-requirements-container">
+                        <div id="stage-requirements-container" class="min-height-200">
                             <!-- Dynamic stage requirements loaded by ModernStageManager -->
                             <div class="text-center py-4">
                                 <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
@@ -312,48 +287,52 @@
                     </div>
 
                     <!-- Legacy Stage Information (Read-only for reference) -->
-                    <div class="col-12 mt-4">
-                        <div class="card border-warning">
-                            <div class="card-header bg-warning text-dark">
-                                <h6 class="mb-0">
-                                    <i class="fas fa-info-circle me-2"></i>Migration Status
-                                </h6>
-                            </div>
-                            <div class="card-body">
-                                <p class="mb-2">
-                                    <strong>Modern Stage Management:</strong> This part uses the new stage-based system for flexible manufacturing workflow configuration.
-                                </p>
-                                <div class="row g-2 small">
-                                    <div class="col-md-3">
-                                        <span class="badge @(Model.Part.RequiresSLSPrinting ? "bg-primary" : "bg-light text-dark")">
-                                            SLS Printing: @(Model.Part.RequiresSLSPrinting ? "Required" : "Not Required")
-                                        </span>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <span class="badge @(Model.Part.RequiresCNCMachining ? "bg-success" : "bg-light text-dark")">
-                                            CNC Machining: @(Model.Part.RequiresCNCMachining ? "Required" : "Not Required")
-                                        </span>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <span class="badge @(Model.Part.RequiresEDMOperations ? "bg-warning" : "bg-light text-dark")">
-                                            EDM Operations: @(Model.Part.RequiresEDMOperations ? "Required" : "Not Required")
-                                        </span>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <span class="badge @(Model.Part.RequiresAssembly ? "bg-info" : "bg-light text-dark")">
-                                            Assembly: @(Model.Part.RequiresAssembly ? "Required" : "Not Required")
-                                        </span>
-                                    </div>
+                    @if (Model.Part.IsLegacyForm && (Model.Part.RequiresSLSPrinting || Model.Part.RequiresCNCMachining || Model.Part.RequiresEDMOperations || Model.Part.RequiresAssembly || Model.Part.RequiresFinishing))
+                    {
+                        <div class="col-12 mt-4">
+                            <div class="card border-warning">
+                                <div class="card-header bg-warning text-dark">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-history me-2"></i>Legacy Stage Configuration (Reference Only)
+                                    </h6>
                                 </div>
-                                <div class="mt-2">
-                                    <small class="text-muted">
-                                        <i class="fas fa-arrow-up me-1"></i>
-                                        Legacy boolean flags are preserved for reference. Use the stage management above to configure the actual manufacturing workflow.
-                                    </small>
+                                <div class="card-body">
+                                    <p class="mb-2">
+                                        <strong>Original Boolean Flags:</strong> This part was configured using the old boolean flag system. 
+                                        The modern stage management system above provides more flexibility and detailed configuration.
+                                    </p>
+                                    <div class="row g-2 small">
+                                        <div class="col-md-3">
+                                            <span class="badge @(Model.Part.RequiresSLSPrinting ? "bg-primary" : "bg-light text-dark")">
+                                                SLS Printing: @(Model.Part.RequiresSLSPrinting ? "Required" : "Not Required")
+                                            </span>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <span class="badge @(Model.Part.RequiresCNCMachining ? "bg-success" : "bg-light text-dark")">
+                                                CNC Machining: @(Model.Part.RequiresCNCMachining ? "Required" : "Not Required")
+                                            </span>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <span class="badge @(Model.Part.RequiresEDMOperations ? "bg-warning" : "bg-light text-dark")">
+                                                EDM Operations: @(Model.Part.RequiresEDMOperations ? "Required" : "Not Required")
+                                            </span>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <span class="badge @(Model.Part.RequiresAssembly ? "bg-info" : "bg-light text-dark")">
+                                                Assembly: @(Model.Part.RequiresAssembly ? "Required" : "Not Required")
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-arrow-up me-1"></i>
+                                            Use the modern stage management above to replace these legacy settings.
+                                        </small>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    }
 
                     <!-- Current Stage Tracking -->
                     <div class="col-md-6">
@@ -638,7 +617,7 @@
                 </div>
             </div>
 
-            <!-- TAB 6: Summary -->
+            <!-- TAB 6: Summary - ENHANCED -->
             <div class="tab-pane fade" id="summary" role="tabpanel">
                 <div class="row g-3">
                     <div class="col-12">
@@ -646,7 +625,7 @@
                             <i class="fas fa-calculator me-2"></i>Manufacturing Summary
                         </h6>
                     </div
-                    >
+                    
                     <!-- Summary Cards -->
                     <div class="col-md-3">
                         <div class="card bg-primary text-white">
@@ -721,12 +700,43 @@
                 </div>
             </div>
 
-            <!-- TAB 7: Assets (Phase 5) -->
+            <!-- TAB 7: Assets (Phase 5) - ENHANCED -->
             @if (Model.Part.Id > 0)
             {
                 <div class="tab-pane fade" id="assets" role="tabpanel">
-                    <!-- Asset management content from existing implementation -->
-                    @* Include existing asset management implementation *@
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="text-primary border-bottom pb-2 mb-0">
+                                    <i class="fas fa-paperclip me-2"></i>Part Assets & Documentation
+                                </h6>
+                                <button type="button" class="btn btn-success btn-sm" id="upload-asset-btn">
+                                    <i class="fas fa-upload me-1"></i>Upload Asset
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Asset Upload Area -->
+                        <div class="col-12">
+                            <div class="card border-dashed border-2 p-4 text-center asset-dropzone" id="asset-dropzone">
+                                <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
+                                <p class="mb-2">Drag and drop files here or click to browse</p>
+                                <p class="small text-muted">Supported: 3D Models (.step, .stp, .stl), Images (.jpg, .png), Documents (.pdf)</p>
+                                <input type="file" id="asset-file-input" multiple accept=".step,.stp,.stl,.jpg,.jpeg,.png,.pdf" class="d-none">
+                            </div>
+                        </div>
+
+                        <!-- Existing Assets List -->
+                        <div class="col-12">
+                            <div id="assets-list-container">
+                                <!-- Assets loaded dynamically -->
+                                <div class="text-center py-4">
+                                    <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                                    <p class="text-muted mt-2">Loading part assets...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             }
         </div>
@@ -828,5 +838,117 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof window.updateSlsMaterial === 'function') {
         window.updateSlsMaterial();
     }
+
+    // Initialize asset drag and drop if on assets tab
+    initializeAssetManagement();
 });
+
+// Asset Management Functions
+function initializeAssetManagement() {
+    const dropzone = document.getElementById('asset-dropzone');
+    const fileInput = document.getElementById('asset-file-input');
+    
+    if (!dropzone || !fileInput) return;
+
+    // Click to browse
+    dropzone.addEventListener('click', () => fileInput.click());
+    
+    // Drag and drop events
+    dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('border-primary', 'bg-light');
+    });
+    
+    dropzone.addEventListener('dragleave', () => {
+        dropzone.classList.remove('border-primary', 'bg-light');
+    });
+    
+    dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('border-primary', 'bg-light');
+        
+        const files = Array.from(e.dataTransfer.files);
+        handleAssetFiles(files);
+    });
+    
+    // File input change
+    fileInput.addEventListener('change', (e) => {
+        const files = Array.from(e.target.files);
+        handleAssetFiles(files);
+    });
+}
+
+function handleAssetFiles(files) {
+    console.log('Handling asset files:', files.map(f => f.name));
+    
+    // Validate and upload files
+    files.forEach(file => {
+        if (validateAssetFile(file)) {
+            uploadAssetFile(file);
+        }
+    });
+}
+
+function validateAssetFile(file) {
+    const allowedTypes = {
+        '3DModel': ['.step', '.stp', '.stl'],
+        'Photo': ['.jpg', '.jpeg', '.png'],
+        'Document': ['.pdf']
+    };
+    
+    const extension = '.' + file.name.split('.').pop().toLowerCase();
+    const isValidType = Object.values(allowedTypes).some(types => types.includes(extension));
+    
+    if (!isValidType) {
+        alert(`File type not supported: ${extension}`);
+        return false;
+    }
+    
+    if (file.size > 50 * 1024 * 1024) { // 50MB limit
+        alert(`File too large: ${file.name}. Maximum size is 50MB.`);
+        return false;
+    }
+    
+    return true;
+}
+
+function uploadAssetFile(file) {
+    // This would integrate with the asset upload functionality
+    console.log('Uploading asset file:', file.name);
+    // Implementation would call the Parts page asset upload method
+}
 </script>
+
+<style>
+.min-height-200 {
+    min-height: 200px;
+}
+
+.border-dashed {
+    border-style: dashed !important;
+}
+
+.asset-dropzone {
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+}
+
+.asset-dropzone:hover {
+    border-color: var(--bs-primary) !important;
+    background-color: var(--bs-light) !important;
+}
+
+.stage-requirement-card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.stage-requirement-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.required::after {
+    content: " *";
+    color: red;
+}
+</style>
