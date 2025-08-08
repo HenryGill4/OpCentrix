@@ -87,15 +87,15 @@
                                 <div class="text-center">
                                     <div class="text-sm font-medium">@day.ToString("M/d")</div>
                                     <div class="text-xs">
-                                        @slotTime.ToString(@"h\:mm")
-                                        @if (slotTime.Hours >= 12) 
-                                        {
-                                            <span>PM</span>
-                                        } 
-                                        else 
-                                        {
-                                            <span>AM</span>
+                                        @{
+                                            // FIXED: Proper TimeSpan formatting for vertical scheduler
+                                            var hour = slotTime.Hours;
+                                            var minute = slotTime.Minutes;
+                                            var displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+                                            var period = hour >= 12 ? "PM" : "AM";
+                                            var timeText = $"{displayHour}:{minute:00}{period}";
                                         }
+                                        @timeText
                                     </div>
                                 </div>
                             }
@@ -153,7 +153,7 @@
                                         
                                         <!-- Job indicator that fits within the cell -->
                                         <div class="absolute job-block @machine.ToLower() status-@job.Status.ToLower().Replace(" ", "-")"
-                                             style="top: 2px; left: 2px; right: 2px; height: calc(100% - 4px); max-height: 56px; z-index: 10;"
+                                             style="top: 2px; left: 2px; right: 2px; height: calc(100% - 4px); max-height: 56px; z-index: 200;"
                                              data-material="@job.SlsMaterial"
                                              data-priority="@job.Priority"
                                              data-status="@job.Status"

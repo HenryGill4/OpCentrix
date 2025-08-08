@@ -108,7 +108,7 @@
                             @foreach (var job in dayJobs.Take(2)) // Limit to 2 jobs for mini view
                             {
                                 <div class="absolute top-1 left-1 right-1 job-block @machine.ToLower() status-@job.Status.ToLower().Replace(" ", "-")"
-                                     style="height: 20px; z-index:10; @(dayJobs.Count > 1 ? "margin-bottom: 2px;" : "")"
+                                     style="height: 20px; z-index:200; @(dayJobs.Count > 1 ? "margin-bottom: 2px;" : "")"
                                      title="@job.PartNumber - @job.Status (@job.EstimatedHours.ToString("F1")h)">
                                     <div class="h-full w-full rounded-md flex items-center px-2 overflow-hidden text-xs font-medium text-white">
                                         @job.PartNumber?.Substring(0, Math.Min(job.PartNumber.Length, 8))

@@ -241,29 +241,109 @@ namespace OpCentrix.Pages.Scheduler
             }
         }
 
-        public async Task<IActionResult> OnPostDeleteJobAsync(int id)
+        public async Task<IActionResult> OnDeleteJobAsync([FromQuery] int id)
         {
             var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogInformation("🗑️ [SCHEDULER-{OperationId}] Deleting job: {JobId}", operationId, id);
+            _logger.LogInformation("🗑️ [SCHEDULER-{OperationId}] DELETE handler called for job: {JobId}", operationId, id);
+            return await DeleteJobInternalAsync(id, operationId);
+        }
 
+        // CRITICAL FIX: Add POST handler for DELETE operations (common pattern for HTMX)
+        public async Task<IActionResult> OnPostDeleteJobAsync([FromQuery] int id)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("🗑️ [SCHEDULER-{OperationId}] POST DELETE handler called for job: {JobId}", operationId, id);
+            return await DeleteJobInternalAsync(id, operationId);
+        }
+
+        // Internal method to handle the actual deletion logic
+        private async Task<IActionResult> DeleteJobInternalAsync(int id, string operationId)
+        {
             try
             {
                 var job = await _context.Jobs.FindAsync(id);
                 if (job == null)
                 {
-                    return new JsonResult(new { success = false, error = "Job not found" });
+                    _logger.LogWarning("⚠️ [SCHEDULER-{OperationId}] Job {JobId} not found for deletion", operationId, id);
+                    
+                    var notFoundScript = $@"
+                        <script>
+                            console.error('🚨 [SCHEDULER] Job not found for deletion');
+                            if (typeof window.showErrorNotification === 'function') {{
+                                window.showErrorNotification('Job not found');
+                            }} else {{
+                                alert('Job not found');
+                            }}
+                        </script>";
+                    
+                    return Content(notFoundScript, "text/html");
                 }
 
+                var partNumber = job.PartNumber; // Store for logging
+                
                 _context.Jobs.Remove(job);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Job deleted: {JobId}", operationId, id);
-                return new JsonResult(new { success = true, message = "Job deleted successfully!", refreshPage = true });
+                _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Job deleted: {JobId} - {PartNumber}", operationId, id, partNumber);
+                
+                // Return HTMX success response that closes modal and refreshes page
+                var successScript = $@"
+                    <script>
+                        console.log('✅ [SCHEDULER] Job deletion successful');
+                        
+                        // Close modal
+                        const modalContainer = document.getElementById('modal-container');
+                        if (modalContainer) {{
+                            modalContainer.style.display = 'none';
+                            modalContainer.classList.add('hidden');
+                            modalContainer.innerHTML = '';
+                        }}
+                        
+                        // Remove modal backdrop
+                        const backdrop = document.querySelector('.modal-backdrop');
+                        if (backdrop) {{
+                            backdrop.remove();
+                        }}
+                        
+                        // Reset body overflow
+                        document.body.style.overflow = '';
+                        document.body.classList.remove('modal-open');
+                        
+                        // Show success message
+                        if (typeof window.showSuccessNotification === 'function') {{
+                            window.showSuccessNotification('Job ""{partNumber}"" deleted successfully!');
+                        }} else if (typeof window.showToast === 'function') {{
+                            window.showToast('success', 'Job ""{partNumber}"" deleted successfully!');
+                        }} else {{
+                            alert('SUCCESS: Job ""{partNumber}"" deleted successfully!');
+                        }}
+                        
+                        // Reload page to refresh scheduler data
+                        setTimeout(() => {{
+                            console.log('🔄 [SCHEDULER] Reloading page to refresh data');
+                            window.location.reload();
+                        }}, 1000);
+                    </script>";
+
+                return Content(successScript, "text/html");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error deleting job: {JobId}", operationId, id);
-                return new JsonResult(new { success = false, error = "Error deleting job" });
+                
+                // Return HTMX error response
+                var errorScript = $@"
+                    <script>
+                        console.error('🚨 [SCHEDULER] Error deleting job:', '{ex.Message}');
+                        
+                        if (typeof window.showErrorNotification === 'function') {{
+                            window.showErrorNotification('Error deleting job: {ex.Message.Replace("'", "\\'")}');
+                        }} else {{
+                            alert('Error deleting job: {ex.Message.Replace("'", "\\'")}');
+                        }}
+                    </script>";
+                
+                return Content(errorScript, "text/html");
             }
         }
 

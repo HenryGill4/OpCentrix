@@ -703,20 +703,20 @@ namespace OpCentrix.Services
         {
             return zoom switch
             {
-                // Task 9: Extended zoom levels from 12 hours down to 1 hour
-                "2month" => (60, 1, 1440),    // 60 days (2 months), 1 slot per day (24 hours)
-                "month" => (30, 1, 1440),     // 30 days (1 month), 1 slot per day (24 hours)
-                "week" => (7, 1, 1440),       // 7 days, 1 slot per day (24 hours)
-                "day" => (7, 1, 1440),        // 7 days, 1 slot per day (24 hours) - kept for compatibility
-                "12h" => (5, 2, 720),         // 5 days, 2 slots per day (12 hours each)
-                "6h" => (4, 4, 360),          // 4 days, 4 slots per day (6 hours each)
-                "4h" => (3, 6, 240),          // 3 days, 6 slots per day (4 hours each)
-                "2h" => (2, 12, 120),         // 2 days, 12 slots per day (2 hours each)
-                "1h" => (1, 24, 60),          // 1 day, 24 slots per day (1 hour each)
-                "hour" => (1, 24, 60),        // Alias for 1h - kept for compatibility
-                "30min" => (1, 48, 30),       // 1 day, 48 slots per day (30 minutes each)
-                "15min" => (1, 96, 15),       // 1 day, 96 slots per day (15 minutes each)
-                _ => (7, 1, 1440)             // Default to week view
+                // ENHANCED: Extended time spans with more slots for superior horizontal scrolling
+                "2month" => (90, 1, 1440),    // 90 days (3 months), 1 slot per day - EXTENDED for more scrolling
+                "month" => (60, 1, 1440),     // 60 days (2 months), 1 slot per day - EXTENDED for more scrolling
+                "week" => (56, 1, 1440),      // 56 days (8 weeks), 1 slot per day - EXTENDED for more scrolling
+                "day" => (45, 1, 1440),       // 45 days, 1 slot per day - EXTENDED for excellent scrolling
+                "12h" => (45, 2, 720),        // 45 days, 2 slots per day - EXTENDED: 90 total slots
+                "6h" => (45, 4, 360),         // 45 days, 4 slots per day - EXTENDED: 180 total slots
+                "4h" => (45, 6, 240),         // 45 days, 6 slots per day - EXTENDED: 270 total slots
+                "2h" => (30, 12, 120),        // 30 days, 12 slots per day - EXTENDED: 360 total slots
+                "1h" => (21, 24, 60),         // 21 days, 24 slots per day - EXTENDED: 504 total slots
+                "hour" => (21, 24, 60),       // Alias for 1h - kept for compatibility
+                "30min" => (14, 48, 30),      // 14 days, 48 slots per day - EXTENDED: 672 total slots
+                "15min" => (7, 96, 15),       // 7 days, 96 slots per day - EXTENDED: 672 total slots
+                _ => (56, 1, 1440)            // Default to enhanced week view (8 weeks)
             };
         }
 

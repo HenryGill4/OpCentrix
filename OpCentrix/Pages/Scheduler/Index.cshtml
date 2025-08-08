@@ -42,33 +42,35 @@
     var hasJobs = viewModel.Jobs.Any();
     var isEmptyState = !hasRealMachines; // Empty state only when no machines are configured
     
-    // Get dynamic slot width values
+    // ENHANCED: Wider slot width values for superior horizontal scrolling
     var slotWidthDesktop = zoom switch {
-        "2month" => "30px",
-        "month" => "40px", 
-        "week" => "120px",
-        "12h" => "60px",
-        "6h" => "50px",
-        "4h" => "40px", 
-        "2h" => "30px",
-        "1h" => "25px",
-        "30min" => "20px",
-        "15min" => "15px",
-        _ => "120px"
+        "2month" => "60px",   // INCREASED: Better horizontal scrolling for 60-day span
+        "month" => "80px",    // INCREASED: Enhanced readability for 30-day span
+        "week" => "100px",    // INCREASED: More generous size for 42-day span
+        "day" => "120px",     // INCREASED: Maximum readability for 30-day span
+        "12h" => "150px",     // INCREASED: Very wide for excellent time labels
+        "6h" => "120px",      // INCREASED: Great balance for 120 slots
+        "4h" => "100px",      // INCREASED: Comfortable for 180 slots
+        "2h" => "80px",       // INCREASED: Good for 252 slots
+        "1h" => "70px",       // INCREASED: Comfortable for 336 slots
+        "30min" => "60px",    // INCREASED: Better for high-density view
+        "15min" => "50px",    // INCREASED: Still very usable for maximum detail
+        _ => "120px"          // Default to maximum readability
     };
     
     var slotWidthMobile = zoom switch {
-        "2month" => "20px",
-        "month" => "25px", 
-        "week" => "80px",
-        "12h" => "40px",
-        "6h" => "35px",
-        "4h" => "30px", 
-        "2h" => "25px",
-        "1h" => "20px",
-        "30min" => "15px",
-        "15min" => "12px",
-        _ => "80px"
+        "2month" => "40px",   // MOBILE: Good mobile horizontal scrolling
+        "month" => "50px",    // MOBILE: Enhanced mobile readability
+        "week" => "60px",     // MOBILE: Great mobile scrolling
+        "day" => "80px",      // MOBILE: Excellent mobile readability
+        "12h" => "100px",     // MOBILE: Very wide mobile touch targets
+        "6h" => "80px",       // MOBILE: Great mobile interaction
+        "4h" => "70px",       // MOBILE: Comfortable mobile scrolling
+        "2h" => "60px",       // MOBILE: Good mobile size
+        "1h" => "50px",       // MOBILE: Mobile comfortable
+        "30min" => "40px",    // MOBILE: Good mobile density
+        "15min" => "35px",    // MOBILE: Still usable minimum
+        _ => "80px"           // Default to excellent mobile view
     };
     
     // Color scheme for enhanced job blocks
@@ -271,6 +273,16 @@
     <link rel="stylesheet" href="~/css/stage-cohort-enhancements.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/responsive-master.css" asp-append-version="true" />
     <style>
+        /* CRITICAL FIX: Set CSS variables dynamically based on zoom level */
+        :root {
+            --slot-width: @slotWidthDesktop;
+        }
+        
+        /* CRITICAL FIX: Ensure proper slot width for current zoom level */
+        .scheduler-main-grid {
+            --slot-width: @slotWidthDesktop;
+        }
+        
         /* Task 9 & 10: Enhanced CSS for new zoom levels and orientation toggle */
         .scheduler-grid-container {
             --slot-width: @slotWidthDesktop;

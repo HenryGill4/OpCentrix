@@ -119,8 +119,9 @@ window.handleFormResponse = function(event) {
 
 class OpCentrixSchedulerUI {
     constructor() {
-        this.zoomLevels = ['day', 'hour', '30min', '15min'];
-        this.currentZoomIndex = 0;
+        // FIXED: Updated zoom levels to match main Index page
+        this.zoomLevels = ['2month', 'month', 'week', '12h', '6h', '4h', '2h', '1h', '30min', '15min'];
+        this.currentZoomIndex = 2; // Default to 'week'
         this.isInitialized = false;
         this.gridCellCache = new Map();
         this.resizeObserver = null;
@@ -148,11 +149,12 @@ class OpCentrixSchedulerUI {
 
     detectCurrentZoom() {
         const urlParams = new URLSearchParams(window.location.search);
-        const currentZoom = urlParams.get('zoom') || 'day';
+        const currentZoom = urlParams.get('zoom') || 'week';
         this.currentZoomIndex = this.zoomLevels.indexOf(currentZoom);
         if (this.currentZoomIndex === -1) {
-            this.currentZoomIndex = 0; // Default to 'day'
+            this.currentZoomIndex = 2; // Default to 'week'
         }
+        console.log(`?? [ZOOM] Current zoom detected: ${currentZoom} (index: ${this.currentZoomIndex})`);
     }
 
     setupEventListeners() {
@@ -436,18 +438,36 @@ class OpCentrixSchedulerUI {
         const currentZoom = this.zoomLevels[this.currentZoomIndex];
         const root = document.documentElement;
         
+        // PROFESSIONAL: Enhanced slot widths for better readability
+        // ENHANCED: Professional slot widths optimized for extended time spans
         const slotWidths = {
-            'day': '120px',
-            'hour': '80px',
-            '30min': '50px',
-            '15min': '30px'
+            'day': '120px',       // INCREASED: Maximum readability for 30-day span
+            'hour': '70px',       // INCREASED: Comfortable for 336 slots
+            '30min': '60px',      // INCREASED: Better for high-density view
+            '15min': '50px',      // INCREASED: Still very usable for maximum detail
+            '12h': '150px',       // INCREASED: Very wide for excellent time labels
+            '6h': '120px',        // INCREASED: Great balance for 120 slots
+            '4h': '100px',        // INCREASED: Comfortable for 180 slots
+            '2h': '80px',         // INCREASED: Good for 252 slots
+            '1h': '70px',         // INCREASED: Comfortable for 336 slots
+            'week': '100px',      // INCREASED: More generous size for 42-day span
+            'month': '80px',      // INCREASED: Enhanced readability for 30-day span
+            '2month': '60px'      // INCREASED: Better horizontal scrolling for 60-day span
         };
         
         const machineWidths = {
             'day': '200px',
-            'hour': '180px',
-            '30min': '160px',
-            '15min': '140px'
+            'hour': '200px',
+            '30min': '200px',
+            '15min': '200px',
+            '12h': '200px',
+            '6h': '200px',
+            '4h': '200px',
+            '2h': '200px',
+            '1h': '200px',
+            'week': '200px',
+            'month': '200px',
+            '2month': '200px'
         };
 
         root.style.setProperty('--slot-width', slotWidths[currentZoom] || '120px');
@@ -463,6 +483,46 @@ class OpCentrixSchedulerUI {
                 gridContainer.style.minWidth = 'fit-content';
             });
         }
+        
+        // ENHANCED: Update zoom-specific CSS variables
+        switch(currentZoom) {
+            case '12h':
+                root.style.setProperty('--slot-width', 'var(--slot-width-12h)');
+                break;
+            case '6h':
+                root.style.setProperty('--slot-width', 'var(--slot-width-6h)');
+                break;
+            case '4h':
+                root.style.setProperty('--slot-width', 'var(--slot-width-4h)');
+                break;
+            case '2h':
+                root.style.setProperty('--slot-width', 'var(--slot-width-2h)');
+                break;
+            case '1h':
+                root.style.setProperty('--slot-width', 'var(--slot-width-1h)');
+                break;
+            case '30min':
+                root.style.setProperty('--slot-width', 'var(--slot-width-30min)');
+                break;
+            case '15min':
+                root.style.setProperty('--slot-width', 'var(--slot-width-15min)');
+                break;
+            case 'week':
+                root.style.setProperty('--slot-width', 'var(--slot-width-week)');
+                break;
+            case 'month':
+                root.style.setProperty('--slot-width', 'var(--slot-width-month)');
+                break;
+            case '2month':
+                root.style.setProperty('--slot-width', 'var(--slot-width-2month)');
+                break;
+            default:
+                root.style.setProperty('--slot-width', slotWidths[currentZoom] || '120px');
+                break;
+        }
+        
+        // Update grid styles based on zoom level
+        console.log(`?? [ZOOM] Grid styles updated for ${currentZoom} zoom`);
     }
 
     handleResize() {
