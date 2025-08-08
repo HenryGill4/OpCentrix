@@ -218,10 +218,6 @@ namespace OpCentrix.Models
         public string ExportClassification { get; set; } = string.Empty;
         
         [StringLength(50)]
-        [Display(Name = "Component Type")]
-        public string ComponentType { get; set; } = string.Empty;
-        
-        [StringLength(50)]
         [Display(Name = "Firearm Type")]
         public string FirearmType { get; set; } = string.Empty;
         
@@ -733,6 +729,14 @@ namespace OpCentrix.Models
         
         public int? PartClassificationId { get; set; }
         
+        // PHASE 3: Part Form Refactor - New foreign key properties
+        public int? ComponentTypeId { get; set; }
+        public int? ComplianceCategoryId { get; set; }
+        public bool IsLegacyForm { get; set; } = true;
+        
+        // PHASE 6: Stage Template Integration
+        public int? AppliedTemplateId { get; set; }
+        
         #endregion
         
         #region Navigation Properties Enhanced for B&T
@@ -744,6 +748,11 @@ namespace OpCentrix.Models
         public virtual ICollection<SerialNumber> SerialNumbers { get; set; } = new List<SerialNumber>();
         public virtual ICollection<ComplianceDocument> ComplianceDocuments { get; set; } = new List<ComplianceDocument>();
         public virtual ICollection<PartStageRequirement> PartStageRequirements { get; set; } = new List<PartStageRequirement>();
+        
+        // PHASE 3: Part Form Refactor - New navigation properties
+        public virtual ComponentType? ComponentType { get; set; }
+        public virtual ComplianceCategory? ComplianceCategory { get; set; }
+        public virtual ICollection<PartAssetLink> AssetLinks { get; set; } = new List<PartAssetLink>();
         
         #endregion
         

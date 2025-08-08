@@ -1,15 +1,11 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using OpCentrix.Models;
+using Microsoft.AspNetCore.Mvc;
 using OpCentrix.Services;
-using System.Text.Json;
+using OpCentrix.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace OpCentrix.Pages.Admin.ProductionStages
 {
-    /// <summary>
-    /// Stage template management page for viewing and applying custom field templates
-    /// </summary>
     [Authorize(Policy = "AdminOnly")]
     public class TemplatesModel : PageModel
     {
@@ -22,281 +18,149 @@ namespace OpCentrix.Pages.Admin.ProductionStages
             _logger = logger;
         }
 
-        public List<ProductionStageTemplate> StageTemplates { get; set; } = new List<ProductionStageTemplate>();
-        public Dictionary<string, string> TemplateJson { get; set; } = new Dictionary<string, string>();
+        // Display properties
+        public List<StageTemplate> StageTemplates { get; set; } = new();
+        public List<StageTemplateCategory> Categories { get; set; } = new();
+        public Dictionary<string, int> UsageStatistics { get; set; } = new();
 
-        public async Task OnGetAsync()
+        // Filter properties
+        [BindProperty(SupportsGet = true)]
+        public string? CategoryFilter { get; set; }
+        
+        [BindProperty(SupportsGet = true)]
+        public string? IndustryFilter { get; set; }
+        
+        [BindProperty(SupportsGet = true)]
+        public string? ComplexityFilter { get; set; }
+
+        // Form binding properties
+        [BindProperty]
+        public StageTemplate NewTemplate { get; set; } = new();
+
+        public async Task<IActionResult> OnGetAsync()
         {
             try
             {
-                _logger.LogInformation("Loading production stage templates");
+                await LoadTemplatesAsync();
+                await LoadCategoriesAsync();
+                await LoadStatisticsAsync();
                 
-                StageTemplates = await _stageTemplateService.GetAllStageTemplatesAsync();
-                
-                // Generate JSON representations for display
-                foreach (var template in StageTemplates)
+                return Page();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading stage templates");
+                TempData["ErrorMessage"] = "Error loading templates. Please try again.";
+                return Page();
+            }
+        }
+
+        public async Task<IActionResult> OnPostCreateTemplateAsync()
+        {
+            try
+            {
+                if (!ModelState.IsValid)
                 {
-                    var jsonOptions = new JsonSerializerOptions 
-                    { 
-                        WriteIndented = true,
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                    };
-                    TemplateJson[template.Name] = JsonSerializer.Serialize(template.CustomFields, jsonOptions);
+                    await LoadTemplatesAsync();
+                    await LoadCategoriesAsync();
+                    await LoadStatisticsAsync();
+                    return Page();
                 }
 
-                _logger.LogInformation("Loaded {Count} production stage templates", StageTemplates.Count);
+                NewTemplate.CreatedBy = User.Identity?.Name ?? "System";
+                NewTemplate.LastModifiedBy = NewTemplate.CreatedBy;
+
+                var createdTemplate = await _stageTemplateService.CreateTemplateAsync(NewTemplate);
+                
+                TempData["SuccessMessage"] = $"Template '{createdTemplate.Name}' created successfully.";
+                return RedirectToPage();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading production stage templates");
-                TempData["ErrorMessage"] = "Error loading stage templates. Please try again.";
-                StageTemplates = new List<ProductionStageTemplate>();
+                _logger.LogError(ex, "Error creating stage template");
+                TempData["ErrorMessage"] = "Error creating template. Please try again.";
+                
+                await LoadTemplatesAsync();
+                await LoadCategoriesAsync();
+                await LoadStatisticsAsync();
+                return Page();
             }
         }
 
-        public async Task<IActionResult> OnGetTemplateCustomFieldsAsync(string stageName)
+        public async Task<IActionResult> OnPostDeleteTemplateAsync(int templateId)
         {
             try
             {
-                var customFields = await _stageTemplateService.GetCustomFieldsForStageAsync(stageName);
+                var success = await _stageTemplateService.DeleteTemplateAsync(templateId);
                 
-                return new JsonResult(new
+                if (success)
                 {
-                    success = true,
-                    stageName = stageName,
-                    customFields = customFields.Select(cf => new
-                    {
-                        name = cf.Name,
-                        type = cf.Type,
-                        label = cf.Label,
-                        description = cf.Description,
-                        required = cf.Required,
-                        defaultValue = cf.DefaultValue,
-                        options = cf.Options,
-                        minValue = cf.MinValue,
-                        maxValue = cf.MaxValue,
-                        unit = cf.Unit,
-                        displayOrder = cf.DisplayOrder,
-                        placeholderText = cf.PlaceholderText,
-                        isReadOnly = cf.IsReadOnly
-                    }).OrderBy(cf => cf.displayOrder).ToList()
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting custom fields for stage: {StageName}", stageName);
-                return new JsonResult(new
-                {
-                    success = false,
-                    error = "Error loading custom fields for stage"
-                });
-            }
-        }
-
-        public async Task<IActionResult> OnGetAvailableStagesAsync()
-        {
-            try
-            {
-                var stageNames = await _stageTemplateService.GetAvailableStageNamesAsync();
-                
-                return new JsonResult(new
-                {
-                    success = true,
-                    stages = stageNames
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting available stage names");
-                return new JsonResult(new
-                {
-                    success = false,
-                    error = "Error loading available stages"
-                });
-            }
-        }
-
-        public async Task<IActionResult> OnPostCreateStageFromTemplateAsync(string stageName)
-        {
-            try
-            {
-                _logger.LogInformation("Creating production stage from template: {StageName}", stageName);
-                
-                var stage = await _stageTemplateService.CreateStageFromTemplateAsync(stageName);
-                
-                // Here you would typically save the stage to the database
-                // For now, we'll just return the created stage data
-                
-                return new JsonResult(new
-                {
-                    success = true,
-                    message = $"Stage '{stageName}' created successfully from template",
-                    stage = new
-                    {
-                        name = stage.Name,
-                        description = stage.Description,
-                        defaultSetupMinutes = stage.DefaultSetupMinutes,
-                        defaultHourlyRate = stage.DefaultHourlyRate,
-                        defaultDurationHours = stage.DefaultDurationHours,
-                        stageColor = stage.StageColor,
-                        stageIcon = stage.StageIcon,
-                        department = stage.Department,
-                        customFieldsCount = stage.GetCustomFields().Count
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating stage from template: {StageName}", stageName);
-                return new JsonResult(new
-                {
-                    success = false,
-                    error = $"Error creating stage from template: {ex.Message}"
-                });
-            }
-        }
-
-        /// <summary>
-        /// Demonstrate how to apply template custom fields to a part stage requirement
-        /// </summary>
-        public async Task<IActionResult> OnPostApplyTemplateToPartAsync(int partId, string stageName)
-        {
-            try
-            {
-                _logger.LogInformation("Applying template {StageName} to part {PartId}", stageName, partId);
-                
-                // Get the template custom fields
-                var customFields = await _stageTemplateService.GetCustomFieldsForStageAsync(stageName);
-                
-                if (!customFields.Any())
-                {
-                    return new JsonResult(new
-                    {
-                        success = false,
-                        error = "No custom fields found for the specified stage template"
-                    });
+                    TempData["SuccessMessage"] = "Template deleted successfully.";
                 }
-
-                // Create example custom field values based on template defaults
-                var customFieldValues = new Dictionary<string, object>();
-                
-                foreach (var field in customFields)
+                else
                 {
-                    switch (field.Type.ToLower())
-                    {
-                        case "text":
-                            customFieldValues[field.Name] = field.DefaultValue ?? "";
-                            break;
-                        case "number":
-                            if (double.TryParse(field.DefaultValue, out var numValue))
-                                customFieldValues[field.Name] = numValue;
-                            else
-                                customFieldValues[field.Name] = field.MinValue ?? 0;
-                            break;
-                        case "dropdown":
-                            customFieldValues[field.Name] = field.DefaultValue ?? field.Options?.FirstOrDefault() ?? "";
-                            break;
-                        case "checkbox":
-                            customFieldValues[field.Name] = bool.TryParse(field.DefaultValue, out var boolValue) ? boolValue : false;
-                            break;
-                        case "textarea":
-                            customFieldValues[field.Name] = field.DefaultValue ?? "";
-                            break;
-                        default:
-                            customFieldValues[field.Name] = field.DefaultValue ?? "";
-                            break;
-                    }
+                    TempData["ErrorMessage"] = "Template not found or could not be deleted.";
                 }
-
-                return new JsonResult(new
-                {
-                    success = true,
-                    message = $"Template '{stageName}' applied successfully",
-                    partId = partId,
-                    stageName = stageName,
-                    customFieldsApplied = customFields.Count,
-                    sampleCustomFieldValues = customFieldValues,
-                    customFieldDefinitions = customFields.Select(cf => new
-                    {
-                        name = cf.Name,
-                        type = cf.Type,
-                        label = cf.Label,
-                        required = cf.Required,
-                        options = cf.Options,
-                        unit = cf.Unit
-                    }).ToList()
-                });
+                
+                return RedirectToPage();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error applying template {StageName} to part {PartId}", stageName, partId);
-                return new JsonResult(new
-                {
-                    success = false,
-                    error = $"Error applying template: {ex.Message}"
-                });
+                _logger.LogError(ex, "Error deleting template {TemplateId}", templateId);
+                TempData["ErrorMessage"] = "Error deleting template. Please try again.";
+                return RedirectToPage();
             }
         }
 
-        /// <summary>
-        /// Get a JSON preview of all templates for API consumption
-        /// </summary>
-        public async Task<IActionResult> OnGetTemplatePreviewAsync()
+        private async Task LoadTemplatesAsync()
         {
-            try
+            StageTemplates = await _stageTemplateService.GetActiveTemplatesAsync();
+            
+            // Apply filters
+            if (!string.IsNullOrEmpty(IndustryFilter))
             {
-                var templates = await _stageTemplateService.GetAllStageTemplatesAsync();
-                
-                var templateData = templates.Select(template => new
-                {
-                    name = template.Name,
-                    displayOrder = template.DisplayOrder,
-                    description = template.Description,
-                    stageColor = template.StageColor,
-                    stageIcon = template.StageIcon,
-                    department = template.Department,
-                    defaultSetupMinutes = template.DefaultSetupMinutes,
-                    defaultHourlyRate = template.DefaultHourlyRate,
-                    defaultDurationHours = template.DefaultDurationHours,
-                    defaultMaterialCost = template.DefaultMaterialCost,
-                    requiresQualityCheck = template.RequiresQualityCheck,
-                    requiresApproval = template.RequiresApproval,
-                    requiresMachineAssignment = template.RequiresMachineAssignment,
-                    allowParallelExecution = template.AllowParallelExecution,
-                    customFields = template.CustomFields.Select(cf => new
-                    {
-                        name = cf.Name,
-                        type = cf.Type,
-                        label = cf.Label,
-                        description = cf.Description,
-                        required = cf.Required,
-                        defaultValue = cf.DefaultValue,
-                        options = cf.Options,
-                        minValue = cf.MinValue,
-                        maxValue = cf.MaxValue,
-                        unit = cf.Unit,
-                        displayOrder = cf.DisplayOrder,
-                        placeholderText = cf.PlaceholderText
-                    }).OrderBy(cf => cf.displayOrder).ToList()
-                }).OrderBy(t => t.displayOrder).ToList();
+                StageTemplates = StageTemplates.Where(t => t.Industry == IndustryFilter).ToList();
+            }
+            
+            if (!string.IsNullOrEmpty(ComplexityFilter))
+            {
+                StageTemplates = StageTemplates.Where(t => t.ComplexityLevel == ComplexityFilter).ToList();
+            }
+        }
 
-                return new JsonResult(new
-                {
-                    success = true,
-                    totalTemplates = templates.Count,
-                    totalCustomFields = templates.Sum(t => t.CustomFields.Count),
-                    templates = templateData
-                });
-            }
-            catch (Exception ex)
+        private async Task LoadCategoriesAsync()
+        {
+            Categories = await _stageTemplateService.GetActiveCategoriesAsync();
+        }
+
+        private async Task LoadStatisticsAsync()
+        {
+            UsageStatistics = await _stageTemplateService.GetTemplateUsageStatisticsAsync();
+        }
+
+        // Helper methods for display
+        public string GetComplexityBadgeClass(string complexityLevel)
+        {
+            return complexityLevel switch
             {
-                _logger.LogError(ex, "Error getting template preview");
-                return new JsonResult(new
-                {
-                    success = false,
-                    error = "Error loading template preview"
-                });
-            }
+                "Simple" => "bg-success",
+                "Medium" => "bg-info",
+                "Complex" => "bg-warning",
+                "VeryComplex" => "bg-danger",
+                _ => "bg-secondary"
+            };
+        }
+
+        public string GetIndustryBadgeClass(string industry)
+        {
+            return industry switch
+            {
+                "Firearms" => "bg-danger",
+                "Aerospace" => "bg-primary",
+                "Automotive" => "bg-warning",
+                "Medical" => "bg-success",
+                _ => "bg-secondary"
+            };
         }
     }
 }

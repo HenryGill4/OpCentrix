@@ -248,6 +248,105 @@
     background-color: #dc3545;
 }
 
+/* Phase 5: Asset Management Styles */
+.asset-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    height: 100%;
+}
+
+.asset-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.asset-group {
+    border-left: 3px solid #007bff;
+    padding-left: 1rem;
+    margin-left: 0.5rem;
+}
+
+.asset-upload-area {
+    border: 2px dashed #dee2e6;
+    border-radius: 0.375rem;
+    padding: 2rem;
+    text-align: center;
+    transition: border-color 0.2s ease;
+}
+
+.asset-upload-area:hover {
+    border-color: #007bff;
+    background-color: #f8f9fa;
+}
+
+.asset-upload-area.dragover {
+    border-color: #007bff;
+    background-color: #e7f3ff;
+}
+
+.file-type-info {
+    background-color: #f8f9fa;
+    border-radius: 0.25rem;
+    padding: 0.5rem;
+    font-size: 0.875rem;
+}
+
+/* Asset type icons */
+.asset-icon-3dmodel { color: #007bff; }
+.asset-icon-photo { color: #28a745; }
+.asset-icon-drawing { color: #17a2b8; }
+.asset-icon-document { color: #ffc107; }
+
+/* Upload progress */
+.upload-progress {
+    height: 4px;
+    background-color: #e9ecef;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.upload-progress-bar {
+    height: 100%;
+    background-color: #007bff;
+    transition: width 0.3s ease;
+}
+
+/* Asset grid responsive adjustments */
+@media (max-width: 576px) {
+    .asset-card .card-body {
+        padding: 1rem;
+    }
+    
+    .asset-group {
+        margin-left: 0;
+        border-left: none;
+        border-top: 3px solid #007bff;
+        padding-left: 0;
+        padding-top: 0.5rem;
+    }
+}
+
+/* File type badges */
+.file-type-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.file-type-badge.step,
+.file-type-badge.stp,
+.file-type-badge.stl { background-color: #e3f2fd; color: #1976d2; }
+
+.file-type-badge.jpg,
+.file-type-badge.jpeg,
+.file-type-badge.png { background-color: #e8f5e8; color: #2e7d32; }
+
+.file-type-badge.pdf { background-color: #fff3e0; color: #f57c00; }
+
+.file-type-badge.dwg,
+.file-type-badge.dxf { background-color: #f3e5f5; color: #7b1fa2; }
+
 /* Mobile responsive validation */
 @media (max-width: 768px) {
     .modal-xl .modal-dialog {

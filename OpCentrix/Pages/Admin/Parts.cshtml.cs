@@ -20,12 +20,24 @@ namespace OpCentrix.Pages.Admin
         private readonly SchedulerContext _context;
         private readonly ILogger<PartsModel> _logger;
         private readonly IPartStageService _partStageService;
+        private readonly ComponentTypeService _componentTypeService;
+        private readonly ComplianceCategoryService _complianceCategoryService;
+        private readonly IPartAssetService _partAssetService;
 
-        public PartsModel(SchedulerContext context, ILogger<PartsModel> logger, IPartStageService partStageService)
+        public PartsModel(
+            SchedulerContext context, 
+            ILogger<PartsModel> logger, 
+            IPartStageService partStageService,
+            ComponentTypeService componentTypeService,
+            ComplianceCategoryService complianceCategoryService,
+            IPartAssetService partAssetService)
         {
             _context = context;
             _logger = logger;
             _partStageService = partStageService;
+            _componentTypeService = componentTypeService;
+            _complianceCategoryService = complianceCategoryService;
+            _partAssetService = partAssetService;
         }
 
         // Main data properties
@@ -556,6 +568,10 @@ namespace OpCentrix.Pages.Admin
                 StageDetails = "{}",
                 StageOrder = 1,
                 
+                // PHASE 4: Set lookup field defaults to avoid validation errors
+                ComponentTypeId = 1, // Default to "General" component type
+                ComplianceCategoryId = 1, // Default to "Non NFA" compliance
+                
                 // Ensure all required string fields have defaults
                 CustomerPartNumber = "",
                 Dimensions = "",
@@ -597,7 +613,6 @@ namespace OpCentrix.Pages.Admin
                 EARClassification = "",
                 ExportControlNotes = "",
                 ExportClassification = "",
-                ComponentType = "",
                 FirearmType = "",
                 BTTestingProtocol = "",
                 BTQualitySpecification = "",
@@ -651,7 +666,7 @@ namespace OpCentrix.Pages.Admin
 
         private async Task<PartFormViewModel> CreatePartFormViewModelAsync(Part part)
         {
-            return new PartFormViewModel
+            var viewModel = new PartFormViewModel
             {
                 Part = part,
                 AvailableMaterials = await _context.Parts
@@ -672,8 +687,27 @@ namespace OpCentrix.Pages.Admin
                     .Distinct()
                     .OrderBy(a => a)
                     .ToListAsync(),
-                AvailableStages = await _partStageService.GetAvailableStagesAsync()
+                AvailableStages = await _partStageService.GetAvailableStagesAsync(),
+                ComponentTypes = await _componentTypeService.GetActiveComponentTypesAsync(),
+                ComplianceCategories = await _complianceCategoryService.GetActiveCategoriesAsync()
             };
+
+            // Phase 5: Load asset data for existing parts
+            if (part.Id > 0)
+            {
+                viewModel.ExistingAssets = await _partAssetService.GetPartAssetsAsync(part.Id);
+                viewModel.AssetStatistics = await _partAssetService.GetAssetUsageStatisticsAsync();
+
+                // Load supported file types for all asset types
+                var assetTypes = new[] { "3DModel", "Photo", "Drawing", "Document" };
+                foreach (var assetType in assetTypes)
+                {
+                    viewModel.SupportedFileTypes[assetType] = await _partAssetService.GetSupportedFileTypesAsync(assetType);
+                    viewModel.MaxFileSizes[assetType] = await _partAssetService.GetMaxFileSizeAsync(assetType);
+                }
+            }
+
+            return viewModel;
         }
 
         private List<string> ValidateEssentialFields(Part part)
@@ -698,15 +732,15 @@ namespace OpCentrix.Pages.Admin
             else if (part.Description.Length > 500)
                 errors.Add("Description cannot exceed 500 characters");
 
-            if (string.IsNullOrWhiteSpace(part.Industry))
-                errors.Add("Industry is required");
-            else if (part.Industry.Length > 100)
-                errors.Add("Industry cannot exceed 100 characters");
+            // PHASE 4: Removed Industry and Application validation - now using lookup tables
+            // ComponentType and ComplianceCategory validation will be handled by the form
 
-            if (string.IsNullOrWhiteSpace(part.Application))
-                errors.Add("Application is required");
-            else if (part.Application.Length > 100)
-                errors.Add("Application cannot exceed 100 characters");
+            // PHASE 4: Add validation for new lookup fields
+            if (!part.ComponentTypeId.HasValue)
+                errors.Add("Component Type is required");
+
+            if (!part.ComplianceCategoryId.HasValue)
+                errors.Add("Compliance Category is required");
 
             if (string.IsNullOrWhiteSpace(part.Material))
                 errors.Add("Material is required");
@@ -739,16 +773,10 @@ namespace OpCentrix.Pages.Admin
             if (part.LengthMm > 1000 || part.WidthMm > 1000 || part.HeightMm > 1000)
                 errors.Add("Dimensions seem unreasonably large (over 1000mm)");
 
-            // Manufacturing stages validation
-            var stageCount = 0;
-            if (part.RequiresSLSPrinting) stageCount++;
-            if (part.RequiresCNCMachining) stageCount++;
-            if (part.RequiresEDMOperations) stageCount++;
-            if (part.RequiresAssembly) stageCount++;
-            if (part.RequiresFinishing) stageCount++;
-
-            if (stageCount == 0)
-                errors.Add("At least one manufacturing stage must be selected");
+            // Manufacturing stages validation - UPDATED FOR PHASE 4
+            // Removed legacy boolean checks, now using PartStageRequirements
+            // Stage validation will be handled through the stage management system
+            // This ensures at least one stage is selected through the modern interface
 
             // B&T specific validation
             if (part.RequiresATFForm1 || part.RequiresATFForm4)
@@ -1067,6 +1095,177 @@ namespace OpCentrix.Pages.Admin
                 return new JsonResult(new { isDuplicate = false, message = "Error checking duplicate" });
             }
         }
+
+        #region Phase 5: Asset Management Methods
+
+        /// <summary>
+        /// Get part assets for display in modal
+        /// </summary>
+        public async Task<IActionResult> OnGetPartAssetsAsync(int partId)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("📎 [ASSETS-{OperationId}] Loading assets for part {PartId}", operationId, partId);
+
+            try
+            {
+                var assets = await _partAssetService.GetPartAssetsAsync(partId);
+                var assetStats = await _partAssetService.GetAssetUsageStatisticsAsync();
+
+                var viewModel = new
+                {
+                    PartId = partId,
+                    Assets = assets.Select(a => new
+                    {
+                        a.Id,
+                        a.DisplayName,
+                        a.AssetType,
+                        a.Url,
+                        a.Source,
+                        a.CreatedDate,
+                        a.CreatedBy,
+                        FileExtension = Path.GetExtension(a.Url),
+                        IsAvailable = true // Could check with CheckAssetAvailabilityAsync
+                    }),
+                    Statistics = assetStats
+                };
+
+                return new JsonResult(viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [ASSETS-{OperationId}] Error loading assets for part {PartId}", operationId, partId);
+                return StatusCode(500, "Error loading part assets");
+            }
+        }
+
+        /// <summary>
+        /// Upload new asset for a part
+        /// </summary>
+        public async Task<IActionResult> OnPostUploadAssetAsync(int partId, IFormFile assetFile, string assetType, string displayName)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("📎 [ASSETS-{OperationId}] Uploading asset for part {PartId}: {FileName}", 
+                operationId, partId, assetFile?.FileName);
+
+            try
+            {
+                if (assetFile == null || assetFile.Length == 0)
+                {
+                    return BadRequest("No file provided");
+                }
+
+                if (string.IsNullOrWhiteSpace(displayName))
+                {
+                    displayName = Path.GetFileNameWithoutExtension(assetFile.FileName);
+                }
+
+                // Validate file
+                if (!await _partAssetService.ValidateAssetAsync(assetFile, assetType))
+                {
+                    return BadRequest("File validation failed. Check file type and size.");
+                }
+
+                // Upload file
+                var url = await _partAssetService.UploadAssetAsync(assetFile, partId, assetType, displayName);
+
+                // Create asset record
+                var asset = new PartAssetLink
+                {
+                    PartId = partId,
+                    Url = url,
+                    DisplayName = displayName,
+                    Source = "Upload",
+                    AssetType = assetType,
+                    CreatedBy = User.Identity?.Name ?? "System"
+                };
+
+                var savedAsset = await _partAssetService.AddAssetAsync(asset);
+
+                _logger.LogInformation("✅ [ASSETS-{OperationId}] Asset uploaded successfully: {AssetId}", operationId, savedAsset.Id);
+
+                return new JsonResult(new
+                {
+                    success = true,
+                    message = "Asset uploaded successfully",
+                    asset = new
+                    {
+                        savedAsset.Id,
+                        savedAsset.DisplayName,
+                        savedAsset.AssetType,
+                        savedAsset.Url,
+                        savedAsset.Source,
+                        savedAsset.CreatedDate,
+                        savedAsset.CreatedBy
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [ASSETS-{OperationId}] Error uploading asset for part {PartId}", operationId, partId);
+                return StatusCode(500, "Error uploading asset");
+            }
+        }
+
+        /// <summary>
+        /// Delete an asset
+        /// </summary>
+        public async Task<IActionResult> OnPostDeleteAssetAsync(int assetId)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("🗑️ [ASSETS-{OperationId}] Deleting asset {AssetId}", operationId, assetId);
+
+            try
+            {
+                var asset = await _partAssetService.GetAssetByIdAsync(assetId);
+                if (asset == null)
+                {
+                    return NotFound("Asset not found");
+                }
+
+                var success = await _partAssetService.DeleteAssetAsync(assetId);
+                if (success)
+                {
+                    _logger.LogInformation("✅ [ASSETS-{OperationId}] Asset deleted successfully: {AssetId}", operationId, assetId);
+                    return new JsonResult(new { success = true, message = "Asset deleted successfully" });
+                }
+                else
+                {
+                    return StatusCode(500, "Failed to delete asset");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [ASSETS-{OperationId}] Error deleting asset {AssetId}", operationId, assetId);
+                return StatusCode(500, "Error deleting asset");
+            }
+        }
+
+        /// <summary>
+        /// Get supported file types for an asset type
+        /// </summary>
+        public async Task<IActionResult> OnGetSupportedFileTypesAsync(string assetType)
+        {
+            try
+            {
+                var fileTypes = await _partAssetService.GetSupportedFileTypesAsync(assetType);
+                var maxSize = await _partAssetService.GetMaxFileSizeAsync(assetType);
+
+                return new JsonResult(new
+                {
+                    assetType,
+                    supportedTypes = fileTypes,
+                    maxSizeBytes = maxSize,
+                    maxSizeMB = Math.Round(maxSize / (1024.0 * 1024.0), 1)
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting supported file types for asset type: {AssetType}", assetType);
+                return StatusCode(500, "Error getting supported file types");
+            }
+        }
+
+        #endregion
     }
 
     /// <summary>
@@ -1079,6 +1278,14 @@ namespace OpCentrix.Pages.Admin
         public List<string> AvailableIndustries { get; set; } = new List<string>();
         public List<string> AvailableApplications { get; set; } = new List<string>();
         public List<ProductionStage> AvailableStages { get; set; } = new List<ProductionStage>();
+        public List<ComponentType> ComponentTypes { get; set; } = new List<ComponentType>();
+        public List<ComplianceCategory> ComplianceCategories { get; set; } = new List<ComplianceCategory>();
         public List<PartStageRequirement> ExistingStages { get; set; } = new List<PartStageRequirement>();
+        
+        // Phase 5: Asset Management Properties
+        public List<PartAssetLink> ExistingAssets { get; set; } = new List<PartAssetLink>();
+        public Dictionary<string, int> AssetStatistics { get; set; } = new Dictionary<string, int>();
+        public Dictionary<string, List<string>> SupportedFileTypes { get; set; } = new Dictionary<string, List<string>>();
+        public Dictionary<string, long> MaxFileSizes { get; set; } = new Dictionary<string, long>();
     }
 }

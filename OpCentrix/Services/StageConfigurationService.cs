@@ -69,7 +69,7 @@ namespace OpCentrix.Services
                         Title = "SLS Printing",
                         IsRequired = true,
                         Order = 1,
-                        EstimatedDurationMinutes = (decimal)(part.EstimatedHours * 60),
+                        EstimatedDurationMinutes = (int)(part.EstimatedHours * 60),
                         Department = "SLS Printing",
                         Notes = $"Material: {part.SlsMaterial}"
                     });
@@ -85,7 +85,7 @@ namespace OpCentrix.Services
                         Title = "CNC Machining",
                         IsRequired = true,
                         Order = 2,
-                        EstimatedDurationMinutes = (decimal)(part.EstimatedHours * 60 * 0.3), // 30% of SLS time
+                        EstimatedDurationMinutes = (int)(part.EstimatedHours * 60 * 0.3), // 30% of SLS time
                         Department = "CNC Machining",
                         Notes = "Secondary operations"
                     });
@@ -101,7 +101,7 @@ namespace OpCentrix.Services
                         Title = "EDM Operations",
                         IsRequired = true,
                         Order = 3,
-                        EstimatedDurationMinutes = (decimal)(part.EstimatedHours * 60 * 0.5), // 50% of SLS time
+                        EstimatedDurationMinutes = (int)(part.EstimatedHours * 60 * 0.5), // 50% of SLS time
                         Department = "EDM",
                         Notes = "Complex geometries"
                     });

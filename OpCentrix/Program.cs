@@ -239,6 +239,22 @@ else
 // Register the new PartStageService
 builder.Services.AddScoped<IPartStageService, PartStageService>();
 
+// PHASE 3: Part Form Refactor Services - Add missing services
+builder.Services.AddScoped<ComponentTypeService>();
+builder.Services.AddScoped<ComplianceCategoryService>();
+
+// PHASE 5: Asset Management Service
+builder.Services.AddScoped<IPartAssetService, PartAssetService>();
+
+// PHASE 6: Stage Template Service
+builder.Services.AddScoped<IStageTemplateService, StageTemplateService>();
+
+// Create seeding service for Part Form Refactor data
+builder.Services.AddScoped<PartFormRefactorSeedingService>();
+
+// PHASE 6: Stage Template Seeding Service
+builder.Services.AddScoped<StageTemplateSeedingService>();
+
 // Option A: Multi-Stage Workflow Enhancement Service
 builder.Services.AddScoped<ICohortManagementService, CohortManagementService>();
 
@@ -380,7 +396,7 @@ using (var scope = app.Services.CreateScope())
             await context.Database.EnsureCreatedAsync();
 
             // Seed initial data (DEPRECATED - already disabled in service)
-            await seedingService.SeedDataAsync();
+            // await seedingService.SeedDataAsync();
 
             // Seed admin control system data (Task 2)
             await adminSeedingService.SeedAllDefaultDataAsync();
@@ -396,68 +412,30 @@ using (var scope = app.Services.CreateScope())
             // Seed B&T part classifications (Segment 7)
             await partClassificationService.SeedDefaultClassificationsAsync();
 
+            // PHASE 3: Seed Part Form Refactor lookup data
+            var partFormRefactorSeeding = initScope.ServiceProvider.GetRequiredService<PartFormRefactorSeedingService>();
+            await partFormRefactorSeeding.SeedAllDataAsync();
+            await partFormRefactorSeeding.MigrateExistingPartsDataAsync();
+
+            // PHASE 6: Seed Stage Templates
+            var stageTemplateSeeding = initScope.ServiceProvider.GetRequiredService<StageTemplateSeedingService>();
+            await stageTemplateSeeding.SeedDefaultTemplatesAsync();
+
             // Initialize production stages for prototype tracking (Phase 0.5)
             var productionStageService = initScope.ServiceProvider.GetRequiredService<ProductionStageService>();
             await productionStageService.CreateDefaultStagesAsync();
 
-            // FIXED: Use the Admin namespace service for production stage seeding - COMPLETE FIX
-            var productionStageSeeder = initScope.ServiceProvider.GetRequiredService<OpCentrix.Services.Admin.IProductionStageSeederService>();
-            var seededStageCount = await productionStageSeeder.SeedDefaultStagesAsync();
-            logger.LogInformation("Production stages seeded: {Count} stages available", seededStageCount);
-
-            // Load system settings into configuration (Task 3)
-            var configurationService = initScope.ServiceProvider.GetRequiredService<OpCentrix.Services.Admin.ISystemConfigurationService>();
-            await configurationService.LoadSettingsIntoConfigurationAsync();
-
-            // Initialize static configuration helper
-            OpCentrix.Services.Admin.SystemConfiguration.Initialize(app.Services);
+            logger.LogInformation("✅ Database initialization completed successfully");
         }
-        logger.LogInformation("Database initialization completed successfully");
-        logger.LogInformation("B&T Manufacturing Execution System ready!");
-        logger.LogInformation("Test users available:");
-        logger.LogInformation("   admin/admin123 (Admin)");
-        logger.LogInformation("   manager/manager123 (Manager)");
-        logger.LogInformation("   scheduler/scheduler123 (Scheduler)");
-        logger.LogInformation("   operator/operator123 (Operator)");
-        logger.LogInformation("   printer/printer123 (PrintingSpecialist)");
-        logger.LogInformation("   coating/coating123 (CoatingSpecialist)");
-        logger.LogInformation("B&T Specialist Users:");
-        logger.LogInformation("   btspecialist/btspecialist123 (BTSpecialist)");
-        logger.LogInformation("   workflowspecialist/workflowspecialist123 (WorkflowSpecialist)");
-        logger.LogInformation("   compliancespecialist/compliancespecialist123 (ComplianceSpecialist)");
-        logger.LogInformation("Segment 7 Features:");
-        logger.LogInformation("   - B&T Part Classification System");
-        logger.LogInformation("   - ATF/ITAR Compliance Tracking");
-        logger.LogInformation("   - Serial Number Management");
-        logger.LogInformation("   - Regulatory Documentation");
-        logger.LogInformation("B&T MES Navigation Features:");
-        logger.LogInformation("   - B&T Manufacturing Section (Amber)");
-        logger.LogInformation("   - Advanced Workflows Section (Purple)");
-        logger.LogInformation("   - Enhanced Admin B&T Management");
-        logger.LogInformation("NOTICE: Part and machine seeding is DISABLED - use /Admin/Parts and /Admin/Machines to add data");
     }
     catch (Exception ex)
     {
-        logger.LogError(ex, "CRITICAL ERROR during database initialization");
-        logger.LogError("Stack trace: {StackTrace}", ex.StackTrace);
-
-        // In development, continue running even if seeding fails
-        if (!app.Environment.IsDevelopment())
-        {
-            throw;
-        }
+        logger.LogError(ex, "❌ Database initialization failed: {ErrorMessage}", ex.Message);
+        throw;
     }
 }
 
-// Log application startup with correct URL
-var startupLogger = app.Services.GetRequiredService<ILogger<Program>>();
-var urls = builder.Configuration.GetValue<string>("Urls") ?? "http://localhost:5090";
-startupLogger.LogInformation("OpCentrix B&T Manufacturing Execution System startedSuccessfully");
-startupLogger.LogInformation("Environment: {Environment}", app.Environment.EnvironmentName);
-startupLogger.LogInformation("URL: {Url}", urls);
-startupLogger.LogInformation("Login Page: {LoginUrl}", $"{urls}/Account/Login");
-
 app.Run();
 
-// Make Program accessible for testing
+// Make Program class accessible for testing
 public partial class Program { }
