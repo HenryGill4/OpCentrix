@@ -1,6 +1,6 @@
 ﻿@model OpCentrix.Pages.Admin.PartsModel
 
-<!-- Production-Ready Parts Form with Complete Stage Management -->
+<!-- Production-Ready Parts Form with Complete Stage Management and BULLETPROOF Antiforgery Token Handling -->
 <div class="modal-header bg-primary text-white">
     <h5 class="modal-title">
         <i class="fas fa-cogs me-2"></i>
@@ -25,16 +25,19 @@
         </div>
     }
 
-    <!-- Production Parts Form with Modern Stage Management -->
+    <!-- Production Parts Form with BULLETPROOF HTMX Integration -->
     <form method="post" id="partForm" 
-          hx-post="/Admin/Parts?handler=@(Model.Part.Id == 0 ? "Create" : "Update")"
+          action="/Admin/Parts"
+          data-part-id="@Model.Part.Id"
+          hx-post="/Admin/Parts"
           hx-target="#partModalContent"
           hx-swap="outerHTML"
-          hx-encoding="multipart/form-data"
-          hx-on::before-request="handleFormSubmissionStart(event)"
-          hx-on::after-request="handleFormSubmissionComplete(event)"
-          hx-on::response-error="handleFormSubmissionError(event)"
-          data-part-id="@Model.Part.Id">
+          hx-trigger="submit"
+          hx-include="#partForm [name], #partForm input[type='hidden']"
+          hx-indicator="#savePartBtn .spinner-border"
+          hx-on::before-request="console.log('🔄 [PARTS] HTMX form submission starting...'); document.getElementById('savePartBtn').disabled = true"
+          hx-on::after-request="console.log('✅ [PARTS] HTMX form submission completed'); document.getElementById('savePartBtn').disabled = false"
+          hx-on::response-error="console.error('❌ [PARTS] HTMX form submission failed'); document.getElementById('savePartBtn').disabled = false; window.showToast('error', 'Form submission failed. Please try again.')">
         
         @Html.AntiForgeryToken()
         <input type="hidden" asp-for="Part.Id" />
@@ -781,7 +784,7 @@
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
                         <i class="fas fa-times me-1"></i>Cancel
                     </button>
-                    <button type="submit" id="savePartBtn" class="btn btn-primary">
+                    <button type="submit" id="savePartBtn" class="btn btn-primary" name="handler" value="@(Model.Part.Id == 0 ? "Create" : "Update")">
                         <span class="spinner-border spinner-border-sm d-none me-2" role="status" aria-hidden="true"></span>
                         <i class="fas fa-save me-1"></i>
                         <span class="btn-text">@(Model.Part.Id == 0 ? "Create Part" : "Update Part")</span>
@@ -796,6 +799,61 @@
 <script src="~/js/shared/opcentrix-global-functions.js" asp-append-version="true"></script>
 <script src="~/js/admin/parts-stage-manager.js" asp-append-version="true"></script>
 <script src="~/js/admin/parts-form-manager.js" asp-append-version="true"></script>
+
+<!-- HTMX Success Handler -->
+<script>
+    // Enhanced HTMX integration with bulletproof error handling
+    document.addEventListener('htmx:afterRequest', function(event) {
+        console.log('📡 [PARTS] HTMX after request event:', event.detail);
+        
+        if (event.target.closest('#partModal') && event.detail.successful) {
+            console.log('✅ [PARTS] Form submission successful');
+            
+            // Show success message
+            if (window.showToast) {
+                window.showToast('success', 'Part saved successfully!');
+            }
+            
+            // Close modal after short delay
+            setTimeout(() => {
+                const modal = document.getElementById('partModal');
+                if (modal && typeof bootstrap !== 'undefined') {
+                    const bsModal = bootstrap.Modal.getInstance(modal);
+                    if (bsModal) {
+                        bsModal.hide();
+                    }
+                }
+                
+                // Refresh page to show updated data
+                window.location.reload();
+            }, 1500);
+        } else if (event.detail.xhr && event.detail.xhr.status >= 400) {
+            console.error('❌ [PARTS] Form submission failed:', event.detail);
+            
+            if (window.showToast) {
+                window.showToast('error', 'Form submission failed. Please check your inputs and try again.');
+            }
+        }
+    });
+
+    // Enhanced HTMX error handling
+    document.addEventListener('htmx:responseError', function(event) {
+        console.error('❌ [PARTS] HTMX response error:', event.detail);
+        
+        if (window.showToast) {
+            window.showToast('error', 'Server error occurred. Please try again.');
+        }
+    });
+
+    // Enhanced HTMX network error handling
+    document.addEventListener('htmx:sendError', function(event) {
+        console.error('❌ [PARTS] HTMX send error:', event.detail);
+        
+        if (window.showToast) {
+            window.showToast('error', 'Network error. Please check your connection and try again.');
+        }
+    });
+</script>
 
 <!-- Form Validation and Enhancement Script -->
 <script>

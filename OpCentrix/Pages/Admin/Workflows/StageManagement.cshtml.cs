@@ -25,7 +25,7 @@ namespace OpCentrix.Pages.Admin.Workflows
             _logger = logger;
         }
 
-        // Data properties for the page - using full namespace to avoid conflicts
+        // Data properties for the page - using consistent naming with SchedulerContext
         public List<ProductionStage> ProductionStages { get; set; } = new List<ProductionStage>();
         public List<WorkflowTemplate> WorkflowTemplates { get; set; } = new List<WorkflowTemplate>();
         public List<OpCentrix.Models.StageDependency> StageDependencies { get; set; } = new List<OpCentrix.Models.StageDependency>();
@@ -52,8 +52,8 @@ namespace OpCentrix.Pages.Admin.Workflows
                 await LoadStageManagementDataAsync();
                 await LoadWorkflowStatisticsAsync();
 
-                _logger.LogInformation("Loaded {StageCount} stages, {TemplateCount} templates, {DependencyCount} dependencies",
-                    ProductionStages.Count, WorkflowTemplates.Count, StageDependencies.Count);
+                _logger.LogInformation("Loaded {StageCount} stages, {TemplateCount} templates, {DependencyCount} dependencies, {ResourceCount} resource pools",
+                    ProductionStages.Count, WorkflowTemplates.Count, StageDependencies.Count, ResourcePools.Count);
             }
             catch (Exception ex)
             {
@@ -97,6 +97,7 @@ namespace OpCentrix.Pages.Admin.Workflows
                 NewWorkflowTemplate.CreatedDate = DateTime.UtcNow;
                 NewWorkflowTemplate.CreatedBy = User.Identity?.Name ?? "System";
                 NewWorkflowTemplate.LastModifiedBy = User.Identity?.Name ?? "System";
+                NewWorkflowTemplate.LastModifiedDate = DateTime.UtcNow;
                 NewWorkflowTemplate.IsActive = true;
 
                 // Default template configuration if not provided
@@ -135,9 +136,9 @@ namespace OpCentrix.Pages.Admin.Workflows
                     return RedirectToPage();
                 }
 
-                // Check if template is being used
-                var usageCount = await _context.PartStageRequirements
-                    .CountAsync(psr => psr.WorkflowTemplateId == templateId && psr.IsActive);
+                // Check if template is being used by checking AppliedTemplateId in Parts
+                var usageCount = await _context.Parts
+                    .CountAsync(p => p.AppliedTemplateId == templateId && p.IsActive);
 
                 if (usageCount > 0)
                 {
@@ -150,6 +151,7 @@ namespace OpCentrix.Pages.Admin.Workflows
                 // Soft delete
                 template.IsActive = false;
                 template.LastModifiedBy = User.Identity?.Name ?? "System";
+                template.LastModifiedDate = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
 
@@ -189,8 +191,8 @@ namespace OpCentrix.Pages.Admin.Workflows
                     return RedirectToPage();
                 }
 
-                // Check for duplicate dependencies - use explicit table reference
-                var existingDependency = await _context.Set<OpCentrix.Models.StageDependency>()
+                // Check for duplicate dependencies - use the correct DbSet reference
+                var existingDependency = await _context.ProductionStageDependencies
                     .FirstOrDefaultAsync(sd => sd.DependentStageId == NewStageDependency.DependentStageId &&
                                               sd.PrerequisiteStageId == NewStageDependency.PrerequisiteStageId &&
                                               sd.IsActive);
@@ -212,9 +214,10 @@ namespace OpCentrix.Pages.Admin.Workflows
                 NewStageDependency.CreatedDate = DateTime.UtcNow;
                 NewStageDependency.CreatedBy = User.Identity?.Name ?? "System";
                 NewStageDependency.LastModifiedBy = User.Identity?.Name ?? "System";
+                NewStageDependency.LastModifiedDate = DateTime.UtcNow;
                 NewStageDependency.IsActive = true;
 
-                _context.Set<OpCentrix.Models.StageDependency>().Add(NewStageDependency);
+                _context.ProductionStageDependencies.Add(NewStageDependency);
                 await _context.SaveChangesAsync();
 
                 _logger.LogInformation("Successfully created stage dependency with ID: {DependencyId}", NewStageDependency.Id);
@@ -236,7 +239,7 @@ namespace OpCentrix.Pages.Admin.Workflows
             {
                 _logger.LogInformation("Attempting to delete stage dependency with ID: {DependencyId}", dependencyId);
 
-                var dependency = await _context.Set<OpCentrix.Models.StageDependency>().FindAsync(dependencyId);
+                var dependency = await _context.ProductionStageDependencies.FindAsync(dependencyId);
                 if (dependency == null)
                 {
                     TempData["ErrorMessage"] = "Stage dependency not found.";
@@ -246,6 +249,7 @@ namespace OpCentrix.Pages.Admin.Workflows
                 // Soft delete
                 dependency.IsActive = false;
                 dependency.LastModifiedBy = User.Identity?.Name ?? "System";
+                dependency.LastModifiedDate = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
 
@@ -298,6 +302,7 @@ namespace OpCentrix.Pages.Admin.Workflows
                 NewResourcePool.CreatedDate = DateTime.UtcNow;
                 NewResourcePool.CreatedBy = User.Identity?.Name ?? "System";
                 NewResourcePool.LastModifiedBy = User.Identity?.Name ?? "System";
+                NewResourcePool.LastModifiedDate = DateTime.UtcNow;
                 NewResourcePool.IsActive = true;
 
                 if (string.IsNullOrEmpty(NewResourcePool.ResourceConfiguration))
@@ -322,6 +327,149 @@ namespace OpCentrix.Pages.Admin.Workflows
             }
         }
 
+        public async Task<IActionResult> OnPostDeleteResourcePoolAsync(int poolId)
+        {
+            try
+            {
+                _logger.LogInformation("Attempting to delete resource pool with ID: {PoolId}", poolId);
+
+                var pool = await _context.ResourcePools.FindAsync(poolId);
+                if (pool == null)
+                {
+                    TempData["ErrorMessage"] = "Resource pool not found.";
+                    return RedirectToPage();
+                }
+
+                // Soft delete
+                pool.IsActive = false;
+                pool.LastModifiedBy = User.Identity?.Name ?? "System";
+                pool.LastModifiedDate = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Successfully deleted resource pool: {PoolName}", pool.Name);
+                TempData["SuccessMessage"] = $"Resource pool '{pool.Name}' deleted successfully.";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting resource pool {PoolId}", poolId);
+                TempData["ErrorMessage"] = "Error deleting resource pool. Please try again.";
+            }
+
+            return RedirectToPage();
+        }
+
+        #endregion
+
+        #region API Endpoints for Edit Operations
+
+        public async Task<IActionResult> OnGetWorkflowTemplateDetailsAsync(int templateId)
+        {
+            try
+            {
+                var template = await _context.WorkflowTemplates
+                    .FirstOrDefaultAsync(wt => wt.Id == templateId && wt.IsActive);
+
+                if (template == null)
+                {
+                    return NotFound("Template not found");
+                }
+
+                var stats = WorkflowStatistics.GetValueOrDefault(templateId, new WorkflowStats());
+
+                return new JsonResult(new
+                {
+                    id = template.Id,
+                    name = template.Name,
+                    description = template.Description ?? "",
+                    category = template.Category ?? "",
+                    complexity = template.Complexity,
+                    estimatedDuration = template.EstimatedDurationHours,
+                    estimatedCost = template.EstimatedCost,
+                    stageConfiguration = template.StageConfiguration,
+                    stats = new
+                    {
+                        usageCount = stats.UsageCount,
+                        completedJobs = stats.CompletedJobs,
+                        averageDuration = stats.AverageDuration,
+                        averageCost = stats.AverageCost,
+                        successRate = stats.SuccessRate
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting workflow template details for {TemplateId}", templateId);
+                return BadRequest("Error loading template details");
+            }
+        }
+
+        public async Task<IActionResult> OnGetStageDependencyDetailsAsync(int dependencyId)
+        {
+            try
+            {
+                var dependency = await _context.ProductionStageDependencies
+                    .Include(sd => sd.DependentStage)
+                    .Include(sd => sd.PrerequisiteStage)
+                    .FirstOrDefaultAsync(sd => sd.Id == dependencyId && sd.IsActive);
+
+                if (dependency == null)
+                {
+                    return NotFound("Dependency not found");
+                }
+
+                return new JsonResult(new
+                {
+                    id = dependency.Id,
+                    dependentStageId = dependency.DependentStageId,
+                    dependentStageName = dependency.DependentStage?.Name ?? "",
+                    prerequisiteStageId = dependency.PrerequisiteStageId,
+                    prerequisiteStageName = dependency.PrerequisiteStage?.Name ?? "",
+                    dependencyType = dependency.DependencyType,
+                    delayHours = dependency.DelayHours,
+                    isOptional = dependency.IsOptional,
+                    notes = dependency.Notes ?? ""
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting stage dependency details for {DependencyId}", dependencyId);
+                return BadRequest("Error loading dependency details");
+            }
+        }
+
+        public async Task<IActionResult> OnGetResourcePoolDetailsAsync(int poolId)
+        {
+            try
+            {
+                var pool = await _context.ResourcePools
+                    .FirstOrDefaultAsync(rp => rp.Id == poolId && rp.IsActive);
+
+                if (pool == null)
+                {
+                    return NotFound("Resource pool not found");
+                }
+
+                return new JsonResult(new
+                {
+                    id = pool.Id,
+                    name = pool.Name,
+                    description = pool.Description ?? "",
+                    resourceType = pool.ResourceType,
+                    maxConcurrentAllocations = pool.MaxConcurrentAllocations,
+                    autoAssign = pool.AutoAssign,
+                    resourceConfiguration = pool.ResourceConfiguration,
+                    assignmentCriteria = pool.AssignmentCriteria ?? "",
+                    utilizationPercentage = pool.GetUtilizationPercentage()
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting resource pool details for {PoolId}", poolId);
+                return BadRequest("Error loading resource pool details");
+            }
+        }
+
         #endregion
 
         #region Helper Methods
@@ -340,8 +488,8 @@ namespace OpCentrix.Pages.Admin.Workflows
                 .OrderBy(wt => wt.Name)
                 .ToListAsync();
 
-            // Load stage dependencies - use explicit table reference to avoid conflicts
-            StageDependencies = await _context.Set<OpCentrix.Models.StageDependency>()
+            // Load stage dependencies - use the correct DbSet reference
+            StageDependencies = await _context.ProductionStageDependencies
                 .Include(sd => sd.DependentStage)
                 .Include(sd => sd.PrerequisiteStage)
                 .Where(sd => sd.IsActive)
@@ -367,11 +515,13 @@ namespace OpCentrix.Pages.Admin.Workflows
             {
                 foreach (var template in WorkflowTemplates)
                 {
-                    var usageCount = await _context.PartStageRequirements
-                        .CountAsync(psr => psr.WorkflowTemplateId == template.Id && psr.IsActive);
+                    // Get usage count from Parts with AppliedTemplateId
+                    var usageCount = await _context.Parts
+                        .CountAsync(p => p.AppliedTemplateId == template.Id && p.IsActive);
 
+                    // Get completed jobs from ProductionStageExecutions
                     var completedJobs = await _context.ProductionStageExecutions
-                        .Where(pse => pse.WorkflowTemplateId == template.Id && pse.Status == "Completed")
+                        .Where(pse => pse.Status == "Completed")
                         .ToListAsync();
 
                     var avgDuration = completedJobs.Any()
@@ -423,8 +573,8 @@ namespace OpCentrix.Pages.Admin.Workflows
 
                 visited.Add(currentStageId);
 
-                // Get all stages that depend on the current stage - use explicit table reference
-                var dependentStages = await _context.Set<OpCentrix.Models.StageDependency>()
+                // Get all stages that depend on the current stage - use correct DbSet reference
+                var dependentStages = await _context.ProductionStageDependencies
                     .Where(sd => sd.PrerequisiteStageId == currentStageId && sd.IsActive)
                     .Select(sd => sd.DependentStageId)
                     .ToListAsync();
@@ -436,47 +586,6 @@ namespace OpCentrix.Pages.Admin.Workflows
             }
 
             return false;
-        }
-
-        public async Task<IActionResult> OnGetWorkflowTemplateDetailsAsync(int templateId)
-        {
-            try
-            {
-                var template = await _context.WorkflowTemplates
-                    .FirstOrDefaultAsync(wt => wt.Id == templateId);
-
-                if (template == null)
-                {
-                    return NotFound("Template not found");
-                }
-
-                var stats = WorkflowStatistics.GetValueOrDefault(templateId, new WorkflowStats());
-
-                return new JsonResult(new
-                {
-                    id = template.Id,
-                    name = template.Name,
-                    description = template.Description ?? "",
-                    category = template.Category ?? "",
-                    complexity = template.Complexity,
-                    estimatedDuration = template.EstimatedDurationHours,
-                    estimatedCost = template.EstimatedCost,
-                    stageConfiguration = template.StageConfiguration,
-                    stats = new
-                    {
-                        usageCount = stats.UsageCount,
-                        completedJobs = stats.CompletedJobs,
-                        averageDuration = stats.AverageDuration,
-                        averageCost = stats.AverageCost,
-                        successRate = stats.SuccessRate
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting workflow template details for {TemplateId}", templateId);
-                return BadRequest("Error loading template details");
-            }
         }
 
         #endregion

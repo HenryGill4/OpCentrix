@@ -620,55 +620,63 @@ class ModernStageManager {
     }
 
     updateStageSummary() {
-        const summaryContainer = document.getElementById('stage-summary-container');
-        if (!summaryContainer) return;
+        // Update the main summary section
+        const summaryContainer = document.getElementById('stage-summary');
+        if (summaryContainer) {
+            if (this.selectedStages.size === 0) {
+                summaryContainer.innerHTML = `
+                    <div class="text-muted text-center py-2">
+                        <i class="fas fa-info-circle me-1"></i>
+                        No manufacturing stages selected
+                    </div>
+                `;
+            } else {
+                const stages = Array.from(this.selectedStages.values()).sort((a, b) => a.executionOrder - b.executionOrder);
+                const totalHours = stages.reduce((sum, stage) => sum + stage.estimatedHours, 0);
+                const totalCost = stages.reduce((sum, stage) => {
+                    const laborCost = stage.estimatedHours * stage.hourlyRate;
+                    const setupCost = (stage.setupMinutes || 0) / 60 * stage.hourlyRate;
+                    return sum + laborCost + setupCost + stage.materialCost;
+                }, 0);
 
-        if (this.selectedStages.size === 0) {
-            summaryContainer.innerHTML = `
-                <div class="text-muted text-center py-2">
-                    <i class="fas fa-info-circle me-1"></i>
-                    No manufacturing stages selected
-                </div>
-            `;
-            return;
+                document.getElementById('summary-total-stages').textContent = stages.length;
+                document.getElementById('summary-total-duration').textContent = `${totalHours.toFixed(1)}h`;
+                document.getElementById('summary-total-cost').textContent = `$${totalCost.toFixed(2)}`;
+                
+                const complexity = this.calculateComplexity(stages.length, totalHours);
+                document.getElementById('summary-complexity').textContent = complexity;
+            }
         }
 
+        // Update the workflow summary cards in the summary tab
+        this.updateWorkflowSummaryCards();
+    }
+
+    updateWorkflowSummaryCards() {
         const stages = Array.from(this.selectedStages.values()).sort((a, b) => a.executionOrder - b.executionOrder);
         const totalHours = stages.reduce((sum, stage) => sum + stage.estimatedHours, 0);
         const totalCost = stages.reduce((sum, stage) => {
             const laborCost = stage.estimatedHours * stage.hourlyRate;
-            const setupCost = (stage.setupTimeMinutes || 0) / 60 * stage.hourlyRate;
+            const setupCost = (stage.setupMinutes || 0) / 60 * stage.hourlyRate;
             return sum + laborCost + setupCost + stage.materialCost;
         }, 0);
 
-        summaryContainer.innerHTML = `
-            <div class="row g-2 text-center">
-                <div class="col-md-3">
-                    <div class="border rounded p-2">
-                        <div class="h6 mb-0 text-primary">${stages.length}</div>
-                        <small class="text-muted">Stages</small>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="border rounded p-2">
-                        <div class="h6 mb-0 text-info">${totalHours.toFixed(1)}h</div>
-                        <small class="text-muted">Total Time</small>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="border rounded p-2">
-                        <div class="h6 mb-0 text-success">$${totalCost.toFixed(2)}</div>
-                        <small class="text-muted">Est. Cost</small>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="border rounded p-2">
-                        <div class="h6 mb-0 text-warning">${stages.map(s => s.executionOrder).join('?')}</div>
-                        <small class="text-muted">Workflow</small>
-                    </div>
-                </div>
-            </div>
-        `;
+        // Update summary tab cards
+        const summaryStagesCard = document.querySelector('#summary-total-stages');
+        const summaryDurationCard = document.querySelector('#summary-total-duration');
+        const summaryCostCard = document.querySelector('#summary-total-cost');
+
+        if (summaryStagesCard) summaryStagesCard.textContent = stages.length;
+        if (summaryDurationCard) summaryDurationCard.textContent = `${totalHours.toFixed(1)}h`;
+        if (summaryCostCard) summaryCostCard.textContent = `$${totalCost.toFixed(2)}`;
+    }
+
+    calculateComplexity(stageCount, totalHours) {
+        const score = stageCount + Math.floor(totalHours / 4);
+        
+        return score <= 2 ? "Simple" : 
+               score <= 4 ? "Medium" : 
+               score <= 6 ? "Complex" : "Very Complex";
     }
 
     // Get stage data for form submission
@@ -870,31 +878,33 @@ window.isStageManagerReady = function() {
     return !!(window.stageManager && window.stageManager.initialized);
 };
 
-// Expose debugging function
-window.debugStageManagerDetailed = function() {
-    console.log('?? [STAGE-MANAGER] Detailed Debug Information:');
-    console.log('- ModernStageManager class available:', typeof ModernStageManager);
-    console.log('- window.stageManager:', window.stageManager);
-    console.log('- stageManager.initialized:', window.stageManager?.initialized);
-    console.log('- availableStages count:', window.stageManager?.availableStages?.length);
-    console.log('- selectedStages count:', window.stageManager?.selectedStages?.size);
-    console.log('- stage container exists:', !!document.getElementById('stage-requirements-container'));
-    
-    if (window.stageManager && window.stageManager.availableStages) {
-        console.log('- Available stages:', window.stageManager.availableStages.map(s => ({ id: s.id, name: s.name })));
+// Global stage functions that bridge to the stage manager
+window.addStageGlobal = function(stageId) {
+    const manager = window.ensureStageManager();
+    if (manager && manager.addStage) {
+        return manager.addStage(stageId);
+    } else {
+        console.warn('?? [STAGE-MANAGER] Add stage function not available');
+        return false;
     }
-    
-    if (window.stageManager && window.stageManager.selectedStages) {
-        console.log('- Selected stages:', Array.from(window.stageManager.selectedStages.entries()));
-    }
-    
-    return {
-        classAvailable: typeof ModernStageManager !== 'undefined',
-        instanceAvailable: !!window.stageManager,
-        initialized: window.stageManager?.initialized || false,
-        availableStagesCount: window.stageManager?.availableStages?.length || 0,
-        selectedStagesCount: window.stageManager?.selectedStages?.size || 0
-    };
 };
 
-console.log('?? [STAGE-MANAGER] Enhanced ModernStageManager loaded and ready');
+window.removeStageGlobal = function(stageId) {
+    const manager = window.getStageManager();
+    if (manager && manager.removeStage) {
+        return manager.removeStage(stageId);
+    } else {
+        console.warn('?? [STAGE-MANAGER] Remove stage function not available');
+        return false;
+    }
+};
+
+window.editStageGlobal = function(stageId) {
+    const manager = window.getStageManager();
+    if (manager && manager.editStage) {
+        return manager.editStage(stageId);
+    } else {
+        console.warn('?? [STAGE-MANAGER] Edit stage function not available');
+        return false;
+    }
+};

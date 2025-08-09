@@ -475,115 +475,141 @@
 <!-- Toast Container -->
 <div id="toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;"></div>
 
-<!-- Include antiforgery token for AJAX requests -->
-<form style="display: none;">
+<!-- Hidden antiforgery token form for JavaScript access -->
+<form id="hiddenAntiforgeryForm" style="display: none;">
     @Html.AntiForgeryToken()
 </form>
 
 <!-- HTMX for seamless form submission -->
 <script src="https://unpkg.com/htmx.org@1.9.10/dist/htmx.min.js"></script>
 
-<!-- Bulletproof JavaScript - Simple and Reliable -->
+<!-- BULLETPROOF PARTS PAGE JAVASCRIPT - COMPREHENSIVE SOLUTION -->
 <script>
 (function() {
     'use strict';
     
-    console.log('?? [PARTS] Loading bulletproof parts page');
+    console.log('?? [PARTS] Loading bulletproof Parts page with comprehensive debugging');
     
-    // Global variables
+    // ===================================================================
+    // GLOBAL CONFIGURATION AND STATE
+    // ===================================================================
+    
+    const CONFIG = {
+        DEBUG: true,
+        RETRY_ATTEMPTS: 3,
+        RETRY_DELAY: 1000,
+        TIMEOUT: 30000,
+        ANTIFORGERY_TOKEN_SELECTOR: 'input[name="__RequestVerificationToken"]'
+    };
+    
     let antiforgeryToken = '';
-
-    // ===================================================================
-    // MAIN BUTTON HANDLERS - Bulletproof with Multiple Fallbacks
-    // ===================================================================
-
-    window.handleAddPartClick = function() {
-        console.log('? [PARTS] Add part button clicked');
-        loadPartForm('add');
+    let pageState = {
+        modalsInitialized: false,
+        toastsInitialized: false,
+        formValidationActive: false
     };
-
-    window.handleEditPartClick = function(partId) {
-        console.log('?? [PARTS] Edit part button clicked for ID:', partId);
-        
-        if (!partId || partId <= 0) {
-            console.error('? [PARTS] Invalid part ID for edit:', partId);
-            showToast('error', 'Invalid part ID');
-            return;
-        }
-        
-        loadPartForm('edit', partId);
-    };
-
-    window.handleDeletePartClick = function(partId, partNumber, partName) {
-        console.log('??? [PARTS] Delete part button clicked for:', partNumber);
-        
-        if (!partId || partId <= 0) {
-            console.error('? [PARTS] Invalid part ID for delete:', partId);
-            showToast('error', 'Invalid part ID');
-            return;
-        }
-        
-        const message = `Are you sure you want to delete part "${partNumber}" (${partName})?\n\nThis action cannot be undone.`;
-        
-        if (confirm(message)) {
-            console.log('? [PARTS] Delete confirmed, submitting form');
-            
-            try {
-                // Create and submit form
-                const form = document.createElement('form');
-                form.method = 'post';
-                form.action = '/Admin/Parts?handler=Delete';
-                form.style.display = 'none';
-                
-                // Add antiforgery token
-                if (antiforgeryToken) {
-                    const tokenInput = document.createElement('input');
-                    tokenInput.type = 'hidden';
-                    tokenInput.name = '__RequestVerificationToken';
-                    tokenInput.value = antiforgeryToken;
-                    form.appendChild(tokenInput);
-                }
-                
-                // Add part ID
-                const idInput = document.createElement('input');
-                idInput.type = 'hidden';
-                idInput.name = 'id';
-                idInput.value = partId;
-                form.appendChild(idInput);
-                
-                // Submit form
-                document.body.appendChild(form);
-                form.submit();
-                
-                console.log('? [PARTS] Delete form submitted successfully');
-                
-            } catch (error) {
-                console.error('? [PARTS] Error creating delete form:', error);
-                showToast('error', 'Failed to delete part. Please try again.');
+    
+    // ===================================================================
+    // ANTIFORGERY TOKEN MANAGEMENT - BULLETPROOF
+    // ===================================================================
+    
+    function initializeAntiforgeryToken() {
+        try {
+            const tokenInput = document.querySelector(CONFIG.ANTIFORGERY_TOKEN_SELECTOR);
+            if (tokenInput) {
+                antiforgeryToken = tokenInput.value;
+                console.log('? [PARTS] Antiforgery token initialized:', antiforgeryToken.substring(0, 20) + '...');
+                return true;
+            } else {
+                console.warn('?? [PARTS] Antiforgery token not found');
+                return false;
             }
-        } else {
-            console.log('?? [PARTS] Delete cancelled by user');
+        } catch (error) {
+            console.error('? [PARTS] Error initializing antiforgery token:', error);
+            return false;
+        }
+    }
+    
+    function getAntiforgeryToken() {
+        if (!antiforgeryToken) {
+            initializeAntiforgeryToken();
+        }
+        return antiforgeryToken;
+    }
+    
+    // ===================================================================
+    // MAIN BUTTON HANDLERS - BULLETPROOF WITH COMPREHENSIVE FALLBACKS
+    // ===================================================================
+    
+    window.handleAddPartClick = function() {
+        const operationId = generateOperationId();
+        console.log(`?? [PARTS-${operationId}] Add part button clicked`);
+        
+        try {
+            loadPartForm('add', null, operationId);
+        } catch (error) {
+            console.error(`? [PARTS-${operationId}] Error in handleAddPartClick:`, error);
+            showToast('error', 'Failed to open add part form. Please try again.');
         }
     };
-
+    
+    window.handleEditPartClick = function(partId) {
+        const operationId = generateOperationId();
+        console.log(`?? [PARTS-${operationId}] Edit part button clicked for ID: ${partId}`);
+        
+        try {
+            if (!partId || partId <= 0) {
+                console.error(`? [PARTS-${operationId}] Invalid part ID: ${partId}`);
+                showToast('error', 'Invalid part ID');
+                return;
+            }
+            
+            loadPartForm('edit', partId, operationId);
+        } catch (error) {
+            console.error(`? [PARTS-${operationId}] Error in handleEditPartClick:`, error);
+            showToast('error', 'Failed to open edit part form. Please try again.');
+        }
+    };
+    
+    window.handleDeletePartClick = function(partId, partNumber, partName) {
+        const operationId = generateOperationId();
+        console.log(`??? [PARTS-${operationId}] Delete part button clicked for: ${partNumber}`);
+        
+        try {
+            if (!partId || partId <= 0) {
+                console.error(`? [PARTS-${operationId}] Invalid part ID: ${partId}`);
+                showToast('error', 'Invalid part ID');
+                return;
+            }
+            
+            const message = `Are you sure you want to delete part "${partNumber}" (${partName})?\n\nThis action cannot be undone.`;
+            
+            if (confirm(message)) {
+                console.log(`? [PARTS-${operationId}] Delete confirmed, submitting form`);
+                submitDeleteForm(partId, operationId);
+            } else {
+                console.log(`? [PARTS-${operationId}] Delete cancelled by user`);
+            }
+        } catch (error) {
+            console.error(`? [PARTS-${operationId}] Error in handleDeletePartClick:`, error);
+            showToast('error', 'Failed to process delete request. Please try again.');
+        }
+    };
+    
     // ===================================================================
-    // CORE FUNCTIONALITY - Simplified and Bulletproof
+    // CORE FUNCTIONALITY - ENHANCED WITH COMPREHENSIVE ERROR HANDLING
     // ===================================================================
-
-    function loadPartForm(action, partId = null) {
-        console.log('?? [PARTS] Loading part form:', action, partId ? `ID: ${partId}` : 'new part');
+    
+    function loadPartForm(action, partId, operationId) {
+        console.log(`?? [PARTS-${operationId}] Loading part form: ${action}${partId ? `, ID: ${partId}` : ''}`);
         
         // Validate inputs
         if (!action || (action !== 'add' && action !== 'edit')) {
-            console.error('? [PARTS] Invalid action:', action);
-            showToast('error', 'Invalid action specified');
-            return;
+            throw new Error(`Invalid action: ${action}`);
         }
         
         if (action === 'edit' && (!partId || partId <= 0)) {
-            console.error('? [PARTS] Invalid partId for edit:', partId);
-            showToast('error', 'Invalid part ID for editing');
-            return;
+            throw new Error(`Invalid partId for edit: ${partId}`);
         }
         
         // Build URL
@@ -594,61 +620,58 @@
             url += `Edit&id=${partId}`;
         }
         
-        console.log('?? [PARTS] Request URL:', url);
+        console.log(`?? [PARTS-${operationId}] Request URL: ${url}`);
         
         // Get modal elements
         const modal = document.getElementById('partModal');
         const modalContent = document.getElementById('partModalContent');
         
         if (!modal || !modalContent) {
-            console.error('? [PARTS] Modal elements not found, redirecting to full page');
+            console.error(`? [PARTS-${operationId}] Modal elements not found, redirecting to full page`);
             window.location.href = url;
             return;
         }
         
         // Show loading state
-        modalContent.innerHTML = createLoadingContent(action);
+        modalContent.innerHTML = createLoadingContent(action, operationId);
         
         // Show modal
-        try {
-            if (typeof bootstrap !== 'undefined') {
-                const bootstrapModal = new bootstrap.Modal(modal, {
-                    backdrop: 'static',
-                    keyboard: true
-                });
-                bootstrapModal.show();
-            } else {
-                // Fallback modal display
-                modal.style.display = 'block';
-                modal.classList.add('show');
-                document.body.classList.add('modal-open');
-            }
-            console.log('? [PARTS] Modal shown with loading state');
-        } catch (error) {
-            console.error('? [PARTS] Error showing modal:', error);
-            window.location.href = url;
-            return;
-        }
+        showModal(modal, operationId);
         
-        // Fetch form content with bulletproof error handling
+        // Fetch form content with comprehensive error handling
+        fetchFormContent(url, modalContent, action, operationId);
+    }
+    
+    function fetchFormContent(url, modalContent, action, operationId) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+        const timeoutId = setTimeout(() => {
+            controller.abort();
+            console.error(`? [PARTS-${operationId}] Request timed out after ${CONFIG.TIMEOUT}ms`);
+        }, CONFIG.TIMEOUT);
+        
+        const headers = {
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'X-Requested-With': 'XMLHttpRequest',
+            'HX-Request': 'true',
+            'Cache-Control': 'no-cache'
+        };
+        
+        // Add antiforgery token
+        const token = getAntiforgeryToken();
+        if (token) {
+            headers['RequestVerificationToken'] = token;
+        }
         
         fetch(url, {
             method: 'GET',
-            headers: {
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'X-Requested-With': 'XMLHttpRequest',
-                'HX-Request': 'true',
-                'Cache-Control': 'no-cache'
-            },
+            headers: headers,
             signal: controller.signal,
             credentials: 'same-origin'
         })
         .then(response => {
             clearTimeout(timeoutId);
             
-            console.log('?? [PARTS] Response received:', response.status, response.statusText);
+            console.log(`?? [PARTS-${operationId}] Response received: ${response.status} ${response.statusText}`);
             
             if (!response.ok) {
                 throw new Error(`Server error: ${response.status} ${response.statusText}`);
@@ -656,14 +679,12 @@
             
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('text/html')) {
-                throw new Error('Invalid response type: Expected HTML content');
+                throw new Error(`Invalid response type: Expected HTML, got ${contentType}`);
             }
             
             return response.text();
         })
         .then(html => {
-            clearTimeout(timeoutId);
-            
             if (!html || html.trim() === '') {
                 throw new Error('Empty response received from server');
             }
@@ -672,51 +693,109 @@
                 throw new Error('Received full page instead of form partial');
             }
             
-            console.log('? [PARTS] Form HTML received, length:', html.length);
+            console.log(`? [PARTS-${operationId}] Form HTML received, length: ${html.length}`);
             
             // Load content into modal
             modalContent.innerHTML = html;
             
             // Initialize form after loading
             setTimeout(() => {
-                initializeFormComponents();
+                initializeFormComponents(operationId);
                 setModalFocus();
-                console.log('? [PARTS] Form initialized successfully');
+                console.log(`? [PARTS-${operationId}] Form initialized successfully`);
             }, 200);
             
         })
         .catch(error => {
             clearTimeout(timeoutId);
-            console.error('? [PARTS] Error loading part form:', error);
+            console.error(`? [PARTS-${operationId}] Error loading part form:`, error);
             
             const errorMessage = getErrorMessage(error);
-            modalContent.innerHTML = createErrorContent(action, errorMessage, url);
+            modalContent.innerHTML = createErrorContent(action, errorMessage, url, operationId);
             showToast('error', `Failed to load ${action} form: ${errorMessage}`);
         });
     }
-
+    
+    function submitDeleteForm(partId, operationId) {
+        try {
+            // Create and submit form
+            const form = document.createElement('form');
+            form.method = 'post';
+            form.action = '/Admin/Parts?handler=Delete';
+            form.style.display = 'none';
+            
+            // Add antiforgery token
+            const token = getAntiforgeryToken();
+            if (token) {
+                const tokenInput = document.createElement('input');
+                tokenInput.type = 'hidden';
+                tokenInput.name = '__RequestVerificationToken';
+                tokenInput.value = token;
+                form.appendChild(tokenInput);
+            } else {
+                console.warn(`?? [PARTS-${operationId}] No antiforgery token available for delete`);
+            }
+            
+            // Add part ID
+            const idInput = document.createElement('input');
+            idInput.type = 'hidden';
+            idInput.name = 'id';
+            idInput.value = partId;
+            form.appendChild(idInput);
+            
+            // Submit form
+            document.body.appendChild(form);
+            form.submit();
+            
+            console.log(`? [PARTS-${operationId}] Delete form submitted successfully`);
+            
+        } catch (error) {
+            console.error(`? [PARTS-${operationId}] Error creating delete form:`, error);
+            showToast('error', 'Failed to delete part. Please try again.');
+        }
+    }
+    
     // ===================================================================
-    // UTILITY FUNCTIONS
+    // UI COMPONENTS AND MODAL MANAGEMENT
     // ===================================================================
-
-    window.changePageSize = function(newSize) {
-        const url = new URL(window.location);
-        url.searchParams.set('PageSize', newSize);
-        url.searchParams.set('PageNumber', '1');
-        window.location.href = url.toString();
-    };
-
+    
+    function showModal(modal, operationId) {
+        try {
+            if (typeof bootstrap !== 'undefined') {
+                const bootstrapModal = new bootstrap.Modal(modal, {
+                    backdrop: 'static',
+                    keyboard: true
+                });
+                bootstrapModal.show();
+                console.log(`? [PARTS-${operationId}] Bootstrap modal shown`);
+            } else {
+                // Fallback modal display
+                modal.style.display = 'block';
+                modal.classList.add('show');
+                document.body.classList.add('modal-open');
+                console.log(`? [PARTS-${operationId}] Fallback modal shown`);
+            }
+        } catch (error) {
+            console.error(`? [PARTS-${operationId}] Error showing modal:`, error);
+            throw new Error('Failed to show modal');
+        }
+    }
+    
     window.showToast = function(type, message) {
-        console.log(`?? [PARTS] Showing ${type} toast:`, message);
+        const operationId = generateOperationId();
+        console.log(`?? [PARTS-${operationId}] Showing ${type} toast: ${message}`);
         
         try {
             if (typeof bootstrap !== 'undefined') {
-                const toastId = 'toast-' + Date.now();
+                const toastId = `toast-${Date.now()}`;
+                const bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+                const iconClass = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+                
                 const toastHtml = `
-                    <div id="${toastId}" class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true" data-bs-delay="5000">
+                    <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true" data-bs-delay="5000">
                         <div class="d-flex">
                             <div class="toast-body">
-                                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                                <i class="fas ${iconClass} me-2"></i>
                                 ${message}
                             </div>
                             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
@@ -742,22 +821,33 @@
                     toastElement.remove();
                 });
                 
-                console.log('? [PARTS] Bootstrap toast displayed successfully');
+                console.log(`? [PARTS-${operationId}] Bootstrap toast displayed successfully`);
             } else {
-                console.warn('?? [PARTS] Bootstrap not available, using alert fallback');
+                console.warn(`?? [PARTS-${operationId}] Bootstrap not available, using alert fallback`);
                 alert(`${type.toUpperCase()}: ${message}`);
             }
         } catch (error) {
-            console.error('? [PARTS] Error showing toast:', error);
+            console.error(`? [PARTS-${operationId}] Error showing toast:`, error);
             alert(`${type.toUpperCase()}: ${message}`);
         }
     };
-
+    
     // ===================================================================
-    // HELPER FUNCTIONS
+    // UTILITY AND HELPER FUNCTIONS
     // ===================================================================
-
-    function initializeFormComponents() {
+    
+    window.changePageSize = function(newSize) {
+        const url = new URL(window.location);
+        url.searchParams.set('PageSize', newSize);
+        url.searchParams.set('PageNumber', '1');
+        window.location.href = url.toString();
+    };
+    
+    function generateOperationId() {
+        return Math.random().toString(36).substring(2, 10);
+    }
+    
+    function initializeFormComponents(operationId) {
         try {
             // Initialize Bootstrap tooltips
             if (typeof bootstrap !== 'undefined') {
@@ -781,12 +871,12 @@
                 }
             });
             
-            console.log('? [PARTS] Form components initialized');
+            console.log(`? [PARTS-${operationId}] Form components initialized`);
         } catch (error) {
-            console.warn('?? [PARTS] Error initializing form components:', error);
+            console.warn(`?? [PARTS-${operationId}] Error initializing form components:`, error);
         }
     }
-
+    
     function setModalFocus() {
         try {
             const modal = document.getElementById('partModal');
@@ -802,8 +892,8 @@
             console.warn('?? [PARTS] Error setting modal focus:', error);
         }
     }
-
-    function createLoadingContent(action) {
+    
+    function createLoadingContent(action, operationId) {
         const actionText = action === 'add' ? 'Add Part' : 'Edit Part';
         
         return `
@@ -814,7 +904,7 @@
                             <span class="visually-hidden">Loading...</span>
                         </div>
                         <i class="fas fa-cogs me-2"></i>
-                        Loading ${actionText}...
+                        Loading ${actionText}... (${operationId})
                     </div>
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -829,11 +919,12 @@
                          role="progressbar" style="width: 100%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100">
                     </div>
                 </div>
+                <small class="text-muted">Operation ID: ${operationId}</small>
             </div>
         `;
     }
-
-    function createErrorContent(action, errorMessage, fallbackUrl) {
+    
+    function createErrorContent(action, errorMessage, fallbackUrl, operationId) {
         return `
             <div class="modal-header bg-danger text-white">
                 <h5 class="modal-title">
@@ -857,6 +948,7 @@
                         <li>Check your internet connection</li>
                         <li>Contact support if the problem persists</li>
                     </ul>
+                    <p class="small text-muted mt-2">Operation ID: ${operationId}</p>
                 </div>
             </div>
             <div class="modal-footer">
@@ -872,7 +964,7 @@
             </div>
         `;
     }
-
+    
     function getErrorMessage(error) {
         if (error.name === 'AbortError') {
             return 'Request timed out. Please check your connection and try again.';
@@ -882,37 +974,19 @@
         }
         return 'An unexpected error occurred.';
     }
-
-    // Add debounce utility function
-    function debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    }
-
+    
     // ===================================================================
-    // INITIALIZATION
+    // INITIALIZATION AND EVENT LISTENERS
     // ===================================================================
-
+    
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('?? [PARTS] Initializing bulletproof Parts page');
+        const operationId = generateOperationId();
+        console.log(`?? [PARTS-${operationId}] Initializing bulletproof Parts page`);
         
         try {
             // Initialize antiforgery token
-            const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]') ||
-                              document.querySelector('form input[name="__RequestVerificationToken"]');
-            
-            if (tokenInput) {
-                antiforgeryToken = tokenInput.value;
-                console.log('?? [PARTS] Antiforgery token initialized');
-            } else {
-                console.warn('?? [PARTS] Antiforgery token not found');
+            if (!initializeAntiforgeryToken()) {
+                console.warn(`?? [PARTS-${operationId}] Failed to initialize antiforgery token`);
             }
             
             // Initialize Bootstrap tooltips
@@ -924,17 +998,46 @@
                         delay: { show: 500, hide: 100 }
                     });
                 });
-                console.log('? [PARTS] Bootstrap tooltips initialized');
+                console.log(`? [PARTS-${operationId}] Bootstrap tooltips initialized`);
             }
             
-            console.log('? [PARTS] Bulletproof Parts page initialized successfully');
+            // Initialize HTMX event listeners
+            if (typeof htmx !== 'undefined') {
+                document.addEventListener('htmx:afterRequest', function(event) {
+                    if (event.target.closest('#partModal') && event.detail.successful) {
+                        console.log(`? [PARTS] HTMX form submission successful`);
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
+                    }
+                });
+                console.log(`? [PARTS-${operationId}] HTMX event listeners initialized`);
+            }
+            
+            console.log(`? [PARTS-${operationId}] Bulletproof Parts page initialized successfully`);
             
         } catch (error) {
-            console.error('? [PARTS] Error initializing Parts page:', error);
+            console.error(`? [PARTS-${operationId}] Error initializing Parts page:`, error);
         }
     });
-
-    console.log('? [PARTS] Bulletproof parts page loaded successfully');
+    
+    // Global error handler
+    window.addEventListener('error', function(event) {
+        console.error('?? [PARTS] Global error caught:', event.error);
+    });
+    
+    // Debug functions for troubleshooting
+    window.debugPartsPage = function() {
+        console.group('?? [PARTS] Debug Information');
+        console.log('Antiforgery token:', antiforgeryToken ? 'Present' : 'Missing');
+        console.log('Bootstrap available:', typeof bootstrap !== 'undefined');
+        console.log('HTMX available:', typeof htmx !== 'undefined');
+        console.log('Page state:', pageState);
+        console.log('Config:', CONFIG);
+        console.groupEnd();
+    };
+    
+    console.log('? [PARTS] Bulletproof Parts page JavaScript loaded and ready');
 })();
 </script>
 
