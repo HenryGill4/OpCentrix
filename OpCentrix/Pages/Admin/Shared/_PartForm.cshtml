@@ -43,6 +43,13 @@
             <input type="hidden" asp-for="Part.CreatedDate" />
             <input type="hidden" asp-for="Part.CreatedBy" />
         }
+
+        <!-- Hidden Stage Management Data -->
+        <input type="hidden" id="selectedStageIds" name="SelectedStageIds" value="" />
+        <input type="hidden" id="stageExecutionOrders" name="StageExecutionOrders" value="" />
+        <input type="hidden" id="stageEstimatedHours" name="StageEstimatedHours" value="" />
+        <input type="hidden" id="stageHourlyRates" name="StageHourlyRates" value="" />
+        <input type="hidden" id="stageMaterialCosts" name="StageMaterialCosts" value="" />
         
         <!-- Tab Navigation -->
         <ul class="nav nav-tabs nav-justified mb-3" id="partFormTabs" role="tablist">
@@ -360,19 +367,19 @@
                             </div>
                             <div class="card-body">
                                 <div class="d-grid gap-2">
-                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="stageManager?.addStage(1)">
+                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addStageGlobal(1)">
                                         <i class="fas fa-cube me-1"></i>SLS Printing
                                     </button>
-                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="stageManager?.addStage(2)">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="addStageGlobal(2)">
                                         <i class="fas fa-bolt me-1"></i>EDM Operations
                                     </button>
-                                    <button type="button" class="btn btn-outline-success btn-sm" onclick="stageManager?.addStage(3)">
+                                    <button type="button" class="btn btn-outline-success btn-sm" onclick="addStageGlobal(3)">
                                         <i class="fas fa-cogs me-1"></i>CNC Machining
                                     </button>
-                                    <button type="button" class="btn btn-outline-info btn-sm" onclick="stageManager?.addStage(4)">
+                                    <button type="button" class="btn btn-outline-info btn-sm" onclick="addStageGlobal(4)">
                                         <i class="fas fa-puzzle-piece me-1"></i>Assembly
                                     </button>
-                                    <button type="button" class="btn btn-outline-dark btn-sm" onclick="stageManager?.addStage(5)">
+                                    <button type="button" class="btn btn-outline-dark btn-sm" onclick="addStageGlobal(5)">
                                         <i class="fas fa-brush me-1"></i>Finishing
                                     </button>
                                 </div>
@@ -417,10 +424,16 @@
                     </div>
                     
                     <div class="col-md-6">
-                        <label asp-for="Part.SlsMaterial" class="form-label">SLS Processing Material</label>
-                        <input asp-for="Part.SlsMaterial" class="form-control" id="slsMaterialInput" />
+                        <label asp-for="Part.SlsMaterial" class="form-label fw-semibold">
+                            <i class="fas fa-cube me-1 text-primary"></i>SLS Material
+                        </label>
+                        <input asp-for="Part.SlsMaterial" id="slsMaterialInput" class="form-control" 
+                               placeholder="Ti-6Al-4V Grade 5" />
                         <span asp-validation-for="Part.SlsMaterial" class="text-danger"></span>
-                        <div class="form-text">Auto-filled from material selection</div>
+                        <div class="form-text">
+                            <i class="fas fa-info-circle text-info me-1"></i>
+                            Auto-synced with primary material selection
+                        </div>
                     </div>
                     
                     <div class="col-md-6">
@@ -685,214 +698,300 @@
                     <div class="col-md-3">
                         <div class="card bg-warning text-white">
                             <div class="card-body text-center">
-                                <i class="fas fa-layer-group fa-2x mb-2"></i>
-                                <h4 class="mb-0" id="summary-complexity">Simple</h4>
-                                <small>Complexity Level</small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Administrative Override Section -->
-                    <div class="col-12 mt-4">
-                        <div class="card border-warning admin-override-section">
-                            <div class="card-header bg-warning text-dark">
-                                <h6 class="mb-0">
-                                    <i class="fas fa-user-shield me-2"></i>Administrative Override (Optional)
-                                </h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <label asp-for="Part.AdminEstimatedHoursOverride" class="form-label">Duration Override (hours)</label>
-                                        <input asp-for="Part.AdminEstimatedHoursOverride" type="number" step="0.1" min="0.1" 
-                                               class="form-control" id="adminOverrideInput" />
-                                        <span asp-validation-for="Part.AdminEstimatedHoursOverride" class="text-danger"></span>
-                                        <div class="form-text">Leave blank to use calculated value</div>
-                                    </div>
-                                    
-                                    <div class="col-md-8">
-                                        <label asp-for="Part.AdminOverrideReason" class="form-label">Override Justification</label>
-                                        <textarea asp-for="Part.AdminOverrideReason" class="form-control" rows="2" 
-                                                  placeholder="Required when using override values..." 
-                                                  id="overrideReasonText"></textarea>
-                                        <span asp-validation-for="Part.AdminOverrideReason" class="text-danger"></span>
-                                        <div class="form-text text-danger">Required when override hours are specified</div>
-                                    </div>
-                                </div>
+                                <i class="fas fa-balance-scale fa-2x mb-2"></i>
+                                <h4 class="mb-0" id="summary-total-weight">0.0g</h4>
+                                <small>Total Weight</small>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- TAB 7: Assets (Phase 5) -->
+            <!-- TAB 7: Assets (Phase 5: Asset Management) -->
             @if (Model.Part.Id > 0)
             {
                 <div class="tab-pane fade" id="assets" role="tabpanel">
-                    <!-- Asset management content from existing implementation -->
-                    @* Include existing asset management implementation *@
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2 mb-3">
+                                <i class="fas fa-paperclip me-2"></i>Part Assets & Attachments
+                            </h6>
+                        </div>
+                        
+                        <div class="col-12">
+                            <!-- Asset Upload Form -->
+                            <form id="assetUploadForm" 
+                                  hx-post="/Admin/Parts/UploadAsset?partId=@Model.Part.Id"
+                                  hx-target="#assetUploadResponse"
+                                  hx-swap="innerHTML"
+                                  enctype="multipart/form-data">
+                                <div class="input-group mb-3">
+                                    <input type="file" class="form-control" name="assets" multiple 
+                                           accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.xls,.xlsx" />
+                                    <button class="btn btn-primary" type="submit">
+                                        <i class="fas fa-upload me-1"></i>Upload Assets
+                                    </button>
+                                </div>
+                                <div id="assetUploadResponse"></div>
+                            </form>
+                        </div>
+                        
+                        <div class="col-12">
+                            <!-- Existing Assets Table -->
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0 fw-bold text-dark">
+                                        <i class="fas fa-list-alt me-2 text-success"></i>
+                                        Existing Assets
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="assetsTableContainer">
+                                        <!-- Assets table will be loaded here by JavaScript -->
+                                        <div class="text-center py-4" id="assetsLoadingIndicator">
+                                            <div class="spinner-border text-primary mb-3" role="status">
+                                                <span class="visually-hidden">Loading...</span>
+                                            </div>
+                                            <p class="text-muted">Loading existing assets...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             }
+        </div>
+
+        <!-- Form Action Buttons -->
+        <div class="modal-footer bg-light border-top">
+            <div class="d-flex justify-content-between align-items-center w-100">
+                <div class="text-muted small">
+                    <i class="fas fa-info-circle me-1"></i>
+                    @if (Model.Part.Id == 0)
+                    {
+                        <span>Creating new part with stage assignments</span>
+                    }
+                    else
+                    {
+                        <span>Updating part: @Model.Part.PartNumber</span>
+                    }
+                </div>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancel
+                    </button>
+                    <button type="submit" id="savePartBtn" class="btn btn-primary">
+                        <span class="spinner-border spinner-border-sm d-none me-2" role="status" aria-hidden="true"></span>
+                        <i class="fas fa-save me-1"></i>
+                        <span class="btn-text">@(Model.Part.Id == 0 ? "Create Part" : "Update Part")</span>
+                    </button>
+                </div>
+            </div>
         </div>
     </form>
 </div>
 
-<div class="modal-footer">
-    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-        <i class="fas fa-times me-1"></i>Cancel
-    </button>
-    <button type="submit" form="partForm" class="btn btn-primary" id="savePartBtn">
-        <i class="fas fa-save me-1"></i>
-        <span class="btn-text">@(Model.Part.Id == 0 ? "Create Part" : "Update Part")</span>
-        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-    </button>
-</div>
-
-<!-- Include External CSS -->
-<link rel="stylesheet" href="~/css/admin/parts-form.css" asp-append-version="true" />
-
-<!-- Enhanced Scripts Section -->
-<script src="~/js/admin/parts-form.js" asp-append-version="true"></script>
+<!-- Enhanced Scripts Section with Best Practices -->
+<script src="~/js/shared/opcentrix-global-functions.js" asp-append-version="true"></script>
 <script src="~/js/admin/parts-stage-manager.js" asp-append-version="true"></script>
+<script src="~/js/admin/parts-form-manager.js" asp-append-version="true"></script>
 
+<!-- Form Validation and Enhancement Script -->
 <script>
-    // Enhanced form submission handlers with better error handling
-    window.handleFormSubmissionStart = function(event) {
-        console.log('🔄 [PART-FORM] Form submission starting...');
+    // Enhanced initialization with proper error boundaries
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('🚀 [PART-FORM] DOM ready - initializing enhanced form systems...');
         
-        // Show loading state on submit button
-        const submitBtn = document.getElementById('savePartBtn');
-        if (submitBtn) {
-            submitBtn.disabled = true;
-            const spinner = submitBtn.querySelector('.spinner-border');
-            const btnText = submitBtn.querySelector('.btn-text');
+        try {
+            // Initialize character counter for description
+            const descriptionField = document.querySelector('[name="Part.Description"]');
+            const charCounter = document.getElementById('description-count');
             
-            if (spinner) spinner.classList.remove('d-none');
-            if (btnText) btnText.textContent = 'Saving...';
-        }
-        
-        // Clear any existing validation errors
-        document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-        document.querySelectorAll('.text-danger').forEach(el => {
-            if (el.classList.contains('field-validation-error')) {
-                el.textContent = '';
+            if (descriptionField && charCounter) {
+                const updateCounter = () => {
+                    const length = descriptionField.value.length;
+                    charCounter.textContent = length;
+                    charCounter.className = length > 400 ? 'text-warning' : length > 450 ? 'text-danger' : '';
+                };
+                
+                descriptionField.addEventListener('input', updateCounter);
+                updateCounter(); // Initial count
             }
+
+            // Initialize tooltips for enhanced UX
+            if (typeof bootstrap !== 'undefined') {
+                const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+                tooltipTriggerList.forEach(tooltipTriggerEl => {
+                    new bootstrap.Tooltip(tooltipTriggerEl, {
+                        trigger: 'hover',
+                        delay: { show: 500, hide: 100 }
+                    });
+                });
+            }
+
+            // Initialize form auto-save (optional enhancement)
+            initializeAutoSave();
+
+            console.log('✅ [PART-FORM] Enhanced form systems initialized successfully');
+            
+        } catch (error) {
+            console.error('❌ [PART-FORM] Error during enhanced initialization:', error);
+            // Don't block form functionality for enhancement failures
+        }
+    });
+
+    // Auto-save functionality (saves to localStorage)
+    function initializeAutoSave() {
+        const form = document.getElementById('partForm');
+        if (!form) return;
+
+        const partId = document.querySelector('input[name="Part.Id"]')?.value;
+        const autoSaveKey = `partForm_autosave_${partId || 'new'}`;
+        
+        // Load saved data
+        try {
+            const savedData = localStorage.getItem(autoSaveKey);
+            if (savedData && partId === '0') { // Only for new parts
+                const data = JSON.parse(savedData);
+                const shouldRestore = confirm('Found previously entered data. Would you like to restore it?');
+                
+                if (shouldRestore) {
+                    Object.keys(data).forEach(key => {
+                        const field = form.querySelector(`[name="${key}"]`);
+                        if (field && field.type !== 'hidden') {
+                            field.value = data[key];
+                        }
+                    });
+                }
+            }
+        } catch (error) {
+            console.warn('⚠️ [PART-FORM] Auto-save restore failed:', error);
+        }
+
+        // Save data periodically
+        let autoSaveTimer;
+        const saveFormData = () => {
+            try {
+                const formData = new FormData(form);
+                const data = {};
+                
+                for (const [key, value] of formData.entries()) {
+                    if (!key.includes('__RequestVerificationToken') && !key.includes('Stage')) {
+                        data[key] = value;
+                    }
+                }
+                
+                localStorage.setItem(autoSaveKey, JSON.stringify(data));
+            } catch (error) {
+                console.warn('⚠️ [PART-FORM] Auto-save failed:', error);
+            }
+        };
+
+        // Auto-save on input changes
+        form.addEventListener('input', () => {
+            clearTimeout(autoSaveTimer);
+            autoSaveTimer = setTimeout(saveFormData, 2000); // Save after 2 seconds of no activity
         });
+
+        // Clear auto-save on successful submission
+        document.addEventListener('partFormSubmissionSuccess', () => {
+            localStorage.removeItem(autoSaveKey);
+        });
+    }
+
+    // Enhanced form submission handler (legacy compatibility)
+    window.handleFormSubmissionStart = function(event) {
+        console.log('🔄 [PART-FORM] Legacy handler called - delegating to form manager');
+        // The new form manager handles this automatically
     };
 
     window.handleFormSubmissionComplete = function(event) {
-        console.log('🔄 [PART-FORM] Form submission completed');
-        
-        // Reset submit button state
-        const submitBtn = document.getElementById('savePartBtn');
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            const spinner = submitBtn.querySelector('.spinner-border');
-            const btnText = submitBtn.querySelector('.btn-text');
-            
-            if (spinner) spinner.classList.add('d-none');
-            if (btnText) {
-                const isEdit = document.querySelector('input[name="Part.Id"]')?.value !== '0';
-                btnText.textContent = isEdit ? 'Update Part' : 'Create Part';
-            }
-        }
-        
-        if (event.detail.successful) {
-            console.log('✅ [PART-FORM] Form submission successful');
-            
-            // Check if response indicates success (no validation errors)
-            const responseText = event.detail.xhr.responseText;
-            
-            // If response contains validation errors, don't close modal
-            if (responseText.includes('alert-danger') || responseText.includes('validation-summary')) {
-                console.warn('⚠️ [PART-FORM] Form contains validation errors, keeping modal open');
-                
-                // Re-initialize stage manager for the updated form
-                setTimeout(() => {
-                    if (typeof ModernStageManager !== 'undefined') {
-                        console.log('🔄 [PART-FORM] Re-initializing stage manager after validation errors');
-                        const partIdInput = document.querySelector('input[name="Part.Id"]');
-                        const partId = partIdInput ? parseInt(partIdInput.value) || null : null;
-                        window.stageManager = new ModernStageManager(partId);
-                    }
-                }, 500);
-                
-                return;
-            }
-            
-            // Check for success indicators in response
-            if (responseText.includes('success') || responseText.includes('saved successfully') || 
-                event.detail.xhr.getResponseHeader('HX-Redirect')) {
-                
-                // Show success message
-                if (window.showToast) {
-                    window.showToast('success', 'Part saved successfully!');
-                }
-                
-                // Close modal after short delay
-                setTimeout(() => {
-                    const modal = document.getElementById('partModal');
-                    if (modal && typeof bootstrap !== 'undefined') {
-                        const bsModal = bootstrap.Modal.getInstance(modal);
-                        if (bsModal) {
-                            bsModal.hide();
-                        }
-                    }
-                    
-                    // Refresh page to show updated data
-                    window.location.href = '/Admin/Parts';
-                }, 1500);
-            }
-                
-        } else {
-            console.warn('⚠️ [PART-FORM] Form submission failed or had validation errors');
-        }
+        console.log('🔄 [PART-FORM] Legacy handler called - delegating to form manager');
+        // The new form manager handles this automatically
     };
 
     window.handleFormSubmissionError = function(event) {
-        console.error('❌ [PART-FORM] Form submission error:', event.detail);
-        
-        // Reset submit button state
-        const submitBtn = document.getElementById('savePartBtn');
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            const spinner = submitBtn.querySelector('.spinner-border');
-            const btnText = submitBtn.querySelector('.btn-text');
-            
-            if (spinner) spinner.classList.add('d-none');
-            if (btnText) {
-                const isEdit = document.querySelector('input[name="Part.Id"]')?.value !== '0';
-                btnText.textContent = isEdit ? 'Update Part' : 'Create Part';
-            }
-        }
-        
-        if (window.showToast) {
-            window.showToast('error', 'Error saving part. Please check your input and try again.');
-        }
+        console.log('❌ [PART-FORM] Legacy handler called - delegating to form manager');
+        // The new form manager handles this automatically
     };
 
-    // Initialize stage manager when form loads
-    document.addEventListener('htmx:afterSwap', function(event) {
-        if (event.target.id === 'partModalContent') {
-            console.log('🔄 [PART-FORM] Form content swapped, initializing stage manager');
+    // Validation enhancement for better UX
+    function addValidationEnhancements() {
+        // Real-time part number validation
+        const partNumberField = document.querySelector('[name="Part.PartNumber"]');
+        if (partNumberField) {
+            let validationTimer;
             
-            // Small delay to ensure all DOM elements are ready
-            setTimeout(() => {
-                if (typeof ModernStageManager !== 'undefined') {
-                    console.log('🎯 [PART-FORM] Initializing stage manager for form');
-                    
-                    // Get part ID if editing
-                    const partIdInput = document.querySelector('input[name="Part.Id"]');
-                    const partId = partIdInput ? parseInt(partIdInput.value) || null : null;
-                    
-                    // Initialize stage manager
-                    window.stageManager = new ModernStageManager(partId);
-                } else {
-                    console.warn('⚠️ [PART-FORM] ModernStageManager not available');
-                }
-            }, 300);
+            partNumberField.addEventListener('input', function() {
+                clearTimeout(validationTimer);
+                validationTimer = setTimeout(() => {
+                    validatePartNumber(this.value);
+                }, 500);
+            });
         }
-    });
+
+        // Real-time field validation
+        const requiredFields = document.querySelectorAll('input[required], textarea[required], select[required]');
+        requiredFields.forEach(field => {
+            field.addEventListener('blur', function() {
+                validateField(this);
+            });
+        });
+    }
+
+    function validatePartNumber(partNumber) {
+        if (!partNumber || partNumber.length < 3) return;
+        
+        const partId = document.querySelector('input[name="Part.Id"]')?.value;
+        const url = `/Admin/Parts?handler=CheckDuplicate&partNumber=${encodeURIComponent(partNumber)}${partId ? `&excludeId=${partId}` : ''}`;
+        
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                const field = document.querySelector('[name="Part.PartNumber"]');
+                const feedback = field.parentElement.querySelector('.duplicate-feedback') || 
+                               createDuplicateFeedback(field.parentElement);
+                
+                if (data.isDuplicate) {
+                    field.classList.add('is-invalid');
+                    feedback.textContent = data.message;
+                    feedback.className = 'duplicate-feedback text-danger small';
+                } else {
+                    field.classList.remove('is-invalid');
+                    feedback.textContent = data.message;
+                    feedback.className = 'duplicate-feedback text-success small';
+                }
+            })
+            .catch(error => {
+                console.warn('⚠️ [PART-FORM] Part number validation failed:', error);
+            });
+    }
+
+    function createDuplicateFeedback(parent) {
+        const feedback = document.createElement('div');
+        feedback.className = 'duplicate-feedback small';
+        parent.appendChild(feedback);
+        return feedback;
+    }
+
+    function validateField(field) {
+        const value = field.value.trim();
+        const isRequired = field.hasAttribute('required');
+        
+        if (isRequired && !value) {
+            field.classList.add('is-invalid');
+            field.classList.remove('is-valid');
+        } else if (value) {
+            field.classList.add('is-valid');
+            field.classList.remove('is-invalid');
+        } else {
+            field.classList.remove('is-valid', 'is-invalid');
+        }
+    }
+
+    // Initialize enhancements
+    document.addEventListener('DOMContentLoaded', addValidationEnhancements);
 
     console.log('✅ [PART-FORM] Enhanced form scripts loaded and ready');
 </script>
