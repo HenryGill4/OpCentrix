@@ -31,7 +31,9 @@
           hx-target="#partModalContent"
           hx-swap="outerHTML"
           hx-encoding="multipart/form-data"
-          hx-on::after-request="handleFormResponse(event)"
+          hx-on::before-request="handleFormSubmissionStart(event)"
+          hx-on::after-request="handleFormSubmissionComplete(event)"
+          hx-on::response-error="handleFormSubmissionError(event)"
           data-part-id="@Model.Part.Id">
         
         @Html.AntiForgeryToken()
@@ -116,8 +118,8 @@
                         <h6 class="text-primary border-bottom pb-2 mb-3">
                             <i class="fas fa-info-circle me-2"></i>Essential Part Information
                         </h6>
-                    </div>
-                    
+                    </div
+                    >
                     <div class="col-md-4">
                         <label asp-for="Part.PartNumber" class="form-label required">Part Number</label>
                         <input asp-for="Part.PartNumber" class="form-control" required 
@@ -287,93 +289,95 @@
             </div>
 
             <!-- TAB 2: Manufacturing Stages - MODERNIZED -->
-            <div class="tab-pane fade" id="stages" role="tabpanel">
-                <div class="row g-3">
-                    <div class="col-12">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="text-primary border-bottom pb-2 mb-0">
-                                <i class="fas fa-tasks me-2"></i>Manufacturing Process Stages
-                            </h6>
-                            <button type="button" class="btn btn-success btn-sm" id="add-stage-btn">
-                                <i class="fas fa-plus me-1"></i>Add Stage
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Modern Stage Requirements Container -->
-                    <div class="col-12">
-                        <div id="stage-requirements-container">
-                            <!-- Dynamic stage requirements loaded by ModernStageManager -->
-                            <div class="text-center py-4">
-                                <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
-                                <p class="text-muted mt-2">Loading manufacturing stages...</p>
+            <div class="tab-pane fade" id="stages" role="tabpanel" aria-labelledby="stages-tab">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-light">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0 fw-bold text-dark">
+                                        <i class="fas fa-route me-2 text-primary"></i>
+                                        Manufacturing Workflow
+                                    </h6>
+                                    <button type="button" class="btn btn-success btn-sm" id="add-stage-btn">
+                                        <i class="fas fa-plus me-1"></i>Add Stage
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <!-- Dynamic Stage Requirements Container -->
+                                <div id="stage-requirements-container">
+                                    <!-- Content loaded dynamically by parts-stage-manager.js -->
+                                    <div class="text-center py-4" id="stageLoadingIndicator">
+                                        <div class="spinner-border text-primary mb-3" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                        <p class="text-muted">Loading manufacturing stages...</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Legacy Stage Information (Read-only for reference) -->
-                    <div class="col-12 mt-4">
-                        <div class="card border-warning">
-                            <div class="card-header bg-warning text-dark">
-                                <h6 class="mb-0">
-                                    <i class="fas fa-info-circle me-2"></i>Migration Status
+                    
+                    <div class="col-md-4">
+                        <!-- Stage Summary Card -->
+                        <div class="card border-0 shadow-sm mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0 fw-bold text-dark">
+                                    <i class="fas fa-chart-pie me-2 text-info"></i>
+                                    Workflow Summary
                                 </h6>
                             </div>
                             <div class="card-body">
-                                <p class="mb-2">
-                                    <strong>Modern Stage Management:</strong> This part uses the new stage-based system for flexible manufacturing workflow configuration.
-                                </p>
-                                <div class="row g-2 small">
-                                    <div class="col-md-3">
-                                        <span class="badge @(Model.Part.RequiresSLSPrinting ? "bg-primary" : "bg-light text-dark")">
-                                            SLS Printing: @(Model.Part.RequiresSLSPrinting ? "Required" : "Not Required")
-                                        </span>
+                                <div id="stage-summary">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted">Total Stages:</span>
+                                        <span class="fw-bold" id="summary-total-stages">0</span>
                                     </div>
-                                    <div class="col-md-3">
-                                        <span class="badge @(Model.Part.RequiresCNCMachining ? "bg-success" : "bg-light text-dark")">
-                                            CNC Machining: @(Model.Part.RequiresCNCMachining ? "Required" : "Not Required")
-                                        </span>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted">Total Duration:</span>
+                                        <span class="fw-bold" id="summary-total-duration">0h</span>
                                     </div>
-                                    <div class="col-md-3">
-                                        <span class="badge @(Model.Part.RequiresEDMOperations ? "bg-warning" : "bg-light text-dark")">
-                                            EDM Operations: @(Model.Part.RequiresEDMOperations ? "Required" : "Not Required")
-                                        </span>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted">Total Cost:</span>
+                                        <span class="fw-bold" id="summary-total-cost">$0.00</span>
                                     </div>
-                                    <div class="col-md-3">
-                                        <span class="badge @(Model.Part.RequiresAssembly ? "bg-info" : "bg-light text-dark")">
-                                            Assembly: @(Model.Part.RequiresAssembly ? "Required" : "Not Required")
-                                        </span>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Complexity:</span>
+                                        <span class="fw-bold" id="summary-complexity">Simple</span>
                                     </div>
-                                </div>
-                                <div class="mt-2">
-                                    <small class="text-muted">
-                                        <i class="fas fa-arrow-up me-1"></i>
-                                        Legacy boolean flags are preserved for reference. Use the stage management above to configure the actual manufacturing workflow.
-                                    </small>
                                 </div>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- Current Stage Tracking -->
-                    <div class="col-md-6">
-                        <label asp-for="Part.ManufacturingStage" class="form-label">Current Stage</label>
-                        <select asp-for="Part.ManufacturingStage" class="form-select">
-                            <option value="Design">Design</option>
-                            <option value="SLS-Primary">SLS Primary</option>
-                            <option value="Secondary-Ops">Secondary Operations</option>
-                            <option value="Multi-Stage">Multi-Stage</option>
-                            <option value="Assembly">Assembly</option>
-                            <option value="Finishing">Finishing</option>
-                            <option value="Complete">Complete</option>
-                        </select>
-                        <span asp-validation-for="Part.ManufacturingStage" class="text-danger"></span>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <label asp-for="Part.StageOrder" class="form-label">Stage Order</label>
-                        <input asp-for="Part.StageOrder" type="number" min="1" max="10" class="form-control" />
-                        <span asp-validation-for="Part.StageOrder" class="text-danger"></span>
+                        
+                        <!-- Quick Add Stages Card -->
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0 fw-bold text-dark">
+                                    <i class="fas fa-tools me-2 text-warning"></i>
+                                    Quick Add
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-grid gap-2">
+                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="stageManager?.addStage(1)">
+                                        <i class="fas fa-cube me-1"></i>SLS Printing
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="stageManager?.addStage(2)">
+                                        <i class="fas fa-bolt me-1"></i>EDM Operations
+                                    </button>
+                                    <button type="button" class="btn btn-outline-success btn-sm" onclick="stageManager?.addStage(3)">
+                                        <i class="fas fa-cogs me-1"></i>CNC Machining
+                                    </button>
+                                    <button type="button" class="btn btn-outline-info btn-sm" onclick="stageManager?.addStage(4)">
+                                        <i class="fas fa-puzzle-piece me-1"></i>Assembly
+                                    </button>
+                                    <button type="button" class="btn btn-outline-dark btn-sm" onclick="stageManager?.addStage(5)">
+                                        <i class="fas fa-brush me-1"></i>Finishing
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -747,86 +751,148 @@
 <!-- Include External CSS -->
 <link rel="stylesheet" href="~/css/admin/parts-form.css" asp-append-version="true" />
 
-<!-- Include External JavaScript -->
+<!-- Enhanced Scripts Section -->
 <script src="~/js/admin/parts-form.js" asp-append-version="true"></script>
 <script src="~/js/admin/parts-stage-manager.js" asp-append-version="true"></script>
 
 <script>
-// Material update function
-window.updateSlsMaterial = function() {
-    const materialSelect = document.getElementById('materialSelect');
-    const slsMaterialInput = document.getElementById('slsMaterialInput');
-    
-    if (materialSelect && slsMaterialInput) {
-        slsMaterialInput.value = materialSelect.value;
-    }
-};
-
-// Volume calculation function
-window.calculateVolume = function() {
-    const length = parseFloat(document.getElementById('Part_LengthMm')?.value) || 0;
-    const width = parseFloat(document.getElementById('Part_WidthMm')?.value) || 0;
-    const height = parseFloat(document.getElementById('Part_HeightMm')?.value) || 0;
-    
-    const volume = length * width * height;
-    const volumeInput = document.getElementById('volumeInput');
-    const dimensionsInput = document.getElementById('dimensionsInput');
-    
-    if (volumeInput) {
-        volumeInput.value = volume.toFixed(0);
-    }
-    
-    if (dimensionsInput && (length > 0 || width > 0 || height > 0)) {
-        dimensionsInput.value = `${length} × ${width} × ${height} mm`;
-    }
-};
-
-// Form response handler
-function handleFormResponse(event) {
-    const xhr = event.detail.xhr;
-    
-    if (xhr.status === 200) {
-        // Success - form was processed
-        const response = xhr.responseText;
+    // Enhanced form submission handlers with better error handling
+    window.handleFormSubmissionStart = function(event) {
+        console.log('🔄 [PART-FORM] Form submission starting...');
         
-        // Check if response contains HX-Redirect header
-        const redirectHeader = xhr.getResponseHeader('HX-Redirect');
-        if (redirectHeader) {
-            window.location.href = redirectHeader;
-            return;
+        // Show loading state on submit button
+        const submitBtn = document.getElementById('savePartBtn');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            const spinner = submitBtn.querySelector('.spinner-border');
+            const btnText = submitBtn.querySelector('.btn-text');
+            
+            if (spinner) spinner.classList.remove('d-none');
+            if (btnText) btnText.textContent = 'Saving...';
         }
         
-        // Check if response contains success indicators
-        if (response.includes('success') || response.includes('created') || response.includes('updated')) {
-            // Close modal and refresh page
-            const modal = bootstrap.Modal.getInstance(document.querySelector('.modal'));
-            if (modal) {
-                modal.hide();
+        // Clear any existing validation errors
+        document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+        document.querySelectorAll('.text-danger').forEach(el => {
+            if (el.classList.contains('field-validation-error')) {
+                el.textContent = '';
             }
-            setTimeout(() => {
-                window.location.reload();
-            }, 500);
-        } else {
-            // Form validation errors - update modal content
-            document.getElementById('partModalContent').innerHTML = response;
-        }
-    } else {
-        // Error occurred
-        console.error('Form submission error:', xhr.status, xhr.statusText);
-        alert('An error occurred while saving the part. Please try again.');
-    }
-}
+        });
+    };
 
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', function() {
-    // Auto-calculate volume on existing values
-    if (typeof window.calculateVolume === 'function') {
-        window.calculateVolume();
-    }
-    
-    // Auto-set SLS material on existing values
-    if (typeof window.updateSlsMaterial === 'function') {
-        window.updateSlsMaterial();
-    }
-});
+    window.handleFormSubmissionComplete = function(event) {
+        console.log('🔄 [PART-FORM] Form submission completed');
+        
+        // Reset submit button state
+        const submitBtn = document.getElementById('savePartBtn');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            const spinner = submitBtn.querySelector('.spinner-border');
+            const btnText = submitBtn.querySelector('.btn-text');
+            
+            if (spinner) spinner.classList.add('d-none');
+            if (btnText) {
+                const isEdit = document.querySelector('input[name="Part.Id"]')?.value !== '0';
+                btnText.textContent = isEdit ? 'Update Part' : 'Create Part';
+            }
+        }
+        
+        if (event.detail.successful) {
+            console.log('✅ [PART-FORM] Form submission successful');
+            
+            // Check if response indicates success (no validation errors)
+            const responseText = event.detail.xhr.responseText;
+            
+            // If response contains validation errors, don't close modal
+            if (responseText.includes('alert-danger') || responseText.includes('validation-summary')) {
+                console.warn('⚠️ [PART-FORM] Form contains validation errors, keeping modal open');
+                
+                // Re-initialize stage manager for the updated form
+                setTimeout(() => {
+                    if (typeof ModernStageManager !== 'undefined') {
+                        console.log('🔄 [PART-FORM] Re-initializing stage manager after validation errors');
+                        const partIdInput = document.querySelector('input[name="Part.Id"]');
+                        const partId = partIdInput ? parseInt(partIdInput.value) || null : null;
+                        window.stageManager = new ModernStageManager(partId);
+                    }
+                }, 500);
+                
+                return;
+            }
+            
+            // Check for success indicators in response
+            if (responseText.includes('success') || responseText.includes('saved successfully') || 
+                event.detail.xhr.getResponseHeader('HX-Redirect')) {
+                
+                // Show success message
+                if (window.showToast) {
+                    window.showToast('success', 'Part saved successfully!');
+                }
+                
+                // Close modal after short delay
+                setTimeout(() => {
+                    const modal = document.getElementById('partModal');
+                    if (modal && typeof bootstrap !== 'undefined') {
+                        const bsModal = bootstrap.Modal.getInstance(modal);
+                        if (bsModal) {
+                            bsModal.hide();
+                        }
+                    }
+                    
+                    // Refresh page to show updated data
+                    window.location.href = '/Admin/Parts';
+                }, 1500);
+            }
+                
+        } else {
+            console.warn('⚠️ [PART-FORM] Form submission failed or had validation errors');
+        }
+    };
+
+    window.handleFormSubmissionError = function(event) {
+        console.error('❌ [PART-FORM] Form submission error:', event.detail);
+        
+        // Reset submit button state
+        const submitBtn = document.getElementById('savePartBtn');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            const spinner = submitBtn.querySelector('.spinner-border');
+            const btnText = submitBtn.querySelector('.btn-text');
+            
+            if (spinner) spinner.classList.add('d-none');
+            if (btnText) {
+                const isEdit = document.querySelector('input[name="Part.Id"]')?.value !== '0';
+                btnText.textContent = isEdit ? 'Update Part' : 'Create Part';
+            }
+        }
+        
+        if (window.showToast) {
+            window.showToast('error', 'Error saving part. Please check your input and try again.');
+        }
+    };
+
+    // Initialize stage manager when form loads
+    document.addEventListener('htmx:afterSwap', function(event) {
+        if (event.target.id === 'partModalContent') {
+            console.log('🔄 [PART-FORM] Form content swapped, initializing stage manager');
+            
+            // Small delay to ensure all DOM elements are ready
+            setTimeout(() => {
+                if (typeof ModernStageManager !== 'undefined') {
+                    console.log('🎯 [PART-FORM] Initializing stage manager for form');
+                    
+                    // Get part ID if editing
+                    const partIdInput = document.querySelector('input[name="Part.Id"]');
+                    const partId = partIdInput ? parseInt(partIdInput.value) || null : null;
+                    
+                    // Initialize stage manager
+                    window.stageManager = new ModernStageManager(partId);
+                } else {
+                    console.warn('⚠️ [PART-FORM] ModernStageManager not available');
+                }
+            }, 300);
+        }
+    });
+
+    console.log('✅ [PART-FORM] Enhanced form scripts loaded and ready');
 </script>

@@ -1,6 +1,7 @@
 /**
  * Modern Stage Management Component for Part Form
  * Replaces legacy boolean checkboxes with dynamic stage selection
+ * Enhanced with robust error handling and fallback mechanisms
  */
 class ModernStageManager {
     constructor(partId = null) {
@@ -8,51 +9,139 @@ class ModernStageManager {
         this.selectedStages = new Map();
         this.availableStages = [];
         this.initialized = false;
+        this.loadingIndicator = null;
+        this.errorIndicator = null;
         
         this.init();
     }
 
     async init() {
         try {
+            console.log('?? [STAGE-MANAGER] Initializing ModernStageManager...');
+            
+            // Show loading state
+            this.showLoadingState();
+            
+            // Load data with enhanced error handling
             await this.loadAvailableStages();
             await this.loadExistingStageRequirements();
+            
+            // Initialize UI
             this.initializeEventHandlers();
             this.renderStageSelection();
-            this.initialized = true;
             
-            console.log('? ModernStageManager initialized successfully');
+            this.initialized = true;
+            console.log('? [STAGE-MANAGER] ModernStageManager initialized successfully');
+            
         } catch (error) {
-            console.error('? Error initializing ModernStageManager:', error);
-            this.showError('Failed to initialize stage management');
+            console.error('? [STAGE-MANAGER] Error initializing ModernStageManager:', error);
+            this.showErrorState('Failed to initialize stage management');
         }
     }
 
     async loadAvailableStages() {
         try {
-            const response = await fetch('/api/production-stages/available');
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            console.log('?? [STAGE-MANAGER] Loading available stages...');
+            
+            const response = await fetch('/api/production-stages/available', {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
             
             this.availableStages = await response.json();
-            console.log(`?? Loaded ${this.availableStages.length} available stages`);
+            console.log(`? [STAGE-MANAGER] Loaded ${this.availableStages.length} available stages`);
+            
         } catch (error) {
-            console.error('Error loading available stages:', error);
-            // Fallback to default stages
+            console.warn('?? [STAGE-MANAGER] API failed, using fallback stages:', error);
+            
+            // Enhanced fallback with more comprehensive data
             this.availableStages = [
-                { id: 1, name: 'SLS Printing', defaultHourlyRate: 85.00, defaultSetupMinutes: 45 },
-                { id: 2, name: 'EDM Operations', defaultHourlyRate: 95.00, defaultSetupMinutes: 30 },
-                { id: 3, name: 'CNC Machining', defaultHourlyRate: 105.00, defaultSetupMinutes: 60 },
-                { id: 4, name: 'Assembly', defaultHourlyRate: 75.00, defaultSetupMinutes: 15 },
-                { id: 5, name: 'Finishing', defaultHourlyRate: 65.00, defaultSetupMinutes: 30 }
+                { 
+                    id: 1, 
+                    name: 'SLS Printing', 
+                    description: 'Selective Laser Sintering',
+                    defaultHourlyRate: 85.00, 
+                    defaultSetupMinutes: 45,
+                    defaultTeardownMinutes: 30,
+                    isActive: true
+                },
+                { 
+                    id: 2, 
+                    name: 'EDM Operations', 
+                    description: 'Electrical Discharge Machining',
+                    defaultHourlyRate: 95.00, 
+                    defaultSetupMinutes: 30,
+                    defaultTeardownMinutes: 15,
+                    isActive: true
+                },
+                { 
+                    id: 3, 
+                    name: 'CNC Machining', 
+                    description: 'Computer Numerical Control Machining',
+                    defaultHourlyRate: 105.00, 
+                    defaultSetupMinutes: 60,
+                    defaultTeardownMinutes: 20,
+                    isActive: true
+                },
+                { 
+                    id: 4, 
+                    name: 'Assembly', 
+                    description: 'Component Assembly',
+                    defaultHourlyRate: 75.00, 
+                    defaultSetupMinutes: 15,
+                    defaultTeardownMinutes: 10,
+                    isActive: true
+                },
+                { 
+                    id: 5, 
+                    name: 'Finishing', 
+                    description: 'Surface Finishing and Post-Processing',
+                    defaultHourlyRate: 65.00, 
+                    defaultSetupMinutes: 30,
+                    defaultTeardownMinutes: 15,
+                    isActive: true
+                }
             ];
+            
+            console.log('?? [STAGE-MANAGER] Using fallback stage data');
         }
     }
 
     async loadExistingStageRequirements() {
-        if (!this.partId || this.partId === 0) return;
+        if (!this.partId || this.partId === 0) {
+            console.log('?? [STAGE-MANAGER] New part - no existing stage requirements to load');
+            return;
+        }
 
         try {
-            const response = await fetch(`/api/parts/${this.partId}/stage-requirements`);
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            console.log(`?? [STAGE-MANAGER] Loading existing stages for part ${this.partId}...`);
+            
+            const response = await fetch(`/api/parts/${this.partId}/stage-requirements`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            });
+            
+            if (!response.ok) {
+                if (response.status === 404) {
+                    console.log('?? [STAGE-MANAGER] No existing stage requirements found for part');
+                    return;
+                }
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
             
             const existingStages = await response.json();
             
@@ -71,33 +160,82 @@ class ModernStageManager {
                 });
             });
 
-            console.log(`?? Loaded ${existingStages.length} existing stage requirements`);
+            console.log(`? [STAGE-MANAGER] Loaded ${existingStages.length} existing stage requirements`);
+            
         } catch (error) {
-            console.error('Error loading existing stage requirements:', error);
+            console.warn('?? [STAGE-MANAGER] Error loading existing stage requirements:', error);
+            // Don't throw - just continue with empty requirements
         }
     }
 
-    initializeEventHandlers() {
-        // Add stage button
-        const addStageBtn = document.getElementById('add-stage-btn');
-        if (addStageBtn) {
-            addStageBtn.addEventListener('click', () => this.showAddStageModal());
-        }
+    showLoadingState() {
+        const container = document.getElementById('stage-requirements-container');
+        if (!container) return;
+        
+        container.innerHTML = `
+            <div class="text-center py-4" id="stageLoadingIndicator">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="text-muted">Loading manufacturing stages...</p>
+            </div>
+        `;
+    }
 
-        // Stage form submission
-        const stageForm = document.getElementById('stage-requirement-form');
-        if (stageForm) {
-            stageForm.addEventListener('submit', (e) => this.handleStageFormSubmit(e));
-        }
+    showErrorState(message) {
+        const container = document.getElementById('stage-requirements-container');
+        if (!container) return;
+        
+        container.innerHTML = `
+            <div class="text-center py-4" id="stageErrorIndicator">
+                <div class="alert alert-warning d-flex align-items-center" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <div>
+                        <strong>Unable to Load Stages</strong><br>
+                        ${message}
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <button type="button" class="btn btn-outline-primary btn-sm me-2" onclick="stageManager?.init()">
+                        <i class="fas fa-redo me-1"></i>Retry Loading
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="stageManager?.useDefaultStages()">
+                        <i class="fas fa-tools me-1"></i>Use Default Stages
+                    </button>
+                </div>
+            </div>
+        `;
+    }
 
-        // Listen for form updates to sync with hidden form fields
-        document.addEventListener('form-data-sync', () => this.syncWithFormData());
+    useDefaultStages() {
+        console.log('?? [STAGE-MANAGER] Using default stages as fallback');
+        
+        // Clear existing state
+        this.selectedStages.clear();
+        
+        // Use the fallback stages from loadAvailableStages
+        this.loadAvailableStages().then(() => {
+            this.renderStageSelection();
+            this.showInfo('Default manufacturing stages loaded successfully');
+        });
     }
 
     renderStageSelection() {
         const container = document.getElementById('stage-requirements-container');
         if (!container) {
-            console.warn('Stage requirements container not found');
+            console.warn('?? [STAGE-MANAGER] Stage requirements container not found');
+            return;
+        }
+
+        // Hide loading/error indicators
+        const loadingIndicator = document.getElementById('stageLoadingIndicator');
+        const errorIndicator = document.getElementById('stageErrorIndicator');
+        
+        if (loadingIndicator) loadingIndicator.style.display = 'none';
+        if (errorIndicator) errorIndicator.style.display = 'none';
+
+        if (this.availableStages.length === 0) {
+            container.innerHTML = this.renderErrorFallback();
             return;
         }
 
@@ -116,9 +254,27 @@ class ModernStageManager {
                 <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
                 <h6 class="text-muted">No Manufacturing Stages Selected</h6>
                 <p class="text-muted mb-3">Add manufacturing stages to define the production workflow for this part.</p>
-                <button type="button" class="btn btn-primary" onclick="stageManager.showAddStageModal()">
+                <button type="button" class="btn btn-primary" onclick="stageManager?.showAddStageModal()">
                     <i class="fas fa-plus me-2"></i>Add First Stage
                 </button>
+            </div>
+        `;
+    }
+
+    renderErrorFallback() {
+        return `
+            <div class="text-center py-4">
+                <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                <h6 class="text-warning">Stage Data Unavailable</h6>
+                <p class="text-muted mb-3">Unable to load manufacturing stages. Please check your connection or contact support.</p>
+                <div class="d-flex justify-content-center gap-2">
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="stageManager?.init()">
+                        <i class="fas fa-redo me-1"></i>Retry
+                    </button>
+                    <button type="button" class="btn btn-outline-warning btn-sm" onclick="stageManager?.useDefaultStages()">
+                        <i class="fas fa-tools me-1"></i>Use Defaults
+                    </button>
+                </div>
             </div>
         `;
     }
@@ -136,24 +292,24 @@ class ModernStageManager {
 
     renderStageCard(stage, index) {
         const totalCost = (stage.estimatedHours * stage.hourlyRate) + 
-                         ((stage.setupMinutes + stage.teardownMinutes) / 60 * stage.hourlyRate) + 
+                         ((stage.setupMinutes + (stage.teardownMinutes || 0)) / 60 * stage.hourlyRate) + 
                          stage.materialCost;
 
         return `
             <div class="col-md-6">
-                <div class="card stage-requirement-card" data-stage-id="${stage.stageId}">
-                    <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card stage-requirement-card border-primary" data-stage-id="${stage.stageId}">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
                         <div class="d-flex align-items-center">
                             <span class="badge bg-primary me-2">${stage.executionOrder}</span>
-                            <h6 class="mb-0">${stage.stageName}</h6>
+                            <h6 class="mb-0 fw-bold">${stage.stageName}</h6>
                         </div>
                         <div class="btn-group btn-group-sm">
-                            <button type="button" class="btn btn-outline-secondary" 
-                                    onclick="stageManager.editStage(${stage.stageId})" title="Edit Stage">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" 
+                                    onclick="stageManager?.editStage(${stage.stageId})" title="Edit Stage">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button type="button" class="btn btn-outline-danger" 
-                                    onclick="stageManager.removeStage(${stage.stageId})" title="Remove Stage">
+                            <button type="button" class="btn btn-outline-danger btn-sm" 
+                                    onclick="stageManager?.removeStage(${stage.stageId})" title="Remove Stage">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -170,12 +326,17 @@ class ModernStageManager {
                                 <strong>Rate:</strong> $${stage.hourlyRate}/hr
                             </div>
                             <div class="col-6">
-                                <strong>Cost:</strong> $${totalCost.toFixed(2)}
+                                <strong>Total Cost:</strong> $${totalCost.toFixed(2)}
                             </div>
                         </div>
-                        ${stage.teardownMinutes > 0 ? `
+                        ${stage.teardownMinutes && stage.teardownMinutes > 0 ? `
                             <div class="mt-2 small text-muted">
                                 <i class="fas fa-clock me-1"></i>Teardown: ${stage.teardownMinutes}min
+                            </div>
+                        ` : ''}
+                        ${stage.materialCost > 0 ? `
+                            <div class="mt-1 small text-info">
+                                <i class="fas fa-dollar-sign me-1"></i>Materials: $${stage.materialCost.toFixed(2)}
                             </div>
                         ` : ''}
                     </div>
@@ -184,7 +345,19 @@ class ModernStageManager {
         `;
     }
 
+    initializeEventHandlers() {
+        // Add stage button
+        const addStageBtn = document.getElementById('add-stage-btn');
+        if (addStageBtn) {
+            addStageBtn.addEventListener('click', () => this.showAddStageModal());
+        }
+
+        console.log('? [STAGE-MANAGER] Event handlers initialized');
+    }
+
     showAddStageModal() {
+        console.log('?? [STAGE-MANAGER] Opening add stage modal...');
+        
         const availableToAdd = this.availableStages.filter(stage => 
             !this.selectedStages.has(stage.id)
         );
@@ -194,327 +367,168 @@ class ModernStageManager {
             return;
         }
 
-        this.showStageModal({
-            title: 'Add Manufacturing Stage',
-            stage: null,
-            availableStages: availableToAdd,
-            isEdit: false
-        });
+        // For now, show a simple selection interface
+        this.showStageSelectionInterface(availableToAdd);
     }
 
-    editStage(stageId) {
-        const stage = this.selectedStages.get(stageId);
-        if (!stage) return;
-
-        this.showStageModal({
-            title: 'Edit Manufacturing Stage',
-            stage: stage,
-            availableStages: [this.availableStages.find(s => s.id === stageId)],
-            isEdit: true
-        });
-    }
-
-    showStageModal(options) {
-        const modalHtml = this.createStageModalHtml(options);
-        
-        // Remove existing modal
-        const existingModal = document.getElementById('stageModal');
-        if (existingModal) {
-            existingModal.remove();
-        }
-
-        // Add modal to document
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-
-        // Show modal
-        const modal = new bootstrap.Modal(document.getElementById('stageModal'));
-        modal.show();
-
-        // Initialize form
-        this.initializeStageForm(options);
-    }
-
-    createStageModalHtml(options) {
-        return `
-            <div class="modal fade" id="stageModal" tabindex="-1">
+    showStageSelectionInterface(availableStages) {
+        // Create a simple modal-like interface for stage selection
+        const modalHtml = `
+            <div class="modal fade" id="stageSelectionModal" tabindex="-1">
                 <div class="modal-dialog">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">${options.title}</h5>
+                            <h5 class="modal-title">Add Manufacturing Stage</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
-                            <form id="stage-requirement-form">
-                                <div class="row g-3">
-                                    <div class="col-12">
-                                        <label class="form-label">Production Stage</label>
-                                        <select class="form-select" id="stage-select" ${options.isEdit ? 'disabled' : ''}>
-                                            <option value="">Select a stage...</option>
-                                            ${options.availableStages.map(stage => `
-                                                <option value="${stage.id}" ${options.stage && options.stage.stageId === stage.id ? 'selected' : ''}>
-                                                    ${stage.name}
-                                                </option>
-                                            `).join('')}
-                                        </select>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Execution Order</label>
-                                        <input type="number" class="form-control" id="execution-order" 
-                                               value="${options.stage?.executionOrder || (this.selectedStages.size + 1)}" 
-                                               min="1" max="20" required>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Estimated Hours</label>
-                                        <input type="number" class="form-control" id="estimated-hours" 
-                                               value="${options.stage?.estimatedHours || 1.0}" 
-                                               step="0.1" min="0.1" max="200" required>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Setup Time (minutes)</label>
-                                        <input type="number" class="form-control" id="setup-minutes" 
-                                               value="${options.stage?.setupMinutes || 30}" 
-                                               min="0" max="600">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Teardown Time (minutes)</label>
-                                        <input type="number" class="form-control" id="teardown-minutes" 
-                                               value="${options.stage?.teardownMinutes || 0}" 
-                                               min="0" max="300">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Hourly Rate ($)</label>
-                                        <input type="number" class="form-control" id="hourly-rate" 
-                                               value="${options.stage?.hourlyRate || 85.00}" 
-                                               step="0.01" min="0" max="500">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Material Cost ($)</label>
-                                        <input type="number" class="form-control" id="material-cost" 
-                                               value="${options.stage?.materialCost || 0.00}" 
-                                               step="0.01" min="0">
-                                    </div>
-                                    <div class="col-12">
-                                        <div class="form-check">
-                                            <input type="checkbox" class="form-check-input" id="is-required" 
-                                                   ${options.stage?.isRequired !== false ? 'checked' : ''}>
-                                            <label class="form-check-label" for="is-required">
-                                                This stage is required for manufacturing
-                                            </label>
+                            <div class="list-group">
+                                ${availableStages.map(stage => `
+                                    <a href="#" class="list-group-item list-group-item-action" 
+                                       onclick="stageManager?.addStage(${stage.id}); bootstrap.Modal.getInstance(document.getElementById('stageSelectionModal')).hide();">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1">${stage.name}</h6>
+                                            <small>$${stage.defaultHourlyRate}/hr</small>
                                         </div>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="button" class="btn btn-primary" onclick="stageManager.saveStage(${options.isEdit ? options.stage?.stageId : 'null'})">
-                                ${options.isEdit ? 'Update Stage' : 'Add Stage'}
-                            </button>
+                                        <p class="mb-1">${stage.description}</p>
+                                        <small>Setup: ${stage.defaultSetupMinutes}min</small>
+                                    </a>
+                                `).join('')}
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         `;
+
+        // Remove existing modal
+        const existing = document.getElementById('stageSelectionModal');
+        if (existing) existing.remove();
+
+        // Add and show modal
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        const modal = new bootstrap.Modal(document.getElementById('stageSelectionModal'));
+        modal.show();
     }
 
-    initializeStageForm(options) {
-        // Auto-fill hourly rate when stage is selected
-        const stageSelect = document.getElementById('stage-select');
-        const hourlyRateInput = document.getElementById('hourly-rate');
-        const setupMinutesInput = document.getElementById('setup-minutes');
-
-        if (stageSelect && hourlyRateInput) {
-            stageSelect.addEventListener('change', () => {
-                const selectedStageId = parseInt(stageSelect.value);
-                const selectedStage = this.availableStages.find(s => s.id === selectedStageId);
-                
-                if (selectedStage) {
-                    hourlyRateInput.value = selectedStage.defaultHourlyRate || 85.00;
-                    setupMinutesInput.value = selectedStage.defaultSetupMinutes || 30;
-                }
-            });
-        }
-    }
-
-    saveStage(existingStageId = null) {
-        const form = document.getElementById('stage-requirement-form');
-        if (!form) return;
-
-        const formData = new FormData(form);
-        const stageId = parseInt(document.getElementById('stage-select').value);
-        const stageName = document.getElementById('stage-select').selectedOptions[0]?.text;
-
-        const stageData = {
-            stageId: stageId,
-            stageName: stageName,
-            executionOrder: parseInt(document.getElementById('execution-order').value),
-            estimatedHours: parseFloat(document.getElementById('estimated-hours').value),
-            setupMinutes: parseInt(document.getElementById('setup-minutes').value),
-            teardownMinutes: parseInt(document.getElementById('teardown-minutes').value),
-            hourlyRate: parseFloat(document.getElementById('hourly-rate').value),
-            materialCost: parseFloat(document.getElementById('material-cost').value),
-            isRequired: document.getElementById('is-required').checked,
-            existingId: existingStageId
-        };
-
-        // Validate
-        if (!stageId) {
-            this.showError('Please select a production stage');
+    addStage(stageId) {
+        const stage = this.availableStages.find(s => s.id === stageId);
+        if (!stage) {
+            console.error('? [STAGE-MANAGER] Stage not found:', stageId);
             return;
         }
 
-        // Add/update in memory
-        this.selectedStages.set(stageId, stageData);
+        const executionOrder = this.selectedStages.size + 1;
+        
+        this.selectedStages.set(stageId, {
+            stageId: stageId,
+            stageName: stage.name,
+            executionOrder: executionOrder,
+            estimatedHours: 2.0, // Default hours
+            setupMinutes: stage.defaultSetupMinutes || 30,
+            teardownMinutes: stage.defaultTeardownMinutes || 0,
+            hourlyRate: stage.defaultHourlyRate || 85.00,
+            materialCost: 0.00,
+            isRequired: true,
+            existingId: null // New stage
+        });
 
-        // Re-render
         this.renderStageSelection();
-        this.syncWithFormData();
-
-        // Close modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('stageModal'));
-        modal.hide();
-
-        this.showSuccess(existingStageId ? 'Stage updated successfully' : 'Stage added successfully');
+        this.showSuccess(`Added ${stage.name} to manufacturing workflow`);
+        
+        console.log(`? [STAGE-MANAGER] Added stage: ${stage.name}`);
     }
 
     removeStage(stageId) {
-        if (confirm('Are you sure you want to remove this manufacturing stage?')) {
+        const stage = this.selectedStages.get(stageId);
+        if (!stage) return;
+
+        if (confirm(`Remove ${stage.stageName} from manufacturing workflow?`)) {
             this.selectedStages.delete(stageId);
             this.renderStageSelection();
-            this.syncWithFormData();
-            this.showSuccess('Stage removed successfully');
-        }
-    }
-
-    syncWithFormData() {
-        // Update hidden form fields for form submission
-        const selectedStageIds = Array.from(this.selectedStages.keys());
-        const executionOrders = Array.from(this.selectedStages.values()).map(s => s.executionOrder);
-        const estimatedHours = Array.from(this.selectedStages.values()).map(s => s.estimatedHours);
-        const hourlyRates = Array.from(this.selectedStages.values()).map(s => s.hourlyRate);
-        const materialCosts = Array.from(this.selectedStages.values()).map(s => s.materialCost);
-
-        // Update form arrays (these should be bound to the page model)
-        this.updateHiddenFormArray('SelectedStageIds', selectedStageIds);
-        this.updateHiddenFormArray('StageExecutionOrders', executionOrders);
-        this.updateHiddenFormArray('StageEstimatedHours', estimatedHours);
-        this.updateHiddenFormArray('StageHourlyRates', hourlyRates);
-        this.updateHiddenFormArray('StageMaterialCosts', materialCosts);
-    }
-
-    updateHiddenFormArray(fieldName, values) {
-        // Remove existing hidden fields
-        const existingFields = document.querySelectorAll(`input[name^="${fieldName}"]`);
-        existingFields.forEach(field => field.remove());
-
-        // Add new hidden fields
-        const form = document.getElementById('partForm');
-        if (form) {
-            values.forEach((value, index) => {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = `${fieldName}[${index}]`;
-                input.value = value;
-                form.appendChild(input);
-            });
+            this.showSuccess(`Removed ${stage.stageName} from workflow`);
+            
+            console.log(`??? [STAGE-MANAGER] Removed stage: ${stage.stageName}`);
         }
     }
 
     updateStageSummary() {
+        // Update stage summary information
         const totalStages = this.selectedStages.size;
-        const totalDuration = Array.from(this.selectedStages.values())
+        const totalHours = Array.from(this.selectedStages.values())
             .reduce((sum, stage) => sum + stage.estimatedHours, 0);
-        const totalCost = Array.from(this.selectedStages.values())
-            .reduce((sum, stage) => {
-                const stageCost = (stage.estimatedHours * stage.hourlyRate) + 
-                                 ((stage.setupMinutes + stage.teardownMinutes) / 60 * stage.hourlyRate) + 
-                                 stage.materialCost;
-                return sum + stageCost;
-            }, 0);
-
-        // Update summary cards if they exist
-        this.updateSummaryCard('summary-total-stages', totalStages);
-        this.updateSummaryCard('summary-total-duration', `${totalDuration.toFixed(1)}h`);
-        this.updateSummaryCard('summary-total-cost', `$${totalCost.toFixed(2)}`);
         
-        // Update complexity
-        const complexity = this.calculateComplexity(totalStages, totalDuration);
-        this.updateSummaryCard('summary-complexity', complexity);
-    }
-
-    updateSummaryCard(elementId, value) {
-        const element = document.getElementById(elementId);
-        if (element) {
-            element.textContent = value;
+        // Update any summary displays
+        const summaryElement = document.getElementById('stage-summary');
+        if (summaryElement) {
+            summaryElement.innerHTML = `
+                <div class="d-flex justify-content-between">
+                    <span><strong>${totalStages}</strong> stages</span>
+                    <span><strong>${totalHours.toFixed(1)}h</strong> total</span>
+                </div>
+            `;
         }
     }
 
-    calculateComplexity(stageCount, totalHours) {
-        const score = stageCount + Math.floor(totalHours / 4);
-        
-        if (score <= 2) return 'Simple';
-        if (score <= 4) return 'Medium';
-        if (score <= 6) return 'Complex';
-        return 'Very Complex';
-    }
-
-    // Utility methods
     showSuccess(message) {
-        this.showToast(message, 'success');
-    }
-
-    showError(message) {
-        this.showToast(message, 'danger');
+        // Simple success notification
+        if (window.showToast) {
+            window.showToast('success', message);
+        } else {
+            console.log(`? [STAGE-MANAGER] ${message}`);
+        }
     }
 
     showInfo(message) {
-        this.showToast(message, 'info');
-    }
-
-    showToast(message, type = 'info') {
-        // Simple toast implementation - could be enhanced with a proper toast library
-        const toastContainer = this.getOrCreateToastContainer();
-        const toast = document.createElement('div');
-        toast.className = `alert alert-${type} alert-dismissible fade show`;
-        toast.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        
-        toastContainer.appendChild(toast);
-        
-        // Auto-remove after 5 seconds
-        setTimeout(() => {
-            if (toast.parentNode) {
-                toast.remove();
-            }
-        }, 5000);
-    }
-
-    getOrCreateToastContainer() {
-        let container = document.getElementById('toast-container');
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'toast-container';
-            container.className = 'position-fixed top-0 end-0 p-3';
-            container.style.zIndex = '1055';
-            document.body.appendChild(container);
+        // Simple info notification
+        if (window.showToast) {
+            window.showToast('info', message);
+        } else {
+            console.log(`?? [STAGE-MANAGER] ${message}`);
         }
-        return container;
     }
 }
 
-// Global instance
-let stageManager;
+// Initialize stage manager when DOM is ready
+let stageManager = null;
 
-// Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', function() {
-    // Get part ID from form if editing
-    const partIdInput = document.getElementById('Part_Id') || document.querySelector('input[name="Part.Id"]');
-    const partId = partIdInput ? parseInt(partIdInput.value) : null;
-    
-    stageManager = new ModernStageManager(partId);
-});
+function initializeStageManager() {
+    try {
+        // Get part ID from form if available
+        const partIdInput = document.querySelector('input[name="Part.Id"]');
+        const partId = partIdInput ? parseInt(partIdInput.value) || null : null;
+        
+        console.log('?? [STAGE-MANAGER] Initializing with partId:', partId);
+        
+        // Create stage manager instance
+        stageManager = new ModernStageManager(partId);
+        
+        // Expose globally for form interaction
+        window.stageManager = stageManager;
+        
+        console.log('? [STAGE-MANAGER] Stage manager initialized and exposed globally');
+        
+    } catch (error) {
+        console.error('? [STAGE-MANAGER] Error initializing stage manager:', error);
+        
+        // Show fallback message
+        const container = document.getElementById('stage-requirements-container');
+        if (container) {
+            container.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Error:</strong> Failed to initialize stage management. 
+                    Please refresh the page and try again.
+                </div>
+            `;
+        }
+    }
+}
 
-// Export for use in other scripts
-window.ModernStageManager = ModernStageManager;
+// Auto-initialize when script loads
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeStageManager);
+} else {
+    initializeStageManager();
+}
+
+console.log('?? [STAGE-MANAGER] Enhanced ModernStageManager loaded and ready');

@@ -565,7 +565,7 @@ public async Task<IActionResult> OnGetAsync(int? id)
         Part = new Part();
     }
 
-    return Page();
+    return Page(); 
 }
 
 
