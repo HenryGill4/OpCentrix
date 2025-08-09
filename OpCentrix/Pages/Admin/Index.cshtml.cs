@@ -822,7 +822,6 @@ namespace OpCentrix.Pages.Admin
                         Description = "Test Bracket - Small", 
                         SlsMaterial = "SS316L", 
                         IsActive = true,
-                        Industry = "Testing",
                         CreatedDate = DateTime.Now,
                         CreatedBy = "Admin Test Setup"
                     },
@@ -832,7 +831,6 @@ namespace OpCentrix.Pages.Admin
                         Description = "Test Housing - Medium", 
                         SlsMaterial = "SS316L", 
                         IsActive = true,
-                        Industry = "Testing",
                         CreatedDate = DateTime.Now,
                         CreatedBy = "Admin Test Setup"
                     },
@@ -842,7 +840,6 @@ namespace OpCentrix.Pages.Admin
                         Description = "Test Component - Large", 
                         SlsMaterial = "Inconel 625", 
                         IsActive = true,
-                        Industry = "Testing",
                         CreatedDate = DateTime.Now,
                         CreatedBy = "Admin Test Setup"
                     },
@@ -852,7 +849,6 @@ namespace OpCentrix.Pages.Admin
                         Description = "Test Fixture - Complex", 
                         SlsMaterial = "AlSi10Mg", 
                         IsActive = true,
-                        Industry = "Testing",
                         CreatedDate = DateTime.Now,
                         CreatedBy = "Admin Test Setup"
                     },
@@ -862,7 +858,6 @@ namespace OpCentrix.Pages.Admin
                         Description = "Test Prototype - Experimental", 
                         SlsMaterial = "SS316L", 
                         IsActive = true,
-                        Industry = "Testing",
                         CreatedDate = DateTime.Now,
                         CreatedBy = "Admin Test Setup"
                     }

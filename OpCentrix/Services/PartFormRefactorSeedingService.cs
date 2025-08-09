@@ -1,4 +1,4 @@
-using OpCentrix.Data;
+﻿using OpCentrix.Data;
 using OpCentrix.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -32,13 +32,13 @@ namespace OpCentrix.Services
                 await SeedComplianceCategoriesAsync();
                 //await SeedLegacyFlagToStageMappingAsync();
                 
-                _logger.LogInformation("? Part Form Refactor seeding completed successfully");
+                _logger.LogInformation("✅ Part Form Refactor seeding completed successfully");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "? Error during Part Form Refactor seeding");
+                _logger.LogError(ex, "❌ Error during Part Form Refactor seeding");
                 // Don't re-throw - log and continue
-                _logger.LogWarning("?? Part Form Refactor seeding failed, continuing without lookup tables");
+                _logger.LogWarning("⚠️ Part Form Refactor seeding failed, continuing without lookup tables");
             }
         }
 
@@ -81,13 +81,13 @@ namespace OpCentrix.Services
                 _context.ComponentTypes.AddRange(componentTypes);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("? ComponentTypes seeded: {Count} types added", componentTypes.Count);
+                _logger.LogInformation("✅ ComponentTypes seeded: {Count} types added", componentTypes.Count);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "? Error seeding ComponentTypes");
+                _logger.LogError(ex, "❌ Error seeding ComponentTypes");
                 // Don't re-throw
-                _logger.LogWarning("?? ComponentTypes seeding failed, continuing without component types");
+                _logger.LogWarning("⚠️ ComponentTypes seeding failed, continuing without component types");
             }
         }
 
@@ -134,13 +134,13 @@ namespace OpCentrix.Services
                 _context.ComplianceCategories.AddRange(complianceCategories);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("? ComplianceCategories seeded: {Count} categories added", complianceCategories.Count);
+                _logger.LogInformation("✅ ComplianceCategories seeded: {Count} categories added", complianceCategories.Count);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "? Error seeding ComplianceCategories");
+                _logger.LogError(ex, "❌ Error seeding ComplianceCategories");
                 // Don't re-throw
-                _logger.LogWarning("?? ComplianceCategories seeding failed, continuing without compliance categories");
+                _logger.LogWarning("⚠️ ComplianceCategories seeding failed, continuing without compliance categories");
             }
         }
 
@@ -227,7 +227,7 @@ namespace OpCentrix.Services
         {
             try
             {
-                _logger.LogInformation("?? Starting migration of existing Parts data...");
+                _logger.LogInformation("🔄 Starting migration of existing Parts data...");
 
                 // Get lookup table IDs
                 var generalComponentType = await _context.ComponentTypes
@@ -242,7 +242,7 @@ namespace OpCentrix.Services
                 if (generalComponentType == null || serializedComponentType == null ||
                     nonNfaCompliance == null || nfaCompliance == null)
                 {
-                    _logger.LogWarning("?? Lookup tables not properly seeded, skipping data migration");
+                    _logger.LogWarning("⚠️ Lookup tables not properly seeded, skipping data migration");
                     return;
                 }
 
@@ -287,13 +287,13 @@ namespace OpCentrix.Services
 
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("? Parts data migration completed: {Count} parts updated", partsToUpdate.Count);
+                _logger.LogInformation("✅ Parts data migration completed: {Count} parts updated", partsToUpdate.Count);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "? Error during Parts data migration");
+                _logger.LogError(ex, "❌ Error during Parts data migration");
                 // Don't re-throw
-                _logger.LogWarning("?? Parts data migration failed, existing parts may need manual update");
+                _logger.LogWarning("⚠️ Parts data migration failed, existing parts may need manual update");
             }
         }
 

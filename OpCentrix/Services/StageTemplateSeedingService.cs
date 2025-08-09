@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using OpCentrix.Data;
 using OpCentrix.Models;
 
@@ -23,14 +23,14 @@ namespace OpCentrix.Services
         {
             try
             {
-                _logger.LogInformation("?? Seeding default stage templates...");
+                _logger.LogInformation("🌱 Seeding default stage templates...");
                 
                 // Check if production stages exist first
                 var productionStagesCount = await _context.ProductionStages.CountAsync();
                 if (productionStagesCount == 0)
                 {
-                    _logger.LogWarning("?? No production stages found. Stage templates require production stages to exist first.");
-                    _logger.LogInformation("?? Create production stages via /Admin/ProductionStages first, then run template seeding again");
+                    _logger.LogWarning("⚠️ No production stages found. Stage templates require production stages to exist first.");
+                    _logger.LogInformation("💡 Create production stages via /Admin/ProductionStages first, then run template seeding again");
                     return;
                 }
                 
@@ -41,13 +41,13 @@ namespace OpCentrix.Services
                 await SeedTemplatesAsync();
                 
                 await _context.SaveChangesAsync();
-                _logger.LogInformation("? Stage template seeding completed successfully");
+                _logger.LogInformation("✅ Stage template seeding completed successfully");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "? Error seeding stage templates");
+                _logger.LogError(ex, "❌ Error seeding stage templates");
                 // Don't re-throw - log and continue
-                _logger.LogWarning("?? Stage template seeding failed, continuing without templates");
+                _logger.LogWarning("⚠️ Stage template seeding failed, continuing without templates");
             }
         }
         
@@ -94,7 +94,7 @@ namespace OpCentrix.Services
                 if (!await _context.StageTemplateCategories.AnyAsync(c => c.Name == category.Name))
                 {
                     _context.StageTemplateCategories.Add(category);
-                    _logger.LogInformation("? Added template category: {CategoryName}", category.Name);
+                    _logger.LogInformation("➕ Added template category: {CategoryName}", category.Name);
                 }
             }
         }
@@ -231,7 +231,7 @@ namespace OpCentrix.Services
                     _context.StageTemplates.Add(template);
                     await _context.SaveChangesAsync(); // Save to get ID
                     
-                    _logger.LogInformation("? Added template: {TemplateName}", template.Name);
+                    _logger.LogInformation("➕ Added template: {TemplateName}", template.Name);
                     
                     // Add template steps
                     foreach (var (stageName, order, hours, rate, materialCost, setupMin, teardownMin) in steps)
@@ -260,7 +260,7 @@ namespace OpCentrix.Services
                         }
                         else
                         {
-                            _logger.LogWarning("?? Production stage not found: {StageName}", stageName);
+                            _logger.LogWarning("⚠️ Production stage not found: {StageName}", stageName);
                         }
                     }
                 }
