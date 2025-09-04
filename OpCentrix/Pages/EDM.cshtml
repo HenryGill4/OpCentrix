@@ -552,6 +552,50 @@
         }
     };
 
+    // Add (or restore) explicit save without print preview
+    window.saveLogToDatabase = async function(){
+        const opId = SafeExecute.generateOperationId();
+        console.log(`?? [EDM-${opId}] saveLogToDatabase start`);
+        if(!validateRequiredFields()) { console.log(`? [EDM-${opId}] Validation failed`); return false; }
+        try {
+            const form = document.getElementById('edmLogForm');
+            const formData = new FormData(form);
+            const logIdValue = document.getElementById('logId').value;
+            const isUpdate = logIdValue && logIdValue !== '0' && logIdValue !== '';
+
+            const response = await fetch('/EDM?handler=SaveLog', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'Accept': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                }
+            });
+            console.log(`?? [EDM-${opId}] Response status: ${response.status}`);
+            if(!response.ok){ throw new Error(`Server error ${response.status}`); }
+            const result = await response.json();
+            if(!result.success) throw new Error(result.message || 'Save failed');
+
+            // If this was a new save, switch UI to update mode using returned ID
+            if(!isUpdate && result.log && result.log.id){
+                document.getElementById('logId').value = result.log.id;
+                document.getElementById('saveButtonText').textContent = 'Update Log';
+                document.getElementById('saveButton').classList.remove('bg-green-600','hover:bg-green-700');
+                document.getElementById('saveButton').classList.add('bg-orange-600','hover:bg-orange-700');
+                document.getElementById('cancelEditButton').classList.remove('hidden');
+            }
+            SafeExecute.showNotification('success', result.message || (isUpdate? 'Log updated' : 'Log saved'), isUpdate? 'Changes stored' : 'Now in edit mode');
+
+            await updateDashboardStats();
+            console.log(`? [EDM-${opId}] saveLogToDatabase done`);
+            return true;
+        } catch(err){
+            console.error(`? [EDM-${opId}] saveLogToDatabase error`, err);
+            SafeExecute.showNotification('error','Save failed', err.message);
+            return false;
+        }
+    };
+
     window.generateLogNumber = function() { 
         const nextLogNumber = document.getElementById('nextLogNumber'); 
         if (nextLogNumber) { 
@@ -623,30 +667,13 @@
         return window.generatePrintPreview();
     };
 
-    window.clearForm = function(){ 
-        const opId = SafeExecute.generateOperationId(); 
-        console.log(`?? [EDM-${opId}] clearForm`); 
-        const isEditing = document.getElementById('logId').value !== ''; 
-        if(!confirm(isEditing ? 'Clear form and cancel edit?' : 'Clear all form data?')) return false; 
-        const form = document.getElementById('edmLogForm'); 
-        form.reset(); 
-        document.getElementById('logId').value = ''; 
-        form.setAttribute('asp-page-handler','SaveLog'); 
-        document.getElementById('saveButtonText').textContent = 'Save to Database'; 
-        document.getElementById('saveButton').classList.remove('bg-orange-600','hover:bg-orange-700'); 
-        document.getElementById('saveButton').classList.add('bg-green-600','hover:bg-green-700'); 
-        document.getElementById('cancelEditButton').classList.add('hidden'); 
-        const logDateElement = document.getElementById('logDate'); 
-        if(logDateElement){ 
-            logDateElement.value = new Date().toISOString().split('T')[0]; 
-        } 
-        const operatorElement = document.getElementById('edmCutBy'); 
-        if(operatorElement){ 
-            operatorElement.value = '@User.Identity?.Name'; 
-        } 
-        document.querySelectorAll('input,textarea,select').forEach(f=>f.classList.remove('border-red-500','bg-red-50')); 
-        SafeExecute.showNotification('success', isEditing ? 'Edit cancelled' : 'Form cleared', isEditing ? 'Returned to new entry mode' : 'All fields reset'); 
-        return true; 
+    window.clearForm = function(){
+        const opId = SafeExecute.generateOperationId();
+        const isEditing = document.getElementById('logId').value !== '';
+        if(!confirm(isEditing ? 'Discard changes and reload the page?' : 'Reload the page to clear the form?')) return false;
+        console.log(`?? [EDM-${opId}] Reloading page for clearForm`);
+        location.reload();
+        return true;
     };
 
     window.updateDashboardStats = async function(){ 
@@ -721,8 +748,7 @@
             document.getElementById('tolerance').value = log.toleranceStatus||''; 
             document.getElementById('EDMScrap').value = log.scrapIssues||''; 
             document.getElementById('Notes').value = log.notes||''; 
-            const form = document.getElementById('edmLogForm'); 
-            form.setAttribute('asp-page-handler','UpdateLog'); 
+            // Switch UI to update mode (no need to change asp-page-handler dynamically)
             document.getElementById('saveButtonText').textContent = 'Update Log'; 
             document.getElementById('saveButton').classList.remove('bg-green-600','hover:bg-green-700'); 
             document.getElementById('saveButton').classList.add('bg-orange-600','hover:bg-orange-700'); 
@@ -739,25 +765,10 @@
     };
 
     window.cancelEdit = function(){ 
-        if(!confirm('Cancel editing? Unsaved changes will be lost.')) return false; 
-        const form = document.getElementById('edmLogForm'); 
-        form.reset(); 
-        document.getElementById('logId').value = ''; 
-        form.setAttribute('asp-page-handler','SaveLog'); 
-        const logDateElement = document.getElementById('logDate'); 
-        if(logDateElement){ 
-            logDateElement.value = new Date().toISOString().split('T')[0]; 
-        } 
-        const operatorElement = document.getElementById('edmCutBy'); 
-        if(operatorElement){ 
-            operatorElement.value = '@User.Identity?.Name'; 
-        } 
-        document.getElementById('saveButtonText').textContent = 'Save to Database'; 
-        document.getElementById('saveButton').classList.remove('bg-orange-600','hover:bg-orange-700'); 
-        document.getElementById('saveButton').classList.add('bg-green-600','hover:bg-green-700'); 
-        document.getElementById('cancelEditButton').classList.add('hidden'); 
-        document.querySelectorAll('input,textarea,select').forEach(f=>f.classList.remove('border-red-500','bg-red-50')); 
-        SafeExecute.showNotification('success','Edit cancelled','Form reset'); 
+        const opId = SafeExecute.generateOperationId();
+        if(!confirm('Cancel editing and reload the page? Unsaved changes will be lost.')) return false; 
+        console.log(`?? [EDM-${opId}] Reloading page for cancelEdit`);
+        location.reload();
         return true; 
     };
 
