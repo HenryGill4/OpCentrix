@@ -539,41 +539,75 @@
         }
     };
 
-    window.printAndStore = function(){ 
-        try { 
-            // Ensure print section is visible and ready
-            const printSection = document.getElementById('printSection');
-            if (!printSection || printSection.style.display === 'none') {
-                SafeExecute.showNotification('warning', 'Print preview must be generated first', 'Click "Save & Print Preview" or "Generate EDM Log" first');
-                return false;
+    window.generateLogNumber = function() { 
+        const nextLogNumber = document.getElementById('nextLogNumber'); 
+        if (nextLogNumber) { 
+            const current = parseInt(nextLogNumber.textContent) || 1; 
+            nextLogNumber.textContent = current + 1; 
+            return current.toString(); 
+        } 
+        return '1'; 
+    };
+
+    // Modern print preview: shows styled screen preview
+    window.generatePrintPreview = function(){
+        try {
+            if(!validateRequiredFields()) return false;
+            populatePrintSection();
+            const ps = document.getElementById('printSection');
+            if(!ps) { SafeExecute.showNotification('error','Print section missing','Cannot preview'); return false; }
+            ps.classList.add('print-preview');
+            ps.scrollIntoView({behavior:'smooth'});
+            SafeExecute.showNotification('success','Preview ready','Scroll to review');
+            return true;
+        } catch(e){
+            SafeExecute.showNotification('error','Preview failed', e.message);
+            return false;
+        }
+    };
+
+    // Clone-based bulletproof printing (avoids layout interference)
+    window.printAndStore = function(){
+        try {
+            const source = document.getElementById('printSection');
+            if(!source){ SafeExecute.showNotification('error','Print section missing','Cannot print'); return false; }
+            if(source.style.display==='none' && !source.classList.contains('print-preview')){
+                populatePrintSection();
             }
 
-            // Add a specific print class to body for enhanced isolation
-            document.body.classList.add('printing-active');
-            
-            // Force a brief delay to ensure styles are applied
-            setTimeout(() => {
-                // Trigger print
+            // Auto compression toggle if content very tall
+            source.classList.remove('compress-for-single-page');
+            if(source.scrollHeight > window.innerHeight * 1.25){
+                source.classList.add('compress-for-single-page');
+            }
+
+            // Remove existing clone if any
+            const oldClone = document.querySelector('.print-root');
+            if(oldClone) oldClone.remove();
+
+            const clone = source.cloneNode(true);
+            clone.classList.remove('print-preview');
+            clone.classList.add('print-root');
+            clone.style.display = 'block';
+            document.body.appendChild(clone);
+
+            // Defer to allow reflow
+            setTimeout(()=>{
                 window.print();
-                
-                // Clean up after print dialog closes/completes
-                setTimeout(() => {
-                    document.body.classList.remove('printing-active');
-                }, 1000);
-            }, 200);
-            
-            SafeExecute.showNotification('success','Print dialog opened','Review and confirm to print the EDM log'); 
-            return true; 
-        } catch(e){ 
-            document.body.classList.remove('printing-active');
-            SafeExecute.showNotification('error','Print failed', e.message); 
-            return false; 
-        } 
+                // Clean clone after print (delay for some browsers)
+                setTimeout(()=>{ const c=document.querySelector('.print-root'); if(c) c.remove(); }, 500);
+            }, 40);
+            SafeExecute.showNotification('success','Sending to printer','System dialog opened');
+            return true;
+        } catch(e){
+            SafeExecute.showNotification('error','Print failed', e.message);
+            return false;
+        }
     };
-    
-    window.hidePrintSection = function(){ 
-        const ps = document.getElementById('printSection'); 
-        if(ps) ps.style.display = 'none'; 
+
+    // Legacy compatibility (Generate EDM Log button previously called generatePrintout)
+    window.generatePrintout = function(){
+        return window.generatePrintPreview();
     };
 
     window.clearForm = function(){ 
