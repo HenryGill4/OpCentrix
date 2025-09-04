@@ -46,6 +46,18 @@ namespace OpCentrix.Pages.Admin
         [BindProperty]
         public Part Part { get; set; } = new Part();
 
+        // Hidden stage form collections (posted as comma-separated lists from modern stage manager)
+        [BindProperty]
+        public string? SelectedStageIds { get; set; }
+        [BindProperty]
+        public string? StageExecutionOrders { get; set; }
+        [BindProperty]
+        public string? StageEstimatedHours { get; set; }
+        [BindProperty]
+        public string? StageHourlyRates { get; set; }
+        [BindProperty]
+        public string? StageMaterialCosts { get; set; }
+
         // Pagination
         [BindProperty(SupportsGet = true)]
         public int PageNumber { get; set; } = 1;
@@ -252,7 +264,13 @@ namespace OpCentrix.Pages.Admin
 
                     if (result > 0)
                     {
-                        return await HandleFormSuccess($"Part '{Part.PartNumber}' created successfully!");
+                        // Attempt to sync posted stage configuration (if any)
+                        var synced = await SyncStagesFromFormAsync(Part, true, operationId);
+                        if (synced > 0)
+                        {
+                            _logger.LogInformation("? [PARTS-{OperationId}] Added {StageCount} stage requirements from form", operationId, synced);
+                        }
+                        return await HandleFormSuccess($"Part '{Part.PartNumber}' created successfully!" + (synced > 0 ? $" Added {synced} stages." : ""));
                     }
                     return await HandleValidationError("Failed to create part. No changes were made to the database.");
                 }
@@ -327,7 +345,12 @@ namespace OpCentrix.Pages.Admin
                     _logger.LogInformation("? [PARTS-{OperationId}] SaveChangesAsync result: {Result}", operationId, result);
                     if (result > 0)
                     {
-                        return await HandleFormSuccess($"Part '{Part.PartNumber}' updated successfully!");
+                        var synced = await SyncStagesFromFormAsync(existingPart, false, operationId);
+                        if (synced >= 0)
+                        {
+                            _logger.LogInformation("? [PARTS-{OperationId}] Stage sync processed {StageCount} stages (posted)", operationId, synced);
+                        }
+                        return await HandleFormSuccess($"Part '{Part.PartNumber}' updated successfully!" + (synced > 0 ? $" Updated {synced} stages." : ""));
                     }
                     return await HandleValidationError("Failed to update part. No changes were detected.");
                 }
@@ -502,6 +525,91 @@ namespace OpCentrix.Pages.Admin
         }
 
         #region Helper Methods
+
+        private async Task<int> SyncStagesFromFormAsync(Part part, bool isNew, string? operationId = null)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(SelectedStageIds))
+                {
+                    _logger.LogInformation("? [PARTS-{OperationId}] No stage form data posted", operationId);
+                    return 0; // Nothing posted
+                }
+
+                var stageIds = SelectedStageIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => int.TryParse(s, out var v) ? v : 0).ToList();
+                var orders = (StageExecutionOrders ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => int.TryParse(s, out var v) ? v : 1).ToList();
+                var hours = (StageEstimatedHours ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => double.TryParse(s, out var v) ? v : 1.0).ToList();
+                var rates = (StageHourlyRates ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => decimal.TryParse(s, out var v) ? v : (decimal?)null).ToList();
+                var materialCosts = (StageMaterialCosts ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => decimal.TryParse(s, out var v) ? v : 0m).ToList();
+
+                if (stageIds.Count == 0)
+                {
+                    _logger.LogInformation("? [PARTS-{OperationId}] Stage IDs parsed empty after split", operationId);
+                    return 0;
+                }
+
+                // Normalize list sizes
+                int count = stageIds.Count;
+                while (orders.Count < count) orders.Add(orders.LastOrDefault() == 0 ? 1 : orders.Last());
+                while (hours.Count < count) hours.Add(1.0);
+                while (rates.Count < count) rates.Add(null);
+                while (materialCosts.Count < count) materialCosts.Add(0m);
+
+                // If updating, clear existing stage requirements only if form posted stage data
+                if (!isNew)
+                {
+                    var existing = await _context.PartStageRequirements.Where(r => r.PartId == part.Id).ToListAsync();
+                    if (existing.Count > 0)
+                    {
+                        _context.PartStageRequirements.RemoveRange(existing);
+                        await _context.SaveChangesAsync();
+                        _logger.LogInformation("? [PARTS-{OperationId}] Removed {Existing} existing stage requirements prior to re-sync", operationId, existing.Count);
+                    }
+                }
+
+                var added = 0;
+                for (int i = 0; i < count; i++)
+                {
+                    if (stageIds[i] <= 0) continue;
+                    var req = new PartStageRequirement
+                    {
+                        PartId = part.Id,
+                        ProductionStageId = stageIds[i],
+                        ExecutionOrder = orders[i],
+                        EstimatedHours = hours[i],
+                        SetupTimeMinutes = 30,
+                        HourlyRateOverride = rates[i],
+                        MaterialCost = materialCosts[i],
+                        IsRequired = true,
+                        IsActive = true,
+                        CreatedBy = User.Identity?.Name ?? "System",
+                        CreatedDate = DateTime.UtcNow,
+                        LastModifiedBy = User.Identity?.Name ?? "System",
+                        LastModifiedDate = DateTime.UtcNow,
+                        RequirementNotes = "(Imported from form)",
+                        SpecialInstructions = string.Empty
+                    };
+                    _context.PartStageRequirements.Add(req);
+                    added++;
+                }
+
+                if (added > 0)
+                {
+                    await _context.SaveChangesAsync();
+                }
+                return added;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "? [PARTS-{OperationId}] Error syncing stage requirements from form", operationId);
+                return -1; // indicate failure (but don't block part creation)
+            }
+        }
 
         private void EnsureRequiredDefaults(Part part, bool isNew)
         {

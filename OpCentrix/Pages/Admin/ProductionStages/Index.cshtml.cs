@@ -422,16 +422,18 @@ namespace OpCentrix.Pages.Admin.ProductionStages
                     var prototypeUsageCount = await _context.ProductionStageExecutions
                         .CountAsync(pse => pse.ProductionStageId == stage.Id);
 
+                    // Project only the columns that we are sure exist in legacy SQLite database schema
                     var completedExecutions = await _context.ProductionStageExecutions
                         .Where(pse => pse.ProductionStageId == stage.Id && pse.Status == "Completed")
+                        .Select(pse => new { pse.ActualHours, pse.ActualCost })
                         .ToListAsync();
 
-                    var avgHours = completedExecutions.Any() 
-                        ? completedExecutions.Average(e => e.ActualHours ?? 0) 
+                    var avgHours = completedExecutions.Any()
+                        ? completedExecutions.Average(e => (double)(e.ActualHours ?? 0))
                         : 0;
 
-                    var avgCost = completedExecutions.Any() 
-                        ? completedExecutions.Average(e => e.ActualCost ?? 0) 
+                    var avgCost = completedExecutions.Any()
+                        ? completedExecutions.Average(e => (double)(e.ActualCost ?? 0))
                         : 0;
 
                     StageUsageStatistics[stage.Id] = new StageUsageStats
@@ -447,7 +449,7 @@ namespace OpCentrix.Pages.Admin.ProductionStages
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading stage usage statistics");
+                _logger.LogError(ex, "Error loading stage usage statistics (projection mode)");
                 // Continue without statistics rather than failing completely
             }
         }

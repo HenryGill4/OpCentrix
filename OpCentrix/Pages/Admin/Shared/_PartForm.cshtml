@@ -257,7 +257,7 @@
                                         <i class="fas fa-route me-2 text-primary"></i>
                                         Manufacturing Workflow
                                     </h6>
-                                    <button type="button" class="btn btn-success btn-sm" id="add-stage-btn">
+                                    <button type="button" class="btn btn-success btn-sm" id="add-stage-btn" onclick="if(window.stageManager){window.stageManager.showAddStageModal();} else {console.warn('Stage manager not ready');}">
                                         <i class="fas fa-plus me-1"></i>Add Stage
                                     </button>
                                 </div>
@@ -265,7 +265,7 @@
                             <div class="card-body">
                                 <!-- Dynamic Stage Requirements Container -->
                                 <div id="stage-requirements-container">
-                                    <!-- Content loaded dynamically by parts-stage-manager.js -->
+                                    <!-- Will be populated by ModernStageManager (parts-stage-manager.js) -->
                                     <div class="text-center py-4" id="stageLoadingIndicator">
                                         <div class="spinner-border text-primary mb-3" role="status">
                                             <span class="visually-hidden">Loading...</span>
@@ -322,7 +322,7 @@
                                     {
                                         @foreach (var stage in Model.PartFormData.AvailableStages.Take(5))
                                         {
-                                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="addStageFromList(@stage.Id)">
+                                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="(window.stageManager && window.stageManager.addStage) ? window.stageManager.addStage(@stage.Id) : window.addStageFromList && window.addStageFromList(@stage.Id)">
                                                 <i class="fas fa-plus me-1"></i>@stage.Name
                                             </button>
                                         }
@@ -590,579 +590,77 @@
 <script src="~/js/admin/parts-form-manager.js" asp-append-version="true"></script>
 
 <script>
-    // Modern Part Form Manager with Stage Integration
-    class PartFormManager {
+    // Inline legacy helper minimized & renamed to avoid clashing with OpCentrixPartFormManager
+    class InlineLegacyPartFormHelper {
         constructor() {
-            this.initializeLookupHandlers();
-            this.initializeStageManager();
-            this.initializeAssetManager();
             this.initializeMaterialHandlers();
-            this.initializeCalculations();
+            this.initializeDimensionHandlers();
         }
-
-        initializeLookupHandlers() {
-            const componentTypeSelect = document.getElementById('Part_ComponentTypeId');
-            const complianceCategorySelect = document.getElementById('Part_ComplianceCategoryId');
-            
-            if (componentTypeSelect) {
-                componentTypeSelect.addEventListener('change', () => this.onComponentTypeChange());
-            }
-            
-            if (complianceCategorySelect) {
-                complianceCategorySelect.addEventListener('change', () => this.onComplianceCategoryChange());
-            }
-        }
-
-        initializeStageManager() {
-            const addStageBtn = document.getElementById('add-stage-btn');
-            if (addStageBtn) {
-                addStageBtn.addEventListener('click', () => this.showAddStageModal());
-            }
-            
-            this.loadExistingStageRequirements();
-        }
-
-        initializeAssetManager() {
-            const assetUpload = document.getElementById('asset-upload');
-            if (assetUpload) {
-                assetUpload.addEventListener('change', (e) => this.handleAssetUpload(e));
-            }
-        }
-
         initializeMaterialHandlers() {
             const materialSelect = document.getElementById('materialSelect');
             if (materialSelect) {
                 materialSelect.addEventListener('change', () => this.updateMaterialDefaults());
             }
         }
-
-        initializeCalculations() {
-            const dimensionInputs = ['Part_LengthMm', 'Part_WidthMm', 'Part_HeightMm'];
-            dimensionInputs.forEach(id => {
-                const input = document.getElementById(id);
-                if (input) {
-                    input.addEventListener('input', () => this.calculateVolume());
-                }
+        initializeDimensionHandlers() {
+            ['Part_LengthMm','Part_WidthMm','Part_HeightMm'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.addEventListener('input', () => this.calculateVolume());
             });
         }
-
-        onComponentTypeChange() {
-            const select = document.getElementById('Part_ComponentTypeId');
-            const selectedOption = select.options[select.selectedIndex];
-            
-            console.log('🔄 [FORM] Component type changed:', selectedOption.text);
-            
-            // Update form behavior based on component type
-            if (selectedOption.text.includes('Serialized')) {
-                this.enableSerializationFields();
-            } else {
-                this.disableSerializationFields();
-            }
-        }
-
-        onComplianceCategoryChange() {
-            const select = document.getElementById('Part_ComplianceCategoryId');
-            const selectedOption = select.options[select.selectedIndex];
-            const regulatoryLevel = selectedOption.getAttribute('data-regulatory-level');
-            
-            console.log('🔄 [FORM] Compliance category changed:', regulatoryLevel);
-            
-            // Update form behavior based on regulatory level
-            if (regulatoryLevel === 'Restricted') {
-                this.enableRestrictedFields();
-            } else {
-                this.disableRestrictedFields();
-            }
-        }
-
-        enableSerializationFields() {
-            // Enable serialization-related fields if they exist
-            const serialFields = document.querySelectorAll('[data-serialization-required]');
-            serialFields.forEach(field => {
-                field.removeAttribute('disabled');
-                field.classList.add('required');
-            });
-        }
-
-        disableSerializationFields() {
-            const serialFields = document.querySelectorAll('[data-serialization-required]');
-            serialFields.forEach(field => {
-                field.setAttribute('disabled', 'true');
-                field.classList.remove('required');
-            });
-        }
-
-        enableRestrictedFields() {
-            // Enable compliance-related fields
-            const complianceFields = document.querySelectorAll('[data-compliance-required]');
-            complianceFields.forEach(field => {
-                field.removeAttribute('disabled');
-                field.classList.add('required');
-            });
-        }
-
-        disableRestrictedFields() {
-            const complianceFields = document.querySelectorAll('[data-compliance-required]');
-            complianceFields.forEach(field => {
-                field.setAttribute('disabled', 'true');
-                field.classList.remove('required');
-            });
-        }
-
         updateMaterialDefaults() {
             const materialSelect = document.getElementById('materialSelect');
             const slsMaterialInput = document.getElementById('slsMaterialInput');
             const materialCostInput = document.getElementById('Part_MaterialCostPerKg');
-            
             if (!materialSelect || !slsMaterialInput) return;
-            
             const selectedMaterial = materialSelect.value;
-            
-            // Update SLS material to match
             slsMaterialInput.value = selectedMaterial;
-            
-            // Update material cost based on selection
-            const materialCosts = {
-                'Ti-6Al-4V Grade 5': 450.00,
-                'Ti-6Al-4V ELI Grade 23': 500.00,
-                'CP Titanium Grade 2': 400.00,
-                'Inconel 718': 750.00,
-                'Inconel 625': 800.00,
-                '316L Stainless Steel': 25.00,
-                '17-4 PH Stainless Steel': 30.00,
-                'AlSi10Mg': 15.00
-            };
-            
-            if (materialCostInput && materialCosts[selectedMaterial]) {
-                materialCostInput.value = materialCosts[selectedMaterial];
-            }
-            
-            console.log('✅ [FORM] Material defaults updated:', selectedMaterial);
+            const materialCosts = { 'Ti-6Al-4V Grade 5':450,'Ti-6Al-4V ELI Grade 23':500,'CP Titanium Grade 2':400,'Inconel 718':750,'Inconel 625':800,'316L Stainless Steel':25,'17-4 PH Stainless Steel':30,'AlSi10Mg':15 };
+            if (materialCostInput && materialCosts[selectedMaterial]) materialCostInput.value = materialCosts[selectedMaterial];
         }
-
         calculateVolume() {
-            const lengthInput = document.getElementById('Part_LengthMm');
-            const widthInput = document.getElementById('Part_WidthMm');
-            const heightInput = document.getElementById('Part_HeightMm');
+            const l = parseFloat(document.getElementById('Part_LengthMm')?.value)||0;
+            const w = parseFloat(document.getElementById('Part_WidthMm')?.value)||0;
+            const h = parseFloat(document.getElementById('Part_HeightMm')?.value)||0;
             const volumeInput = document.getElementById('volumeInput');
             const dimensionsInput = document.getElementById('dimensionsInput');
-            
-            if (!lengthInput || !widthInput || !heightInput || !volumeInput) return;
-            
-            const length = parseFloat(lengthInput.value) || 0;
-            const width = parseFloat(widthInput.value) || 0;
-            const height = parseFloat(heightInput.value) || 0;
-            
-            const volume = length * width * height;
-            volumeInput.value = volume.toFixed(1);
-            
-            if (dimensionsInput) {
-                dimensionsInput.value = length && width && height ? 
-                    `${length} × ${width} × ${height} mm` : '';
-            }
-        }
-
-        async loadExistingStageRequirements() {
-            const partId = document.querySelector('input[name="Part.Id"]')?.value;
-            if (!partId || partId === '0') {
-                this.hideStageLoadingIndicator();
-                return;
-            }
-
-            try {
-                const response = await fetch(`/Admin/Parts?handler=PartStages&partId=${partId}`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    credentials: 'same-origin'
-                });
-                
-                if (!response.ok) {
-                    if (response.status === 404) {
-                        console.log('🔍 [FORM] No existing stage requirements found for part');
-                        this.renderStageRequirements([]);
-                        return;
-                    }
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                
-                const stages = await response.json();
-                this.renderStageRequirements(stages);
-                this.updateStageSummary(stages);
-                
-                console.log(`✅ [FORM] Loaded ${stages.length} existing stage requirements`);
-                
-            } catch (error) {
-                console.error('❌ [FORM] Failed to load stage requirements:', error);
-                this.showStageError('Failed to load stage requirements. Click "Add Stage" to create new workflow.');
-            } finally {
-                this.hideStageLoadingIndicator();
-            }
-        }
-
-        renderStageRequirements(stages) {
-            const container = document.getElementById('stage-requirements-container');
-            if (!container) return;
-            
-            if (!stages || stages.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-4">
-                        <i class="fas fa-plus-circle fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">No manufacturing stages assigned yet.</p>
-                        <p class="small text-muted">Click "Add Stage" to create your manufacturing workflow.</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            let stageHtml = '';
-            stages.forEach((stage, index) => {
-                stageHtml += this.createStageRequirementHtml(stage, index);
-            });
-            
-            container.innerHTML = stageHtml;
-        }
-
-        createStageRequirementHtml(stage, index) {
-            const productionStage = stage.productionStage || {};
-            const stageName = productionStage.name || 'Unknown Stage';
-            const estimatedHours = stage.estimatedHours || 0;
-            const setupMinutes = stage.setupTimeMinutes || 0;
-            const hourlyRate = stage.hourlyRateOverride || productionStage.defaultHourlyRate || 85;
-            const materialCost = stage.materialCost || 0;
-            const totalCost = this.calculateStageCost(stage);
-            
-            return `
-                <div class="stage-requirement-item border rounded p-3 mb-3" data-stage-id="${stage.id || stage.productionStageId}">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div class="flex-grow-1">
-                            <div class="d-flex align-items-center mb-2">
-                                <span class="badge bg-primary me-2">${stage.executionOrder || index + 1}</span>
-                                <h6 class="mb-0 fw-bold">${stageName}</h6>
-                                ${stage.isRequired ? '<span class="badge bg-success ms-2">Required</span>' : '<span class="badge bg-secondary ms-2">Optional</span>'}
-                            </div>
-                            <div class="row g-2 text-sm">
-                                <div class="col-md-3">
-                                    <span class="text-muted">Duration:</span>
-                                    <span class="fw-semibold">${estimatedHours}h</span>
-                                </div>
-                                <div class="col-md-3">
-                                    <span class="text-muted">Setup:</span>
-                                    <span class="fw-semibold">${setupMinutes}min</span>
-                                </div>
-                                <div class="col-md-3">
-                                    <span class="text-muted">Rate:</span>
-                                    <span class="fw-semibold">$${hourlyRate}/h</span>
-                                </div>
-                                <div class="col-md-3">
-                                    <span class="text-muted">Cost:</span>
-                                    <span class="fw-semibold">$${totalCost.toFixed(2)}</span>
-                                </div>
-                            </div>
-                            ${stage.requirementNotes ? `
-                                <div class="mt-2">
-                                    <small class="text-muted"><i class="fas fa-sticky-note me-1"></i>${stage.requirementNotes}</small>
-                                </div>
-                            ` : ''}
-                        </div>
-                        <div class="btn-group-vertical btn-group-sm">
-                            <button type="button" class="btn btn-outline-secondary" onclick="editStage(${stage.id || stage.productionStageId})" title="Edit Stage">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button type="button" class="btn btn-outline-danger" onclick="removeStage(${stage.productionStageId || stage.id})" title="Remove Stage">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        calculateStageCost(stage) {
-            const hours = stage.estimatedHours || 0;
-            const rate = stage.hourlyRateOverride || stage.productionStage?.defaultHourlyRate || 85;
-            const setupMinutes = stage.setupTimeMinutes || 0;
-            const materialCost = stage.materialCost || 0;
-            
-            return (hours * rate) + ((setupMinutes / 60) * rate) + materialCost;
-        }
-
-        updateStageSummary(stages) {
-            const totalStages = stages.length;
-            const totalDuration = stages.reduce((sum, stage) => sum + (stage.estimatedHours || 0), 0);
-            const totalCost = stages.reduce((sum, stage) => sum + this.calculateStageCost(stage), 0);
-            
-            const complexity = totalStages <= 2 ? 'Simple' : 
-                              totalStages <= 4 ? 'Medium' : 'Complex';
-            
-            this.updateElement('summary-total-stages', totalStages);
-            this.updateElement('summary-total-duration', `${totalDuration.toFixed(1)}h`);
-            this.updateElement('summary-total-cost', `$${totalCost.toFixed(2)}`);
-            this.updateElement('summary-complexity', complexity);
-        }
-
-        updateElement(id, value) {
-            const element = document.getElementById(id);
-            if (element) {
-                element.textContent = value;
-            }
-        }
-
-        hideStageLoadingIndicator() {
-            const indicator = document.getElementById('stageLoadingIndicator');
-            if (indicator) {
-                indicator.style.display = 'none';
-            }
-        }
-
-        showStageError(message) {
-            const container = document.getElementById('stage-requirements-container');
-            if (container) {
-                container.innerHTML = `
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        ${message}
-                    </div>
-                `;
-            }
-        }
-
-        showAddStageModal() {
-            console.log('🔄 [FORM] Showing add stage modal');
-            
-            // For now, create a simple selection interface using available stages
-            const availableStagesContainer = document.getElementById('availableStagesContainer');
-            if (availableStagesContainer) {
-                // Highlight the available stages section
-                availableStagesContainer.scrollIntoView({ behavior: 'smooth' });
-                
-                // Add some visual feedback
-                availableStagesContainer.classList.add('border', 'border-primary', 'rounded', 'p-2');
-                setTimeout(() => {
-                    availableStagesContainer.classList.remove('border', 'border-primary', 'rounded', 'p-2');
-                }, 2000);
-                
-                if (window.showToast) {
-                    window.showToast('info', 'Click on a stage from the "Available Stages" list to add it');
-                }
-            } else {
-                // Fallback: show alert with common stages
-                if (window.showToast) {
-                    window.showToast('info', 'Stage selection modal coming soon. Use the Available Stages panel on the right.');
-                }
-            }
-        }
-
-        useDefaultStages() {
-            console.log('🔧 [FORM] Using default stages as fallback');
-            
-            // Clear existing state
-            this.selectedStages.clear();
-            
-            // Create basic default stages structure
-            const defaultStages = [
-                {
-                    id: 'temp-1',
-                    productionStage: { name: 'SLS Printing', defaultHourlyRate: 85 },
-                    productionStageId: 1,
-                    executionOrder: 1,
-                    estimatedHours: 4.0,
-                    setupTimeMinutes: 45,
-                    isRequired: true,
-                    materialCost: 0,
-                    requirementNotes: 'Primary manufacturing stage'
-                },
-                {
-                    id: 'temp-2',
-                    productionStage: { name: 'Post-Processing', defaultHourlyRate: 75 },
-                    productionStageId: 2,
-                    executionOrder: 2,
-                    estimatedHours: 1.0,
-                    setupTimeMinutes: 15,
-                    isRequired: true,
-                    materialCost: 0,
-                    requirementNotes: 'Finishing and cleanup'
-                }
-            ];
-            
-            this.renderStageRequirements(defaultStages);
-            this.updateStageSummary(defaultStages);
-            
-            if (window.showToast) {
-                window.showToast('success', 'Default manufacturing stages loaded');
-            }
+            const vol = l*w*h; if(volumeInput) volumeInput.value = vol.toFixed(1);
+            if(dimensionsInput) dimensionsInput.value = (l&&w&&h)?`${l} × ${w} × ${h} mm`:'';
         }
     }
+    // Instantiate without overwriting main partFormManager provided by parts-form-manager.js
+    window.inlineLegacyFormHelper = new InlineLegacyPartFormHelper();
 
-    // Helper function to get antiforgery token
-    function getAntiForgeryToken() {
-        const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
-        return tokenInput ? tokenInput.value : '';
-    }
-
-    // Global functions for stage management
-    window.addStageFromList = async function(stageId) {
-        console.log('➕ [FORM] Adding stage from list:', stageId);
-        
-        const partId = document.querySelector('input[name="Part.Id"]')?.value || 0;
-        const maxOrder = document.querySelectorAll('.stage-requirement-item').length + 1;
-        
-        try {
-            const response = await fetch('/Admin/Parts?handler=AddStage', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': getAntiForgeryToken(),
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                credentials: 'same-origin',
-                body: JSON.stringify({
-                    partId: parseInt(partId),
-                    stageId: stageId,
-                    executionOrder: maxOrder,
-                    estimatedHours: 1.0,
-                    setupTimeMinutes: 30,
-                    materialCost: 0.00,
-                    isRequired: true
-                })
-            });
-            
-            const result = await response.json();
-            if (result.success) {
-                console.log('✅ [FORM] Stage added successfully');
-                // Reload the stage display
-                const manager = window.partFormManager;
-                if (manager) {
-                    await manager.loadExistingStageRequirements();
-                }
-                if (window.showToast) {
-                    window.showToast('success', result.message);
-                }
-            } else {
-                console.error('❌ [FORM] Failed to add stage:', result.message);
-                if (window.showToast) {
-                    window.showToast('error', result.message);
-                }
-            }
-        } catch (error) {
-            console.error('❌ [FORM] Error adding stage:', error);
-            if (window.showToast) {
-                window.showToast('error', 'Failed to add stage');
-            }
-        }
-    };
-
-    window.editStage = function(stageId) {
-        console.log('✏️ [FORM] Editing stage:', stageId);
-        // TODO: Implement stage editing modal
-        if (window.showToast) {
-            window.showToast('info', 'Stage editing coming soon');
-        }
-    };
-
-    window.removeStage = async function(stageId) {
-        console.log('🗑️ [FORM] Removing stage:', stageId);
-        
-        if (!confirm('Are you sure you want to remove this stage from the part?')) {
+    // Stage management fallbacks (new parts without saved ID cannot persist stages yet)
+    window.addStageFromList = async function(stageId){
+        if(window.stageManager && typeof window.stageManager.addStage === 'function'){
+            const success = window.stageManager.addStage(stageId);
+            if(!success && window.showToast) window.showToast('error','Failed to add stage');
             return;
         }
-        
-        const partId = document.querySelector('input[name="Part.Id"]')?.value || 0;
-        
-        try {
-            const response = await fetch('/Admin/Parts?handler=RemoveStage', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': getAntiForgeryToken(),
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                credentials: 'same-origin',
-                body: JSON.stringify({
-                    partId: parseInt(partId),
-                    stageId: stageId
-                })
-            });
-            
-            const result = await response.json();
-            if (result.success) {
-                console.log('✅ [FORM] Stage removed successfully');
-                // Reload the stage display
-                const manager = window.partFormManager;
-                if (manager) {
-                    await manager.loadExistingStageRequirements();
-                }
-                if (window.showToast) {
-                    window.showToast('success', result.message);
-                }
-            } else {
-                console.error('❌ [FORM] Failed to remove stage:', result.message);
-                if (window.showToast) {
-                    window.showToast('error', result.message);
-                }
-            }
-        } catch (error) {
-            console.error('❌ [FORM] Error removing stage:', error);
-            if (window.showToast) {
-                window.showToast('error', 'Failed to remove stage');
-            }
-        }
+        console.warn('Stage manager not ready; stage cannot be added before part is saved.');
+        window.showToast && window.showToast('info','Save the part first, then add stages.');
+    };
+    window.editStage = function(stageId){
+        if(window.stageManager && window.stageManager.editStage){ return window.stageManager.editStage(stageId);} 
+        window.showToast && window.showToast('info','Stage editor requires stage manager.');
+    };
+    window.removeStage = function(stageId){
+        if(window.stageManager && window.stageManager.removeStage){ return window.stageManager.removeStage(stageId);} 
+        window.showToast && window.showToast('info','Stage manager not loaded.');
     };
 
-    // Material helper functions
-    window.updateSlsMaterial = function() {
-        const manager = window.partFormManager;
-        if (manager) {
-            manager.updateMaterialDefaults();
-        }
+    // Material helper bridging to whichever manager is present
+    window.updateSlsMaterial = function(){
+        if(window.partFormManager && window.partFormManager.updateMaterialDefaults){window.partFormManager.updateMaterialDefaults();return;}
+        if(window.inlineLegacyFormHelper) window.inlineLegacyFormHelper.updateMaterialDefaults();
+    };
+    window.calculateVolume = function(){
+        if(window.partFormManager && window.partFormManager.calculateVolume){window.partFormManager.calculateVolume();return;}
+        if(window.inlineLegacyFormHelper) window.inlineLegacyFormHelper.calculateVolume();
     };
 
-    window.calculateVolume = function() {
-        const manager = window.partFormManager;
-        if (manager) {
-            manager.calculateVolume();
-        }
-    };
-
-    // Initialize form manager when DOM is ready
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('🚀 [PART-FORM] Initializing modern form manager...');
-        try {
-            window.partFormManager = new PartFormManager();
-            console.log('✅ [PART-FORM] Form manager initialized successfully');
-        } catch (error) {
-            console.error('❌ [PART-FORM] Failed to initialize form manager:', error);
-        }
+    document.addEventListener('DOMContentLoaded',()=>{
+        console.log('✅ [_PartForm] Inline helper initialized without conflicts');
     });
-
-    // HTMX Success Handler for Parts Form
-    document.addEventListener('htmx:afterRequest', function(event) {
-        if (event.target.closest('#partModal') && event.detail.successful) {
-            console.log('✅ [PARTS] Form submission successful');
-            
-            if (window.showToast) {
-                window.showToast('success', 'Part saved successfully!');
-            }
-            
-            setTimeout(() => {
-                const modal = document.getElementById('partModal');
-                if (modal && typeof bootstrap !== 'undefined') {
-                    const bsModal = bootstrap.Modal.getInstance(modal);
-                    if (bsModal) {
-                        bsModal.hide();
-                    }
-                }
-                window.location.reload();
-            }, 1000);
-        } else if (event.detail.xhr && event.detail.xhr.status >= 400) {
-            console.error('❌ [PARTS] Form submission failed:', event.detail);
-            if (window.showToast) {
-                window.showToast('error', 'Form submission failed. Please check your inputs and try again.');
-            }
-        }
-    });
-
-    console.log('✅ [PART-FORM] Modernized form scripts loaded successfully');
 </script>
