@@ -5,6 +5,9 @@
     Layout = "~/Pages/Shared/_Layout.cshtml";
 }
 
+<!-- Include EDM Print Styles -->
+<link rel="stylesheet" href="~/css/edm-print.css" />
+
 <!-- GLOBAL SAFE EXECUTION WRAPPER - DEFINED FIRST -->
 <script>
     window.SafeExecute = {
@@ -198,89 +201,128 @@
     </form>
 </div>
 
-<!-- Print Section - Completely refactored for single page printing -->
-<div id="printSection" class="print-section bg-white" style="display:none;">
-    <div class="print-header bg-white px-4 py-2 border-b border-gray-300">
-        <div class="flex items-center justify-between">
-            <div class="flex-1 text-center">
-                <h1 class="text-lg font-bold text-gray-900 mb-0">OPCENTRIX MANUFACTURING</h1>
-                <h2 class="text-sm font-semibold text-gray-700 mb-0">EDM Operation Log</h2>
-                <div class="text-xs text-gray-500 mt-1">
-                    Log #<span id="printLogNumber"></span> | <span id="printTimestamp"></span>
+<!-- Modern Print Section - Clean HTML with Dedicated CSS -->
+<div id="printSection" class="print-section">
+    <div class="print-header">
+        <div class="print-header-content">
+            <div class="print-title-section">
+                <h1 class="print-title">OPCENTRIX MANUFACTURING</h1>
+                <h2 class="print-subtitle">EDM Operation Log</h2>
+                <div class="print-meta">
+                    Electrical Discharge Machining Documentation<br>
+                    Log #<span id="printLogNumber"></span> | Generated: <span id="printTimestamp"></span>
                 </div>
             </div>
-            <div class="no-print flex space-x-2">
-                <button onclick="event.preventDefault(); SafeExecute.call('printAndStore')" class="bg-green-600 text-white px-3 py-1 rounded text-sm font-semibold">Print</button>
-                <button onclick="event.preventDefault(); SafeExecute.call('hidePrintSection')" class="bg-gray-500 text-white px-2 py-1 rounded text-sm">Close</button>
+            <div class="print-actions">
+                <button onclick="event.preventDefault(); SafeExecute.call('printAndStore')" class="print-btn print-btn-primary">Print</button>
+                <button onclick="event.preventDefault(); SafeExecute.call('hidePrintSection')" class="print-btn print-btn-secondary">Close</button>
             </div>
         </div>
     </div>
     
-    <div class="print-content p-3">
-        <!-- Main data grid - 3 columns for better space utilization -->
-        <div class="grid grid-cols-3 gap-2 mb-2">
-            <!-- Basic Info -->
-            <div class="border border-gray-400 p-2 text-xs">
-                <h3 class="font-bold text-gray-800 mb-1 text-xs uppercase border-b border-gray-300 pb-1">Basic Information</h3>
-                <div class="space-y-0.5">
-                    <div class="flex justify-between"><span class="font-medium">Date:</span><span id="printLogDate"></span></div>
-                    <div class="flex justify-between"><span class="font-medium">Shift:</span><span id="printShift"></span></div>
-                    <div class="flex justify-between"><span class="font-medium">Part #:</span><span id="printPartNumber" class="font-mono text-xs"></span></div>
-                    <div class="flex justify-between"><span class="font-medium">Qty:</span><span id="printQuantity"></span></div>
+    <div class="print-content">
+        <!-- Main Information Grid -->
+        <div class="print-grid print-grid-3">
+            <!-- Basic Information -->
+            <div class="print-section-box">
+                <h3 class="print-section-title">Basic Information</h3>
+                <div class="print-field">
+                    <span class="print-field-label">Date:</span>
+                    <span class="print-field-value" id="printLogDate"></span>
+                </div>
+                <div class="print-field">
+                    <span class="print-field-label">Shift:</span>
+                    <span class="print-field-value" id="printShift"></span>
+                </div>
+                <div class="print-field">
+                    <span class="print-field-label">Part Number:</span>
+                    <span class="print-field-value print-field-mono" id="printPartNumber"></span>
+                </div>
+                <div class="print-field">
+                    <span class="print-field-label">Quantity:</span>
+                    <span class="print-field-value" id="printQuantity"></span>
                 </div>
             </div>
             
-            <!-- Operator Info -->
-            <div class="border border-gray-400 p-2 text-xs">
-                <h3 class="font-bold text-gray-800 mb-1 text-xs uppercase border-b border-gray-300 pb-1">Operator</h3>
-                <div class="space-y-0.5">
-                    <div class="flex justify-between"><span class="font-medium">Name:</span><span id="printEdmCutBy" class="text-xs"></span></div>
-                    <div class="flex justify-between"><span class="font-medium">Initials:</span><span id="printEdmInitials" class="font-mono font-bold"></span></div>
-                    <div class="flex justify-between"><span class="font-medium">Start:</span><span id="printStartTime" class="font-mono"></span></div>
-                    <div class="flex justify-between"><span class="font-medium">End:</span><span id="printEndTime" class="font-mono"></span></div>
+            <!-- Operator Information -->
+            <div class="print-section-box">
+                <h3 class="print-section-title">Operator</h3>
+                <div class="print-field">
+                    <span class="print-field-label">Name:</span>
+                    <span class="print-field-value" id="printEdmCutBy"></span>
+                </div>
+                <div class="print-field">
+                    <span class="print-field-label">Initials:</span>
+                    <span class="print-field-value print-field-mono" id="printEdmInitials"></span>
+                </div>
+                <div class="print-field">
+                    <span class="print-field-label">Start Time:</span>
+                    <span class="print-field-value print-field-mono" id="printStartTime"></span>
+                </div>
+                <div class="print-field">
+                    <span class="print-field-label">End Time:</span>
+                    <span class="print-field-value print-field-mono" id="printEndTime"></span>
                 </div>
             </div>
             
             <!-- Time Analysis -->
-            <div class="border border-gray-400 p-2 text-xs">
-                <h3 class="font-bold text-gray-800 mb-1 text-xs uppercase border-b border-gray-300 pb-1">Time Analysis</h3>
-                <div class="space-y-0.5">
-                    <div class="flex justify-between"><span class="font-medium">Total:</span><span id="printTotalTime"></span></div>
-                    <div class="flex justify-between"><span class="font-medium">Process:</span><span id="printCutTime"></span></div>
-                    <div class="flex justify-between"><span class="font-medium">Status:</span><span class="text-green-700 font-semibold">Complete</span></div>
-                    <div class="flex justify-between"><span class="font-medium">Quality:</span><span class="text-blue-700 font-semibold">Passed</span></div>
+            <div class="print-section-box">
+                <h3 class="print-section-title">Time Analysis</h3>
+                <div class="print-field">
+                    <span class="print-field-label">Total Time:</span>
+                    <span class="print-field-value" id="printTotalTime"></span>
+                </div>
+                <div class="print-field">
+                    <span class="print-field-label">Process Time:</span>
+                    <span class="print-field-value" id="printCutTime"></span>
+                </div>
+                <div class="print-field">
+                    <span class="print-field-label">Status:</span>
+                    <span class="print-field-value print-status-complete">Complete</span>
+                </div>
+                <div class="print-field">
+                    <span class="print-field-label">Quality:</span>
+                    <span class="print-field-value print-status-passed">Passed</span>
                 </div>
             </div>
         </div>
         
-        <!-- Measurements row -->
-        <div class="grid grid-cols-2 gap-2 mb-2">
-            <div class="border border-gray-400 p-2 text-xs">
-                <h3 class="font-bold text-gray-800 mb-1 text-xs uppercase border-b border-gray-300 pb-1">Measurements</h3>
-                <div class="space-y-0.5">
-                    <div class="flex justify-between"><span class="font-medium">Measurement 1:</span><span id="printMeasurement1" class="font-mono"></span></div>
-                    <div class="flex justify-between"><span class="font-medium">Measurement 2:</span><span id="printMeasurement2" class="font-mono"></span></div>
+        <!-- Measurements and Quality -->
+        <div class="print-grid print-grid-2">
+            <div class="print-section-box">
+                <h3 class="print-section-title">Measurements</h3>
+                <div class="print-field">
+                    <span class="print-field-label">Measurement 1:</span>
+                    <span class="print-field-value print-field-mono" id="printMeasurement1"></span>
+                </div>
+                <div class="print-field">
+                    <span class="print-field-label">Measurement 2:</span>
+                    <span class="print-field-value print-field-mono" id="printMeasurement2"></span>
                 </div>
             </div>
             
-            <div class="border border-gray-400 p-2 text-xs">
-                <h3 class="font-bold text-gray-800 mb-1 text-xs uppercase border-b border-gray-300 pb-1">Quality Control</h3>
-                <div class="space-y-0.5">
-                    <div class="flex justify-between"><span class="font-medium">Tolerance:</span><span id="printTolerance"></span></div>
-                    <div class="flex justify-between"><span class="font-medium">Scrap/Issues:</span><span id="printEDMScrap"></span></div>
+            <div class="print-section-box">
+                <h3 class="print-section-title">Quality Control</h3>
+                <div class="print-field">
+                    <span class="print-field-label">Tolerance:</span>
+                    <span class="print-field-value" id="printTolerance"></span>
+                </div>
+                <div class="print-field">
+                    <span class="print-field-label">Scrap/Issues:</span>
+                    <span class="print-field-value" id="printEDMScrap"></span>
                 </div>
             </div>
         </div>
         
-        <!-- Notes section - compact -->
-        <div class="border border-gray-400 p-2 text-xs mb-2">
-            <h3 class="font-bold text-gray-800 mb-1 text-xs uppercase border-b border-gray-300 pb-1">Notes & Comments</h3>
-            <div id="printNotes" class="text-xs leading-tight"></div>
+        <!-- Notes Section -->
+        <div class="print-notes-section">
+            <h3 class="print-section-title">Notes & Comments</h3>
+            <div class="print-notes-content" id="printNotes"></div>
         </div>
         
         <!-- Footer -->
-        <div class="text-center text-xs text-gray-600 border-t border-gray-400 pt-1">
-            <strong>OpCentrix Manufacturing</strong> • EDM Operations • Confidential
+        <div class="print-footer">
+            <strong>OpCentrix Manufacturing</strong> • EDM Operations Department • Confidential & Proprietary Document
         </div>
     </div>
 </div>
@@ -297,212 +339,6 @@
         </div>
     </div>
 </div>
-
-<style>
-    /* Completely refactored print styles for guaranteed single page printing */
-    @@media print {
-        @@page { 
-            size: Letter portrait; 
-            margin: 0.3in 0.3in 0.3in 0.3in; 
-        }
-        
-        /* Hide everything except print section */
-        body * { visibility: hidden; }
-        #printSection, #printSection * { visibility: visible; }
-        
-        /* Force print section to fit on one page */
-        #printSection { 
-            position: absolute !important; 
-            left: 0 !important; 
-            top: 0 !important; 
-            width: 100% !important; 
-            height: auto !important;
-            max-height: 10in !important;
-            box-shadow: none !important; 
-            border-radius: 0 !important; 
-            background: white !important;
-            overflow: hidden !important;
-            page-break-after: avoid !important;
-            page-break-inside: avoid !important;
-            transform: scale(0.95) !important;
-            transform-origin: top left !important;
-        }
-        
-        /* Hide non-print elements */
-        .no-print { display: none !important; }
-        
-        /* Extremely compact header */
-        #printSection .print-header { 
-            padding: 2px !important; 
-            border-bottom: 2px solid #000 !important;
-            margin-bottom: 3px !important;
-            page-break-after: avoid !important;
-        }
-        
-        #printSection h1 { 
-            font-size: 14px !important; 
-            margin: 0 !important; 
-            line-height: 1 !important;
-            font-weight: bold !important;
-        }
-        
-        #printSection h2 { 
-            font-size: 10px !important; 
-            margin: 1px 0 0 0 !important; 
-            line-height: 1 !important;
-        }
-        
-        #printSection .print-header .text-xs { 
-            font-size: 8px !important; 
-            margin: 1px 0 !important; 
-            line-height: 1 !important;
-        }
-        
-        /* Ultra-compact content area */
-        #printSection .print-content { 
-            padding: 2px !important; 
-            margin: 0 !important;
-            page-break-inside: avoid !important;
-        }
-        
-        /* Minimal grid spacing */
-        #printSection .grid { 
-            gap: 1px !important; 
-            margin-bottom: 2px !important;
-        }
-        
-        #printSection .border { 
-            border: 1px solid #000 !important; 
-            box-shadow: none !important;
-            margin: 0 !important;
-        }
-        
-        #printSection .p-2 { 
-            padding: 2px !important; 
-        }
-        
-        #printSection .p-3 { 
-            padding: 2px !important; 
-        }
-        
-        /* Eliminate all unnecessary spacing */
-        #printSection .space-y-0\.5 > :not([hidden]) ~ :not([hidden]) { 
-            margin-top: 1px !important; 
-        }
-        
-        #printSection .mb-1 { margin-bottom: 1px !important; }
-        #printSection .mb-2 { margin-bottom: 2px !important; }
-        #printSection .mt-1 { margin-top: 1px !important; }
-        #printSection .pt-1 { padding-top: 1px !important; }
-        #printSection .pb-1 { padding-bottom: 1px !important; }
-        
-        /* Section headers - very compact */
-        #printSection h3 { 
-            font-size: 8px !important; 
-            margin: 0 0 1px 0 !important; 
-            line-height: 1 !important;
-            font-weight: bold !important;
-            padding: 1px 0 !important;
-        }
-        
-        /* Data text - very small but readable */
-        #printSection .text-xs { 
-            font-size: 7px !important; 
-            line-height: 1 !important;
-        }
-        
-        #printSection .text-sm { 
-            font-size: 8px !important; 
-            line-height: 1 !important;
-        }
-        
-        #printSection .text-lg { 
-            font-size: 12px !important; 
-            line-height: 1 !important;
-        }
-        
-        /* Notes section - very compact */
-        #printSection #printNotes { 
-            font-size: 7px !important; 
-            line-height: 1.1 !important;
-            max-height: 30px !important;
-            overflow: hidden !important;
-            word-wrap: break-word !important;
-            margin: 0 !important;
-            padding: 1px !important;
-        }
-        
-        /* Footer - minimal */
-        #printSection .text-center:last-child {
-            margin-top: 2px !important;
-            padding-top: 1px !important;
-            border-top: 1px solid #666 !important;
-            font-size: 6px !important;
-            line-height: 1 !important;
-            page-break-inside: avoid !important;
-        }
-        
-        /* Force all grid items to be compact */
-        #printSection .grid > div {
-            page-break-inside: avoid !important;
-            min-height: auto !important;
-        }
-        
-        /* Remove any potential spacing issues */
-        #printSection * {
-            box-sizing: border-box !important;
-            margin: 0 !important;
-        }
-        
-        /* Override any default margins */
-        #printSection div {
-            margin: 0 !important;
-        }
-        
-        /* Ensure body has no spacing during print */
-        body {
-            margin: 0 !important;
-            padding: 0 !important;
-            height: auto !important;
-        }
-        
-        /* Force flex items to be compact */
-        #printSection .flex {
-            align-items: flex-start !important;
-            line-height: 1 !important;
-        }
-        
-        #printSection .justify-between {
-            justify-content: space-between !important;
-        }
-        
-        /* Prevent any elements from creating extra height */
-        #printSection .border-b {
-            border-bottom: 1px solid #ccc !important;
-        }
-        
-        #printSection .border-t {
-            border-top: 1px solid #ccc !important;
-        }
-        
-        /* Ultra-compact grid layout */
-        #printSection .grid-cols-3 {
-            grid-template-columns: 1fr 1fr 1fr !important;
-        }
-        
-        #printSection .grid-cols-2 {
-            grid-template-columns: 1fr 1fr !important;
-        }
-        
-        /* Force absolute positioning to prevent page breaks */
-        #printSection .print-content {
-            position: relative !important;
-            height: auto !important;
-            max-height: 9in !important;
-            overflow: hidden !important;
-        }
-    }
-</style>
 
 <script>
     // Validation helper
@@ -525,7 +361,7 @@
         return true;
     }
 
-    // Unified populate function - updated for new compact layout
+    // Unified populate function - updated for new clean layout
     window.populatePrintFromData = function(data) {
         try {
             document.getElementById('printLogDate').textContent = data.logDate ? (new Date(data.logDate).toLocaleDateString()) : 'N/A';
@@ -540,7 +376,7 @@
             document.getElementById('printMeasurement2').textContent = data.measurement2 || 'N/A';
             document.getElementById('printTolerance').textContent = data.toleranceStatus || 'N/A';
             document.getElementById('printEDMScrap').textContent = data.scrapIssues || 'None';
-            document.getElementById('printNotes').textContent = data.notes || 'No additional notes';
+            document.getElementById('printNotes').textContent = data.notes || 'No additional notes provided';
             document.getElementById('printTotalTime').textContent = data.totalTime || 'N/A';
             document.getElementById('printCutTime').textContent = data.totalTime || 'N/A';
             document.getElementById('printLogNumber').textContent = data.logNumber || document.getElementById('nextLogNumber').textContent;
