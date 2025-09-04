@@ -140,7 +140,7 @@ namespace OpCentrix.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("AdminAlerts");
+                    b.ToTable("AdminAlerts", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.ArchivedJob", b =>
@@ -322,7 +322,7 @@ namespace OpCentrix.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ArchivedJobs");
+                    b.ToTable("ArchivedJobs", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.AssemblyComponent", b =>
@@ -432,7 +432,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("Supplier");
 
-                    b.ToTable("AssemblyComponents");
+                    b.ToTable("AssemblyComponents", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.BugReport", b =>
@@ -843,7 +843,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("Severity", "Priority");
 
-                    b.ToTable("BugReports");
+                    b.ToTable("BugReports", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.BuildCohort", b =>
@@ -916,7 +916,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("Status");
 
-                    b.ToTable("BuildCohorts");
+                    b.ToTable("BuildCohorts", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.BuildJob", b =>
@@ -1041,7 +1041,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("BuildJobs");
+                    b.ToTable("BuildJobs", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.BuildJobPart", b =>
@@ -1090,7 +1090,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("BuildJobBuildId");
 
-                    b.ToTable("BuildJobParts");
+                    b.ToTable("BuildJobParts", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.BuildTimeLearningData", b =>
@@ -1183,7 +1183,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("MachineId", "TotalParts", "SupportComplexity");
 
-                    b.ToTable("BuildTimeLearningData");
+                    b.ToTable("BuildTimeLearningData", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.ComplianceDocument", b =>
@@ -1494,7 +1494,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("Status");
 
-                    b.ToTable("ComplianceDocuments");
+                    b.ToTable("ComplianceDocuments", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.ComplianceRequirement", b =>
@@ -1753,7 +1753,7 @@ namespace OpCentrix.Migrations
                     b.HasIndex("RequirementCode")
                         .IsUnique();
 
-                    b.ToTable("ComplianceRequirements");
+                    b.ToTable("ComplianceRequirements", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.DefectCategory", b =>
@@ -1871,7 +1871,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("SeverityLevel");
 
-                    b.ToTable("DefectCategories");
+                    b.ToTable("DefectCategories", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.DelayLog", b =>
@@ -1910,7 +1910,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("BuildJobBuildId");
 
-                    b.ToTable("DelayLogs");
+                    b.ToTable("DelayLogs", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.EDMLog", b =>
@@ -2060,7 +2060,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("PartId");
 
-                    b.ToTable("EDMLogs");
+                    b.ToTable("EDMLogs", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.FeatureToggle", b =>
@@ -2181,7 +2181,7 @@ namespace OpCentrix.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("FeatureToggles");
+                    b.ToTable("FeatureToggles", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.InspectionCheckpoint", b =>
@@ -2337,7 +2337,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("PartId", "SortOrder");
 
-                    b.ToTable("InspectionCheckpoints");
+                    b.ToTable("InspectionCheckpoints", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.Job", b =>
@@ -2695,7 +2695,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("WorkflowStage", "Status");
 
-                    b.ToTable("Jobs");
+                    b.ToTable("Jobs", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.JobLogEntry", b =>
@@ -2727,7 +2727,7 @@ namespace OpCentrix.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("JobLogEntries");
+                    b.ToTable("JobLogEntries", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.JobNote", b =>
@@ -2806,7 +2806,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("JobId", "Step");
 
-                    b.ToTable("JobNotes");
+                    b.ToTable("JobNotes", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.JobStageHistory", b =>
@@ -2874,7 +2874,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("JobId", "Timestamp");
 
-                    b.ToTable("JobStageHistories");
+                    b.ToTable("JobStageHistories", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.JobStaging.JobStage", b =>
@@ -3028,7 +3028,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("JobId", "ExecutionOrder");
 
-                    b.ToTable("JobStages");
+                    b.ToTable("JobStages", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.JobStaging.JobStageDependency", b =>
@@ -3073,7 +3073,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("RequiredStageId");
 
-                    b.ToTable("StageDependencies", t =>
+                    b.ToTable("StageDependencies", null, t =>
                         {
                             t.HasCheckConstraint("CK_JobStageDependency_NoSelfReference", "DependentStageId != RequiredStageId");
                         });
@@ -3130,7 +3130,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("StageId");
 
-                    b.ToTable("StageNotes");
+                    b.ToTable("StageNotes", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.Machine", b =>
@@ -3315,7 +3315,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("Status");
 
-                    b.ToTable("Machines");
+                    b.ToTable("Machines", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.MachineCapability", b =>
@@ -3413,7 +3413,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("MachineId", "CapabilityType");
 
-                    b.ToTable("MachineCapabilities");
+                    b.ToTable("MachineCapabilities", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.Material", b =>
@@ -3496,7 +3496,7 @@ namespace OpCentrix.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Materials");
+                    b.ToTable("Materials", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.OperatingShift", b =>
@@ -3564,7 +3564,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("DayOfWeek", "IsActive");
 
-                    b.ToTable("OperatingShifts");
+                    b.ToTable("OperatingShifts", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.OperatorEstimateLog", b =>
@@ -3601,7 +3601,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("LoggedAt");
 
-                    b.ToTable("OperatorEstimateLogs");
+                    b.ToTable("OperatorEstimateLogs", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.Part", b =>
@@ -4295,7 +4295,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("SlsMaterial");
 
-                    b.ToTable("Parts");
+                    b.ToTable("Parts", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.PartClassification", b =>
@@ -4533,7 +4533,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("SuppressorType");
 
-                    b.ToTable("PartClassifications");
+                    b.ToTable("PartClassifications", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.PartCompletionLog", b =>
@@ -4592,7 +4592,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("BuildJobId", "PartNumber");
 
-                    b.ToTable("PartCompletionLogs");
+                    b.ToTable("PartCompletionLogs", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.PartStageRequirement", b =>
@@ -4704,7 +4704,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("WorkflowTemplateId");
 
-                    b.ToTable("PartStageRequirements");
+                    b.ToTable("PartStageRequirements", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.ProductionStage", b =>
@@ -4861,7 +4861,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("DisplayOrder", "IsActive");
 
-                    b.ToTable("ProductionStages");
+                    b.ToTable("ProductionStages", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.ProductionStageExecution", b =>
@@ -5002,7 +5002,7 @@ namespace OpCentrix.Migrations
                     b.HasIndex("PrototypeJobId", "ProductionStageId")
                         .IsUnique();
 
-                    b.ToTable("ProductionStageExecutions");
+                    b.ToTable("ProductionStageExecutions", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.PrototypeJob", b =>
@@ -5137,7 +5137,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("Status");
 
-                    b.ToTable("PrototypeJobs");
+                    b.ToTable("PrototypeJobs", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.PrototypeTimeLog", b =>
@@ -5205,7 +5205,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("StartTime");
 
-                    b.ToTable("PrototypeTimeLogs");
+                    b.ToTable("PrototypeTimeLogs", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.ResourcePool", b =>
@@ -5290,7 +5290,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("ResourceType", "IsActive");
 
-                    b.ToTable("ResourcePools");
+                    b.ToTable("ResourcePools", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.RolePermission", b =>
@@ -5381,7 +5381,7 @@ namespace OpCentrix.Migrations
                     b.HasIndex("RoleName", "PermissionKey")
                         .IsUnique();
 
-                    b.ToTable("RolePermissions");
+                    b.ToTable("RolePermissions", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.SerialNumber", b =>
@@ -5721,7 +5721,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("TransferStatus");
 
-                    b.ToTable("SerialNumbers");
+                    b.ToTable("SerialNumbers", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.StageDependency", b =>
@@ -5901,7 +5901,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("Category", "DisplayOrder");
 
-                    b.ToTable("SystemSettings");
+                    b.ToTable("SystemSettings", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.User", b =>
@@ -5963,7 +5963,7 @@ namespace OpCentrix.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.UserSettings", b =>
@@ -6015,7 +6015,7 @@ namespace OpCentrix.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("UserSettings");
+                    b.ToTable("UserSettings", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.WorkflowTemplate", b =>
@@ -6101,7 +6101,7 @@ namespace OpCentrix.Migrations
 
                     b.HasIndex("Category", "IsActive");
 
-                    b.ToTable("WorkflowTemplates");
+                    b.ToTable("WorkflowTemplates", (string)null);
                 });
 
             modelBuilder.Entity("OpCentrix.Models.AssemblyComponent", b =>

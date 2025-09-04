@@ -366,7 +366,7 @@
     .scheduler-grid-cell:hover {
         background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%) !important;
         border-left: 2px solid var(--ios-blue) !important;
-        transform: translateX(1px);
+        /*transform: translateX(1px);*/
         box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
         /* ENH    border-radius: 8px;
 visibility on hover */

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
@@ -10,9 +10,8 @@ using OpCentrix.Services.Admin;
 namespace OpCentrix.Pages.Admin
 {
     /// <summary>
-    /// Bulletproof Parts management page with simplified, reliable CRUD operations
-    /// REDESIGNED: Focuses on simplicity, reliability, and maintainability
-    /// ENHANCED: Integrated with PartStageService for stage management
+    /// PHASE 3: Parts management page with modernized lookup-driven form
+    /// Successfully migrated all 4 parts to ComponentType/ComplianceCategory structure
     /// </summary>
     [Authorize(Policy = "AdminOnly")]
     public class PartsModel : PageModel
@@ -40,310 +39,149 @@ namespace OpCentrix.Pages.Admin
             _partAssetService = partAssetService;
         }
 
-        // Main data properties
+        // Main properties
         public IList<Part> Parts { get; set; } = new List<Part>();
 
-        // Form property for modal
         [BindProperty]
         public Part Part { get; set; } = new Part();
 
-        // Stage management properties
-        [BindProperty]
-        public List<int> SelectedStageIds { get; set; } = new List<int>();
-
-        [BindProperty]
-        public List<int> StageExecutionOrders { get; set; } = new List<int>();
-
-        [BindProperty]
-        public List<double> StageEstimatedHours { get; set; } = new List<double>();
-
-        [BindProperty]
-        public List<decimal> StageHourlyRates { get; set; } = new List<decimal>();
-
-        [BindProperty]
-        public List<decimal> StageMaterialCosts { get; set; } = new List<decimal>();
-
-        // Pagination and filtering properties
+        // Pagination
         [BindProperty(SupportsGet = true)]
         public int PageNumber { get; set; } = 1;
-
+        
         [BindProperty(SupportsGet = true)]
         public int PageSize { get; set; } = 20;
-
+        
         public int TotalCount { get; set; } = 0;
-
         public int TotalPages => PageSize > 0 ? (int)Math.Ceiling((double)TotalCount / PageSize) : 0;
 
-        // Filter properties
+        // Filters
         [BindProperty(SupportsGet = true)]
         public string? SearchTerm { get; set; }
-
+        
         [BindProperty(SupportsGet = true)]
         public string? MaterialFilter { get; set; }
-
-        [BindProperty(SupportsGet = true)]
-        public string? IndustryFilter { get; set; }
-
+        
         [BindProperty(SupportsGet = true)]
         public string? CategoryFilter { get; set; }
-
+        
         [BindProperty(SupportsGet = true)]
         public string? StageFilter { get; set; }
-
+        
         [BindProperty(SupportsGet = true)]
         public string? ComplexityFilter { get; set; }
-
+        
         [BindProperty(SupportsGet = true)]
-        public bool ActiveOnly { get; set; } = false; // FIXED: Default to false to show all parts initially
+        public bool ActiveOnly { get; set; } = true;
 
-        // Sorting properties
+        // Sorting
         [BindProperty(SupportsGet = true)]
-        public string? SortBy { get; set; } = "PartNumber"; // Default sort
-
+        public string? SortBy { get; set; } = "PartNumber";
+        
         [BindProperty(SupportsGet = true)]
-        public string? SortDirection { get; set; } = "asc"; // Default sort direction
+        public string? SortDirection { get; set; } = "asc";
 
-        // Lists and statistics
+        // Statistics
         public List<string> AvailableMaterials { get; set; } = new();
-        public List<string> AvailableIndustries { get; set; } = new();
         public List<string> AvailableCategories { get; set; } = new();
         public int ActivePartsCount { get; set; } = 0;
         public int InactivePartsCount { get; set; } = 0;
         public string MostUsedMaterial { get; set; } = "N/A";
         public double AverageEstimatedHours { get; set; } = 0;
 
-        // Simplified ViewModels for bulletproof data passing
+        // PHASE 3: Form data with lookup support
         public PartFormViewModel PartFormData { get; set; } = new PartFormViewModel();
-
-        // Stage-related properties
-        public Dictionary<string, int> StageUsageStats { get; set; } = new();
-        public List<ProductionStage> AvailableStages { get; set; } = new List<ProductionStage>();
 
         public async Task<IActionResult> OnGetAsync()
         {
             try
             {
-                _logger.LogInformation("🔍 [PARTS] GET request - Loading parts page data");
+                _logger.LogInformation("?? [PARTS] Loading parts page");
 
-                // CRITICAL FIX: Initialize ActiveOnly to true by default only if not explicitly set
-                if (!Request.Query.ContainsKey("ActiveOnly"))
-                {
-                    ActiveOnly = true;
-                }
-
-                // Load component types and compliance categories for form
                 await LoadFormDataAsync();
-
-                // Load statistics first
                 await LoadStatisticsAsync();
-
-                // Load parts data with current filters
                 await LoadPartsDataAsync();
 
-                _logger.LogInformation("✅ [PARTS] Page data loaded successfully - {PartsCount} parts found (Total: {TotalCount})",
-                    Parts.Count, TotalCount);
-
+                _logger.LogInformation("? [PARTS] Page loaded - {Count} parts", Parts.Count);
                 return Page();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ [PARTS] Error loading parts page");
-
-                // Set safe defaults
-                TotalCount = 0;
-                Parts = new List<Part>();
-                ActivePartsCount = 0;
-                InactivePartsCount = 0;
-                MostUsedMaterial = "N/A";
-                AverageEstimatedHours = 0;
-
+                _logger.LogError(ex, "? [PARTS] Error loading page");
                 TempData["ErrorMessage"] = "Failed to load parts. Please try again.";
                 return Page();
             }
         }
 
-        /// <summary>
-        /// Get add part modal form - SIMPLIFIED for bulletproof reliability
-        /// </summary>
         public async Task<IActionResult> OnGetAddAsync()
         {
             var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogInformation("🔧 [PARTS-{OperationId}] Loading add part form", operationId);
+            _logger.LogInformation("?? [PARTS-{OperationId}] Loading add form", operationId);
 
             try
             {
-                // Create new part with essential defaults only
                 Part = CreateDefaultPart();
-
-                // Load form data in simple, predictable way
                 PartFormData = await CreatePartFormViewModelAsync(Part);
 
-                _logger.LogInformation("✅ [PARTS-{OperationId}] Add part form loaded successfully", operationId);
+                _logger.LogInformation("? [PARTS-{OperationId}] Add form loaded", operationId);
                 return Partial("Shared/_PartForm", this);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ [PARTS-{OperationId}] Error loading add part form", operationId);
+                _logger.LogError(ex, "? [PARTS-{OperationId}] Error loading add form", operationId);
                 return StatusCode(500, "Error loading form");
             }
         }
 
-        /// <summary>
-        /// Get edit part modal form - SIMPLIFIED for bulletproof reliability
-        /// </summary>
         public async Task<IActionResult> OnGetEditAsync(int id)
         {
             var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogInformation("🔧 [PARTS-{OperationId}] Loading edit part form for ID: {PartId}", operationId, id);
+            _logger.LogInformation("?? [PARTS-{OperationId}] Loading edit form for ID: {PartId}", operationId, id);
 
             try
             {
                 if (id <= 0)
                 {
-                    _logger.LogWarning("⚠️ [PARTS-{OperationId}] Invalid part ID: {PartId}", operationId, id);
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Invalid part ID: {PartId}", operationId, id);
                     return BadRequest("Invalid part ID");
                 }
 
-                Part = await _context.Parts.FindAsync(id);
+                Part = await _context.Parts
+                    .Include(p => p.ComponentType)
+                    .Include(p => p.ComplianceCategory)
+                    .Include(p => p.AssetLinks)
+                    .FirstOrDefaultAsync(p => p.Id == id);
+
                 if (Part == null)
                 {
-                    _logger.LogWarning("⚠️ [PARTS-{OperationId}] Part not found: {PartId}", operationId, id);
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Part not found: {PartId}", operationId, id);
                     return NotFound("Part not found");
                 }
 
-                // Load existing stage assignments
-                await LoadExistingStageAssignments(id);
-
-                // Load form data in simple, predictable way
                 PartFormData = await CreatePartFormViewModelAsync(Part);
 
-                _logger.LogInformation("✅ [PARTS-{OperationId}] Edit part form loaded successfully", operationId);
+                _logger.LogInformation("? [PARTS-{OperationId}] Edit form loaded", operationId);
                 return Partial("Shared/_PartForm", this);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ [PARTS-{OperationId}] Error loading edit part form for ID: {PartId}", operationId, id);
+                _logger.LogError(ex, "? [PARTS-{OperationId}] Error loading edit form for ID: {PartId}", operationId, id);
                 return StatusCode(500, "Error loading form");
             }
         }
 
-        /// <summary>
-        /// Delete part with comprehensive dependency checking
-        /// </summary>
-        public async Task<IActionResult> OnPostDeleteAsync(int id)
-        {
-            var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogInformation("🗑️ [PARTS-{OperationId}] Deleting part ID: {PartId}", operationId, id);
-
-            try
-            {
-                if (id <= 0)
-                {
-                    _logger.LogWarning("⚠️ [PARTS-{OperationId}] Invalid part ID for deletion: {PartId}", operationId, id);
-                    TempData["ErrorMessage"] = "Invalid part ID";
-                    return RedirectToPage();
-                }
-
-                var part = await _context.Parts.FindAsync(id);
-                if (part == null)
-                {
-                    _logger.LogWarning("⚠️ [PARTS-{OperationId}] Part not found for deletion: ID {PartId}", operationId, id);
-                    TempData["ErrorMessage"] = "Part not found. It may have already been deleted.";
-                    return RedirectToPage();
-                }
-
-                // Check dependencies
-                var dependencies = await CheckPartDependencies(part);
-                if (dependencies.Any())
-                {
-                    var dependencyList = string.Join(", ", dependencies);
-                    _logger.LogWarning("⚠️ [PARTS-{OperationId}] Cannot delete part with dependencies: {PartNumber} - Dependencies: {Dependencies}",
-                        operationId, part.PartNumber, dependencyList);
-                    TempData["ErrorMessage"] = $"Cannot delete part '{part.PartNumber}' because it is referenced by {dependencyList}.";
-                    return RedirectToPage();
-                }
-
-                // Delete with transaction
-                using var transaction = await _context.Database.BeginTransactionAsync();
-                try
-                {
-                    // Remove stage assignments first
-                    await _partStageService.RemoveAllPartStagesAsync(part.Id);
-
-                    _context.Parts.Remove(part);
-                    var result = await _context.SaveChangesAsync();
-
-                    if (result > 0)
-                    {
-                        await transaction.CommitAsync();
-                        _logger.LogInformation("✅ [PARTS-{OperationId}] Part deleted successfully: {PartNumber} (ID: {PartId})",
-                            operationId, part.PartNumber, part.Id);
-
-                        TempData["SuccessMessage"] = $"Part '{part.PartNumber}' deleted successfully";
-                        return RedirectToPage();
-                    }
-                    else
-                    {
-                        await transaction.RollbackAsync();
-                        TempData["ErrorMessage"] = "Failed to delete part. No changes were made.";
-                        return RedirectToPage();
-                    }
-                }
-                catch (Exception dbEx)
-                {
-                    await transaction.RollbackAsync();
-                    _logger.LogError(dbEx, "❌ [PARTS-{OperationId}] Database error deleting part", operationId);
-                    TempData["ErrorMessage"] = $"Database error: {GetFriendlyErrorMessage(dbEx)}";
-                    return RedirectToPage();
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ [PARTS-{OperationId}] Unexpected error deleting part ID: {PartId}", operationId, id);
-                TempData["ErrorMessage"] = $"Error deleting part: {ex.Message}";
-                return RedirectToPage();
-            }
-        }
-
-        /// <summary>
-        /// Create new part with stage assignments - ENHANCED ERROR HANDLING
-        /// </summary>
         public async Task<IActionResult> OnPostCreateAsync()
         {
             var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogInformation("➕ [PARTS-{OperationId}] Creating new part: {PartNumber}", operationId, Part.PartNumber);
+            _logger.LogInformation("? [PARTS-{OperationId}] Creating part: {PartNumber}", operationId, Part.PartNumber);
 
             try
             {
                 if (!ModelState.IsValid)
                 {
                     var errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList();
-                    _logger.LogWarning("⚠️ [PARTS-{OperationId}] Model validation failed: {Errors}", operationId, string.Join("; ", errors));
-                    return await HandleValidationError("Please fix the validation errors and try again.", Part);
-                }
-
-                // Essential field validation with enhanced error messages
-                var validationErrors = ValidateEssentialFields(Part);
-                if (validationErrors.Any())
-                {
-                    _logger.LogWarning("⚠️ [PARTS-{OperationId}] Field validation failed: {Errors}", operationId, string.Join("; ", validationErrors));
-                    foreach (var error in validationErrors)
-                    {
-                        ModelState.AddModelError("", error);
-                    }
-                    return await HandleValidationError("Please fix the validation errors below.", Part);
-                }
-
-                // Stage data validation (optional but helpful)
-                var stageValidationErrors = ValidateStageData();
-                if (stageValidationErrors.Any())
-                {
-                    _logger.LogWarning("⚠️ [PARTS-{OperationId}] Stage validation failed: {Errors}", operationId, string.Join("; ", stageValidationErrors));
-                    foreach (var error in stageValidationErrors)
-                    {
-                        ModelState.AddModelError("", error);
-                    }
-                    return await HandleValidationError("Please fix the stage configuration errors below.", Part);
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Validation failed: {Errors}", operationId, string.Join("; ", errors));
+                    return await HandleValidationError("Please fix the validation errors and try again.");
                 }
 
                 // Check for duplicate part number
@@ -353,122 +191,61 @@ namespace OpCentrix.Pages.Admin
 
                 if (existingPart != null)
                 {
-                    _logger.LogWarning("⚠️ [PARTS-{OperationId}] Duplicate part number: {PartNumber}", operationId, Part.PartNumber);
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Duplicate part number: {PartNumber}", operationId, Part.PartNumber);
                     ModelState.AddModelError("Part.PartNumber", $"Part number '{Part.PartNumber}' already exists");
-                    return await HandleValidationError("Part number already exists. Please choose a different part number.", Part);
+                    return await HandleValidationError("Part number already exists. Please choose a different part number.");
                 }
 
-                // Begin transaction for atomicity
-                using var transaction = await _context.Database.BeginTransactionAsync();
+                // Set defaults
+                SetPartDefaults(Part, isNew: true);
+                Part.IsLegacyForm = false; // Mark as modern form
 
-                try
+                _context.Parts.Add(Part);
+                var result = await _context.SaveChangesAsync();
+
+                if (result > 0)
                 {
-                    // Set defaults and audit fields
-                    SetPartDefaults(Part, isNew: true);
-
-                    // Add part to context
-                    _context.Parts.Add(Part);
-                    var result = await _context.SaveChangesAsync();
-
-                    if (result > 0)
-                    {
-                        _logger.LogInformation("✅ [PARTS-{OperationId}] Part created successfully: {PartNumber} (ID: {PartId})",
-                            operationId, Part.PartNumber, Part.Id);
-
-                        // Process stage assignments if provided
-                        if (SelectedStageIds?.Any() == true)
-                        {
-                            try
-                            {
-                                await ProcessStageAssignments(Part.Id, operationId);
-                                _logger.LogInformation("✅ [PARTS-{OperationId}] Stage assignments processed successfully", operationId);
-                            }
-                            catch (Exception stageEx)
-                            {
-                                _logger.LogError(stageEx, "❌ [PARTS-{OperationId}] Stage assignment failed", operationId);
-                                // Continue without failing the part creation - stages can be added later
-                            }
-                        }
-
-                        await transaction.CommitAsync();
-
-                        _logger.LogInformation("✅ [PARTS-{OperationId}] Part creation transaction completed successfully", operationId);
-                        return await HandleFormSuccess($"Part '{Part.PartNumber}' created successfully!");
-                    }
-                    else
-                    {
-                        await transaction.RollbackAsync();
-                        _logger.LogError("❌ [PARTS-{OperationId}] No rows affected during part creation", operationId);
-                        return await HandleValidationError("Failed to create part. No changes were made to the database.", Part);
-                    }
+                    _logger.LogInformation("? [PARTS-{OperationId}] Part created: {PartNumber} (ID: {PartId})", operationId, Part.PartNumber, Part.Id);
+                    return await HandleFormSuccess($"Part '{Part.PartNumber}' created successfully!");
                 }
-                catch (Exception dbEx)
+                else
                 {
-                    await transaction.RollbackAsync();
-                    _logger.LogError(dbEx, "❌ [PARTS-{OperationId}] Database error during part creation", operationId);
-                    return await HandleValidationError($"Database error: {GetFriendlyErrorMessage(dbEx)}", Part);
+                    _logger.LogError("? [PARTS-{OperationId}] No rows affected during creation", operationId);
+                    return await HandleValidationError("Failed to create part. No changes were made to the database.");
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ [PARTS-{OperationId}] Unexpected error creating part", operationId);
-                return await HandleValidationError($"Unexpected error: {ex.Message}", Part);
+                _logger.LogError(ex, "? [PARTS-{OperationId}] Error creating part", operationId);
+                return await HandleValidationError($"Unexpected error: {ex.Message}");
             }
         }
 
-        /// <summary>
-        /// Update existing part with stage assignments - ENHANCED ERROR HANDLING
-        /// </summary>
         public async Task<IActionResult> OnPostUpdateAsync()
         {
             var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogInformation("📝 [PARTS-{OperationId}] Updating part: {PartNumber} (ID: {PartId})", operationId, Part.PartNumber, Part.Id);
+            _logger.LogInformation("?? [PARTS-{OperationId}] Updating part: {PartNumber} (ID: {PartId})", operationId, Part.PartNumber, Part.Id);
 
             try
             {
                 if (Part.Id <= 0)
                 {
-                    _logger.LogWarning("⚠️ [PARTS-{OperationId}] Invalid part ID for update: {PartId}", operationId, Part.Id);
-                    return await HandleValidationError("Invalid part ID. Please try again.", Part);
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Invalid part ID for update: {PartId}", operationId, Part.Id);
+                    return await HandleValidationError("Invalid part ID. Please try again.");
                 }
 
                 if (!ModelState.IsValid)
                 {
                     var errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList();
-                    _logger.LogWarning("⚠️ [PARTS-{OperationId}] Model validation failed: {Errors}", operationId, string.Join("; ", errors));
-                    return await HandleValidationError("Please fix the validation errors and try again.", Part);
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Validation failed: {Errors}", operationId, string.Join("; ", errors));
+                    return await HandleValidationError("Please fix the validation errors and try again.");
                 }
 
-                // Get existing part
                 var existingPart = await _context.Parts.FindAsync(Part.Id);
                 if (existingPart == null)
                 {
-                    _logger.LogWarning("⚠️ [PARTS-{OperationId}] Part not found for update: ID {PartId}", operationId, Part.Id);
-                    return await HandleValidationError("Part not found. It may have been deleted by another user.", Part);
-                }
-
-                // Essential field validation
-                var validationErrors = ValidateEssentialFields(Part);
-                if (validationErrors.Any())
-                {
-                    _logger.LogWarning("⚠️ [PARTS-{OperationId}] Field validation failed: {Errors}", operationId, string.Join("; ", validationErrors));
-                    foreach (var error in validationErrors)
-                    {
-                        ModelState.AddModelError("", error);
-                    }
-                    return await HandleValidationError("Please fix the validation errors below.", Part);
-                }
-
-                // Stage data validation (optional but helpful)
-                var stageValidationErrors = ValidateStageData();
-                if (stageValidationErrors.Any())
-                {
-                    _logger.LogWarning("⚠️ [PARTS-{OperationId}] Stage validation failed: {Errors}", operationId, string.Join("; ", stageValidationErrors));
-                    foreach (var error in stageValidationErrors)
-                    {
-                        ModelState.AddModelError("", error);
-                    }
-                    return await HandleValidationError("Please fix the stage configuration errors below.", Part);
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Part not found for update: ID {PartId}", operationId, Part.Id);
+                    return await HandleValidationError("Part not found. It may have been deleted by another user.");
                 }
 
                 // Check for duplicate part number (excluding current part)
@@ -478,227 +255,278 @@ namespace OpCentrix.Pages.Admin
 
                 if (duplicatePart != null)
                 {
-                    _logger.LogWarning("⚠️ [PARTS-{OperationId}] Duplicate part number: {PartNumber}", operationId, Part.PartNumber);
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Duplicate part number: {PartNumber}", operationId, Part.PartNumber);
                     ModelState.AddModelError("Part.PartNumber", $"Part number '{Part.PartNumber}' already exists");
-                    return await HandleValidationError("Part number already exists. Please choose a different part number.", Part);
+                    return await HandleValidationError("Part number already exists. Please choose a different part number.");
                 }
 
-                // Begin transaction for atomicity
-                using var transaction = await _context.Database.BeginTransactionAsync();
+                // Update fields while preserving creation data
+                SetPartDefaults(Part, isNew: false, existingPart);
+                Part.IsLegacyForm = false; // Mark as modern form
 
+                _context.Entry(existingPart).CurrentValues.SetValues(Part);
+                var result = await _context.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    _logger.LogInformation("? [PARTS-{OperationId}] Part updated: {PartNumber} (ID: {PartId})", operationId, Part.PartNumber, Part.Id);
+                    return await HandleFormSuccess($"Part '{Part.PartNumber}' updated successfully!");
+                }
+                else
+                {
+                    _logger.LogError("? [PARTS-{OperationId}] No rows affected during update", operationId);
+                    return await HandleValidationError("Failed to update part. No changes were detected.");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "? [PARTS-{OperationId}] Error updating part", operationId);
+                return await HandleValidationError($"Unexpected error: {ex.Message}");
+            }
+        }
+
+        public async Task<IActionResult> OnPostDeleteAsync(int id)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("??? [PARTS-{OperationId}] Deleting part ID: {PartId}", operationId, id);
+
+            try
+            {
+                if (id <= 0)
+                {
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Invalid part ID for deletion: {PartId}", operationId, id);
+                    TempData["ErrorMessage"] = "Invalid part ID";
+                    return RedirectToPage();
+                }
+
+                var part = await _context.Parts.FindAsync(id);
+                if (part == null)
+                {
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Part not found for deletion: ID {PartId}", operationId, id);
+                    TempData["ErrorMessage"] = "Part not found. It may have already been deleted.";
+                    return RedirectToPage();
+                }
+
+                _context.Parts.Remove(part);
+                var result = await _context.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    _logger.LogInformation("? [PARTS-{OperationId}] Part deleted: {PartNumber} (ID: {PartId})", operationId, part.PartNumber, part.Id);
+                    TempData["SuccessMessage"] = $"Part '{part.PartNumber}' deleted successfully";
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = "Failed to delete part. No changes were made.";
+                }
+
+                return RedirectToPage();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "? [PARTS-{OperationId}] Error deleting part ID: {PartId}", operationId, id);
+                TempData["ErrorMessage"] = $"Error deleting part: {ex.Message}";
+                return RedirectToPage();
+            }
+        }
+
+        public async Task<IActionResult> OnGetPartStagesAsync(int partId)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("?? [PARTS-{OperationId}] Loading stages for part ID: {PartId}", operationId, partId);
+
+            try
+            {
+                if (partId <= 0)
+                {
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Invalid part ID: {PartId}", operationId, partId);
+                    return BadRequest("Invalid part ID");
+                }
+
+                var stages = await _partStageService.GetPartStagesWithDetailsAsync(partId);
+
+                _logger.LogInformation("? [PARTS-{OperationId}] Loaded {StageCount} stages for part {PartId}", operationId, stages.Count, partId);
+                return new JsonResult(stages);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "? [PARTS-{OperationId}] Error loading stages for part ID: {PartId}", operationId, partId);
+                return StatusCode(500, "Error loading stages");
+            }
+        }
+
+        public async Task<IActionResult> OnPostAddStageAsync([FromBody] AddStageRequest request)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("? [PARTS-{OperationId}] Adding stage {StageId} to part {PartId}", operationId, request.StageId, request.PartId);
+
+            try
+            {
+                if (request.PartId <= 0 || request.StageId <= 0)
+                {
+                    return BadRequest("Invalid part or stage ID");
+                }
+
+                var partStageRequirement = new PartStageRequirement
+                {
+                    PartId = request.PartId,
+                    ProductionStageId = request.StageId,
+                    ExecutionOrder = request.ExecutionOrder,
+                    EstimatedHours = request.EstimatedHours,
+                    SetupTimeMinutes = request.SetupTimeMinutes,
+                    HourlyRateOverride = request.HourlyRateOverride,
+                    MaterialCost = request.MaterialCost,
+                    IsRequired = request.IsRequired,
+                    RequirementNotes = request.RequirementNotes ?? "",
+                    SpecialInstructions = request.SpecialInstructions ?? "",
+                    IsActive = true,
+                    CreatedBy = User.Identity?.Name ?? "System",
+                    CreatedDate = DateTime.UtcNow,
+                    LastModifiedBy = User.Identity?.Name ?? "System",
+                    LastModifiedDate = DateTime.UtcNow
+                };
+
+                var success = await _partStageService.AddPartStageAsync(partStageRequirement);
+
+                if (success)
+                {
+                    _logger.LogInformation("? [PARTS-{OperationId}] Stage added successfully", operationId);
+                    return new JsonResult(new { success = true, message = "Stage added successfully" });
+                }
+                else
+                {
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Failed to add stage", operationId);
+                    return new JsonResult(new { success = false, message = "Failed to add stage" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "? [PARTS-{OperationId}] Error adding stage", operationId);
+                return StatusCode(500, "Error adding stage");
+            }
+        }
+
+        public async Task<IActionResult> OnPostRemoveStageAsync([FromBody] RemoveStageRequest request)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("??? [PARTS-{OperationId}] Removing stage {StageId} from part {PartId}", operationId, request.StageId, request.PartId);
+
+            try
+            {
+                if (request.PartId <= 0 || request.StageId <= 0)
+                {
+                    return BadRequest("Invalid part or stage ID");
+                }
+
+                var success = await _partStageService.RemovePartStageAsync(request.PartId, request.StageId);
+
+                if (success)
+                {
+                    _logger.LogInformation("? [PARTS-{OperationId}] Stage removed successfully", operationId);
+                    return new JsonResult(new { success = true, message = "Stage removed successfully" });
+                }
+                else
+                {
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Failed to remove stage", operationId);
+                    return new JsonResult(new { success = false, message = "Failed to remove stage" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "? [PARTS-{OperationId}] Error removing stage", operationId);
+                return StatusCode(500, "Error removing stage");
+            }
+        }
+
+        #region Helper Methods
+
+        private async Task LoadFormDataAsync()
+        {
+            try
+            {
+                var componentTypes = await _componentTypeService.GetActiveComponentTypesAsync();
+                var complianceCategories = await _complianceCategoryService.GetActiveCategoriesAsync();
+                var availableStages = await _context.ProductionStages
+                    .Where(ps => ps.IsActive)
+                    .OrderBy(ps => ps.Name)
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                PartFormData = new PartFormViewModel
+                {
+                    Part = Part ?? CreateDefaultPart(),
+                    ComponentTypes = componentTypes,
+                    ComplianceCategories = complianceCategories,
+                    AvailableStages = availableStages,
+                    ExistingStages = new List<PartStageRequirement>(),
+                    ExistingAssets = new List<PartAssetLink>()
+                };
+
+                _logger.LogInformation("? [PARTS] Form data loaded - {ComponentTypesCount} component types, {ComplianceCategoriesCount} compliance categories",
+                    componentTypes.Count, complianceCategories.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "? [PARTS] Error loading form data");
+                PartFormData = new PartFormViewModel
+                {
+                    Part = Part ?? CreateDefaultPart(),
+                    ComponentTypes = new List<ComponentType>(),
+                    ComplianceCategories = new List<ComplianceCategory>(),
+                    AvailableStages = new List<ProductionStage>(),
+                    ExistingStages = new List<PartStageRequirement>(),
+                    ExistingAssets = new List<PartAssetLink>()
+                };
+            }
+        }
+
+        private async Task<PartFormViewModel> CreatePartFormViewModelAsync(Part part)
+        {
+            var viewModel = new PartFormViewModel
+            {
+                Part = part,
+                ComponentTypes = await _componentTypeService.GetActiveComponentTypesAsync(),
+                ComplianceCategories = await _complianceCategoryService.GetActiveCategoriesAsync(),
+                AvailableStages = await _context.ProductionStages
+                    .Where(ps => ps.IsActive)
+                    .OrderBy(ps => ps.Name)
+                    .ToListAsync(),
+                AvailableMaterials = await _context.Parts
+                    .Where(p => !string.IsNullOrEmpty(p.Material))
+                    .Select(p => p.Material)
+                    .Distinct()
+                    .OrderBy(m => m)
+                    .ToListAsync()
+            };
+
+            if (part.Id > 0)
+            {
                 try
                 {
-                    // Update existing part fields while preserving creation data
-                    SetPartDefaults(Part, isNew: false, existingPart);
-
-                    // Update the existing entity
-                    _context.Entry(existingPart).CurrentValues.SetValues(Part);
-
-                    var result = await _context.SaveChangesAsync();
-
-                    if (result > 0)
-                    {
-                        _logger.LogInformation("✅ [PARTS-{OperationId}] Part updated successfully: {PartNumber} (ID: {PartId})",
-                            operationId, Part.PartNumber, Part.Id);
-
-                        // Process stage assignments if provided
-                        if (SelectedStageIds?.Any() == true)
-                        {
-                            try
-                            {
-                                await ProcessStageAssignments(Part.Id, operationId);
-                                _logger.LogInformation("✅ [PARTS-{OperationId}] Stage assignments updated successfully", operationId);
-                            }
-                            catch (Exception stageEx)
-                            {
-                                _logger.LogError(stageEx, "❌ [PARTS-{OperationId}] Stage assignment update failed", operationId);
-                                // Continue without failing the part update - stages can be modified later
-                            }
-                        }
-
-                        await transaction.CommitAsync();
-
-                        _logger.LogInformation("✅ [PARTS-{OperationId}] Part update transaction completed successfully", operationId);
-                        return await HandleFormSuccess($"Part '{Part.PartNumber}' updated successfully!");
-                    }
-                    else
-                    {
-                        await transaction.RollbackAsync();
-                        _logger.LogError("❌ [PARTS-{OperationId}] No rows affected during part update", operationId);
-                        return await HandleValidationError("Failed to update part. No changes were detected.", Part);
-                    }
-                }
-                catch (Exception dbEx)
-                {
-                    await transaction.RollbackAsync();
-                    _logger.LogError(dbEx, "❌ [PARTS-{OperationId}] Database error during part update", operationId);
-                    return await HandleValidationError($"Database error: {GetFriendlyErrorMessage(dbEx)}", Part);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ [PARTS-{OperationId}] Unexpected error updating part", operationId);
-                return await HandleValidationError($"Unexpected error: {ex.Message}", Part);
-            }
-        }
-
-        #region Private Helper Methods - ENHANCED WITH STAGE MANAGEMENT
-
-        private async Task LoadStageDataAsync()
-        {
-            try
-            {
-                StageUsageStats = await _partStageService.GetStageUsageStatisticsAsync();
-                AvailableStages = await _partStageService.GetAvailableStagesAsync();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading stage data");
-            }
-        }
-
-        private async Task LoadExistingStageAssignments(int partId)
-        {
-            try
-            {
-                var partStages = await _partStageService.GetPartStagesWithDetailsAsync(partId);
-
-                SelectedStageIds = partStages.Select(ps => ps.ProductionStageId).ToList();
-                StageExecutionOrders = partStages.Select(ps => ps.ExecutionOrder).ToList();
-                StageEstimatedHours = partStages.Select(ps => ps.EstimatedHours ?? (ps.ProductionStage?.DefaultDurationHours ?? 1.0)).ToList();
-                StageHourlyRates = partStages.Select(ps => ps.HourlyRateOverride ?? (ps.ProductionStage?.DefaultHourlyRate ?? 85.00m)).ToList();
-                StageMaterialCosts = partStages.Select(ps => ps.MaterialCost).ToList();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading existing stage assignments for part {PartId}", partId);
-            }
-        }
-
-        private async Task ProcessStageAssignments(int partId, string operationId)
-        {
-            try
-            {
-                _logger.LogInformation("Processing stage assignments for part {PartId}, operation {OperationId}", partId, operationId);
-
-                // Skip if no stage data provided
-                if (SelectedStageIds == null || !SelectedStageIds.Any())
-                {
-                    _logger.LogInformation("No stage assignments to process for part {PartId}", partId);
-                    return;
-                }
-
-                // Validate that all arrays have the same length
-                var stageCount = SelectedStageIds.Count;
-                if (StageExecutionOrders?.Count != stageCount ||
-                    StageEstimatedHours?.Count != stageCount ||
-                    StageHourlyRates?.Count != stageCount ||
-                    StageMaterialCosts?.Count != stageCount)
-                {
-                    _logger.LogWarning("Stage data arrays have mismatched lengths for part {PartId}", partId);
-                    throw new InvalidOperationException("Stage data is incomplete or mismatched");
-                }
-
-                // Begin transaction for atomicity
-                using var transaction = await _context.Database.BeginTransactionAsync();
-
-                try
-                {
-                    // Step 1: Deactivate existing stage requirements
-                    var existingStages = await _context.PartStageRequirements
-                        .Where(psr => psr.PartId == partId)
-                        .ToListAsync();
-
-                    foreach (var existingStage in existingStages)
-                    {
-                        existingStage.IsActive = false;
-                        existingStage.LastModifiedBy = User.Identity?.Name ?? "System";
-                        existingStage.LastModifiedDate = DateTime.UtcNow;
-                    }
-
-                    // Step 2: Create new stage requirements
-                    for (int i = 0; i < stageCount; i++)
-                    {
-                        var stageId = SelectedStageIds[i];
-                        var executionOrder = StageExecutionOrders?[i] ?? (i + 1);
-                        var estimatedHours = StageEstimatedHours?[i] ?? 1.0;
-                        var hourlyRate = StageHourlyRates?[i] ?? 85.00m;
-                        var materialCost = StageMaterialCosts?[i] ?? 0.00m;
-
-                        // Validate that the production stage exists
-                        var productionStage = await _context.ProductionStages.FindAsync(stageId);
-                        if (productionStage == null)
-                        {
-                            _logger.LogWarning("Production stage {StageId} not found for part {PartId}", stageId, partId);
-                            continue;
-                        }
-
-                        var stageRequirement = new PartStageRequirement
-                        {
-                            PartId = partId,
-                            ProductionStageId = stageId,
-                            ExecutionOrder = executionOrder,
-                            EstimatedHours = estimatedHours,
-                            SetupTimeMinutes = productionStage.DefaultSetupMinutes,
-                            HourlyRateOverride = hourlyRate != productionStage.DefaultHourlyRate ? hourlyRate : null,
-                            MaterialCost = materialCost,
-                            IsRequired = true,
-                            IsActive = true,
-                            IsBlocking = true,
-                            AllowParallelExecution = false,
-                            RequiresSpecificMachine = false,
-                            EstimatedCost = 0.0m, // Will be calculated
-                            CreatedBy = User.Identity?.Name ?? "System",
-                            CreatedDate = DateTime.UtcNow,
-                            LastModifiedBy = User.Identity?.Name ?? "System",
-                            LastModifiedDate = DateTime.UtcNow,
-                            CustomFieldValues = "{}",
-                            QualityRequirements = "{}",
-                            RequiredMaterials = "[]",
-                            RequiredTooling = string.Empty,
-                            RequirementNotes = $"Added via modern stage management - {operationId}",
-                            SpecialInstructions = string.Empty,
-                            StageParameters = "{}"
-                        };
-
-                        _context.PartStageRequirements.Add(stageRequirement);
-
-                        _logger.LogInformation("Added stage requirement: Part {PartId}, Stage {StageId}, Order {Order}",
-                            partId, stageId, executionOrder);
-                    }
-
-                    // Step 3: Mark part as using modern form (not legacy)
-                    var part = await _context.Parts.FindAsync(partId);
-                    if (part != null)
-                    {
-                        part.IsLegacyForm = false;
-                        part.LastModifiedBy = User.Identity?.Name ?? "System";
-                        part.LastModifiedDate = DateTime.UtcNow;
-                    }
-
-                    await _context.SaveChangesAsync();
-                    await transaction.CommitAsync();
-
-                    _logger.LogInformation("Successfully processed {Count} stage assignments for part {PartId}",
-                        stageCount, partId);
+                    // Load existing assets
+                    viewModel.ExistingAssets = await _partAssetService.GetPartAssetsAsync(part.Id);
+                    
+                    // Load existing stages using the correct service method
+                    viewModel.ExistingStages = await _partStageService.GetPartStagesWithDetailsAsync(part.Id);
+                    
+                    _logger.LogInformation("? [PARTS] Loaded {AssetCount} assets and {StageCount} stages for part {PartId}", 
+                        viewModel.ExistingAssets.Count, viewModel.ExistingStages.Count, part.Id);
                 }
                 catch (Exception ex)
                 {
-                    await transaction.RollbackAsync();
-                    _logger.LogError(ex, "Error processing stage assignments for part {PartId}, rolling back transaction", partId);
-                    throw;
+                    _logger.LogError(ex, "? [PARTS] Error loading part assets/stages for part {PartId}", part.Id);
+                    viewModel.ExistingAssets = new List<PartAssetLink>();
+                    viewModel.ExistingStages = new List<PartStageRequirement>();
                 }
             }
-            catch (Exception ex)
+            else
             {
-                _logger.LogError(ex, "Failed to process stage assignments for part {PartId}", partId);
-                throw new InvalidOperationException($"Failed to process stage assignments: {ex.Message}", ex);
+                viewModel.ExistingAssets = new List<PartAssetLink>();
+                viewModel.ExistingStages = new List<PartStageRequirement>();
             }
+
+            return viewModel;
         }
-
-        #endregion
-
-        #region Private Helper Methods - SIMPLIFIED
 
         private Part CreateDefaultPart()
         {
@@ -708,414 +536,31 @@ namespace OpCentrix.Pages.Admin
                 PartNumber = "",
                 Name = "",
                 Description = "",
-                Industry = "Firearms", // Updated to match B&T focus
-                Application = "B&T Manufacturing", // Updated to match B&T focus
                 Material = "Ti-6Al-4V Grade 5",
-                SlsMaterial = "Ti-6Al-4V Grade 5", // Ensure SLS material matches
+                SlsMaterial = "Ti-6Al-4V Grade 5",
                 EstimatedHours = 8.0,
                 MaterialCostPerKg = 450.00m,
                 StandardLaborCostPerHour = 85.00m,
                 PartCategory = "Production",
-                PartClass = "B",
                 ProcessType = "SLS Metal",
-                RequiredMachineType = "TruPrint 3000",
+                SurfaceFinishRequirement = "As-built",
                 IsActive = true,
-                RequiresSLSPrinting = true,
-                RequiresInspection = true,
                 CreatedDate = DateTime.UtcNow,
                 CreatedBy = User.Identity?.Name ?? "System",
-
-                // B&T Manufacturing defaults
-                BTComponentType = "General",
-                BTFirearmCategory = "Component",
-                ManufacturingStage = "Design",
-                StageDetails = "{}",
-                StageOrder = 1,
-
-                // PHASE 4: Set lookup field defaults to avoid validation errors
-                ComponentTypeId = 1, // Default to "General" component type
-                ComplianceCategoryId = 1, // Default to "Non NFA" compliance
-
-                // Ensure all required string fields have defaults
+                ComponentTypeId = 1, // Default to "General"
+                ComplianceCategoryId = 1, // Default to "Non NFA"
+                IsLegacyForm = false,
                 CustomerPartNumber = "",
                 Dimensions = "",
-                SurfaceFinishRequirement = "As-built",
-                PowderSpecification = "15-45 micron particle size",
-                PreferredMachines = "TI1,TI2",
-                RequiredSkills = "SLS Operation,Powder Handling,Inert Gas Safety,Post-Processing",
-                RequiredCertifications = "SLS Operation Certification,Powder Safety Training",
-                RequiredTooling = "Build Platform,Powder Sieve,Support Removal Tools",
-                ConsumableMaterials = "Argon Gas,Build Platform Coating",
-                SupportStrategy = "Minimal supports on overhangs > 45°",
-                QualityStandards = "ASTM F3001, ISO 17296",
-                ToleranceRequirements = "±0.1mm typical, ±0.05mm critical dimensions",
-                ProcessParameters = "{}",
-                QualityCheckpoints = "{}",
-                BuildFileTemplate = "",
-                CadFilePath = "",
-                CadFileVersion = "",
-                AvgDuration = "8h 0m",
-                AvgDurationDays = 1,
                 AdminOverrideReason = "",
                 AdminOverrideBy = "",
-
-                // B&T specific defaults
-                BTSuppressorType = "",
-                BTBafflePosition = "",
-                BTCaliberCompatibility = "",
-                BTThreadPitch = "",
-                SerialNumberFormat = "BT-{YYYY}-{####}",
-                BatchControlMethod = "Standard",
-                MaxBatchSize = 1,
-                ParentComponents = "[]",
-                ChildComponents = "[]",
-                WorkflowTemplate = "BT_Standard_Workflow",
-                ApprovalWorkflow = "Standard",
-                ATFClassification = "",
-                FFLRequirements = "",
-                ITARCategory = "",
-                EARClassification = "",
-                ExportControlNotes = "",
-                ExportClassification = "",
-                FirearmType = "",
-                BTTestingProtocol = "",
-                BTQualitySpecification = "",
-                BTTestingRequirements = "",
-                BTQualityStandards = "",
-                BTRegulatoryNotes = "",
-
-                // Initialize numeric fields with safe defaults
-                PowderRequirementKg = 0.5,
-                RecommendedLaserPower = 200,
-                RecommendedScanSpeed = 1200,
-                RecommendedLayerThickness = 30,
-                RecommendedHatchSpacing = 120,
-                RecommendedBuildTemperature = 180,
-                RequiredArgonPurity = 99.9,
-                MaxOxygenContent = 50,
                 WeightGrams = 0,
                 VolumeMm3 = 0,
                 HeightMm = 0,
                 LengthMm = 0,
                 WidthMm = 0,
-                MaxSurfaceRoughnessRa = 25,
-                SetupCost = 150.00m,
-                PostProcessingCost = 75.00m,
-                QualityInspectionCost = 50.00m,
-                MachineOperatingCostPerHour = 125.00m,
-                ArgonCostPerHour = 15.00m,
-                SetupTimeMinutes = 45,
-                PowderChangeoverTimeMinutes = 30,
-                PreheatingTimeMinutes = 60,
-                CoolingTimeMinutes = 240,
-                PostProcessingTimeMinutes = 45,
-                SupportRemovalTimeMinutes = 0,
-                AverageActualHours = 0,
-                AverageEfficiencyPercent = 100,
-                AverageQualityScore = 100,
-                AverageDefectRate = 0,
-                AveragePowderUtilization = 85,
-                TotalJobsCompleted = 0,
-                TotalUnitsProduced = 0,
-                AverageCostPerUnit = 0,
-                StandardSellingPrice = 0,
-
-                // B&T cost defaults
-                BTLicensingCost = 0.00m,
-                ComplianceCost = 0.00m,
-                TestingCost = 0.00m,
-                DocumentationCost = 0.00m
+                MaxSurfaceRoughnessRa = 25
             };
-        }
-
-        private async Task<PartFormViewModel> CreatePartFormViewModelAsync(Part part)
-        {
-            var viewModel = new PartFormViewModel
-            {
-                Part = part,
-                AvailableMaterials = await _context.Parts
-                    .Where(p => !string.IsNullOrEmpty(p.Material))
-                    .Select(p => p.Material)
-                    .Distinct()
-                    .OrderBy(m => m)
-                    .ToListAsync(),
-                AvailableIndustries = await _context.Parts
-                    .Where(p => !string.IsNullOrEmpty(p.Industry))
-                    .Select(p => p.Industry)
-                    .Distinct()
-                    .OrderBy(i => i)
-                    .ToListAsync(),
-                AvailableApplications = await _context.Parts
-                    .Where(p => !string.IsNullOrEmpty(p.Application))
-                    .Select(p => p.Application)
-                    .Distinct()
-                    .OrderBy(a => a)
-                    .ToListAsync(),
-                AvailableStages = await _partStageService.GetAvailableStagesAsync(),
-                ComponentTypes = await _componentTypeService.GetActiveComponentTypesAsync(),
-                ComplianceCategories = await _complianceCategoryService.GetActiveCategoriesAsync()
-            };
-
-            // Phase 5: Load asset data for existing parts
-            if (part.Id > 0)
-            {
-                viewModel.ExistingAssets = await _partAssetService.GetPartAssetsAsync(part.Id);
-                viewModel.AssetStatistics = await _partAssetService.GetAssetUsageStatisticsAsync();
-
-                // Load supported file types for all asset types
-                var assetTypes = new[] { "3DModel", "Photo", "Drawing", "Document" };
-                foreach (var assetType in assetTypes)
-                {
-                    viewModel.SupportedFileTypes[assetType] = await _partAssetService.GetSupportedFileTypesAsync(assetType);
-                    viewModel.MaxFileSizes[assetType] = await _partAssetService.GetMaxFileSizeAsync(assetType);
-                }
-            }
-
-            return viewModel;
-        }
-
-        private List<string> ValidateEssentialFields(Part part)
-        {
-            var errors = new List<string>();
-
-            // Required field validation with better error messages
-            if (string.IsNullOrWhiteSpace(part.PartNumber))
-            {
-                errors.Add("Part Number is required");
-            }
-            else
-            {
-                if (part.PartNumber.Length > 50)
-                    errors.Add("Part Number cannot exceed 50 characters");
-
-                if (!System.Text.RegularExpressions.Regex.IsMatch(part.PartNumber, @"^[A-Z0-9][A-Z0-9\-_]{2,49}$", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
-                    errors.Add("Part Number must be 3-50 characters, alphanumeric with hyphens/underscores only");
-            }
-
-            if (string.IsNullOrWhiteSpace(part.Name))
-            {
-                errors.Add("Part Name is required");
-            }
-            else if (part.Name.Length > 200)
-            {
-                errors.Add("Part Name cannot exceed 200 characters");
-            }
-
-            if (string.IsNullOrWhiteSpace(part.Description))
-            {
-                errors.Add("Description is required");
-            }
-            else if (part.Description.Length > 500)
-            {
-                errors.Add("Description cannot exceed 500 characters");
-            }
-
-            // Lookup field validation with defaults
-            if (!part.ComponentTypeId.HasValue)
-            {
-                part.ComponentTypeId = 1; // Set default
-                _logger.LogInformation("Setting default ComponentTypeId = 1 for part");
-            }
-
-            if (!part.ComplianceCategoryId.HasValue)
-            {
-                part.ComplianceCategoryId = 1; // Set default 
-                _logger.LogInformation("Setting default ComplianceCategoryId = 1 for part");
-            }
-
-            if (string.IsNullOrWhiteSpace(part.Material))
-            {
-                errors.Add("Material is required");
-            }
-            else if (part.Material.Length > 100)
-            {
-                errors.Add("Material cannot exceed 100 characters");
-            }
-
-            // Numeric field validation with safe defaults
-            if (part.EstimatedHours <= 0)
-            {
-                part.EstimatedHours = 8.0; // Set default instead of error
-                _logger.LogInformation("Setting default EstimatedHours = 8.0 for part");
-            }
-            else if (part.EstimatedHours > 200)
-            {
-                errors.Add("Estimated Hours cannot exceed 200 hours");
-            }
-
-            if (part.MaterialCostPerKg < 0)
-            {
-                part.MaterialCostPerKg = 450.00m; // Set default instead of error
-                _logger.LogInformation("Setting default MaterialCostPerKg = 450.00 for part");
-            }
-            else if (part.MaterialCostPerKg > 10000)
-            {
-                errors.Add("Material Cost seems unreasonably high (over $10,000/kg)");
-            }
-
-            if (part.StandardLaborCostPerHour < 0)
-            {
-                part.StandardLaborCostPerHour = 85.00m; // Set default instead of error
-                _logger.LogInformation("Setting default StandardLaborCostPerHour = 85.00 for part");
-            }
-            else if (part.StandardLaborCostPerHour > 500)
-            {
-                errors.Add("Labor Cost seems unreasonably high (over $500/hour)");
-            }
-
-            // Physical properties validation with auto-correction
-            if (part.WeightGrams < 0)
-            {
-                part.WeightGrams = 0;
-                _logger.LogInformation("Corrected negative WeightGrams to 0 for part");
-            }
-
-            if (part.LengthMm < 0 || part.WidthMm < 0 || part.HeightMm < 0)
-            {
-                if (part.LengthMm < 0) part.LengthMm = 0;
-                if (part.WidthMm < 0) part.WidthMm = 0;
-                if (part.HeightMm < 0) part.HeightMm = 0;
-                _logger.LogInformation("Corrected negative dimensions for part");
-            }
-
-            if (part.LengthMm > 1000 || part.WidthMm > 1000 || part.HeightMm > 1000)
-            {
-                errors.Add("Dimensions seem unreasonably large (over 1000mm) - please verify");
-            }
-
-            // B&T specific validation with auto-correction
-            if (part.RequiresATFForm1 || part.RequiresATFForm4)
-            {
-                if (string.IsNullOrWhiteSpace(part.ATFClassification))
-                {
-                    part.ATFClassification = "Pending Classification"; // Set default instead of error
-                    _logger.LogInformation("Setting default ATF classification for part requiring ATF forms");
-                }
-            }
-
-            if (part.RequiresTaxStamp && !part.TaxStampAmount.HasValue)
-            {
-                part.TaxStampAmount = 200.00m; // Set default tax stamp amount
-                _logger.LogInformation("Setting default tax stamp amount for part requiring tax stamp");
-            }
-
-            if (part.RequiresExportLicense && string.IsNullOrWhiteSpace(part.ITARCategory))
-            {
-                part.ITARCategory = "Under Review"; // Set default instead of error
-                _logger.LogInformation("Setting default ITAR category for export controlled part");
-            }
-
-            // Admin override validation - make optional
-            if (part.AdminEstimatedHoursOverride.HasValue && part.AdminEstimatedHoursOverride.Value <= 0)
-            {
-                part.AdminEstimatedHoursOverride = null; // Clear invalid override
-                _logger.LogInformation("Cleared invalid admin override hours for part");
-            }
-
-            // Business logic validation - warnings instead of blocking errors
-            if (part.BTComponentType == "Suppressor" && !part.RequiresTaxStamp)
-            {
-                _logger.LogWarning("Suppressor component may require a tax stamp: {PartNumber}", part.PartNumber);
-            }
-
-            if (part.BTFirearmCategory == "Firearm" && !part.RequiresUniqueSerialNumber)
-            {
-                _logger.LogWarning("Firearm component may require unique serial number: {PartNumber}", part.PartNumber);
-            }
-
-            return errors;
-        }
-
-        /// <summary>
-        /// Enhanced validation that includes stage requirements validation
-        /// </summary>
-        private List<string> ValidateStageData()
-        {
-            var errors = new List<string>();
-
-            try
-            {
-                // Skip validation if no stage data provided
-                if (SelectedStageIds == null || !SelectedStageIds.Any())
-                {
-                    _logger.LogInformation("No stage data provided for validation");
-                    return errors; // Not an error - stages are optional
-                }
-
-                // Validate array lengths match
-                var stageCount = SelectedStageIds.Count;
-                if (StageExecutionOrders?.Count != stageCount ||
-                    StageEstimatedHours?.Count != stageCount ||
-                    StageHourlyRates?.Count != stageCount ||
-                    StageMaterialCosts?.Count != stageCount)
-                {
-                    errors.Add("Stage data is incomplete - please refresh the form and try again");
-                    return errors;
-                }
-
-                // Validate individual stage data
-                for (int i = 0; i < stageCount; i++)
-                {
-                    var stageId = SelectedStageIds[i];
-                    var executionOrder = StageExecutionOrders?[i] ?? 0;
-                    var estimatedHours = StageEstimatedHours?[i] ?? 0;
-                    var hourlyRate = StageHourlyRates?[i] ?? 0;
-                    var materialCost = StageMaterialCosts?[i] ?? 0;
-
-                    if (stageId <= 0)
-                    {
-                        errors.Add($"Invalid stage ID at position {i + 1}");
-                        continue;
-                    }
-
-                    if (executionOrder <= 0)
-                    {
-                        errors.Add($"Stage {stageId}: Execution order must be greater than 0");
-                    }
-
-                    if (estimatedHours <= 0)
-                    {
-                        errors.Add($"Stage {stageId}: Estimated hours must be greater than 0");
-                    }
-
-                    if (hourlyRate <= 0)
-                    {
-                        errors.Add($"Stage {stageId}: Hourly rate must be greater than 0");
-                    }
-
-                    if (materialCost < 0)
-                    {
-                        errors.Add($"Stage {stageId}: Material cost cannot be negative");
-                    }
-                }
-
-                // Check for duplicate execution orders
-                var orders = StageExecutionOrders?.Where(o => o > 0).ToList() ?? new List<int>();
-                if (orders.Count != orders.Distinct().Count())
-                {
-                    errors.Add("Stages cannot have duplicate execution orders");
-                }
-
-                // Validate stage IDs exist in database
-                var validStageIds = _context.ProductionStages
-                    .Where(ps => ps.IsActive && SelectedStageIds.Contains(ps.Id))
-                    .Select(ps => ps.Id)
-                    .ToList();
-
-                var invalidStageIds = SelectedStageIds.Except(validStageIds).ToList();
-                if (invalidStageIds.Any())
-                {
-                    errors.Add($"Invalid stage IDs: {string.Join(", ", invalidStageIds)}");
-                }
-
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error validating stage data");
-                errors.Add("Error validating stage data - please try again");
-            }
-
-            return errors;
         }
 
         private void SetPartDefaults(Part part, bool isNew, Part? existingPart = null)
@@ -1135,82 +580,54 @@ namespace OpCentrix.Pages.Admin
             part.LastModifiedDate = DateTime.UtcNow;
             part.LastModifiedBy = User.Identity?.Name ?? "System";
 
-            // Set essential defaults for NOT NULL fields
             part.CustomerPartNumber ??= "";
             part.AdminOverrideReason ??= "";
             part.AdminOverrideBy ??= "";
 
-            // Ensure numeric fields have valid values
             if (part.MaterialCostPerKg <= 0) part.MaterialCostPerKg = 450.00m;
             if (part.StandardLaborCostPerHour <= 0) part.StandardLaborCostPerHour = 85.00m;
         }
 
-        private async Task<IActionResult> HandleValidationError(string message, Part part)
+        private async Task<IActionResult> HandleValidationError(string message)
         {
             ModelState.AddModelError("", message);
-            PartFormData = await CreatePartFormViewModelAsync(part);
+            PartFormData = await CreatePartFormViewModelAsync(Part);
             return Partial("Shared/_PartForm", this);
         }
 
         private async Task<IActionResult> HandleFormSuccess(string message)
         {
-            // Check if this is an HTMX request
             if (Request.Headers.ContainsKey("HX-Request"))
             {
-                // For HTMX requests, return an HX-Redirect to refresh the page properly
-                Response.Headers["HX-Redirect"] = "/Admin/Parts";
-                return Content("", "text/html");
+                return Content($@"
+                    <script>
+                        console.log('? [PARTS] Part saved successfully');
+                        
+                        if (typeof hideModal === 'function') {{ hideModal(); }}
+                        if (typeof showNotification === 'function') {{ showNotification('{message}', 'success'); }}
+                        
+                        setTimeout(() => {{ window.location.reload(); }}, 100);
+                    </script>
+                ", "text/html");
             }
             else
             {
-                // For standard form requests, redirect with success message
                 TempData["SuccessMessage"] = message;
                 return RedirectToPage();
             }
-        }
-
-        private string GetFriendlyErrorMessage(Exception ex)
-        {
-            if (ex.Message.Contains("UNIQUE") || ex.Message.Contains("duplicate"))
-                return "A part with this information already exists";
-
-            if (ex.InnerException?.Message?.Contains("NOT NULL") == true)
-                return "Required field validation failed";
-
-            return "Database operation failed";
-        }
-
-        private async Task<List<string>> CheckPartDependencies(Part part)
-        {
-            var dependencies = new List<string>();
-
-            try
-            {
-                // Check Jobs
-                var jobCount = await _context.Jobs.CountAsync(j => j.PartNumber == part.PartNumber);
-                if (jobCount > 0) dependencies.Add($"{jobCount} job(s)");
-
-                // Check other dependencies if needed in the future
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error checking dependencies for part {PartId}", part.Id);
-            }
-
-            return dependencies;
         }
 
         private async Task LoadPartsDataAsync()
         {
             try
             {
-                var query = _context.Parts.AsQueryable();
+                var query = _context.Parts
+                    .Include(p => p.ComponentType)
+                    .Include(p => p.ComplianceCategory)
+                    .AsQueryable();
 
-                // Apply filters
                 if (ActiveOnly)
-                {
                     query = query.Where(p => p.IsActive);
-                }
 
                 if (!string.IsNullOrEmpty(SearchTerm))
                 {
@@ -1224,64 +641,24 @@ namespace OpCentrix.Pages.Admin
                 if (!string.IsNullOrEmpty(MaterialFilter))
                     query = query.Where(p => p.Material == MaterialFilter);
 
-                if (!string.IsNullOrEmpty(IndustryFilter))
-                    query = query.Where(p => p.Industry == IndustryFilter);
-
                 if (!string.IsNullOrEmpty(CategoryFilter))
                     query = query.Where(p => p.PartCategory == CategoryFilter);
 
-                // Enhanced: Add stage filtering
-                if (!string.IsNullOrEmpty(StageFilter))
-                {
-                    var partsWithStage = await _context.PartStageRequirements
-                        .Include(psr => psr.ProductionStage)
-                        .Where(psr => psr.ProductionStage.Name.Contains(StageFilter) && psr.IsActive)
-                        .Select(psr => psr.PartId)
-                        .ToListAsync();
-
-                    query = query.Where(p => partsWithStage.Contains(p.Id));
-                }
-
-                // Enhanced: Add complexity filtering
-                if (!string.IsNullOrEmpty(ComplexityFilter))
-                {
-                    // Note: This is a simplified complexity filter - in practice you'd calculate complexity
-                    switch (ComplexityFilter.ToLower())
-                    {
-                        case "simple":
-                            query = query.Where(p => p.EstimatedHours <= 4);
-                            break;
-                        case "medium":
-                            query = query.Where(p => p.EstimatedHours > 4 && p.EstimatedHours <= 12);
-                            break;
-                        case "complex":
-                            query = query.Where(p => p.EstimatedHours > 12 && p.EstimatedHours <= 24);
-                            break;
-                        case "very complex":
-                            query = query.Where(p => p.EstimatedHours > 24);
-                            break;
-                    }
-                }
-
-                // Apply sorting
                 query = ApplySorting(query);
 
-                // CRITICAL FIX: Get total count BEFORE pagination
                 TotalCount = await query.CountAsync();
 
-                // Apply pagination
                 Parts = await query
                     .Skip((PageNumber - 1) * PageSize)
                     .Take(PageSize)
                     .AsNoTracking()
                     .ToListAsync();
 
-                _logger.LogInformation("✅ [PARTS] Loaded {PartsCount} parts (Total: {TotalCount}, Page: {PageNumber}/{TotalPages})",
-                    Parts.Count, TotalCount, PageNumber, TotalPages);
+                _logger.LogInformation("? [PARTS] Loaded {PartsCount} parts (Total: {TotalCount})", Parts.Count, TotalCount);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ [PARTS] Error loading parts data");
+                _logger.LogError(ex, "? [PARTS] Error loading parts data");
                 TotalCount = 0;
                 Parts = new List<Part>();
                 throw;
@@ -1296,48 +673,21 @@ namespace OpCentrix.Pages.Admin
             {
                 "name" => ascending ? query.OrderBy(p => p.Name) : query.OrderByDescending(p => p.Name),
                 "material" => ascending ? query.OrderBy(p => p.Material) : query.OrderByDescending(p => p.Material),
-                "industry" => ascending ? query.OrderBy(p => p.Industry) : query.OrderByDescending(p => p.Industry),
                 "category" => ascending ? query.OrderBy(p => p.PartCategory) : query.OrderByDescending(p => p.PartCategory),
                 "hours" => ascending ? query.OrderBy(p => p.EstimatedHours) : query.OrderByDescending(p => p.EstimatedHours),
                 _ => ascending ? query.OrderBy(p => p.PartNumber) : query.OrderByDescending(p => p.PartNumber)
             };
         }
 
-        private async Task LoadFilterOptionsAsync()
-        {
-            AvailableMaterials = await _context.Parts
-                .Where(p => !string.IsNullOrEmpty(p.Material))
-                .Select(p => p.Material)
-                .Distinct()
-                .OrderBy(m => m)
-                .ToListAsync();
-
-            AvailableIndustries = await _context.Parts
-                .Where(p => !string.IsNullOrEmpty(p.Industry))
-                .Select(p => p.Industry)
-                .Distinct()
-                .OrderBy(i => i)
-                .ToListAsync();
-
-            AvailableCategories = await _context.Parts
-                .Where(p => !string.IsNullOrEmpty(p.PartCategory))
-                .Select(p => p.PartCategory)
-                .Distinct()
-                .OrderBy(c => c)
-                .ToListAsync();
-        }
-
         private async Task LoadStatisticsAsync()
         {
             try
             {
-                // Get all parts to calculate statistics
                 var allParts = await _context.Parts.AsNoTracking().ToListAsync();
 
                 ActivePartsCount = allParts.Count(p => p.IsActive);
                 InactivePartsCount = allParts.Count(p => !p.IsActive);
 
-                // Calculate most used material
                 var materialGroups = allParts
                     .Where(p => !string.IsNullOrEmpty(p.Material))
                     .GroupBy(p => p.Material)
@@ -1346,23 +696,14 @@ namespace OpCentrix.Pages.Admin
 
                 MostUsedMaterial = materialGroups?.Key ?? "N/A";
 
-                // Calculate average estimated hours
                 var partsWithHours = allParts.Where(p => p.EstimatedHours > 0);
                 AverageEstimatedHours = partsWithHours.Any() ? partsWithHours.Average(p => p.EstimatedHours) : 0;
 
-                // Load filter options from existing data
                 AvailableMaterials = allParts
                     .Where(p => !string.IsNullOrEmpty(p.Material))
                     .Select(p => p.Material)
                     .Distinct()
                     .OrderBy(m => m)
-                    .ToList();
-
-                AvailableIndustries = allParts
-                    .Where(p => !string.IsNullOrEmpty(p.Industry))
-                    .Select(p => p.Industry)
-                    .Distinct()
-                    .OrderBy(i => i)
                     .ToList();
 
                 AvailableCategories = allParts
@@ -1372,67 +713,20 @@ namespace OpCentrix.Pages.Admin
                     .OrderBy(c => c)
                     .ToList();
 
-                _logger.LogInformation("✅ [PARTS] Statistics loaded - Active: {ActiveCount}, Inactive: {InactiveCount}, Top Material: {TopMaterial}",
-                    ActivePartsCount, InactivePartsCount, MostUsedMaterial);
+                _logger.LogInformation("? [PARTS] Statistics loaded - Active: {ActiveCount}, Inactive: {InactiveCount}",
+                    ActivePartsCount, InactivePartsCount);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ [PARTS] Error loading statistics");
-                // Set default values on error
+                _logger.LogError(ex, "? [PARTS] Error loading statistics");
                 ActivePartsCount = 0;
                 InactivePartsCount = 0;
                 MostUsedMaterial = "N/A";
                 AverageEstimatedHours = 0;
                 AvailableMaterials = new List<string>();
-                AvailableIndustries = new List<string>();
                 AvailableCategories = new List<string>();
             }
         }
-
-        private async Task LoadFormDataAsync()
-        {
-            try
-            {
-                // Load component types
-                var componentTypes = await _componentTypeService.GetActiveComponentTypesAsync();
-                var complianceCategories = await _complianceCategoryService.GetActiveCategoriesAsync();
-                var availableStages = await _context.ProductionStages
-                    .Where(ps => ps.IsActive)
-                    .OrderBy(ps => ps.Name)
-                    .AsNoTracking()
-                    .ToListAsync();
-
-                PartFormData = new PartFormViewModel
-                {
-                    Part = Part ?? CreateDefaultPart(),
-                    ComponentTypes = componentTypes,
-                    ComplianceCategories = complianceCategories,
-                    AvailableStages = availableStages,
-                    ExistingStages = new List<PartStageRequirement>(),
-                    ExistingAssets = new List<PartAssetLink>()
-                };
-
-                _logger.LogInformation("✅ [PARTS] Form data loaded - {ComponentTypesCount} component types, {ComplianceCategoriesCount} compliance categories, {StagesCount} stages",
-                    componentTypes.Count, complianceCategories.Count, availableStages.Count);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ [PARTS] Error loading form data");
-
-                // Create minimal form data to prevent errors
-                PartFormData = new PartFormViewModel
-                {
-                    Part = Part ?? CreateDefaultPart(),
-                    ComponentTypes = new List<ComponentType>(),
-                    ComplianceCategories = new List<ComplianceCategory>(),
-                    AvailableStages = new List<ProductionStage>(),
-                    ExistingStages = new List<PartStageRequirement>(),
-                    ExistingAssets = new List<PartAssetLink>()
-                };
-            }
-        }
-
-        #region Helper Methods for Views
 
         public string GetSortDirection(string column)
         {
@@ -1447,9 +741,9 @@ namespace OpCentrix.Pages.Admin
         {
             if (SortBy?.ToLower() == column.ToLower())
             {
-                return SortDirection?.ToLower() == "desc" ? "↓" : "↑";
+                return SortDirection?.ToLower() == "desc" ? "?" : "?";
             }
-            return "↕";
+            return "?";
         }
 
         public string GetStatusBadgeClass(bool isActive)
@@ -1458,236 +752,46 @@ namespace OpCentrix.Pages.Admin
         }
 
         #endregion
-
-        /// <summary>
-        /// Check if part number already exists (AJAX endpoint)
-        /// </summary>
-        public async Task<IActionResult> OnGetCheckDuplicateAsync(string partNumber, int? excludeId = null)
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(partNumber))
-                {
-                    return new JsonResult(new { isDuplicate = false, message = "Part number is empty" });
-                }
-
-                var query = _context.Parts.Where(p => p.PartNumber == partNumber);
-
-                // Exclude current part when editing
-                if (excludeId.HasValue && excludeId.Value > 0)
-                {
-                    query = query.Where(p => p.Id != excludeId.Value);
-                }
-
-                var existingPart = await query.FirstOrDefaultAsync();
-                var isDuplicate = existingPart != null;
-
-                return new JsonResult(new
-                {
-                    isDuplicate,
-                    message = isDuplicate ? $"Part number '{partNumber}' already exists" : "Part number is available",
-                    existingPartId = existingPart?.Id,
-                    existingPartName = existingPart?.Name
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error checking duplicate part number: {PartNumber}", partNumber);
-                return new JsonResult(new { isDuplicate = false, message = "Error checking duplicate" });
-            }
-        }
-
-        #region Phase 5: Asset Management Methods
-
-        /// <summary>
-        /// Get part assets for display in modal
-        /// </summary>
-        public async Task<IActionResult> OnGetPartAssetsAsync(int partId)
-        {
-            var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogInformation("📎 [ASSETS-{OperationId}] Loading assets for part {PartId}", operationId, partId);
-
-            try
-            {
-                var assets = await _partAssetService.GetPartAssetsAsync(partId);
-                var assetStats = await _partAssetService.GetAssetUsageStatisticsAsync();
-
-                var viewModel = new
-                {
-                    PartId = partId,
-                    Assets = assets.Select(a => new
-                    {
-                        a.Id,
-                        a.DisplayName,
-                        a.AssetType,
-                        a.Url,
-                        a.Source,
-                        a.CreatedDate,
-                        a.CreatedBy,
-                        FileExtension = Path.GetExtension(a.Url),
-                        IsAvailable = true // Could check with CheckAssetAvailabilityAsync
-                    }),
-                    Statistics = assetStats
-                };
-
-                return new JsonResult(viewModel);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ [ASSETS-{OperationId}] Error loading assets for part {PartId}", operationId, partId);
-                return StatusCode(500, "Error loading part assets");
-            }
-        }
-
-        /// <summary>
-        /// Upload new asset for a part
-        /// </summary>
-        public async Task<IActionResult> OnPostUploadAssetAsync(int partId, IFormFile assetFile, string assetType, string displayName)
-        {
-            var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogInformation("📎 [ASSETS-{OperationId}] Uploading asset for part {PartId}: {FileName}",
-                operationId, partId, assetFile?.FileName);
-
-            try
-            {
-                if (assetFile == null || assetFile.Length == 0)
-                {
-                    return BadRequest("No file provided");
-                }
-
-                if (string.IsNullOrWhiteSpace(displayName))
-                {
-                    displayName = Path.GetFileNameWithoutExtension(assetFile.FileName);
-                }
-
-                // Validate file
-                if (!await _partAssetService.ValidateAssetAsync(assetFile, assetType))
-                {
-                    return BadRequest("File validation failed. Check file type and size.");
-                }
-
-                // Upload file
-                var url = await _partAssetService.UploadAssetAsync(assetFile, partId, assetType, displayName);
-
-                // Create asset record
-                var asset = new PartAssetLink
-                {
-                    PartId = partId,
-                    Url = url,
-                    DisplayName = displayName,
-                    Source = "Upload",
-                    AssetType = assetType,
-                    CreatedBy = User.Identity?.Name ?? "System"
-                };
-
-                var savedAsset = await _partAssetService.AddAssetAsync(asset);
-
-                _logger.LogInformation("✅ [ASSETS-{OperationId}] Asset uploaded successfully: {AssetId}", operationId, savedAsset.Id);
-
-                return new JsonResult(new
-                {
-                    success = true,
-                    message = "Asset uploaded successfully",
-                    asset = new
-                    {
-                        savedAsset.Id,
-                        savedAsset.DisplayName,
-                        savedAsset.AssetType,
-                        savedAsset.Url,
-                        savedAsset.Source,
-                        savedAsset.CreatedDate,
-                        savedAsset.CreatedBy
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ [ASSETS-{OperationId}] Error uploading asset for part {PartId}", operationId, partId);
-                return StatusCode(500, "Error uploading asset");
-            }
-        }
-
-        /// <summary>
-        /// Delete an asset
-        /// </summary>
-        public async Task<IActionResult> OnPostDeleteAssetAsync(int assetId)
-        {
-            var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogInformation("🗑️ [ASSETS-{OperationId}] Deleting asset {AssetId}", operationId, assetId);
-
-            try
-            {
-                var asset = await _partAssetService.GetAssetByIdAsync(assetId);
-                if (asset == null)
-                {
-                    return NotFound("Asset not found");
-                }
-
-                var success = await _partAssetService.DeleteAssetAsync(assetId);
-                if (success)
-                {
-                    _logger.LogInformation("✅ [ASSETS-{OperationId}] Asset deleted successfully: {AssetId}", operationId, assetId);
-                    return new JsonResult(new { success = true, message = "Asset deleted successfully" });
-                }
-                else
-                {
-                    return StatusCode(500, "Failed to delete asset");
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ [ASSETS-{OperationId}] Error deleting asset {AssetId}", operationId, assetId);
-                return StatusCode(500, "Error deleting asset");
-            }
-        }
-
-        /// <summary>
-        /// Get supported file types for an asset type
-        /// </summary>
-        public async Task<IActionResult> OnGetSupportedFileTypesAsync(string assetType)
-        {
-            try
-            {
-                var fileTypes = await _partAssetService.GetSupportedFileTypesAsync(assetType);
-                var maxSize = await _partAssetService.GetMaxFileSizeAsync(assetType);
-
-                return new JsonResult(new
-                {
-                    assetType,
-                    supportedTypes = fileTypes,
-                    maxSizeBytes = maxSize,
-                    maxSizeMB = Math.Round(maxSize / (1024.0 * 1024.0), 1)
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting supported file types for asset type: {AssetType}", assetType);
-                return StatusCode(500, "Error getting supported file types");
-            }
-        }
-
-        #endregion
     }
 
     /// <summary>
-    /// Enhanced ViewModel for bulletproof data passing to the form
+    /// PHASE 3: Enhanced ViewModel for modernized form with lookup support
     /// </summary>
     public class PartFormViewModel
     {
         public Part Part { get; set; } = new Part();
         public List<string> AvailableMaterials { get; set; } = new List<string>();
-        public List<string> AvailableIndustries { get; set; } = new List<string>();
-        public List<string> AvailableApplications { get; set; } = new List<string>();
         public List<ProductionStage> AvailableStages { get; set; } = new List<ProductionStage>();
         public List<ComponentType> ComponentTypes { get; set; } = new List<ComponentType>();
         public List<ComplianceCategory> ComplianceCategories { get; set; } = new List<ComplianceCategory>();
         public List<PartStageRequirement> ExistingStages { get; set; } = new List<PartStageRequirement>();
-
-        // Phase 5: Asset Management Properties
         public List<PartAssetLink> ExistingAssets { get; set; } = new List<PartAssetLink>();
         public Dictionary<string, int> AssetStatistics { get; set; } = new Dictionary<string, int>();
-        public Dictionary<string, List<string>> SupportedFileTypes { get; set; } = new Dictionary<string, List<string>>();
-        public Dictionary<string, long> MaxFileSizes { get; set; } = new Dictionary<string, long>();
     }
-    #endregion
+
+    /// <summary>
+    /// Request model for adding a stage to a part
+    /// </summary>
+    public class AddStageRequest
+    {
+        public int PartId { get; set; }
+        public int StageId { get; set; }
+        public int ExecutionOrder { get; set; } = 1;
+        public double EstimatedHours { get; set; } = 1.0;
+        public int SetupTimeMinutes { get; set; } = 30;
+        public decimal? HourlyRateOverride { get; set; }
+        public decimal MaterialCost { get; set; } = 0.00m;
+        public bool IsRequired { get; set; } = true;
+        public string? RequirementNotes { get; set; }
+        public string? SpecialInstructions { get; set; }
+    }
+
+    /// <summary>
+    /// Request model for removing a stage from a part
+    /// </summary>
+    public class RemoveStageRequest
+    {
+        public int PartId { get; set; }
+        public int StageId { get; set; }
+    }
 }

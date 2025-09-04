@@ -773,33 +773,16 @@
             }
 
             try {
-                const response = await fetch(`/Admin/Parts?handler=PartStages&partId=${partId}`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    credentials: 'same-origin'
-                });
-                
-                if (!response.ok) {
-                    if (response.status === 404) {
-                        console.log('🔍 [FORM] No existing stage requirements found for part');
-                        this.renderStageRequirements([]);
-                        return;
-                    }
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
+                const response = await fetch(`/Admin/Parts/GetPartStages?partId=${partId}`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 
                 const stages = await response.json();
                 this.renderStageRequirements(stages);
                 this.updateStageSummary(stages);
                 
-                console.log(`✅ [FORM] Loaded ${stages.length} existing stage requirements`);
-                
             } catch (error) {
                 console.error('❌ [FORM] Failed to load stage requirements:', error);
-                this.showStageError('Failed to load stage requirements. Click "Add Stage" to create new workflow.');
+                this.showStageError('Failed to load stage requirements');
             } finally {
                 this.hideStageLoadingIndicator();
             }
@@ -829,52 +812,38 @@
         }
 
         createStageRequirementHtml(stage, index) {
-            const productionStage = stage.productionStage || {};
-            const stageName = productionStage.name || 'Unknown Stage';
-            const estimatedHours = stage.estimatedHours || 0;
-            const setupMinutes = stage.setupTimeMinutes || 0;
-            const hourlyRate = stage.hourlyRateOverride || productionStage.defaultHourlyRate || 85;
-            const materialCost = stage.materialCost || 0;
-            const totalCost = this.calculateStageCost(stage);
-            
             return `
-                <div class="stage-requirement-item border rounded p-3 mb-3" data-stage-id="${stage.id || stage.productionStageId}">
+                <div class="stage-requirement-item border rounded p-3 mb-3" data-stage-id="${stage.id}">
                     <div class="d-flex justify-content-between align-items-start">
                         <div class="flex-grow-1">
                             <div class="d-flex align-items-center mb-2">
                                 <span class="badge bg-primary me-2">${stage.executionOrder || index + 1}</span>
-                                <h6 class="mb-0 fw-bold">${stageName}</h6>
-                                ${stage.isRequired ? '<span class="badge bg-success ms-2">Required</span>' : '<span class="badge bg-secondary ms-2">Optional</span>'}
+                                <h6 class="mb-0 fw-bold">${stage.productionStage?.name || 'Unknown Stage'}</h6>
                             </div>
                             <div class="row g-2 text-sm">
                                 <div class="col-md-3">
                                     <span class="text-muted">Duration:</span>
-                                    <span class="fw-semibold">${estimatedHours}h</span>
+                                    <span class="fw-semibold">${stage.estimatedHours || 0}h</span>
                                 </div>
                                 <div class="col-md-3">
                                     <span class="text-muted">Setup:</span>
-                                    <span class="fw-semibold">${setupMinutes}min</span>
+                                    <span class="fw-semibold">${stage.setupTimeMinutes || 0}min</span>
                                 </div>
                                 <div class="col-md-3">
                                     <span class="text-muted">Rate:</span>
-                                    <span class="fw-semibold">$${hourlyRate}/h</span>
+                                    <span class="fw-semibold">$${stage.hourlyRateOverride || stage.productionStage?.defaultHourlyRate || 85}/h</span>
                                 </div>
                                 <div class="col-md-3">
                                     <span class="text-muted">Cost:</span>
-                                    <span class="fw-semibold">$${totalCost.toFixed(2)}</span>
+                                    <span class="fw-semibold">$${this.calculateStageCost(stage).toFixed(2)}</span>
                                 </div>
                             </div>
-                            ${stage.requirementNotes ? `
-                                <div class="mt-2">
-                                    <small class="text-muted"><i class="fas fa-sticky-note me-1"></i>${stage.requirementNotes}</small>
-                                </div>
-                            ` : ''}
                         </div>
                         <div class="btn-group-vertical btn-group-sm">
-                            <button type="button" class="btn btn-outline-secondary" onclick="editStage(${stage.id || stage.productionStageId})" title="Edit Stage">
+                            <button type="button" class="btn btn-outline-secondary" onclick="editStage(${stage.id})">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button type="button" class="btn btn-outline-danger" onclick="removeStage(${stage.productionStageId || stage.id})" title="Remove Stage">
+                            <button type="button" class="btn btn-outline-danger" onclick="removeStage(${stage.id})">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -933,185 +902,35 @@
         }
 
         showAddStageModal() {
-            console.log('🔄 [FORM] Showing add stage modal');
-            
-            // For now, create a simple selection interface using available stages
-            const availableStagesContainer = document.getElementById('availableStagesContainer');
-            if (availableStagesContainer) {
-                // Highlight the available stages section
-                availableStagesContainer.scrollIntoView({ behavior: 'smooth' });
-                
-                // Add some visual feedback
-                availableStagesContainer.classList.add('border', 'border-primary', 'rounded', 'p-2');
-                setTimeout(() => {
-                    availableStagesContainer.classList.remove('border', 'border-primary', 'rounded', 'p-2');
-                }, 2000);
-                
-                if (window.showToast) {
-                    window.showToast('info', 'Click on a stage from the "Available Stages" list to add it');
-                }
-            } else {
-                // Fallback: show alert with common stages
-                if (window.showToast) {
-                    window.showToast('info', 'Stage selection modal coming soon. Use the Available Stages panel on the right.');
-                }
-            }
+            // TODO: Implement stage selection modal
+            console.log('🔄 [FORM] Show add stage modal');
         }
 
-        useDefaultStages() {
-            console.log('🔧 [FORM] Using default stages as fallback');
-            
-            // Clear existing state
-            this.selectedStages.clear();
-            
-            // Create basic default stages structure
-            const defaultStages = [
-                {
-                    id: 'temp-1',
-                    productionStage: { name: 'SLS Printing', defaultHourlyRate: 85 },
-                    productionStageId: 1,
-                    executionOrder: 1,
-                    estimatedHours: 4.0,
-                    setupTimeMinutes: 45,
-                    isRequired: true,
-                    materialCost: 0,
-                    requirementNotes: 'Primary manufacturing stage'
-                },
-                {
-                    id: 'temp-2',
-                    productionStage: { name: 'Post-Processing', defaultHourlyRate: 75 },
-                    productionStageId: 2,
-                    executionOrder: 2,
-                    estimatedHours: 1.0,
-                    setupTimeMinutes: 15,
-                    isRequired: true,
-                    materialCost: 0,
-                    requirementNotes: 'Finishing and cleanup'
-                }
-            ];
-            
-            this.renderStageRequirements(defaultStages);
-            this.updateStageSummary(defaultStages);
-            
-            if (window.showToast) {
-                window.showToast('success', 'Default manufacturing stages loaded');
-            }
+        handleAssetUpload(event) {
+            // TODO: Implement asset upload
+            console.log('🔄 [FORM] Asset upload:', event.target.files);
         }
-    }
-
-    // Helper function to get antiforgery token
-    function getAntiForgeryToken() {
-        const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
-        return tokenInput ? tokenInput.value : '';
     }
 
     // Global functions for stage management
-    window.addStageFromList = async function(stageId) {
+    window.addStageFromList = function(stageId) {
         console.log('➕ [FORM] Adding stage from list:', stageId);
-        
-        const partId = document.querySelector('input[name="Part.Id"]')?.value || 0;
-        const maxOrder = document.querySelectorAll('.stage-requirement-item').length + 1;
-        
-        try {
-            const response = await fetch('/Admin/Parts?handler=AddStage', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': getAntiForgeryToken(),
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                credentials: 'same-origin',
-                body: JSON.stringify({
-                    partId: parseInt(partId),
-                    stageId: stageId,
-                    executionOrder: maxOrder,
-                    estimatedHours: 1.0,
-                    setupTimeMinutes: 30,
-                    materialCost: 0.00,
-                    isRequired: true
-                })
-            });
-            
-            const result = await response.json();
-            if (result.success) {
-                console.log('✅ [FORM] Stage added successfully');
-                // Reload the stage display
-                const manager = window.partFormManager;
-                if (manager) {
-                    await manager.loadExistingStageRequirements();
-                }
-                if (window.showToast) {
-                    window.showToast('success', result.message);
-                }
-            } else {
-                console.error('❌ [FORM] Failed to add stage:', result.message);
-                if (window.showToast) {
-                    window.showToast('error', result.message);
-                }
-            }
-        } catch (error) {
-            console.error('❌ [FORM] Error adding stage:', error);
-            if (window.showToast) {
-                window.showToast('error', 'Failed to add stage');
-            }
-        }
+        // TODO: Implement stage addition
     };
 
     window.editStage = function(stageId) {
         console.log('✏️ [FORM] Editing stage:', stageId);
-        // TODO: Implement stage editing modal
-        if (window.showToast) {
-            window.showToast('info', 'Stage editing coming soon');
-        }
+        // TODO: Implement stage editing
     };
 
-    window.removeStage = async function(stageId) {
+    window.removeStage = function(stageId) {
         console.log('🗑️ [FORM] Removing stage:', stageId);
-        
-        if (!confirm('Are you sure you want to remove this stage from the part?')) {
-            return;
-        }
-        
-        const partId = document.querySelector('input[name="Part.Id"]')?.value || 0;
-        
-        try {
-            const response = await fetch('/Admin/Parts?handler=RemoveStage', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': getAntiForgeryToken(),
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                credentials: 'same-origin',
-                body: JSON.stringify({
-                    partId: parseInt(partId),
-                    stageId: stageId
-                })
-            });
-            
-            const result = await response.json();
-            if (result.success) {
-                console.log('✅ [FORM] Stage removed successfully');
-                // Reload the stage display
-                const manager = window.partFormManager;
-                if (manager) {
-                    await manager.loadExistingStageRequirements();
-                }
-                if (window.showToast) {
-                    window.showToast('success', result.message);
-                }
-            } else {
-                console.error('❌ [FORM] Failed to remove stage:', result.message);
-                if (window.showToast) {
-                    window.showToast('error', result.message);
-                }
-            }
-        } catch (error) {
-            console.error('❌ [FORM] Error removing stage:', error);
-            if (window.showToast) {
-                window.showToast('error', 'Failed to remove stage');
-            }
-        }
+        // TODO: Implement stage removal
+    };
+
+    window.uploadAssets = function() {
+        console.log('📎 [FORM] Uploading assets');
+        // TODO: Implement asset upload
     };
 
     // Material helper functions
