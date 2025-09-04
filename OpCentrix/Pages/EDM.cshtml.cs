@@ -61,6 +61,10 @@ namespace OpCentrix.Pages
             {
                 if (!ModelState.IsValid)
                 {
+                    if (Request.Headers.Accept.ToString().Contains("application/json"))
+                    {
+                        return new JsonResult(new { success = false, message = "Invalid data provided" });
+                    }
                     await LoadDashboardDataAsync();
                     return Page();
                 }
@@ -116,16 +120,36 @@ namespace OpCentrix.Pages
                 _context.EDMLogs.Add(edmLog);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("EDM Log {LogNumber} created successfully by {User}", 
+                _logger.LogInformation("EDM Log {LogNumber} created successfully by {User}",
                     logNumber, User?.Identity?.Name ?? "System");
 
-                // Return success response for AJAX
                 if (Request.Headers.Accept.ToString().Contains("application/json"))
                 {
-                    return new JsonResult(new { 
-                        success = true, 
-                        logNumber = logNumber,
-                        message = $"EDM Log #{logNumber} saved successfully!" 
+                    return new JsonResult(new
+                    {
+                        success = true,
+                        message = $"EDM Log #{logNumber} saved successfully!",
+                        log = new
+                        {
+                            edmLog.Id,
+                            edmLog.LogNumber,
+                            edmLog.PartNumber,
+                            edmLog.Quantity,
+                            edmLog.LogDate,
+                            edmLog.Shift,
+                            edmLog.OperatorName,
+                            edmLog.OperatorInitials,
+                            edmLog.StartTime,
+                            edmLog.EndTime,
+                            edmLog.Measurement1,
+                            edmLog.Measurement2,
+                            edmLog.ToleranceStatus,
+                            edmLog.ScrapIssues,
+                            edmLog.Notes,
+                            edmLog.TotalTime,
+                            edmLog.CreatedDate,
+                            edmLog.CreatedBy
+                        }
                     });
                 }
 
@@ -135,12 +159,13 @@ namespace OpCentrix.Pages
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error saving EDM log entry");
-                
+
                 if (Request.Headers.Accept.ToString().Contains("application/json"))
                 {
-                    return new JsonResult(new { 
-                        success = false, 
-                        message = "Failed to save EDM log. Please try again." 
+                    return new JsonResult(new
+                    {
+                        success = false,
+                        message = "Failed to save EDM log. Please try again."
                     });
                 }
 
@@ -234,9 +259,10 @@ namespace OpCentrix.Pages
 
                 if (log == null)
                 {
-                    return new JsonResult(new { 
-                        success = false, 
-                        message = "Log not found or already deleted" 
+                    return new JsonResult(new
+                    {
+                        success = false,
+                        message = "Log not found or already deleted"
                     });
                 }
 
@@ -247,20 +273,22 @@ namespace OpCentrix.Pages
 
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("EDM Log {LogNumber} (ID: {LogId}) deleted by {User}", 
+                _logger.LogInformation("EDM Log {LogNumber} (ID: {LogId}) deleted by {User}",
                     log.LogNumber, id, User?.Identity?.Name ?? "System");
 
-                return new JsonResult(new { 
-                    success = true, 
-                    message = $"Log #{log.LogNumber} deleted successfully" 
+                return new JsonResult(new
+                {
+                    success = true,
+                    message = $"Log #{log.LogNumber} deleted successfully"
                 });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error deleting EDM log with ID: {LogId}", id);
-                return new JsonResult(new { 
-                    success = false, 
-                    message = "Failed to delete log. Please try again." 
+                return new JsonResult(new
+                {
+                    success = false,
+                    message = "Failed to delete log. Please try again."
                 });
             }
         }
@@ -271,9 +299,10 @@ namespace OpCentrix.Pages
             {
                 if (!ModelState.IsValid)
                 {
-                    return new JsonResult(new { 
-                        success = false, 
-                        message = "Invalid data provided" 
+                    return new JsonResult(new
+                    {
+                        success = false,
+                        message = "Invalid data provided"
                     });
                 }
 
@@ -282,9 +311,10 @@ namespace OpCentrix.Pages
 
                 if (existingLog == null)
                 {
-                    return new JsonResult(new { 
-                        success = false, 
-                        message = "Log not found" 
+                    return new JsonResult(new
+                    {
+                        success = false,
+                        message = "Log not found"
                     });
                 }
 
@@ -316,21 +346,43 @@ namespace OpCentrix.Pages
 
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("EDM Log {LogNumber} (ID: {LogId}) updated by {User}", 
+                _logger.LogInformation("EDM Log {LogNumber} (ID: {LogId}) updated by {User}",
                     existingLog.LogNumber, existingLog.Id, User?.Identity?.Name ?? "System");
 
-                return new JsonResult(new { 
-                    success = true, 
+                return new JsonResult(new
+                {
+                    success = true,
                     message = $"Log #{existingLog.LogNumber} updated successfully",
-                    logNumber = existingLog.LogNumber
+                    log = new
+                    {
+                        existingLog.Id,
+                        existingLog.LogNumber,
+                        existingLog.PartNumber,
+                        existingLog.Quantity,
+                        existingLog.LogDate,
+                        existingLog.Shift,
+                        existingLog.OperatorName,
+                        existingLog.OperatorInitials,
+                        existingLog.StartTime,
+                        existingLog.EndTime,
+                        existingLog.Measurement1,
+                        existingLog.Measurement2,
+                        existingLog.ToleranceStatus,
+                        existingLog.ScrapIssues,
+                        existingLog.Notes,
+                        existingLog.TotalTime,
+                        existingLog.CreatedDate,
+                        existingLog.CreatedBy
+                    }
                 });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating EDM log");
-                return new JsonResult(new { 
-                    success = false, 
-                    message = "Failed to update log. Please try again." 
+                return new JsonResult(new
+                {
+                    success = false,
+                    message = "Failed to update log. Please try again."
                 });
             }
         }
@@ -338,15 +390,15 @@ namespace OpCentrix.Pages
         private async Task LoadDashboardDataAsync()
         {
             var today = DateTime.Today;
-            
+
             TotalLogsCount = await _context.EDMLogs.CountAsync(l => l.IsActive);
             TodayLogsCount = await _context.EDMLogs.CountAsync(l => l.IsActive && l.LogDate == today);
-            
+
             var lastLog = await _context.EDMLogs
                 .Where(l => l.IsActive)
                 .OrderByDescending(l => l.CreatedDate)
                 .FirstOrDefaultAsync();
-            
+
             LastLogTime = lastLog?.CreatedDate.ToString("yyyy-MM-dd HH:mm") ?? "Never";
         }
 
