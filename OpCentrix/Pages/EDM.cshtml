@@ -5,6 +5,8 @@
     Layout = "~/Pages/Shared/_Layout.cshtml";
 }
 
+<!-- Include Font Awesome (for icon replacements) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 <!-- Include EDM Print Styles -->
 <link rel="stylesheet" href="~/css/edm-print.css" />
 
@@ -51,9 +53,14 @@
             this.showNotification('error', message, error.message);
         },
         showNotification: function(type, message, detail) {
+            const iconMap = {
+                error: '<i class="fa-solid fa-circle-xmark fa-lg"></i>',
+                warning: '<i class="fa-solid fa-triangle-exclamation fa-lg"></i>',
+                success: '<i class="fa-solid fa-circle-check fa-lg"></i>'
+            };
             const notification = document.createElement('div');
             notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-md ${ type === 'error' ? 'bg-red-500 text-white' : type === 'warning' ? 'bg-yellow-500 text-black' : 'bg-green-600 text-white'}`;
-            notification.innerHTML = `<div class=\"flex items-start\"><div class=\"flex-shrink-0\">${type === 'error' ? '?' : type === 'warning' ? '??' : '?'}</div><div class=\"ml-3\"><p class=\"font-semibold\">${message}</p>${detail ? `<p class=\"text-sm opacity-90 mt-1\">${detail}</p>` : ''}</div><button onclick=\"this.parentElement.parentElement.remove()\" class=\"ml-auto pl-3 text-lg opacity-70 hover:opacity-100\">×</button></div>`;
+            notification.innerHTML = `<div class=\"flex items-start\"><div class=\"flex-shrink-0 mt-0.5\">${iconMap[type] || ''}</div><div class=\"ml-3\"><p class=\"font-semibold\">${message}</p>${detail ? `<p class=\"text-sm opacity-90 mt-1\">${detail}</p>` : ''}</div><button aria-label=\"Close notification\" onclick=\"this.parentElement.parentElement.remove()\" class=\"ml-auto pl-3 text-lg opacity-70 hover:opacity-100\"><i class='fa-solid fa-xmark'></i></button></div>`;
             document.body.appendChild(notification);
             setTimeout(()=>{ if(notification.parentElement){ notification.remove(); } },5000);
         }
@@ -69,13 +76,13 @@
         </div>
         <div class="flex space-x-3">
             <button type="button" onclick="event.preventDefault(); SafeExecute.call('viewStoredLogs')" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition">
-                ?? View Stored Logs (<span id="logCount">@Model.TotalLogsCount</span>)
+                <i class="fa-solid fa-file-lines mr-2"></i> View Stored Logs (<span id="logCount">@Model.TotalLogsCount</span>)
             </button>
             <button type="button" onclick="event.preventDefault(); SafeExecute.call('clearForm')" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition">
-                Clear Form
+                <i class="fa-solid fa-eraser mr-2"></i> Clear Form
             </button>
             <button type="button" onclick="event.preventDefault(); SafeExecute.call('generatePrintout')" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-                Generate EDM Log
+                <i class="fa-solid fa-print mr-2"></i> Generate EDM Log
             </button>
         </div>
     </div>
@@ -95,7 +102,7 @@
 <div class="bg-white rounded-lg shadow-lg overflow-hidden mb-8">
     <div class="bg-gradient-to-r from-purple-600 to-blue-600 px-6 py-4">
         <h2 class="text-xl font-semibold text-white flex items-center">
-            <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            <i class="fa-solid fa-microchip mr-3"></i>
             EDM Operation Log Entry #<span id="nextLogNumber">@Model.NextLogNumber</span>
         </h2>
     </div>
@@ -168,9 +175,9 @@
                     <label asp-for="LogEntry.ToleranceStatus" class="block text-sm font-medium text-gray-700 mb-2">Tolerance Status</label>
                     <select asp-for="LogEntry.ToleranceStatus" id="tolerance" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition text-lg">
                         <option value="">Select Status</option>
-                        <option value="? Within Tolerance">? Within Tolerance</option>
-                        <option value="?? Close to Limit">?? Close to Limit</option>
-                        <option value="? Out of Tolerance">? Out of Tolerance</option>
+                        <option value="Within Tolerance">Within Tolerance</option>
+                        <option value="Close to Limit">Close to Limit</option>
+                        <option value="Out of Tolerance">Out of Tolerance</option>
                     </select>
                 </div>
                 <div>
@@ -187,14 +194,13 @@
         <!-- Actions -->
         <div class="mt-6 flex justify-between">
             <button type="button" onclick="event.preventDefault(); SafeExecute.call('saveLogToDatabase')" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition text-lg font-semibold" id="saveButton">
-                <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                <i class="fa-solid fa-database mr-2"></i>
                 <span id="saveButtonText">Save to Database</span>
             </button>
             <div class="flex space-x-3">
-                <button type="button" onclick="event.preventDefault(); SafeExecute.call('cancelEdit')" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition hidden" id="cancelEditButton">Cancel Edit</button>
+                <button type="button" onclick="event.preventDefault(); SafeExecute.call('cancelEdit')" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition hidden" id="cancelEditButton"><i class="fa-solid fa-rotate-left mr-2"></i>Cancel Edit</button>
                 <button type="button" onclick="event.preventDefault(); SafeExecute.call('saveAndPrintPreview')" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition text-lg font-semibold" id="savePrintButton">
-                    <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-                    Save & Print Preview
+                    <i class="fa-solid fa-floppy-disk mr-2"></i> Save & Print Preview
                 </button>
             </div>
         </div>
@@ -214,8 +220,8 @@
                 </div>
             </div>
             <div class="print-actions">
-                <button onclick="event.preventDefault(); SafeExecute.call('printAndStore')" class="print-btn print-btn-primary">Print</button>
-                <button onclick="event.preventDefault(); SafeExecute.call('hidePrintSection')" class="print-btn print-btn-secondary">Close</button>
+                <button onclick="event.preventDefault(); SafeExecute.call('printAndStore')" class="print-btn print-btn-primary"><i class="fa-solid fa-print"></i> Print</button>
+                <button onclick="event.preventDefault(); SafeExecute.call('hidePrintSection')" class="print-btn print-btn-secondary"><i class="fa-solid fa-xmark"></i> Close</button>
             </div>
         </div>
     </div>
@@ -332,8 +338,8 @@
     <div class="relative top-10 mx-auto p-5 border w-11/12 md:w-4/5 lg:w-3/4 xl:w-2/3 shadow-lg rounded-md bg-white max-h-screen overflow-y-auto">
         <div class="mt-3">
             <div class="flex items-center justify-between pb-4 border-b">
-                <h3 class="text-lg font-semibold text-gray-900">Stored EDM Logs</h3>
-                <button onclick="event.preventDefault(); SafeExecute.call('closeStoredLogsModal')" class="text-gray-400 hover:text-gray-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                <h3 class="text-lg font-semibold text-gray-900"><i class="fa-solid fa-file-lines mr-2 text-indigo-600"></i>Stored EDM Logs</h3>
+                <button onclick="event.preventDefault(); SafeExecute.call('closeStoredLogsModal')" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
             <div id="storedLogsContent" class="mt-6"></div>
         </div>
@@ -361,9 +367,16 @@
         return true;
     }
 
+    // Helper to sanitize tolerance strings (remove any leading non-letter symbols like emojis or '?')
+    window.cleanTolerance = function(val){
+        if(!val) return '';
+        return val.replace(/^[^A-Za-z]+\s*/, '').trim();
+    };
+
     // Unified populate function - updated for new clean layout
     window.populatePrintFromData = function(data) {
         try {
+            const tolClean = window.cleanTolerance(data.toleranceStatus);
             document.getElementById('printLogDate').textContent = data.logDate ? (new Date(data.logDate).toLocaleDateString()) : 'N/A';
             document.getElementById('printShift').textContent = data.shift || 'N/A';
             document.getElementById('printPartNumber').textContent = data.partNumber || 'N/A';
@@ -374,7 +387,7 @@
             document.getElementById('printEndTime').textContent = data.endTime || 'N/A';
             document.getElementById('printMeasurement1').textContent = data.measurement1 || 'N/A';
             document.getElementById('printMeasurement2').textContent = data.measurement2 || 'N/A';
-            document.getElementById('printTolerance').textContent = data.toleranceStatus || 'N/A';
+            document.getElementById('printTolerance').textContent = tolClean || 'N/A';
             document.getElementById('printEDMScrap').textContent = data.scrapIssues || 'None';
             document.getElementById('printNotes').textContent = data.notes || 'No additional notes provided';
             document.getElementById('printTotalTime').textContent = data.totalTime || 'N/A';
@@ -676,8 +689,10 @@
             if(!Array.isArray(logs) || logs.length === 0){ 
                 content.innerHTML = '<div class="text-center text-gray-500 py-8"><p class="text-lg">No logs found</p></div>'; 
                 return true; 
-            } 
-            content.innerHTML = `<div class='space-y-4'>${logs.map(log=>`<div class='border border-gray-200 rounded-lg p-4 hover:bg-gray-50'><div class='flex justify-between items-start'><div class='flex-1'><h4 class='font-semibold text-lg'>Log #${log.logNumber} - ${log.partNumber}</h4><p class='text-gray-600'>Qty: ${log.quantity} | Operator: ${log.operatorName} (${log.operatorInitials})</p><p class='text-sm text-gray-500'>Created: ${new Date(log.createdDate).toLocaleString()}</p>${log.notes? `<p class='text-sm text-gray-700 mt-2 italic'>"${log.notes}"</p>`:''}</div><div class='text-right'><div class='mb-2><span class='inline-block px-2 py-1 text-xs font-medium rounded ${log.toleranceStatus==='? Within Tolerance'?'bg-green-100 text-green-800':log.toleranceStatus==='?? Close to Limit'?'bg-yellow-100 text-yellow-800':log.toleranceStatus==='? Out of Tolerance'?'bg-red-100 text-red-800':'bg-gray-100 text-gray-800'}'>${log.toleranceStatus || 'Not Specified'}</span></div><div class='flex space-x-2'><button onclick='event.preventDefault(); window.editStoredLog(${log.id})' class='bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600'>Edit</button><button onclick='event.preventDefault(); window.printStoredLog(${log.id})' class='bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600'>Print</button><button onclick='event.preventDefault(); window.deleteStoredLog(${log.id})' class='bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600'>Delete</button></div></div></div></div>`).join('')}</div>`; 
+            }
+            const toleranceClass = (status)=> status === 'Within Tolerance' ? 'bg-green-100 text-green-800' : status === 'Close to Limit' ? 'bg-yellow-100 text-yellow-800' : status === 'Out of Tolerance' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800';
+            const toleranceDisplay = (status)=> window.cleanTolerance(status) || 'Not Specified';
+            content.innerHTML = `<div class='space-y-4'>${logs.map(log=>{const disp=toleranceDisplay(log.toleranceStatus); return `<div class='border border-gray-200 rounded-lg p-4 hover:bg-gray-50'><div class='flex justify-between items-start'><div class='flex-1'><h4 class='font-semibold text-lg'><i class=\"fa-solid fa-file-lines text-indigo-500 mr-1\"></i>Log #${log.logNumber} - ${log.partNumber}</h4><p class='text-gray-600'>Qty: ${log.quantity} | Operator: ${log.operatorName} (${log.operatorInitials})</p><p class='text-sm text-gray-500'>Created: ${new Date(log.createdDate).toLocaleString()}</p>${log.notes? `<p class='text-sm text-gray-700 mt-2 italic'>"${log.notes}"</p>`:''}</div><div class='text-right'><div class='mb-2'><span class='inline-flex items-center px-2 py-1 text-xs font-medium rounded ${toleranceClass(disp)}'>${disp}</span></div><div class='flex space-x-2'><button onclick='event.preventDefault(); window.editStoredLog(${log.id})' class='bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600'><i class=\"fa-solid fa-pen-to-square\"></i></button><button onclick='event.preventDefault(); window.printStoredLog(${log.id})' class='bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600'><i class=\"fa-solid fa-print\"></i></button><button onclick='event.preventDefault(); window.deleteStoredLog(${log.id})' class='bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600'><i class=\"fa-solid fa-trash\"></i></button></div></div></div></div>`}).join('')}</div>`; 
             return true; 
         } catch(e){ 
             SafeExecute.logError(opId,'viewStoredLogs',e); 
