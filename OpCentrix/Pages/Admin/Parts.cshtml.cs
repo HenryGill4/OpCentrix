@@ -6,6 +6,7 @@ using OpCentrix.Data;
 using OpCentrix.Models;
 using OpCentrix.Services;
 using OpCentrix.Services.Admin;
+using System.Text;
 
 namespace OpCentrix.Pages.Admin
 {
@@ -170,48 +171,99 @@ namespace OpCentrix.Pages.Admin
             }
         }
 
+        // Add helper to dump model state & part snapshot
+        private void LogModelState(string operationId, string phase)
+        {
+            if (ModelState.IsValid)
+            {
+                _logger.LogInformation("? [PARTS-{OperationId}] ModelState VALID at {Phase}", operationId, phase);
+                return;
+            }
+            var sb = new StringBuilder();
+            foreach (var kvp in ModelState)
+            {
+                var errors = kvp.Value?.Errors;
+                if (errors != null && errors.Count > 0)
+                {
+                    sb.AppendLine($"Key: {kvp.Key} -> Attempted: '{kvp.Value?.AttemptedValue}' Errors: {string.Join(" | ", errors.Select(e => e.ErrorMessage))}");
+                }
+            }
+            _logger.LogWarning("?? [PARTS-{OperationId}] ModelState INVALID at {Phase}:\n{Errors}", operationId, phase, sb.ToString());
+        }
+
+        private void LogPartSnapshot(string operationId, string contextLabel)
+        {
+            if (Part == null)
+            {
+                _logger.LogWarning("?? [PARTS-{OperationId}] Part is null at {Label}", operationId, contextLabel);
+                return;
+            }
+            try
+            {
+                var props = typeof(Part).GetProperties()
+                    .Where(p => p.PropertyType.IsPrimitive || p.PropertyType == typeof(string) || p.PropertyType == typeof(decimal) || p.PropertyType == typeof(DateTime) || p.PropertyType == typeof(double) || p.PropertyType == typeof(bool))
+                    .Select(p => $"{p.Name}={(p.GetValue(Part) ?? "<null>")}");
+                _logger.LogInformation("? [PARTS-{OperationId}] PART SNAPSHOT ({Label}): {Props}", operationId, contextLabel, string.Join(", ", props));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "? [PARTS-{OperationId}] Error logging part snapshot at {Label}", operationId, contextLabel);
+            }
+        }
+
         public async Task<IActionResult> OnPostCreateAsync()
         {
             var operationId = Guid.NewGuid().ToString("N")[..8];
             _logger.LogInformation("? [PARTS-{OperationId}] Creating part: {PartNumber}", operationId, Part.PartNumber);
+            LogPartSnapshot(operationId, "INITIAL_POST_BIND");
+            LogModelState(operationId, "INITIAL_POST_BIND");
 
             try
             {
+                EnsureRequiredDefaults(Part, isNew: true);
+                LogPartSnapshot(operationId, "AFTER_DEFAULTS");
+
+                ModelState.Clear();
+                TryValidateModel(Part, nameof(Part));
+                LogModelState(operationId, "AFTER_VALIDATE_MODEL");
+
                 if (!ModelState.IsValid)
                 {
-                    var errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList();
-                    _logger.LogWarning("?? [PARTS-{OperationId}] Validation failed: {Errors}", operationId, string.Join("; ", errors));
                     return await HandleValidationError("Please fix the validation errors and try again.");
                 }
 
-                // Check for duplicate part number
-                var existingPart = await _context.Parts
-                    .Where(p => p.PartNumber == Part.PartNumber)
-                    .FirstOrDefaultAsync();
-
+                var existingPart = await _context.Parts.FirstOrDefaultAsync(p => p.PartNumber == Part.PartNumber);
                 if (existingPart != null)
                 {
-                    _logger.LogWarning("?? [PARTS-{OperationId}] Duplicate part number: {PartNumber}", operationId, Part.PartNumber);
                     ModelState.AddModelError("Part.PartNumber", $"Part number '{Part.PartNumber}' already exists");
+                    LogModelState(operationId, "DUPLICATE_CHECK");
                     return await HandleValidationError("Part number already exists. Please choose a different part number.");
                 }
 
-                // Set defaults
                 SetPartDefaults(Part, isNew: true);
-                Part.IsLegacyForm = false; // Mark as modern form
+                Part.IsLegacyForm = false;
 
                 _context.Parts.Add(Part);
-                var result = await _context.SaveChangesAsync();
+                _logger.LogInformation("? [PARTS-{OperationId}] Saving new part...", operationId);
+                try
+                {
+                    var result = await _context.SaveChangesAsync();
+                    _logger.LogInformation("? [PARTS-{OperationId}] SaveChangesAsync result: {Result} (New ID: {Id})", operationId, result, Part.Id);
 
-                if (result > 0)
-                {
-                    _logger.LogInformation("? [PARTS-{OperationId}] Part created: {PartNumber} (ID: {PartId})", operationId, Part.PartNumber, Part.Id);
-                    return await HandleFormSuccess($"Part '{Part.PartNumber}' created successfully!");
-                }
-                else
-                {
-                    _logger.LogError("? [PARTS-{OperationId}] No rows affected during creation", operationId);
+                    if (result > 0)
+                    {
+                        return await HandleFormSuccess($"Part '{Part.PartNumber}' created successfully!");
+                    }
                     return await HandleValidationError("Failed to create part. No changes were made to the database.");
+                }
+                catch (DbUpdateException dbEx)
+                {
+                    _logger.LogError(dbEx, "? [PARTS-{OperationId}] DbUpdateException on create: {Message}", operationId, dbEx.Message);
+                    if (dbEx.InnerException != null)
+                    {
+                        _logger.LogError(dbEx.InnerException, "? [PARTS-{OperationId}] InnerException: {Inner}", operationId, dbEx.InnerException.Message);
+                    }
+                    return await HandleValidationError($"Database error: {dbEx.Message}");
                 }
             }
             catch (Exception ex)
@@ -225,6 +277,8 @@ namespace OpCentrix.Pages.Admin
         {
             var operationId = Guid.NewGuid().ToString("N")[..8];
             _logger.LogInformation("?? [PARTS-{OperationId}] Updating part: {PartNumber} (ID: {PartId})", operationId, Part.PartNumber, Part.Id);
+            LogPartSnapshot(operationId, "INITIAL_UPDATE_BIND");
+            LogModelState(operationId, "INITIAL_UPDATE_BIND");
 
             try
             {
@@ -234,48 +288,57 @@ namespace OpCentrix.Pages.Admin
                     return await HandleValidationError("Invalid part ID. Please try again.");
                 }
 
+                EnsureRequiredDefaults(Part, isNew: false);
+                LogPartSnapshot(operationId, "AFTER_DEFAULTS");
+
+                ModelState.Clear();
+                TryValidateModel(Part, nameof(Part));
+                LogModelState(operationId, "AFTER_VALIDATE_MODEL");
+
                 if (!ModelState.IsValid)
                 {
-                    var errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList();
-                    _logger.LogWarning("?? [PARTS-{OperationId}] Validation failed: {Errors}", operationId, string.Join("; ", errors));
                     return await HandleValidationError("Please fix the validation errors and try again.");
                 }
 
                 var existingPart = await _context.Parts.FindAsync(Part.Id);
                 if (existingPart == null)
                 {
-                    _logger.LogWarning("?? [PARTS-{OperationId}] Part not found for update: ID {PartId}", operationId, Part.Id);
                     return await HandleValidationError("Part not found. It may have been deleted by another user.");
                 }
 
-                // Check for duplicate part number (excluding current part)
                 var duplicatePart = await _context.Parts
                     .Where(p => p.PartNumber == Part.PartNumber && p.Id != Part.Id)
                     .FirstOrDefaultAsync();
-
                 if (duplicatePart != null)
                 {
-                    _logger.LogWarning("?? [PARTS-{OperationId}] Duplicate part number: {PartNumber}", operationId, Part.PartNumber);
                     ModelState.AddModelError("Part.PartNumber", $"Part number '{Part.PartNumber}' already exists");
+                    LogModelState(operationId, "DUPLICATE_CHECK");
                     return await HandleValidationError("Part number already exists. Please choose a different part number.");
                 }
 
-                // Update fields while preserving creation data
                 SetPartDefaults(Part, isNew: false, existingPart);
-                Part.IsLegacyForm = false; // Mark as modern form
+                Part.IsLegacyForm = false;
 
                 _context.Entry(existingPart).CurrentValues.SetValues(Part);
-                var result = await _context.SaveChangesAsync();
-
-                if (result > 0)
+                _logger.LogInformation("? [PARTS-{OperationId}] Saving updated part...", operationId);
+                try
                 {
-                    _logger.LogInformation("? [PARTS-{OperationId}] Part updated: {PartNumber} (ID: {PartId})", operationId, Part.PartNumber, Part.Id);
-                    return await HandleFormSuccess($"Part '{Part.PartNumber}' updated successfully!");
-                }
-                else
-                {
-                    _logger.LogError("? [PARTS-{OperationId}] No rows affected during update", operationId);
+                    var result = await _context.SaveChangesAsync();
+                    _logger.LogInformation("? [PARTS-{OperationId}] SaveChangesAsync result: {Result}", operationId, result);
+                    if (result > 0)
+                    {
+                        return await HandleFormSuccess($"Part '{Part.PartNumber}' updated successfully!");
+                    }
                     return await HandleValidationError("Failed to update part. No changes were detected.");
+                }
+                catch (DbUpdateException dbEx)
+                {
+                    _logger.LogError(dbEx, "? [PARTS-{OperationId}] DbUpdateException on update: {Message}", operationId, dbEx.Message);
+                    if (dbEx.InnerException != null)
+                    {
+                        _logger.LogError(dbEx.InnerException, "? [PARTS-{OperationId}] InnerException: {Inner}", operationId, dbEx.InnerException.Message);
+                    }
+                    return await HandleValidationError($"Database error: {dbEx.Message}");
                 }
             }
             catch (Exception ex)
@@ -440,6 +503,36 @@ namespace OpCentrix.Pages.Admin
 
         #region Helper Methods
 
+        private void EnsureRequiredDefaults(Part part, bool isNew)
+        {
+            // Populate fields that are marked [Required] in the model but are NOT collected on the basic form
+            if (string.IsNullOrWhiteSpace(part.BuildFileTemplate)) part.BuildFileTemplate = "default.btf";
+            if (string.IsNullOrWhiteSpace(part.CadFilePath)) part.CadFilePath = "N/A";
+            if (string.IsNullOrWhiteSpace(part.CadFileVersion)) part.CadFileVersion = "1.0";
+            if (string.IsNullOrWhiteSpace(part.Dimensions)) part.Dimensions = "0 × 0 × 0 mm";
+            if (string.IsNullOrWhiteSpace(part.CustomerPartNumber)) part.CustomerPartNumber = "N/A";
+            if (string.IsNullOrWhiteSpace(part.ProcessParameters)) part.ProcessParameters = "{}";
+            if (string.IsNullOrWhiteSpace(part.QualityCheckpoints)) part.QualityCheckpoints = "{}";
+            if (string.IsNullOrWhiteSpace(part.RequiredSkills)) part.RequiredSkills = "SLS Operation";
+            if (string.IsNullOrWhiteSpace(part.RequiredCertifications)) part.RequiredCertifications = "SLS Operation Certification";
+            if (string.IsNullOrWhiteSpace(part.RequiredTooling)) part.RequiredTooling = "Build Platform";
+            if (string.IsNullOrWhiteSpace(part.ConsumableMaterials)) part.ConsumableMaterials = "Argon Gas";
+            if (string.IsNullOrWhiteSpace(part.ToleranceRequirements)) part.ToleranceRequirements = "±0.1mm typical";
+            if (string.IsNullOrWhiteSpace(part.QualityStandards)) part.QualityStandards = "ASTM F3001";
+            if (string.IsNullOrWhiteSpace(part.PreferredMachines)) part.PreferredMachines = "TI1";
+            if (string.IsNullOrWhiteSpace(part.RequiredMachineType)) part.RequiredMachineType = "TruPrint 3000";
+            if (string.IsNullOrWhiteSpace(part.PowderSpecification)) part.PowderSpecification = "15-45 micron particle size";
+            if (string.IsNullOrWhiteSpace(part.AvgDuration)) part.AvgDuration = "8h 0m";
+            if (string.IsNullOrWhiteSpace(part.AdminOverrideBy)) part.AdminOverrideBy = User.Identity?.Name ?? "System";
+            if (string.IsNullOrWhiteSpace(part.CreatedBy)) part.CreatedBy = User.Identity?.Name ?? "System";
+            if (string.IsNullOrWhiteSpace(part.LastModifiedBy)) part.LastModifiedBy = User.Identity?.Name ?? "System";
+            if (string.IsNullOrWhiteSpace(part.Industry)) part.Industry = "Firearms";
+            if (string.IsNullOrWhiteSpace(part.Application)) part.Application = "B&T Manufacturing";
+            if (string.IsNullOrWhiteSpace(part.BTComponentType)) part.BTComponentType = "General";
+            if (string.IsNullOrWhiteSpace(part.BTFirearmCategory)) part.BTFirearmCategory = "Component";
+            if (string.IsNullOrWhiteSpace(part.WorkflowTemplate)) part.WorkflowTemplate = part.GetRecommendedWorkflow();
+        }
+
         private async Task LoadFormDataAsync()
         {
             try
@@ -553,7 +646,7 @@ namespace OpCentrix.Pages.Admin
                 CustomerPartNumber = "",
                 Dimensions = "",
                 AdminOverrideReason = "",
-                AdminOverrideBy = "",
+                AdminOverrideBy = User.Identity?.Name ?? "System",
                 WeightGrams = 0,
                 VolumeMm3 = 0,
                 HeightMm = 0,
@@ -580,9 +673,9 @@ namespace OpCentrix.Pages.Admin
             part.LastModifiedDate = DateTime.UtcNow;
             part.LastModifiedBy = User.Identity?.Name ?? "System";
 
-            part.CustomerPartNumber ??= "";
-            part.AdminOverrideReason ??= "";
-            part.AdminOverrideBy ??= "";
+            part.CustomerPartNumber ??= "N/A";
+            part.AdminOverrideReason ??= string.Empty;
+            part.AdminOverrideBy ??= User.Identity?.Name ?? "System";
 
             if (part.MaterialCostPerKg <= 0) part.MaterialCostPerKg = 450.00m;
             if (part.StandardLaborCostPerHour <= 0) part.StandardLaborCostPerHour = 85.00m;
@@ -590,7 +683,7 @@ namespace OpCentrix.Pages.Admin
 
         private async Task<IActionResult> HandleValidationError(string message)
         {
-            ModelState.AddModelError("", message);
+            ModelState.AddModelError(string.Empty, message);
             PartFormData = await CreatePartFormViewModelAsync(Part);
             return Partial("Shared/_PartForm", this);
         }

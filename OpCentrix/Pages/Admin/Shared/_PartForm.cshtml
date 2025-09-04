@@ -27,9 +27,9 @@
 
     <!-- PHASE 3: Modern Form with HTMX Integration -->
     <form method="post" id="partForm" 
-          action="/Admin/Parts"
+          action="/Admin/Parts?handler=@(Model.Part.Id == 0 ? "Create" : "Update")"
           data-part-id="@Model.Part.Id"
-          hx-post="/Admin/Parts"
+          hx-post="/Admin/Parts?handler=@(Model.Part.Id == 0 ? "Create" : "Update")"
           hx-target="#partModalContent"
           hx-swap="outerHTML"
           hx-trigger="submit"
@@ -88,7 +88,6 @@
                     <span class="d-md-none">Physical</span>
                 </button>
             </li>
-            <!-- Phase 5: Asset Management Tab -->
             @if (Model.Part.Id > 0)
             {
                 <li class="nav-item" role="presentation">
@@ -102,7 +101,6 @@
             }
         </ul>
 
-        <!-- Tab Content -->
         <div class="tab-content" id="partFormTabsContent">
             
             <!-- TAB 1: Basic Information - MODERNIZED -->
@@ -575,7 +573,7 @@
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
                         <i class="fas fa-times me-1"></i>Cancel
                     </button>
-                    <button type="submit" id="savePartBtn" class="btn btn-primary" name="handler" value="@(Model.Part.Id == 0 ? "Create" : "Update")">
+                    <button type="submit" id="savePartBtn" class="btn btn-primary">
                         <span class="spinner-border spinner-border-sm d-none me-2" role="status" aria-hidden="true"></span>
                         <i class="fas fa-save me-1"></i>
                         <span class="btn-text">@(Model.Part.Id == 0 ? "Create Part" : "Update Part")</span>
@@ -591,7 +589,6 @@
 <script src="~/js/admin/parts-stage-manager.js" asp-append-version="true"></script>
 <script src="~/js/admin/parts-form-manager.js" asp-append-version="true"></script>
 
-<!-- PHASE 3: Enhanced Form Manager -->
 <script>
     // Modern Part Form Manager with Stage Integration
     class PartFormManager {
