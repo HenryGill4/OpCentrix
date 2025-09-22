@@ -1,6 +1,7 @@
 /* OpCentrix Scheduler Enhanced Professional Design - iOS Style
  * REDESIGNED: Professional day zoom display with proper time hierarchy
  * FIXED: All styling moved from embedded styles to proper CSS
+ * FIXED: Z-index hierarchy to prevent job block hover overlap issues
  */
 
 :root {
@@ -232,6 +233,8 @@
             line-height: 1;
         }
 
+    /* ENHANCED: Reserved for future use (if needed) */
+
 /* PROFESSIONAL: Machine Labels */
 .scheduler-machine-label {
     position: sticky !important;
@@ -318,7 +321,7 @@
         border-left: 4px solid var(--machine-edm);
     }
 
-/* ENHANCED: Machine row containers must allow job block overflow AND establish stacking context */
+    /* ENHANCED: Machine row containers must allow job block overflow AND establish stacking context */
 .machine-row,
 .scheduler-machine-columns,
 .time-row {
@@ -366,37 +369,26 @@
     .scheduler-grid-cell:hover {
         background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%) !important;
         border-left: 2px solid var(--ios-blue) !important;
-        /*transform: translateX(1px);*/
-        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
-        /* ENH    border-radius: 8px;
-visibility on hover */
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
         overflow: visible !important;
     }
 
-/* ENHANCED: Machine row containers must allow job block overflow */
-.machine-row,
-.scheduler-machine-columns,
-.time-row {
-    overflow: visible !important; /* CRITICAL: Don't clip job blocks */
-    contain: none; /* Allow content to escape */
+/* CORRECTED Z-INDEX HIERARCHY - Clean and Clear */
+
+/* Background elements - lowest priority */
+.current-time-dot,
+.time-indicator {
+    z-index: 25 !important;
+    position: absolute !important;
 }
 
-/* ENHANCED: Main scheduler containers */
-.scheduler-main-grid,
-.scheduler-horizontal-container,
-.scheduler-vertical {
-    overflow-x: auto; /* Horizontal scrolling */
-    overflow-y: visible; /* Allow vertical overflow for job blocks */
-    contain: none; /* Don't constrain job blocks */
-}
-
-/* iOS-STYLE: Enhanced Job Blocks */
+/* Job blocks - medium priority */
 .job-block {
-    position: absolute !important; /* CRITICAL: Must be absolute for z-index to work */
+    position: absolute !important;
     top: 4px;
     bottom: 4px;
     min-width: 60px;
-    z-index: 1 !important; /* INCREASED: Ensure above all other elements */
+    z-index: 30 !important; /* Below interactive elements but above backgrounds */
     border-radius: 8px;
     padding: 8px 10px;
     color: white;
@@ -411,129 +403,25 @@ visibility on hover */
     overflow: hidden;
     font-family: inherit;
     border: 1px solid rgba(255, 255, 255, 0.2);
-    /* ENHANCED: Force stacking context */
     isolation: isolate;
-    transform: translateZ(0); /* Force hardware acceleration and stacking */
+    transform: translateZ(0);
+    pointer-events: auto;
 }
 
-    .job-block:hover {
+    /* Job blocks on hover - slightly higher but STILL below interactive elements */
+    .job-block:hover,
+    .job-block:focus,
+    .job-block:active {
         transform: translateY(-2px) scale(1.02) translateZ(0);
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-        z-index: 1 !important; /* INCREASED: Maximum z-index on hover */
+        z-index: 35 !important; /* Elevated but STILL below add buttons (50) */
         border-color: rgba(255, 255, 255, 0.4);
-        /* ENHANCED: Force to top of stack */
         position: absolute !important;
         isolation: isolate;
+        pointer-events: auto;
     }
 
-    .job-block:active {
-        transform: translateY(-1px) scale(1.01) translateZ(0);
-        transition-duration: 0.1s;
-        z-index: 1 !important; /* INCREASED: Maximum z-index when active */
-        position: absolute !important;
-        isolation: isolate;
-    }
-
-    .job-block .job-title {
-        font-weight: 700;
-        font-size: 13px;
-        line-height: 1.2;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        margin-bottom: 2px;
-    }
-
-    .job-block .job-details {
-        font-size: 10px;
-        opacity: 0.9;
-        line-height: 1.1;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .job-block .job-material {
-        font-size: 9px;
-        opacity: 0.8;
-        line-height: 1.1;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        margin-top: 1px;
-    }
-
-    .job-block .job-progress {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: rgba(255, 255, 255, 0.3);
-        border-radius: 0 0 8px 8px;
-        overflow: hidden;
-    }
-
-    .job-block .progress-bar {
-        height: 100%;
-        background: rgba(255, 255, 255, 0.8);
-        width: 65%;
-        animation: pulse-progress 2s infinite;
-    }
-
-    /* iOS-STYLE: Status-Based Job Colors */
-    .job-block.status-scheduled {
-        background: linear-gradient(135deg, var(--status-scheduled), #1d4ed8);
-        border-left: 3px solid #1e40af;
-    }
-
-    .job-block.status-building,
-    .job-block.status-running {
-        background: linear-gradient(135deg, var(--status-building), #d97706);
-        border-left: 3px solid #b45309;
-        animation: pulse-building 2.5s ease-in-out infinite;
-    }
-
-    .job-block.status-completed {
-        background: linear-gradient(135deg, var(--status-completed), #4b5563);
-        border-left: 3px solid #374151;
-        opacity: 0.9;
-    }
-
-    .job-block.status-delayed {
-        background: linear-gradient(135deg, var(--status-delayed), #dc2626);
-        border-left: 3px solid #b91c1c;
-        animation: pulse-urgent 2s ease-in-out infinite;
-    }
-
-    .job-block.status-cancelled {
-        background: linear-gradient(135deg, var(--status-cancelled), #6b7280);
-        border-left: 3px solid #4b5563;
-        opacity: 0.7;
-    }
-
-    /* Machine-specific job block colors (secondary styling) */
-    .job-block.machine-ti1 {
-        box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
-    }
-
-    .job-block.machine-ti2 {
-        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
-    }
-
-    .job-block.machine-inc {
-        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
-    }
-
-    .job-block.machine-cnc1 {
-        box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
-    }
-
-    .job-block.machine-edm {
-        box-shadow: 0 2px 8px rgba(6, 182, 212, 0.2);
-    }
-
-/* iOS-STYLE: Add Job Button */
+/* Interactive elements - HIGHEST priority */
 .add-job-btn {
     position: absolute;
     top: 50%;
@@ -552,21 +440,168 @@ visibility on hover */
     font-size: 14px;
     font-weight: bold;
     cursor: pointer;
-    z-index: 40;
+    z-index: 50 !important; /* HIGHEST: Always on top of everything */
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
     border: 2px solid rgba(255, 255, 255, 0.9);
     backdrop-filter: blur(10px);
+    isolation: isolate;
+    pointer-events: auto;
+    /* ENHANCED: Add delay for better UX when clicking existing jobs */
+    transition-delay: 0.5s; /* Delay showing the button by 500ms */
 }
 
 .scheduler-grid-cell:hover .add-job-btn {
     opacity: 1 !important;
     transform: translate(-50%, -50%) scale(1.1);
     box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+    z-index: 50 !important; /* MAINTAIN HIGHEST Z-INDEX */
+    transition-delay: 0.5s; /* Keep the delay for consistency */
 }
 
 .add-job-btn:hover {
     background: #1d4ed8 !important;
     transform: translate(-50%, -50%) scale(1.2) !important;
+    z-index: 50 !important; /* MAINTAIN HIGHEST Z-INDEX */
+    transition-delay: 0s; /* Remove delay when directly hovering the button */
+}
+
+/* ENHANCED: Hide add button immediately when hovering over job blocks */
+.scheduler-grid-cell:hover .job-block:hover ~ .add-job-btn,
+.job-block:hover + .add-job-btn {
+    opacity: 0 !important;
+    transition-delay: 0s; /* Hide immediately when hovering job blocks */
+    pointer-events: none;
+}
+
+/* Job block styling details */
+.job-block .job-title {
+    font-weight: 700;
+    font-size: 13px;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+}
+
+.job-block .job-details {
+    font-size: 10px;
+    opacity: 0.9;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.job-block .job-material {
+    font-size: 9px;
+    opacity: 0.8;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 1px;
+}
+
+.job-block .job-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 0 0 8px 8px;
+    overflow: hidden;
+}
+
+.job-block .progress-bar {
+    height: 100%;
+    background: rgba(255, 255, 255, 0.8);
+    width: 65%;
+    animation: pulse-progress 2s infinite;
+}
+
+/* iOS-STYLE: Status-Based Job Colors */
+.job-block.status-scheduled {
+    background: linear-gradient(135deg, var(--status-scheduled), #1d4ed8);
+    border-left: 3px solid #1e40af;
+}
+
+.job-block.status-building,
+.job-block.status-running {
+    background: linear-gradient(135deg, var(--status-building), #d97706);
+    border-left: 3px solid #b45309;
+    animation: pulse-building 2.5s ease-in-out infinite;
+}
+
+.job-block.status-completed {
+    background: linear-gradient(135deg, var(--status-completed), #4b5563);
+    border-left: 3px solid #374151;
+    opacity: 0.9;
+}
+
+.job-block.status-delayed {
+    background: linear-gradient(135deg, var(--status-delayed), #dc2626);
+    border-left: 3px solid #b91c1c;
+    animation: pulse-urgent 2s ease-in-out infinite;
+}
+
+.job-block.status-cancelled {
+    background: linear-gradient(135deg, var(--status-cancelled), #6b7280);
+    border-left: 3px solid #4b5563;
+    opacity: 0.7;
+}
+
+/* Machine-specific job block colors (secondary styling) */
+.job-block.machine-ti1 {
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
+}
+
+.job-block.machine-ti2 {
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+}
+
+.job-block.machine-inc {
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+}
+
+.job-block.machine-cnc1 {
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
+}
+
+.job-block.machine-edm {
+    box-shadow: 0 2px 8px rgba(6, 182, 212, 0.2);
+}
+
+/* Headers hierarchy */
+.scheduler-grid-cell {
+    position: relative !important;
+    z-index: auto;
+}
+
+.scheduler-machine-header {
+    z-index: 20 !important;
+    position: sticky !important;
+}
+
+.scheduler-time-header {
+    z-index: 15 !important;
+    position: sticky !important;
+}
+
+.scheduler-machine-label {
+    z-index: 10 !important;
+    position: relative !important;
+}
+
+/* Container layer management */
+.scheduler-main-grid,
+.scheduler-horizontal-container,
+.scheduler-vertical,
+.machine-row,
+.time-row {
+    position: relative !important;
+    z-index: auto;
 }
 
 /* Current Time Indicator */
@@ -579,102 +614,9 @@ visibility on hover */
     background: #ef4444;
     border-radius: 50%;
     animation: pulse-current 2s infinite;
-    z-index: 30; /* LOWER than job blocks */
+    z-index: 25 !important;
     box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
 }
-
-/* ENHANCED: Z-Index Hierarchy Management with FORCED POSITIONING */
-/* Ensure proper layering throughout the scheduler */
-
-/* Base layers - ensure all have proper positioning */
-.scheduler-grid-cell {
-    position: relative !important;
-}
-
-/* Time headers and machine headers - proper positioning */
-.scheduler-time-header,
-.scheduler-machine-header,
-.scheduler-machine-label {
-    z-index: 10 !important; /* Lowest priority headers */
-    position: relative !important;
-}
-
-/* Sticky headers need higher z-index but still below job blocks */
-.scheduler-machine-header {
-    z-index: 20 !important; /* Higher than regular headers */
-    position: sticky !important;
-}
-
-.scheduler-time-header {
-    z-index: 15 !important; /* Between machine headers and regular headers */
-    position: sticky !important;
-}
-
-/* Interactive elements - positioned properly */
-.add-job-btn {
-    z-index: 40 !important; /* Below job blocks but above grid cells */
-    position: absolute !important;
-}
-
-/* Time indicators - positioned properly */
-.current-time-dot,
-.time-indicator {
-    z-index: 30 !important; /* Below job blocks but above add buttons */
-    position: absolute !important;
-}
-
-/* Job blocks - HIGHEST priority with FORCED positioning */
-.job-block {
-    z-index: 1 !important; /* HIGHEST - always visible */
-    position: absolute !important; /* CRITICAL: Must be positioned */
-    pointer-events: auto !important; /* Ensure clickable */
-    /* ENHANCED: Create new stacking context */
-    isolation: isolate !important;
-    /* ENHANCED: Force GPU layer for better rendering */
-    will-change: transform, z-index;
-    transform: translateZ(0);
-}
-
-    .job-block:hover,
-    .job-block:focus,
-    .job-block:active {
-        z-index: 1 !important; /* MAXIMUM on interaction */
-        position: absolute !important; /* CRITICAL: Maintain positioning */
-        pointer-events: auto !important; /* Ensure clickable during interaction */
-        /* ENHANCED: Force to top */
-        isolation: isolate !important;
-        transform: translateY(-2px) scale(1.02) translateZ(0) !important;
-    }
-
-/* ENHANCED: Container layer management */
-.scheduler-main-grid,
-.scheduler-horizontal-container,
-.scheduler-vertical,
-.machine-row,
-.time-row {
-    /* CRITICAL: All containers must be positioned for child z-index to work */
-    position: relative !important;
-    /* ENHANCED: Don't create stacking context that could interfere */
-    z-index: auto;
-}
-
-/* ENHANCED: Debugging helper (can be removed in production) */
-.job-block[data-debug="true"] {
-    outline: 2px solid red !important;
-    background-color: rgba(255, 0, 0, 0.3) !important;
-}
-
-    .job-block[data-debug="true"]:before {
-        content: "Z:" attr(style) !important;
-        position: absolute !important;
-        top: -20px !important;
-        left: 0 !important;
-        background: yellow !important;
-        color: black !important;
-        font-size: 10px !important;
-        padding: 2px !important;
-        z-index: 1 !important;
-    }
 
 /* PROFESSIONAL: Animations */
 @keyframes pulse-building {
@@ -728,20 +670,19 @@ visibility on hover */
 }
 
 /* PROFESSIONAL: Responsive Design */
-/* ENHANCED: Mobile optimizations with wider slots for better scrolling */
 @media (max-width: 1024px) {
     :root {
-        --slot-width-2month: 50px; /* Larger mobile slots for better scrolling */
-        --slot-width-month: 60px; /* Enhanced mobile readability */
-        --slot-width-week: 80px; /* Great tablet scrolling experience */
-        --slot-width-day: 100px; /* Excellent tablet readability */
-        --slot-width-12h: 120px; /* Very wide touch-friendly targets */
-        --slot-width-6h: 100px; /* Great tablet interaction */
-        --slot-width-4h: 80px; /* Comfortable tablet scrolling */
-        --slot-width-2h: 70px; /* Good tablet size */
-        --slot-width-1h: 60px; /* Comfortable tablet view */
-        --slot-width-30min: 50px; /* Usable on tablet */
-        --slot-width-15min: 40px; /* Minimum for high detail */
+        --slot-width-2month: 50px;
+        --slot-width-month: 60px;
+        --slot-width-week: 80px;
+        --slot-width-day: 100px;
+        --slot-width-12h: 120px;
+        --slot-width-6h: 100px;
+        --slot-width-4h: 80px;
+        --slot-width-2h: 70px;
+        --slot-width-1h: 60px;
+        --slot-width-30min: 50px;
+        --slot-width-15min: 40px;
     }
 
     .scheduler-machine-label {
@@ -759,17 +700,17 @@ visibility on hover */
 @media (max-width: 768px) {
     :root {
         --machine-label-width: 160px;
-        --slot-width-2month: 40px; /* Mobile with good scrolling */
-        --slot-width-month: 50px; /* Enhanced mobile touch size */
-        --slot-width-week: 60px; /* Great mobile scrolling */
-        --slot-width-day: 80px; /* Excellent mobile readability */
-        --slot-width-12h: 100px; /* Very wide mobile touch targets */
-        --slot-width-6h: 80px; /* Great mobile interaction */
-        --slot-width-4h: 70px; /* Comfortable mobile scrolling */
-        --slot-width-2h: 60px; /* Good mobile size */
-        --slot-width-1h: 50px; /* Mobile comfortable */
-        --slot-width-30min: 40px; /* Good mobile density */
-        --slot-width-15min: 35px; /* Still usable minimum */
+        --slot-width-2month: 40px;
+        --slot-width-month: 50px;
+        --slot-width-week: 60px;
+        --slot-width-day: 80px;
+        --slot-width-12h: 100px;
+        --slot-width-6h: 80px;
+        --slot-width-4h: 70px;
+        --slot-width-2h: 60px;
+        --slot-width-1h: 50px;
+        --slot-width-30min: 40px;
+        --slot-width-15min: 35px;
     }
 
     .scheduler-machine-label {
@@ -836,4 +777,28 @@ visibility on hover */
         box-shadow: none !important;
         border: 1px solid rgba(0, 0, 0, 0.2) !important;
     }
+}
+
+/* VERTICAL VIEW FIXES: allow continuous job blocks across time rows */
+.scheduler-vertical .scheduler-time-rows {
+    position: relative;
+}
+
+.scheduler-vertical .time-row {
+    position: relative;
+    overflow: visible !important; /* let vertical spans overflow into next rows visually */
+}
+
+.scheduler-vertical .scheduler-machine-columns {
+    overflow: visible !important; /* prevent clipping of tall job blocks */
+}
+
+.scheduler-vertical .scheduler-grid-cell.machine-column {
+    overflow: visible !important; /* required for absolute job-block children with tall height */
+}
+
+/* Ensure job-blocks can extend vertically without being cut */
+.scheduler-vertical .job-block {
+    top: auto; /* handled via inline styles */
+    bottom: auto;
 }

@@ -25,19 +25,10 @@
         </div>
     }
 
-    <!-- PHASE 3: Modern Form with HTMX Integration -->
+    <!-- PHASE 3: Modern Form with Manual JavaScript Handling (HTMX removed to prevent conflicts) -->
     <form method="post" id="partForm" 
           action="/Admin/Parts?handler=@(Model.Part.Id == 0 ? "Create" : "Update")"
-          data-part-id="@Model.Part.Id"
-          hx-post="/Admin/Parts?handler=@(Model.Part.Id == 0 ? "Create" : "Update")"
-          hx-target="#partModalContent"
-          hx-swap="outerHTML"
-          hx-trigger="submit"
-          hx-include="#partForm [name], #partForm input[type='hidden']"
-          hx-indicator="#savePartBtn .spinner-border"
-          hx-on::before-request="console.log('🔄 [PARTS] Form submission starting...'); document.getElementById('savePartBtn').disabled = true"
-          hx-on::after-request="console.log('✅ [PARTS] Form submission completed'); document.getElementById('savePartBtn').disabled = false"
-          hx-on::response-error="console.error('❌ [PARTS] Form submission failed'); document.getElementById('savePartBtn').disabled = false; window.showToast('error', 'Form submission failed. Please try again.')">
+          data-part-id="@Model.Part.Id">
         
         @Html.AntiForgeryToken()
         <input type="hidden" asp-for="Part.Id" />
@@ -590,24 +581,128 @@
 <script src="~/js/admin/parts-form-manager.js" asp-append-version="true"></script>
 
 <script>
-    // Inline legacy helper minimized & renamed to avoid clashing with OpCentrixPartFormManager
+    // ENHANCED: Improved modal initialization with comprehensive debugging
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('🔧 [PART-FORM] DOM Content Loaded - Setting up modal event listeners...');
+        
+        // Initialize stage manager when this modal opens
+        const partModal = document.getElementById('partModal');
+        if (partModal) {
+            console.log('✅ [PART-FORM] Found partModal element');
+            
+            partModal.addEventListener('shown.bs.modal', function() {
+                console.log('🔧 [PART-FORM] Modal shown event fired');
+                console.log('🔧 [PART-FORM] Checking for stage container...');
+                
+                const stageContainer = document.getElementById('stage-requirements-container');
+                if (stageContainer) {
+                    console.log('✅ [PART-FORM] Stage container found, initializing stage manager...');
+                    
+                    // Initialize with a short delay to ensure DOM is fully rendered
+                    setTimeout(function() {
+                        try {
+                            if (window.initializeStageManagerForModal) {
+                                console.log('🔧 [PART-FORM] Calling initializeStageManagerForModal...');
+                                window.initializeStageManagerForModal();
+                            } else {
+                                console.error('❌ [PART-FORM] initializeStageManagerForModal function not available');
+                                console.log('Available functions:', Object.keys(window).filter(k => k.includes('Stage')));
+                            }
+                        } catch (error) {
+                            console.error('❌ [PART-FORM] Error initializing stage manager:', error);
+                        }
+                    }, 300);
+                } else {
+                    console.warn('⚠️ [PART-FORM] Stage container not found in modal');
+                }
+            });
+            
+            partModal.addEventListener('hidden.bs.modal', function() {
+                console.log('🔧 [PART-FORM] Modal hidden - cleaning up stage manager');
+                if (window.stageManager) {
+                    window.stageManager = null;
+                }
+            });
+        } else {
+            console.warn('⚠️ [PART-FORM] partModal element not found');
+            
+            // Try direct initialization if we're already in a modal context
+            setTimeout(function() {
+                const stageContainer = document.getElementById('stage-requirements-container');
+                if (stageContainer) {
+                    console.log('🔧 [PART-FORM] Direct initialization - stage container found');
+                    if (window.initializeStageManagerForModal) {
+                        window.initializeStageManagerForModal();
+                    }
+                }
+            }, 500);
+        }
+    });
+
+    // Alternative initialization for tab clicks
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.id === 'stages-tab') {
+            console.log('🔧 [PART-FORM] Manufacturing Stages tab clicked');
+            
+            setTimeout(function() {
+                if (!window.stageManager || !window.stageManager.isInitialized) {
+                    console.log('🔧 [PART-FORM] Stage manager not ready, initializing...');
+                    if (window.initializeStageManagerForModal) {
+                        window.initializeStageManagerForModal();
+                    }
+                }
+            }, 100);
+        }
+    });
+
+    // Enhanced legacy helper with stage integration
     class InlineLegacyPartFormHelper {
         constructor() {
             this.initializeMaterialHandlers();
             this.initializeDimensionHandlers();
+            this.initializeStageIntegration();
         }
+        
         initializeMaterialHandlers() {
             const materialSelect = document.getElementById('materialSelect');
             if (materialSelect) {
                 materialSelect.addEventListener('change', () => this.updateMaterialDefaults());
             }
         }
+        
         initializeDimensionHandlers() {
             ['Part_LengthMm','Part_WidthMm','Part_HeightMm'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.addEventListener('input', () => this.calculateVolume());
             });
         }
+        
+        initializeStageIntegration() {
+            console.log('🔧 [PART-FORM] Initializing stage integration helpers...');
+            
+            // Form submit interception for stage data
+            const form = document.getElementById('partForm');
+            if (form) {
+                form.addEventListener('submit', (e) => {
+                    console.log('🔧 [PART-FORM] Form submit intercepted, updating stage data...');
+                    this.updateStageDataBeforeSubmit();
+                });
+            }
+        }
+        
+        updateStageDataBeforeSubmit() {
+            try {
+                if (window.stageManager && window.stageManager.isInitialized) {
+                    console.log('🔧 [PART-FORM] Updating hidden fields before submit...');
+                    window.stageManager.updateHiddenFields();
+                } else {
+                    console.log('⚠️ [PART-FORM] Stage manager not available for form submit');
+                }
+            } catch (error) {
+                console.error('❌ [PART-FORM] Error updating stage data before submit:', error);
+            }
+        }
+        
         updateMaterialDefaults() {
             const materialSelect = document.getElementById('materialSelect');
             const slsMaterialInput = document.getElementById('slsMaterialInput');
@@ -618,6 +713,7 @@
             const materialCosts = { 'Ti-6Al-4V Grade 5':450,'Ti-6Al-4V ELI Grade 23':500,'CP Titanium Grade 2':400,'Inconel 718':750,'Inconel 625':800,'316L Stainless Steel':25,'17-4 PH Stainless Steel':30,'AlSi10Mg':15 };
             if (materialCostInput && materialCosts[selectedMaterial]) materialCostInput.value = materialCosts[selectedMaterial];
         }
+        
         calculateVolume() {
             const l = parseFloat(document.getElementById('Part_LengthMm')?.value)||0;
             const w = parseFloat(document.getElementById('Part_WidthMm')?.value)||0;
@@ -625,42 +721,96 @@
             const volumeInput = document.getElementById('volumeInput');
             const dimensionsInput = document.getElementById('dimensionsInput');
             const vol = l*w*h; if(volumeInput) volumeInput.value = vol.toFixed(1);
-            if(dimensionsInput) dimensionsInput.value = (l&&w&&h)?`${l} × ${w} × ${h} mm`:'';
+            if(dimensionsInput) dimensionsInput.value = (l&&w&&h)?`${l} × ${w} × ${h} mm`:'':
         }
     }
-    // Instantiate without overwriting main partFormManager provided by parts-form-manager.js
+    
+    // Initialize helper
     window.inlineLegacyFormHelper = new InlineLegacyPartFormHelper();
 
-    // Stage management fallbacks (new parts without saved ID cannot persist stages yet)
+    // Enhanced stage management fallbacks with debugging
     window.addStageFromList = async function(stageId){
+        console.log('🔧 [PART-FORM] addStageFromList called with stageId:', stageId);
+        
         if(window.stageManager && typeof window.stageManager.addStage === 'function'){
+            console.log('✅ [PART-FORM] Stage manager available, adding stage...');
             const success = window.stageManager.addStage(stageId);
             if(!success && window.showToast) window.showToast('error','Failed to add stage');
+            return success;
+        }
+        
+        // Try to initialize stage manager if not available
+        if (window.initializeStageManagerForModal) {
+            console.log('🔧 [PART-FORM] Stage manager not ready, attempting initialization...');
+            window.initializeStageManagerForModal();
+            
+            // Wait a bit and try again
+            setTimeout(() => {
+                if (window.stageManager && window.stageManager.addStage) {
+                    console.log('✅ [PART-FORM] Stage manager now ready, adding stage...');
+                    return window.stageManager.addStage(stageId);
+                } else {
+                    console.warn('⚠️ [PART-FORM] Stage manager still not ready after initialization attempt');
+                    window.showToast && window.showToast('warning','Stage manager is loading, please try again in a moment.');
+                }
+            }, 1000);
             return;
         }
-        console.warn('Stage manager not ready; stage cannot be added before part is saved.');
+        
+        console.warn('⚠️ [PART-FORM] Stage manager not ready; stage cannot be added before part is saved.');
         window.showToast && window.showToast('info','Save the part first, then add stages.');
     };
+    
     window.editStage = function(stageId){
+        console.log('🔧 [PART-FORM] editStage called with stageId:', stageId);
         if(window.stageManager && window.stageManager.editStage){ return window.stageManager.editStage(stageId);} 
         window.showToast && window.showToast('info','Stage editor requires stage manager.');
     };
     window.removeStage = function(stageId){
+        console.log('🔧 [PART-FORM] removeStage called with stageId:', stageId);
         if(window.stageManager && window.stageManager.removeStage){ return window.stageManager.removeStage(stageId);} 
         window.showToast && window.showToast('info','Stage manager not loaded.');
     };
 
-    // Material helper bridging to whichever manager is present
+    // Material helper bridging
     window.updateSlsMaterial = function(){
         if(window.partFormManager && window.partFormManager.updateMaterialDefaults){window.partFormManager.updateMaterialDefaults();return;}
         if(window.inlineLegacyFormHelper) window.inlineLegacyFormHelper.updateMaterialDefaults();
     };
+    
     window.calculateVolume = function(){
         if(window.partFormManager && window.partFormManager.calculateVolume){window.partFormManager.calculateVolume();return;}
         if(window.inlineLegacyFormHelper) window.inlineLegacyFormHelper.calculateVolume();
     };
 
-    document.addEventListener('DOMContentLoaded',()=>{
-        console.log('✅ [_PartForm] Inline helper initialized without conflicts');
-    });
+    // Debug function to check stage manager status
+    window.debugStageManager = function() {
+        console.log('🔍 [DEBUG] Stage Manager Status:');
+        console.log('- window.stageManager exists:', !!window.stageManager);
+        console.log('- window.initializeStageManagerForModal exists:', !!window.initializeStageManagerForModal);
+        console.log('- stage-requirements-container exists:', !!document.getElementById('stage-requirements-container'));
+        console.log('- partModal exists:', !!document.getElementById('partModal'));
+        
+        if (window.stageManager) {
+            console.log('- stageManager.isInitialized:', window.stageManager.isInitialized);
+            console.log('- stageManager.availableStages count:', window.stageManager.availableStages?.length || 0);
+            console.log('- stageManager.selectedStages count:', window.stageManager.selectedStages?.length || 0);
+        }
+        
+        // Test API endpoint
+        fetch('/api/production-stages/available')
+            .then(r => {
+                console.log('- API Response Status:', r.status);
+                return r.json();
+            })
+            .then(data => {
+                console.log('- API Data:', data);
+            })
+            .catch(err => {
+                console.log('- API Error:', err);
+            });
+    };
+
+    console.log('✅ [_PartForm] Enhanced initialization complete with comprehensive debugging');
+    console.log('💡 [_PartForm] Use debugStageManager() in console to check status');
 </script>

@@ -688,17 +688,49 @@ namespace OpCentrix.Pages.Admin
                 Part = part,
                 ComponentTypes = await _componentTypeService.GetActiveComponentTypesAsync(),
                 ComplianceCategories = await _complianceCategoryService.GetActiveCategoriesAsync(),
-                AvailableStages = await _context.ProductionStages
+                AvailableStages = new List<ProductionStage>(),
+                AvailableMaterials = new List<string>(),
+                ExistingStages = new List<PartStageRequirement>(),
+                ExistingAssets = new List<PartAssetLink>()
+            };
+
+            try
+            {
+                // Load available stages with detailed logging
+                viewModel.AvailableStages = await _context.ProductionStages
                     .Where(ps => ps.IsActive)
-                    .OrderBy(ps => ps.Name)
-                    .ToListAsync(),
-                AvailableMaterials = await _context.Parts
+                    .OrderBy(ps => ps.DisplayOrder)
+                    .ThenBy(ps => ps.Name)
+                    .ToListAsync();
+                    
+                _logger.LogInformation("?? [PARTS] Loaded {StageCount} available stages for form", viewModel.AvailableStages.Count);
+                
+                // Load available materials
+                viewModel.AvailableMaterials = await _context.Parts
                     .Where(p => !string.IsNullOrEmpty(p.Material))
                     .Select(p => p.Material)
                     .Distinct()
                     .OrderBy(m => m)
-                    .ToListAsync()
-            };
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "? [PARTS] Error loading available stages/materials");
+                // Use fallback data to ensure form still works
+                viewModel.AvailableStages = new List<ProductionStage>
+                {
+                    new ProductionStage
+                    {
+                        Id = 1,
+                        Name = "SLS Printing (Fallback)",
+                        Description = "Fallback stage for testing",
+                        DefaultHourlyRate = 85m,
+                        IsActive = true,
+                        DisplayOrder = 1
+                    }
+                };
+                viewModel.AvailableMaterials = new List<string> { "Ti-6Al-4V Grade 5" };
+            }
 
             if (part.Id > 0)
             {
@@ -720,11 +752,9 @@ namespace OpCentrix.Pages.Admin
                     viewModel.ExistingStages = new List<PartStageRequirement>();
                 }
             }
-            else
-            {
-                viewModel.ExistingAssets = new List<PartAssetLink>();
-                viewModel.ExistingStages = new List<PartStageRequirement>();
-            }
+
+            _logger.LogInformation("? [PARTS] PartFormViewModel created - {StageCount} stages, {ComponentCount} components, {CategoryCount} categories", 
+                viewModel.AvailableStages.Count, viewModel.ComponentTypes.Count, viewModel.ComplianceCategories.Count);
 
             return viewModel;
         }

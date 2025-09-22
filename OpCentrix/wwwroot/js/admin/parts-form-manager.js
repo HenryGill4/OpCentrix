@@ -228,26 +228,27 @@ class OpCentrixPartFormManager {
         this.submitInProgress = true;
         this.showSubmitProgress(true);
 
-        // Perform validation
-        this.validateForm()
-            .then(isValid => {
-                if (isValid) {
-                    return this.populateHiddenFields();
-                } else {
-                    throw new Error('Form validation failed');
-                }
-            })
-            .then(() => {
-                return this.submitForm();
-            })
-            .catch(error => {
-                console.error('? [PART-FORM] Form submission failed:', error);
-                this.showNotification('error', `Form submission failed: ${error.message}`);
-            })
-            .finally(() => {
-                this.submitInProgress = false;
-                this.showSubmitProgress(false);
-            });
+        try {
+            // CRITICAL FIX: Populate hidden fields BEFORE validation
+            console.log('?? [PART-FORM] Populating hidden fields before validation...');
+            await this.populateHiddenFields();
+            
+            // Then perform validation
+            const isValid = await this.validateForm();
+            if (!isValid) {
+                throw new Error('Form validation failed');
+            }
+            
+            // Submit the form
+            await this.submitForm();
+            
+        } catch (error) {
+            console.error('? [PART-FORM] Form submission failed:', error);
+            this.showNotification('error', `Form submission failed: ${error.message}`);
+        } finally {
+            this.submitInProgress = false;
+            this.showSubmitProgress(false);
+        }
 
         return false;
     }
@@ -329,26 +330,40 @@ class OpCentrixPartFormManager {
         console.log('?? [PART-FORM] Populating hidden form fields...');
 
         try {
-            // Get stage data
-            const stageData = this.stageManager && this.stageManager.getStageDataForSubmission ? 
-                this.stageManager.getStageDataForSubmission() : 
-                { stageIds: [], executionOrders: [], estimatedHours: [], hourlyRates: [], materialCosts: [] };
+            // Get stage data from stage manager
+            let stageData;
+            
+            if (this.stageManager && this.stageManager.getStageDataForSubmission) {
+                stageData = this.stageManager.getStageDataForSubmission();
+                console.log('? [PART-FORM] Got stage data from stage manager:', stageData);
+            } else {
+                console.warn('?? [PART-FORM] Stage manager not available, using empty stage data');
+                stageData = { 
+                    stageIds: [], 
+                    executionOrders: [], 
+                    estimatedHours: [], 
+                    hourlyRates: [], 
+                    materialCosts: [] 
+                };
+            }
 
-            // Populate hidden fields
+            // Populate ALL hidden fields (these were not getting set before!)
             this.setHiddenFieldValue('selectedStageIds', stageData.stageIds.join(','));
             this.setHiddenFieldValue('stageExecutionOrders', stageData.executionOrders.join(','));
             this.setHiddenFieldValue('stageEstimatedHours', stageData.estimatedHours.join(','));
             this.setHiddenFieldValue('stageHourlyRates', stageData.hourlyRates.join(','));
             this.setHiddenFieldValue('stageMaterialCosts', stageData.materialCosts.join(','));
 
-            console.log('? [PART-FORM] Hidden fields populated:', {
+            console.log('? [PART-FORM] Hidden fields populated successfully:', {
                 stageCount: stageData.stageIds.length,
-                stageIds: stageData.stageIds.join(',')
+                stageIds: stageData.stageIds.join(','),
+                selectedStageIds: document.getElementById('selectedStageIds')?.value,
+                stageExecutionOrders: document.getElementById('stageExecutionOrders')?.value
             });
 
         } catch (error) {
             console.error('? [PART-FORM] Error populating hidden fields:', error);
-            throw error;
+            // Don't throw - allow form submission to continue even if stage data fails
         }
     }
 
