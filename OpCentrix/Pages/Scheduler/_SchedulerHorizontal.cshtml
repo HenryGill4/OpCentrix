@@ -9,11 +9,32 @@
     string GetColor(string m)=> Model.MachineColors != null && Model.MachineColors.TryGetValue(m, out var c) ? c : "#6366F1";
 }
 <style>
-    /* Centralized DB-driven color logic for horizontal scheduler */
-    .scheduler-horizontal-container .job-block {background:var(--machine-color,#6366F1)!important;color:#fff;}
-    /* Neutralize previous status overrides so machine color always wins */
-    .scheduler-horizontal-container .job-block[class*='status-'] {background:var(--machine-color,#6366F1)!important;}
+    /* Reinstate variable-based coloring with hard inline fallback */
+    .scheduler-horizontal-container .job-block { color:#fff; border-radius:6px; }
+    .scheduler-horizontal-container .job-block[data-color] { box-shadow:0 4px 14px -2px rgba(0,0,0,.12); }
+    /* If some global CSS forces white, this increases specificity */
+    .scheduler-horizontal-container .scheduler-grid-cell .job-block { background:var(--machine-color,#6366F1); }
 </style>
+<script>
+// Fallback: ensure openJobModalSafely exists before any inline onclick calls
+if(typeof window.openJobModalSafely !== 'function'){
+  window.openJobModalSafely = function(machineId, date, jobId){
+    try {
+      if(typeof window.openJobModal === 'function') return window.openJobModal(machineId,date,jobId);
+      const params = new URLSearchParams({ handler:'ShowAddModal', machineId: machineId||'', date: date||'' });
+      if(jobId) params.append('id', jobId);
+      const url = '/Scheduler?' + params.toString();
+      if(typeof htmx !== 'undefined'){
+        return htmx.ajax('GET', url, { target:'#modal-container', swap:'innerHTML' }).then(()=>{
+          const mc=document.getElementById('modal-container'); if(mc){ mc.style.display='flex'; mc.classList.remove('hidden'); document.body.style.overflow='hidden'; }
+        });
+      }
+      window.location.href = url; // hard fallback
+    } catch(err){ console.error('openJobModalSafely fallback error', err); }
+    return false;
+  };
+}
+</script>
 <div class="scheduler-horizontal-container" data-zoom="@zoom" data-orientation="horizontal" data-total-slots="@totalSlots">
     <div class="scheduler-main-grid" style="display:grid; grid-template-columns: 200px repeat(@totalSlots, var(--slot-width)); min-width:fit-content;">
         <div class="scheduler-machine-header">
@@ -76,7 +97,7 @@
             var jobCount = machineJobs.Count;
             var totalHours = machineJobs.Sum(j => j.DurationHours);
             var utilizationPercent = (totalHours / 24.0 * 100).ToString("F0");
-            <div class="scheduler-machine-label machine-@machine.ToLower()" style="min-height:@(rowHeight)px; --machine-color:@color" data-machine="@machine">
+            <div class="scheduler-machine-label machine-@machine.ToLower()" style="min-height:@(rowHeight)px; --machine-color:@color" data-machine="@machine" data-color="@color">
                 <div class="machine-name flex items-center space-x-2">
                     <span class="inline-block w-2.5 h-2.5 rounded-sm" style="background:@color"></span>
                     <span>@machine</span>
@@ -108,7 +129,7 @@
                     var slotJobs = machineJobs.Where(job => job.ScheduledStart < slotDateTime.AddMinutes(slotMinutes) && job.ScheduledEnd > slotDateTime).ToList();
                     if (slotJobs.Any()) cellClasses.Add("has-jobs");
                     var addTooltip = $"Click to add job at {slotDateTime:MMM dd, yyyy h:mm tt}";
-                    <div class="@string.Join(" ", cellClasses)" style="min-height:@(rowHeight)px; --machine-color:@color" onclick="openJobModalSafely('@machine','@slotDateTime.ToString("yyyy-MM-ddTHH:mm")')" title="@addTooltip" data-slot-time="@slotDateTime.ToString("yyyy-MM-ddTHH:mm")" data-machine="@machine" aria-label="Slot @slotDateTime.ToString("MMM dd h:mm tt") for @machine">
+                    <div class="@string.Join(" ", cellClasses)" style="min-height:@(rowHeight)px" onclick="openJobModalSafely('@machine','@slotDateTime.ToString("yyyy-MM-ddTHH:mm")')" title="@addTooltip" data-slot-time="@slotDateTime.ToString("yyyy-MM-ddTHH:mm")" data-machine="@machine">
                         @foreach (var job in slotJobs)
                         {
                             var startDate = Model.Dates.Count > 0 ? Model.Dates[0].Date : DateTime.Today;
@@ -125,7 +146,7 @@
                                 jobLabel += $" - Duration: {job.DurationHours:F1}h";
                                 if(job.Priority>0) jobLabel += $" - Priority P{job.Priority}";
                                 var rush = false; try { rush = (bool)(job.GetType().GetProperty("IsRushJob")?.GetValue(job) ?? false); } catch { }
-                                <div class="job-block machine-@machine.ToLower() status-@job.Status.ToLower().Replace(" ", "-")@(rush ? " rush-job" : string.Empty)" style="left:@leftPct; width:@widthPct; --machine-color:@color" data-material="@job.SlsMaterial" data-priority="@job.Priority" data-status="@job.Status" data-machine="@machine" onclick="event.stopPropagation(); openJobModalSafely('@machine','@job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")',@job.Id)" title="@jobLabel" aria-label="@jobLabel" data-job-id="@job.Id">
+                                <div class="job-block machine-@machine.ToLower() status-@job.Status.ToLower().Replace(" ", "-")@(rush ? " rush-job" : string.Empty)" style="left:@leftPct; width:@widthPct; --machine-color:@color; background:@color !important;" data-color="@color" data-material="@job.SlsMaterial" data-priority="@job.Priority" data-status="@job.Status" data-machine="@machine" onclick="event.stopPropagation(); openJobModalSafely('@machine','@job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")',@job.Id)" title="@jobLabel" aria-label="@jobLabel" data-job-id="@job.Id">
                                     <div class="job-badges">
                                         @if (job.Priority <= 2) { <span class="priority-badge p@job.Priority" title="Priority P@job.Priority">P@job.Priority</span>; }
                                         @if (rush) { <span class="rush-badge" title="Rush Job">?</span>; }
@@ -153,3 +174,10 @@
         }
     </div>
 </div>
+<script>
+// Immediate hydration to fix white flash if any CSS loads late
+(function(){
+  const blocks=document.querySelectorAll('.scheduler-horizontal-container .job-block[data-color]');
+  blocks.forEach(b=>{const c=b.getAttribute('data-color'); if(c) b.style.backgroundColor=c;});
+})();
+</script>

@@ -11,5 +11,7 @@ namespace OpCentrix.ViewModels.Shared
         public List<string> Machines { get; set; } = new();
         public List<DateTime> Dates { get; set; } = new();
         public DateTime StartDate { get; set; }
+        // NEW: DB-driven machine colors (MachineId -> Hex)
+        public Dictionary<string,string> MachineColors { get; set; } = new();
     }
 }
