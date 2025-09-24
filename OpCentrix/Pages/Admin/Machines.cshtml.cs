@@ -6,6 +6,7 @@ using OpCentrix.Data;
 using OpCentrix.Services.Admin;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
+using System.Text.RegularExpressions;
 
 namespace OpCentrix.Pages.Admin;
 
@@ -541,6 +542,11 @@ public class MachinesModel : PageModel
         if (string.IsNullOrWhiteSpace(request.Status))
             result.AddError(nameof(request.Status), "Status is required.");
 
+        if (string.IsNullOrWhiteSpace(request.MachineType))
+            result.AddError(nameof(request.MachineType), "Machine Type is required.");
+        else if (!AllowedMachineTypes.Contains(request.MachineType, StringComparer.OrdinalIgnoreCase) && !request.MachineType.Equals("Auto", StringComparison.OrdinalIgnoreCase))
+            result.AddError(nameof(request.MachineType), "Invalid machine type.");
+
         // Business logic validation
         if (!string.IsNullOrWhiteSpace(request.MachineId))
         {
@@ -564,6 +570,11 @@ public class MachinesModel : PageModel
 
         if (string.IsNullOrWhiteSpace(request.MachineName))
             result.AddError(nameof(request.MachineName), "Machine Name is required.");
+
+        if (string.IsNullOrWhiteSpace(request.MachineType))
+            result.AddError(nameof(request.MachineType), "Machine Type is required.");
+        else if (!AllowedMachineTypes.Contains(request.MachineType, StringComparer.OrdinalIgnoreCase) && !request.MachineType.Equals("Auto", StringComparison.OrdinalIgnoreCase))
+            result.AddError(nameof(request.MachineType), "Invalid machine type.");
 
         // Business logic validation
         if (!string.IsNullOrWhiteSpace(request.MachineId))
@@ -594,14 +605,39 @@ public class MachinesModel : PageModel
         return result;
     }
 
+    private static readonly string[] AllowedMachineTypes = new[] { "SLS", "CNC", "EDM", "Coating", "Inspection", "Assembly", "Other" };
+
+    private string NormalizeMachineType(string? requested, string? model, string? name)
+    {
+        string source = string.Join(" ", requested, model, name).ToUpperInvariant();
+        // Explicit request takes precedence if valid
+        if (!string.IsNullOrWhiteSpace(requested))
+        {
+            var reqNorm = requested.Trim();
+            if (AllowedMachineTypes.Contains(reqNorm, StringComparer.OrdinalIgnoreCase))
+                return AllowedMachineTypes.First(t => t.Equals(reqNorm, StringComparison.OrdinalIgnoreCase));
+            if (reqNorm.Equals("AUTO", StringComparison.OrdinalIgnoreCase))
+            {
+                // fall through to inference
+            }
+        }
+        if (source.Contains("TRUPRINT") || source.Contains("TRU PRINT") || source.Contains("SLS") || source.Contains("SELECTIVE LASER")) return "SLS";
+        if (source.Contains("CNC") || source.Contains("HAAS") || source.Contains("MAZAK") || source.Contains("DOOSAN") ) return "CNC";
+        if (source.Contains("EDM") || source.Contains("WIRE EDM")) return "EDM";
+        if (source.Contains("COAT") || source.Contains("CERAKOTE")) return "Coating";
+        if (source.Contains("INSPECTION") || source.Contains("QC") || source.Contains("CMM")) return "Inspection";
+        return "Other";
+    }
+
     private Machine CreateMachineFromDto(CreateMachineDto dto)
     {
+        var normalizedType = NormalizeMachineType(dto.MachineType, dto.MachineModel, dto.MachineName);
         return new Machine
         {
             MachineId = dto.MachineId,
             Name = dto.MachineName,
             MachineName = dto.MachineName,
-            MachineType = dto.MachineModel?.Contains("TruPrint") == true ? "SLS" : "SLS",
+            MachineType = normalizedType,
             MachineModel = dto.MachineModel,
             SerialNumber = dto.SerialNumber ?? string.Empty,
             Location = dto.Location ?? string.Empty,
@@ -644,6 +680,7 @@ public class MachinesModel : PageModel
         machine.Name = dto.MachineName;
         machine.MachineName = dto.MachineName;
         machine.MachineModel = dto.MachineModel;
+        machine.MachineType = NormalizeMachineType(dto.MachineType, dto.MachineModel, dto.MachineName);
         machine.SerialNumber = dto.SerialNumber ?? string.Empty;
         machine.Location = dto.Location ?? string.Empty;
         machine.SupportedMaterials = dto.SupportedMaterials ?? string.Empty;
@@ -687,6 +724,7 @@ public class MachinesModel : PageModel
             MachineId = machine.MachineId,
             MachineName = machine.MachineName,
             MachineModel = machine.MachineModel,
+            MachineType = machine.MachineType,
             SerialNumber = machine.SerialNumber,
             Location = machine.Location,
             SupportedMaterials = machine.SupportedMaterials,
@@ -704,7 +742,8 @@ public class MachinesModel : PageModel
             MaxLayerThicknessMicrons = machine.MaxLayerThicknessMicrons,
             MaintenanceIntervalHours = machine.MaintenanceIntervalHours,
             OpcUaEndpointUrl = machine.OpcUaEndpointUrl,
-            OpcUaEnabled = machine.OpcUaEnabled
+            OpcUaEnabled = machine.OpcUaEnabled,
+            ColorHex = machine.ColorHex
         };
     }
 
@@ -727,6 +766,7 @@ public class CreateMachineDto
 {
     public string MachineId { get; set; } = string.Empty;
     public string MachineName { get; set; } = string.Empty;
+    public string MachineType { get; set; } = "Auto"; // NEW - Allow Auto inference
     public string MachineModel { get; set; } = "TruPrint 3000";
     public string? SerialNumber { get; set; }
     public string? Location { get; set; }
@@ -746,13 +786,14 @@ public class CreateMachineDto
     public double MaintenanceIntervalHours { get; set; } = 500;
     public string? OpcUaEndpointUrl { get; set; }
     public bool OpcUaEnabled { get; set; } = false;
-    public string? ColorHex { get; set; } // NEW
+    public string? ColorHex { get; set; }
 }
 
 public class EditMachineDto
 {
     public string MachineId { get; set; } = string.Empty;
     public string MachineName { get; set; } = string.Empty;
+    public string MachineType { get; set; } = "Auto"; // NEW
     public string MachineModel { get; set; } = string.Empty;
     public string? SerialNumber { get; set; }
     public string? Location { get; set; }
@@ -772,7 +813,7 @@ public class EditMachineDto
     public double MaintenanceIntervalHours { get; set; }
     public string? OpcUaEndpointUrl { get; set; }
     public bool OpcUaEnabled { get; set; }
-    public string? ColorHex { get; set; } // NEW
+    public string? ColorHex { get; set; }
 }
 
 public class CreateCapabilityDto

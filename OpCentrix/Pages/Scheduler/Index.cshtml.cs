@@ -8,6 +8,8 @@ using OpCentrix.Data;
 using OpCentrix.Services;
 using OpCentrix.Services.Admin;
 using OpCentrix.Authorization;
+using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace OpCentrix.Pages.Scheduler
 {
@@ -54,7 +56,40 @@ namespace OpCentrix.Pages.Scheduler
         [BindProperty]
         public int? EditingJobId { get; set; }
 
-        public async Task OnGetAsync(string? zoom = null, DateTime? startDate = null, string? orientation = null)
+        // Helper: unify/normalize machine type labels for scheduler grouping
+        private static string GetUnifiedMachineType(Machine m)
+        {
+            if (m == null) return "Unknown";
+            string raw = (m.MachineType ?? "").Trim();
+            string name = (m.MachineName ?? m.Name ?? "").Trim();
+            string model = (m.MachineModel ?? "").Trim();
+            string all = string.Join(" ", raw, name, model).ToUpperInvariant();
+
+            // SLS group (TruPrint + Custom SLS + generic SLS keywords)
+            if (all.Contains("TRUPRINT") || all.Contains("TRU PRINT") || all.Contains("SLS") || all.Contains("SELECTIVE LASER") )
+                return "SLS";
+
+            // CNC group (Haas, Doosan, Mazak, generic CNC)
+            if (all.Contains("CNC") || all.Contains("HAAS") || all.Contains("MAZAK") || all.Contains("DOOSAN"))
+                return "CNC";
+
+            // EDM group
+            if (all.Contains("EDM") || all.Contains("WIRE EDM"))
+                return "EDM";
+
+            // Coating / Cerakote group
+            if (all.Contains("COAT") || all.Contains("CERAKOTE") )
+                return "Coating";
+
+            // Inspection / QC group
+            if (all.Contains("INSPECTION") || all.Contains("QC") || all.Contains("CMM"))
+                return "Inspection";
+
+            return string.IsNullOrWhiteSpace(raw) ? "Other" : raw; // fallback to stored type
+        }
+
+        // Added machineType filter
+        public async Task OnGetAsync(string? zoom = null, DateTime? startDate = null, string? orientation = null, string? machineType = null)
         {
             var operationId = Guid.NewGuid().ToString("N")[..8];
             _logger.LogInformation("🎯 [SCHEDULER-{OperationId}] Loading modern scheduler", operationId);
@@ -63,26 +98,50 @@ namespace OpCentrix.Pages.Scheduler
             {
                 await LoadAvailableMachinesAsync(operationId);
                 // Backfill colors if missing
-                foreach(var m in AvailableMachines)
+                foreach (var m in AvailableMachines)
                 {
-                    if(string.IsNullOrWhiteSpace(m.ColorHex))
+                    if (string.IsNullOrWhiteSpace(m.ColorHex))
                     {
                         m.ColorHex = AssignColor(m.MachineId, AvailableMachines);
                         _context.Machines.Update(m);
                     }
                 }
                 await _context.SaveChangesAsync();
+
+                // Base data
                 ViewModel = _schedulerService.GetSchedulerData(zoom, startDate);
                 ViewModel.Machines = AvailableMachines.Select(m => m.MachineId).ToList();
                 ViewModel.MachineColors = AvailableMachines.ToDictionary(m => m.MachineId, m => string.IsNullOrWhiteSpace(m.ColorHex) ? m.EffectiveColorHex : m.ColorHex!);
-                await LoadAvailablePartsAsync(operationId);
+
+                // Jobs before filtering
                 await LoadJobsAsync(operationId);
+
+                // Build unified type map
+                var unifiedTypeMap = AvailableMachines.ToDictionary(m => m.MachineId, GetUnifiedMachineType);
+                var distinctTypes = unifiedTypeMap.Values.Distinct().OrderBy(t => t).ToList();
+                ViewData["MachineTypes"] = distinctTypes;
+
+                // Apply filter if requested
+                if (!string.IsNullOrWhiteSpace(machineType) && !string.Equals(machineType, "all", StringComparison.OrdinalIgnoreCase))
+                {
+                    var target = machineType.Trim().ToUpperInvariant();
+                    var filteredMachineIds = unifiedTypeMap.Where(kvp => kvp.Value.ToUpperInvariant() == target).Select(kvp => kvp.Key).ToHashSet();
+
+                    ViewModel.Machines = ViewModel.Machines.Where(id => filteredMachineIds.Contains(id)).ToList();
+                    ViewModel.Jobs = ViewModel.Jobs.Where(j => filteredMachineIds.Contains(j.MachineId)).ToList();
+                    ViewModel.MachineColors = ViewModel.MachineColors
+                        .Where(kvp => filteredMachineIds.Contains(kvp.Key))
+                        .ToDictionary(k => k.Key, v => v.Value);
+                }
+                ViewData["CurrentMachineTypeFilter"] = string.IsNullOrWhiteSpace(machineType) ? "all" : machineType;
+
+                // Summary based on (possibly filtered) machines
                 await GenerateSummaryAsync(operationId);
-                _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Scheduler loaded: {JobCount} jobs, {MachineCount} machines", 
-                    operationId, ViewModel.Jobs.Count, AvailableMachines.Count);
-                
-                _logger.LogInformation("🔧 [SCHEDULER-{OperationId}] Available machines: {Machines}", 
-                    operationId, string.Join(", ", AvailableMachines.Select(m => $"{m.MachineId}({m.MachineName})")));
+
+                await LoadAvailablePartsAsync(operationId);
+
+                _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Scheduler loaded: {JobCount} jobs, {MachineCount} machines (filter={Filter})",
+                    operationId, ViewModel.Jobs.Count, ViewModel.Machines.Count, ViewData["CurrentMachineTypeFilter"]);
             }
             catch (Exception ex)
             {
@@ -93,7 +152,7 @@ namespace OpCentrix.Pages.Scheduler
         }
 
         // NEW: Lightweight partial refresh handler for the grid (removes need for full page reload)
-        public async Task<IActionResult> OnGetRefreshGridAsync(string? zoom = null, DateTime? startDate = null, string? orientation = null)
+        public async Task<IActionResult> OnGetRefreshGridAsync(string? zoom = null, DateTime? startDate = null, string? orientation = null, string? machineType = null)
         {
             var opId = Guid.NewGuid().ToString("N")[..8];
             try
@@ -103,7 +162,18 @@ namespace OpCentrix.Pages.Scheduler
                 ViewModel.Machines = AvailableMachines.Select(m => m.MachineId).ToList();
                 ViewModel.MachineColors = AvailableMachines.ToDictionary(m => m.MachineId, m => string.IsNullOrWhiteSpace(m.ColorHex) ? m.EffectiveColorHex : m.ColorHex!);
                 await LoadJobsAsync(opId);
-                await GenerateSummaryAsync(opId);
+
+                var unifiedTypeMap = AvailableMachines.ToDictionary(m => m.MachineId, GetUnifiedMachineType);
+                if (!string.IsNullOrWhiteSpace(machineType) && !string.Equals(machineType, "all", StringComparison.OrdinalIgnoreCase))
+                {
+                    var target = machineType.Trim().ToUpperInvariant();
+                    var filteredMachineIds = unifiedTypeMap.Where(kvp => kvp.Value.ToUpperInvariant() == target).Select(kvp => kvp.Key).ToHashSet();
+                    ViewModel.Machines = ViewModel.Machines.Where(id => filteredMachineIds.Contains(id)).ToList();
+                    ViewModel.Jobs = ViewModel.Jobs.Where(j => filteredMachineIds.Contains(j.MachineId)).ToList();
+                    ViewModel.MachineColors = ViewModel.MachineColors.Where(kvp => filteredMachineIds.Contains(kvp.Key)).ToDictionary(k => k.Key, v => v.Value);
+                }
+
+                await GenerateSummaryAsync(opId); // Keep summary coherent if needed client-side
 
                 var isVertical = orientation == "vertical";
                 if (isVertical)
@@ -120,7 +190,7 @@ namespace OpCentrix.Pages.Scheduler
         }
 
         // NEW: Lightweight partial refresh handler for footer summary
-        public async Task<IActionResult> OnGetRefreshSummaryAsync(string? zoom = null, DateTime? startDate = null)
+        public async Task<IActionResult> OnGetRefreshSummaryAsync(string? zoom = null, DateTime? startDate = null, string? machineType = null)
         {
             var opId = Guid.NewGuid().ToString("N")[..8];
             try
@@ -130,6 +200,16 @@ namespace OpCentrix.Pages.Scheduler
                 ViewModel.Machines = AvailableMachines.Select(m => m.MachineId).ToList();
                 ViewModel.MachineColors = AvailableMachines.ToDictionary(m => m.MachineId, m => string.IsNullOrWhiteSpace(m.ColorHex) ? m.EffectiveColorHex : m.ColorHex!);
                 await LoadJobsAsync(opId);
+
+                var unifiedTypeMap = AvailableMachines.ToDictionary(m => m.MachineId, GetUnifiedMachineType);
+                if (!string.IsNullOrWhiteSpace(machineType) && !string.Equals(machineType, "all", StringComparison.OrdinalIgnoreCase))
+                {
+                    var target = machineType.Trim().ToUpperInvariant();
+                    var filteredMachineIds = unifiedTypeMap.Where(kvp => kvp.Value.ToUpperInvariant() == target).Select(kvp => kvp.Key).ToHashSet();
+                    ViewModel.Machines = ViewModel.Machines.Where(id => filteredMachineIds.Contains(id)).ToList();
+                    ViewModel.Jobs = ViewModel.Jobs.Where(j => filteredMachineIds.Contains(j.MachineId)).ToList();
+                }
+
                 await GenerateSummaryAsync(opId);
                 return Partial("_FooterSummary", Summary);
             }
@@ -506,16 +586,21 @@ namespace OpCentrix.Pages.Scheduler
         {
             try
             {
+                var activeMachineSet = ViewModel.Machines.ToHashSet();
                 Summary = new FooterSummaryViewModel
                 {
-                    MachineHours = AvailableMachines.ToDictionary(
-                        m => m.MachineId,
-                        m => ViewModel.Jobs.Where(j => j.MachineId == m.MachineId).Sum(j => j.DurationHours)
-                    ),
-                    JobCounts = AvailableMachines.ToDictionary(
-                        m => m.MachineId,
-                        m => ViewModel.Jobs.Count(j => j.MachineId == m.MachineId)
-                    )
+                    MachineHours = AvailableMachines
+                        .Where(m => activeMachineSet.Contains(m.MachineId))
+                        .ToDictionary(
+                            m => m.MachineId,
+                            m => ViewModel.Jobs.Where(j => j.MachineId == m.MachineId).Sum(j => j.DurationHours)
+                        ),
+                    JobCounts = AvailableMachines
+                        .Where(m => activeMachineSet.Contains(m.MachineId))
+                        .ToDictionary(
+                            m => m.MachineId,
+                            m => ViewModel.Jobs.Count(j => j.MachineId == m.MachineId)
+                        )
                 };
             }
             catch (Exception ex)
@@ -709,7 +794,7 @@ namespace OpCentrix.Pages.Scheduler
                 job.OxygenContentPpm = 50;
                 job.RequiresArgonPurge = true;
                 job.RequiresPreheating = true;
-                job.RequiresPowderSieving = true;
+                job.RequiresPowderSieving = true; // fixed property name
                 job.MaterialCostPerKg = part.MaterialCostPerKg;
                 job.LaborCostPerHour = part.StandardLaborCostPerHour;
                 job.MachineOperatingCostPerHour = part.MachineOperatingCostPerHour;

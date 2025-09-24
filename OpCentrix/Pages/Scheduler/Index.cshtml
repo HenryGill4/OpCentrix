@@ -6,192 +6,94 @@
     ViewData["Title"] = "Production Scheduler";
     ViewData["Description"] = "Schedule and manage production jobs across all machines";
     Layout = "~/Pages/Shared/_UserLayout.cshtml";
-    
-    // Task 9: Enhanced zoom handling with extended levels (12h to 1h, 2 months)
+
+    // Restored server-side scheduler setup
     var zoomLevels = new[] { "2month", "month", "week", "12h", "6h", "4h", "2h", "1h", "30min", "15min" };
     var zoomParam = Request.Query["zoom"].FirstOrDefault() ?? "week";
     var zoomIndex = Array.IndexOf(zoomLevels, zoomParam);
-    if (zoomIndex < 0) zoomIndex = 2; // Default to week
+    if (zoomIndex < 0) zoomIndex = 2; // default to week
     var zoom = zoomLevels[zoomIndex];
-    
-    // Task 10: Enhanced orientation parameter with user preference fallback
+
     var orientationParam = Request.Query["orientation"].FirstOrDefault();
     string currentOrientation;
-    
     if (!string.IsNullOrEmpty(orientationParam) && (orientationParam == "horizontal" || orientationParam == "vertical"))
     {
         currentOrientation = orientationParam;
     }
     else
     {
-        // Default to horizontal since user preferences aren't implemented yet
         currentOrientation = "horizontal";
     }
-    
     var isVertical = currentOrientation == "vertical";
-    
-    // Use the view model data
+
     var viewModel = Model.ViewModel;
-    var slotsPerDay = viewModel.SlotsPerDay; 
-    var slotMinutes = viewModel.SlotMinutes;
-    var slotTimes = Enumerable.Range(0, slotsPerDay).Select(i => TimeSpan.FromMinutes(i * slotMinutes)).ToList();
-    var totalSlots = viewModel.Dates.Count * slotsPerDay;
-    var dates = viewModel.Dates;
-    var machines = viewModel.Machines;
-    var jobs = viewModel.Jobs;
-    var machineRowHeights = viewModel.MachineRowHeights;
-    
-    // Check if system is in empty state (no real machines configured)
-    var hasRealMachines = viewModel.Machines.Any(); // If we have any machines from the database, they are real
-    var hasJobs = viewModel.Jobs.Any();
-    var isEmptyState = !hasRealMachines; // Empty state only when no machines are configured
-    
-    // ENHANCED: Wider slot width values for superior horizontal scrolling
-    var slotWidthDesktop = zoom switch {
-        "2month" => "60px",   // INCREASED: Better horizontal scrolling for 60-day span
-        "month" => "80px",    // INCREASED: Enhanced readability for 30-day span
-        "week" => "100px",    // INCREASED: More generous size for 42-day span
-        "day" => "120px",     // INCREASED: Maximum readability for 30-day span
-        "12h" => "150px",     // INCREASED: Very wide for excellent time labels
-        "6h" => "120px",      // INCREASED: Great balance for 120 slots
-        "4h" => "100px",      // INCREASED: Comfortable for 180 slots
-        "2h" => "80px",       // INCREASED: Good for 252 slots
-        "1h" => "70px",       // INCREASED: Comfortable for 336 slots
-        "30min" => "60px",    // INCREASED: Better for high-density view
-        "15min" => "50px",    // INCREASED: Still very usable for maximum detail
-        _ => "120px"          // Default to maximum readability
-    };
-    
-    var slotWidthMobile = zoom switch {
-        "2month" => "40px",   // MOBILE: Good mobile horizontal scrolling
-        "month" => "50px",    // MOBILE: Enhanced mobile readability
-        "week" => "60px",     // MOBILE: Great mobile scrolling
-        "day" => "80px",      // MOBILE: Excellent mobile readability
-        "12h" => "100px",     // MOBILE: Very wide mobile touch targets
-        "6h" => "80px",       // MOBILE: Great mobile interaction
-        "4h" => "70px",       // MOBILE: Comfortable mobile scrolling
-        "2h" => "60px",       // MOBILE: Good mobile size
-        "1h" => "50px",       // MOBILE: Mobile comfortable
-        "30min" => "40px",    // MOBILE: Good mobile density
-        "15min" => "35px",    // MOBILE: Still usable minimum
-        _ => "80px"           // Default to excellent mobile view
-    };
-    
-    // Color scheme for enhanced job blocks
-    var statusColors = new Dictionary<string, string>
-    {
-        ["scheduled"] = "#3B82F6",   // blue
-        ["running"] = "#F59E0B",     // amber
-        ["building"] = "#F59E0B",    // amber (SLS-specific)
-        ["cooling"] = "#8B5CF6",     // purple (SLS-specific)
-        ["post-processing"] = "#06B6D4", // cyan
-        ["completed"] = "#10B981",   // green
-        ["delayed"] = "#EF4444",     // red
-        ["cancelled"] = "#6B7280",   // gray
-        ["on-hold"] = "#F97316",     // orange
-        ["preheating"] = "#FBBF24"   // yellow (SLS-specific)
-    };
 }
 
 <!-- Enhanced Header with Controls -->
 <div class="opcentrix-card p-6 mb-6">
-    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-        <!-- Controls Row -->
-        <div class="flex flex-col sm:flex-row gap-4">
+    <div class="scheduler-header-wrapper">
+        <!-- Controls Wrapper -->
+        <div class="scheduler-controls">
             <!-- Navigation Controls -->
-            <div class="flex items-center space-x-2 bg-gray-50 rounded-lg p-2">
-                <button onclick="navigatePeriod(-1)" 
-                        class="p-2 text-gray-600 hover:text-gray-900 hover:bg-white rounded-md transition-colors"
-                        title="Previous period">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                    </svg>
+            <div class="control-group">
+                <button onclick="navigatePeriod(-1)" class="icon-btn" title="Previous period">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                 </button>
-                <button onclick="navigateToToday()" 
-                        class="px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-white rounded-md transition-colors"
-                        title="Go to today">
-                    Today
-                </button>
-                <button onclick="navigatePeriod(1)" 
-                        class="p-2 text-gray-600 hover:text-gray-900 hover:bg-white rounded-md transition-colors"
-                        title="Next period">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                    </svg>
+                <button onclick="navigateToToday()" class="text-btn" title="Go to today">Today</button>
+                <button onclick="navigatePeriod(1)" class="icon-btn" title="Next period">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                 </button>
             </div>
 
             <!-- Zoom Controls -->
-            <div class="flex items-center space-x-2 bg-gray-50 rounded-lg p-2">
-                <span class="text-xs font-medium text-gray-500 px-2">Zoom:</span>
-                <button id="zoomOut" 
-                        @(zoomIndex <= 0 ? "disabled" : "")
-                        onclick="changeZoom(-1)"
-                        class="p-2 text-gray-600 hover:text-gray-900 hover:bg-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="Zoom out">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10h-6"></path>
-                    </svg>
+            <div class="control-group">
+                <span class="group-label">Zoom</span>
+                <button id="zoomOut" @(zoomIndex <= 0 ? "disabled" : "") onclick="changeZoom(-1)" class="icon-btn" title="Zoom out">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10h-6"/></svg>
                 </button>
-                <span class="px-3 py-1 text-xs font-medium text-gray-700 bg-white rounded border">@zoom</span>
-                <button id="zoomIn" 
-                        @(zoomIndex >= zoomLevels.Length - 1 ? "disabled" : "")
-                        onclick="changeZoom(1)"
-                        class="p-2 text-gray-600 hover:text-gray-900 hover:bg-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="Zoom in">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                    </svg>
+                <span class="chip-active !cursor-default">@zoom</span>
+                <button id="zoomIn" @(zoomIndex >= zoomLevels.Length - 1 ? "disabled" : "") onclick="changeZoom(1)" class="icon-btn" title="Zoom in">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                 </button>
             </div>
 
-            <!-- Task 10: Orientation Toggle -->
-            <div class="flex items-center space-x-2 bg-gray-50 rounded-lg p-2">
-                <span class="text-xs font-medium text-gray-500 px-2">Layout:</span>
-                <div class="orientation-toggle">
-                    <div class="slider">
-                        <div class="slider-option @(isVertical ? "" : "active")" 
-                             onclick="toggleOrientation('horizontal')"
-                             title="Horizontal layout (machines on left)">
-                            <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                            </svg>
-                            Horizontal
-                        </div>
-                        <div class="slider-option @(isVertical ? "active" : "")" 
-                             onclick="toggleOrientation('vertical')"
-                             title="Vertical layout (machines on top)">
-                            <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 4v16M12 4v16M18 4v16"></path>
-                            </svg>
-                            Vertical
-                        </div>
-                    </div>
+            <!-- Orientation Toggle -->
+            <div class="control-group orientation-group">
+                <span class="group-label">Layout</span>
+                <button class="toggle-btn @(isVertical?"":"active")" onclick="toggleOrientation('horizontal')" title="Horizontal layout">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>H
+                </button>
+                <button class="toggle-btn @(isVertical?"active":"")" onclick="toggleOrientation('vertical')" title="Vertical layout">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 4v16M12 4v16M18 4v16"/></svg>V
+                </button>
+            </div>
+
+            <!-- Machine Type Filter (Scrollable Chips) -->
+            <div class="control-group filter-group">
+                <span class="group-label">Type</span>
+                <div class="chip-scroll" title="Filter by machine type">
+                    @{ var types = (IEnumerable<string>) (ViewData["MachineTypes"] ?? new List<string>()); var currentType = (string)(ViewData["CurrentMachineTypeFilter"] ?? "all"); }
+                    <a class="chip @(currentType=="all"?"chip-active":"")" href="@Url.Page("/Scheduler/Index", new { machineType = "all", zoom = zoom, startDate = viewModel.StartDate.ToString("yyyy-MM-dd"), orientation = currentOrientation })">All</a>
+                    @foreach(var t in types){
+                        <a class="chip @(currentType==t?"chip-active":"")" href="@Url.Page("/Scheduler/Index", new { machineType = t, zoom = zoom, startDate = viewModel.StartDate.ToString("yyyy-MM-dd"), orientation = currentOrientation })">@t</a>
+                    }
                 </div>
             </div>
 
             <!-- Status Summary -->
-            <div class="flex items-center space-x-2 bg-gray-50 rounded-lg p-2">
-                <span class="text-xs font-medium text-gray-500 px-2">Status:</span>
-                <div class="flex items-center space-x-1">
-                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        @viewModel.Jobs.Count jobs
-                    </span>
-                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        @viewModel.Machines.Count machines
-                    </span>
-                </div>
+            <div class="control-group summary-group">
+                <span class="group-label">Status</span>
+                <span class="mini-pill bg-green-100 text-green-700">@viewModel.Jobs.Count jobs</span>
+                <span class="mini-pill bg-blue-100 text-blue-700">@viewModel.Machines.Count machines</span>
             </div>
 
             <!-- Refresh Button -->
-            <button onclick="window.location.reload()" 
-                    class="opcentrix-button opcentrix-button-secondary"
-                    title="Refresh scheduler">
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                </svg>
-                Refresh
-            </button>
+            <div class="control-group">
+                <button onclick="window.location.reload()" class="primary-btn" title="Refresh scheduler">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    Refresh
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -229,20 +131,9 @@
     <link rel="stylesheet" href="~/css/scheduler-modal.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/stage-cohort-enhancements.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/responsive-master.css" asp-append-version="true" />
-    <style>
-        /* Restore orientation toggle styling */
-        .orientation-toggle { position: relative; }
-        .orientation-toggle .slider {
-            display: flex; align-items: center; background: #e5e7eb; border-radius: 9999px; padding: 4px; min-width: 180px;
-        }
-        .orientation-toggle .slider-option {
-            flex: 1; text-align: center; padding: 8px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; color: #6b7280; cursor: pointer; transition: all .2s ease;
-        }
-        .orientation-toggle .slider-option.active { background: #3b82f6; color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,.1); }
-        .orientation-toggle .slider-option svg { vertical-align: middle; }
-    </style>
+    <link rel="stylesheet" href="~/css/scheduler-header.css" asp-append-version="true" />
 }
 
 @section Scripts {
-<script src="~/js/scheduler-ui.js" asp-append-version="true"></script>
+    <script src="~/js/scheduler-ui.js" asp-append-version="true"></script>
 }

@@ -1,0 +1,25 @@
+/* Scheduler Header Responsive & Control Styling */
+.scheduler-controls{display:flex;flex-wrap:wrap;gap:.75rem;align-items:stretch}
+.control-group{display:flex;align-items:center;gap:.5rem;background:#f3f4f6;padding:.55rem .75rem;border-radius:.75rem;flex-wrap:wrap;max-width:100%}
+.control-group.filter-group{flex:1 1 320px;min-width:260px}
+.group-label{font-size:.65rem;text-transform:uppercase;font-weight:600;letter-spacing:.05em;color:#6b7280;margin-right:.25rem}
+.icon-btn,.text-btn{display:inline-flex;align-items:center;justify-content:center;padding:.45rem .65rem;border-radius:.5rem;background:#fff;border:1px solid #e5e7eb;font-size:.75rem;font-weight:500;color:#374151;transition:.18s}
+.text-btn{padding:.45rem .85rem}
+.icon-btn:hover,.text-btn:hover{background:#f9fafb;color:#111827}
+.icon-btn:disabled{opacity:.4;cursor:not-allowed}
+.toggle-btn{display:inline-flex;align-items:center;padding:.45rem .6rem;border-radius:9999px;font-size:.65rem;font-weight:600;background:#fff;border:1px solid #d1d5db;color:#4b5563;transition:.18s}
+.toggle-btn.active{background:#3b82f6;color:#fff;border-color:#3b82f6;box-shadow:0 2px 4px rgba(59,130,246,.4)}
+.toggle-btn:hover:not(.active){background:#f1f5f9}
+.chip-scroll{display:flex;gap:.4rem;overflow-x:auto;max-width:100%;padding:.25rem .1rem;-ms-overflow-style:none;scrollbar-width:none}
+.chip-scroll::-webkit-scrollbar{display:none}
+.chip{display:inline-flex;align-items:center;padding:.4rem .75rem;background:#fff;border:1px solid #e5e7eb;border-radius:9999px;font-size:.6rem;font-weight:600;letter-spacing:.05em;color:#4b5563;white-space:nowrap;transition:.18s;text-decoration:none}
+.chip:hover{background:#f3f4f6;color:#111827}
+.chip-active{background:#3b82f6!important;color:#fff!important;border-color:#3b82f6!important;box-shadow:0 2px 4px rgba(59,130,246,.35)}
+.mini-pill{display:inline-flex;align-items:center;font-size:.6rem;font-weight:600;padding:.3rem .55rem;border-radius:9999px;white-space:nowrap}
+.primary-btn{display:inline-flex;align-items:center;background:#3b82f6;color:#fff;font-size:.7rem;font-weight:600;border:none;border-radius:.6rem;padding:.55rem .9rem;transition:.18s}
+.primary-btn:hover{background:#2563eb}
+@media (max-width:900px){
+  .control-group.summary-group{order:10;width:100%;justify-content:flex-start}
+  .control-group.filter-group{order:5}
+  .primary-btn{width:100%;justify-content:center}
+}
