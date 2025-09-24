@@ -113,7 +113,7 @@
                 
                 <div class="machine-name">@machine</div>
                 <div class="machine-stats">
-                    <div class="job-count">@jobCount job@(jobCount != 1 ? "s" : "") • @totalHours.ToString("F1")h</div>
+                    <div class="job-count">@jobCount job@(jobCount != 1 ? "s" : "") · @totalHours.ToString("F1")h</div>
                     <div class="utilization">@utilizationPercent% utilization</div>
                 </div>
                 
@@ -148,11 +148,11 @@
                     
                     <div class="@string.Join(" ", cellClasses)" 
                          style="min-height: @(rowHeight)px;"
-                         onclick="openJobModal('@machine', '@slotDateTime.ToString("yyyy-MM-ddTHH:mm")')"
+                         onclick="openJobModalSafely('@machine', '@slotDateTime.ToString("yyyy-MM-ddTHH:mm")')"
                          title="Click to add job at @slotDateTime.ToString("MMM dd, yyyy h:mm tt")"
                          data-slot-time="@slotDateTime.ToString("yyyy-MM-ddTHH:mm")"
                          data-machine="@machine">
-                         
+                        
                         <!-- Jobs in this slot -->
                         @{ 
                             var slotJobs = machineJobs.Where(job => 
@@ -180,7 +180,7 @@
                                      data-priority="@job.Priority"
                                      data-status="@job.Status"
                                      data-machine="@machine"
-                                     onclick="event.stopPropagation(); openJobModal('@machine', '@job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")', @job.Id)"
+                                     onclick="event.stopPropagation(); openJobModalSafely('@machine', '@job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")', @job.Id)"
                                      title="@job.PartNumber - @job.Status (@job.DurationHours.ToString("F1")h) - @job.SlsMaterial"
                                      data-job-id="@job.Id">
                                     
@@ -189,7 +189,7 @@
                                     @if (rowHeight > 50)
                                     {
                                         <div class="job-details">
-                                            @job.Status • @job.DurationHours.ToString("F1")h
+                                            @job.Status · @job.DurationHours.ToString("F1")h
                                         </div>
                                         
                                         @if (!string.IsNullOrEmpty(job.SlsMaterial))
@@ -210,13 +210,13 @@
                         
                         <!-- Add Job button -->
                         <div class="add-job-btn"
-                             onclick="event.stopPropagation(); openJobModal('@machine', '@slotDateTime.ToString("yyyy-MM-ddTHH:mm")')">
+                             onclick="event.stopPropagation(); openJobModalSafely('@machine', '@slotDateTime.ToString("yyyy-MM-ddTHH:mm")')">
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
                             </svg>
                         </div>
                         
-                        <!-- Current time indicator -->
+                        <!-- Current time indicator dot -->
                         @if (isCurrentTimeSlot)
                         {
                             <div class="current-time-dot"></div>

@@ -2,6 +2,67 @@
 // Handles zoom controls, grid interactions, and UI state management
 // Optimized for performance and maintainability
 
+// --- EARLY GLOBAL SAFEGUARDS & WRAPPERS (must load before any inline onclick calls) ---
+if (!window.safeExecute) {
+    window.safeExecute = function(source, action, executor, meta) {
+        try {
+            return executor();
+        } catch (err) {
+            console.error(`[${source}] ${action} failed`, { meta, err });
+            if (window.SafeExecute && typeof window.SafeExecute.logError === 'function') {
+                window.SafeExecute.logError(
+                    Math.random().toString(36).slice(2, 8),
+                    action,
+                    err
+                );
+            }
+            return false;
+        }
+    };
+}
+
+// Unified safe modal opener used by Razor inline onclick attributes
+if (!window.openJobModalSafely) {
+    window.openJobModalSafely = function(machineId, date, jobId = null) {
+        // Prefer primary implementation if already defined
+        if (typeof window.openJobModal === 'function') {
+            return window.openJobModal(machineId, date, jobId);
+        }
+
+        console.log('?? [JOB-MODAL] Fallback openJobModalSafely executing', { machineId, date, jobId });
+        if (!machineId || !date) {
+            console.error('? [JOB-MODAL] Missing machineId or date');
+            return false;
+        }
+
+        try {
+            const params = new URLSearchParams({ handler: 'ShowAddModal', machineId, date });
+            if (jobId) params.append('id', jobId);
+            const url = `/Scheduler?${params.toString()}`;
+
+            if (typeof htmx !== 'undefined') {
+                htmx.ajax('GET', url, { target: '#modal-container', swap: 'innerHTML' })
+                    .then(() => {
+                        const modalContainer = document.getElementById('modal-container');
+                        if (modalContainer) {
+                            modalContainer.style.display = 'flex';
+                            modalContainer.classList.remove('hidden');
+                            document.body.style.overflow = 'hidden';
+                        }
+                    })
+                    .catch(e => console.error('? [JOB-MODAL] HTMX fallback error', e));
+                return true;
+            }
+            // Hard fallback: navigate
+            window.location.href = url;
+            return true;
+        } catch (e) {
+            console.error('? [JOB-MODAL] Critical fallback error', e);
+            return false;
+        }
+    };
+}
+
 // **ENHANCED GLOBAL FUNCTION DEFINITIONS**
 // These functions need to be available immediately when HTML loads
 // They provide fallback functionality when specific forms don't override them
@@ -376,8 +437,8 @@ class OpCentrixSchedulerUI {
                          cell.closest('.machine-row')?.getAttribute('data-machine');
         const slotTime = cell.getAttribute('data-slot-time');
         
-        if (machineId && slotTime && window.openJobModal) {
-            window.openJobModal(machineId, slotTime);
+        if (machineId && slotTime && (window.openJobModal || window.openJobModalSafely)) {
+            (window.openJobModal || window.openJobModalSafely)(machineId, slotTime);
         }
     }
 
@@ -705,106 +766,67 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = OpCentrixSchedulerUI;
 }
 
-// **ENHANCED MODAL MANAGEMENT FUNCTIONS**
-// These ensure proper modal lifecycle and HTMX integration
-
+// **MODAL MANAGEMENT FUNCTIONS (REFRESHED - no safeExecute dependency)**
 window.openJobModal = function(machineId, date, jobId = null) {
-    return safeExecute('SITE', 'openJobModal', () => {
+    try {
         console.log('?? [MODAL] Opening job modal for:', { machineId, date, jobId });
-        
-        if (!machineId || !date) {
-            throw new Error('Machine ID and date are required for opening job modal');
-        }
-        
-        // Build URL for modal content
-        const params = new URLSearchParams({
-            machineId: machineId,
-            date: date
-        });
-        
-        if (jobId) {
-            params.append('id', jobId);
-        }
-        
+        if (!machineId || !date) throw new Error('Machine ID and date are required for opening job modal');
+
+        const params = new URLSearchParams({ machineId, date });
+        if (jobId) params.append('id', jobId);
         const url = `/Scheduler?handler=ShowAddModal&${params.toString()}`;
-        
         console.log('?? [MODAL] Fetching modal content from:', url);
-        
-        // Use HTMX to load modal content
-        htmx.ajax('GET', url, {
-            target: '#modal-container',
-            swap: 'innerHTML'
-        }).then(() => {
-            // Show the modal container
-            const modalContainer = document.getElementById('modal-container');
-            if (modalContainer) {
-                modalContainer.style.display = 'flex';
-                modalContainer.classList.remove('hidden');
-                document.body.style.overflow = 'hidden';
-                console.log('? [MODAL] Modal opened successfully');
-            } else {
-                throw new Error('Modal container not found after loading content');
-            }
-        }).catch(error => {
-            console.error('? [MODAL] Error loading modal:', error);
-            if (window.showErrorNotification) {
-                window.showErrorNotification('Error opening job form. Please try again.');
-            }
-        });
-        
+
+        if (typeof htmx === 'undefined') {
+            console.warn('? [MODAL] HTMX not found, navigating instead');
+            window.location.href = url;
+            return true;
+        }
+
+        htmx.ajax('GET', url, { target: '#modal-container', swap: 'innerHTML' })
+            .then(() => {
+                const modalContainer = document.getElementById('modal-container');
+                if (modalContainer) {
+                    modalContainer.style.display = 'flex';
+                    modalContainer.classList.remove('hidden');
+                    document.body.style.overflow = 'hidden';
+                    console.log('? [MODAL] Modal opened successfully');
+                } else {
+                    throw new Error('Modal container not found after loading content');
+                }
+            })
+            .catch(error => {
+                console.error('? [MODAL] Error loading modal:', error);
+                if (window.showErrorNotification) {
+                    window.showErrorNotification('Error opening job form. Please try again.');
+                } else {
+                    alert('Error opening job form.');
+                }
+            });
         return true;
-    }, {
-        machineId: machineId,
-        date: date,
-        jobId: jobId,
-        modalContainer: !!document.getElementById('modal-container')
-    });
+    } catch (e) {
+        console.error('? [MODAL] openJobModal critical failure', e);
+        return false;
+    }
 };
 
 window.closeJobModal = function() {
-    return safeExecute('SITE', 'closeJobModal', () => {
+    try {
         console.log('?? [MODAL] Closing job modal');
-        
-        // Find and hide modal container
         const modalContainer = document.getElementById('modal-container') || 
                               document.getElementById('job-modal-container') ||
                               document.querySelector('.modal-backdrop');
-        
         if (modalContainer) {
             modalContainer.style.display = 'none';
             modalContainer.classList.add('hidden');
-            
-            // Clear modal content to free memory
             modalContainer.innerHTML = '';
-            
-            console.log('? [MODAL] Modal closed and cleared');
-        } else {
-            console.warn('?? [MODAL] No modal container found to close');
         }
-        
-        // Restore body scrolling
         document.body.style.overflow = '';
-        
-        // Clear any form validation states
-        const forms = document.querySelectorAll('form');
-        forms.forEach(form => {
-            const submitBtn = form.querySelector('button[type="submit"]');
-            if (submitBtn) {
-                submitBtn.disabled = false;
-            }
-            
-            const spinner = form.querySelector('.submit-spinner');
-            if (spinner) {
-                spinner.classList.add('hidden');
-            }
-        });
-        
         return true;
-    }, {
-        modalContainerFound: !!(document.getElementById('modal-container') || 
-                               document.getElementById('job-modal-container') || 
-                               document.querySelector('.modal-backdrop'))
-    });
+    } catch (e) {
+        console.error('? [MODAL] closeJobModal error', e);
+        return false;
+    }
 };
 
 // Enhanced grid interaction for opening modals
@@ -815,22 +837,15 @@ window.handleGridCellClick = function(event) {
             console.log('?? [GRID] Click not on grid cell');
             return false;
         }
-        
-        // Get machine and time information
         const machineId = cell.getAttribute('data-machine') || 
                          cell.closest('.machine-row')?.getAttribute('data-machine');
         const slotTime = cell.getAttribute('data-slot-time');
-        
         if (!machineId || !slotTime) {
             console.warn('?? [GRID] Missing machine ID or slot time data');
             return false;
         }
-        
         console.log('?? [GRID] Grid cell clicked:', { machineId, slotTime });
-        
-        // Open modal for new job
-        window.openJobModal(machineId, slotTime);
-        
+        (window.openJobModal || window.openJobModalSafely)(machineId, slotTime);
         return true;
     }, {
         machineId: event.target.closest('.scheduler-grid-cell')?.getAttribute('data-machine'),
@@ -848,21 +863,15 @@ window.handleJobBlockClick = function(event) {
             console.log('?? [JOB] Click not on job block');
             return false;
         }
-        
         const jobId = jobBlock.getAttribute('data-job-id');
         const machineId = jobBlock.getAttribute('data-machine-id');
         const jobDate = jobBlock.getAttribute('data-job-date');
-        
         if (!jobId || !machineId || !jobDate) {
             console.warn('?? [JOB] Missing job block data attributes');
             return false;
         }
-        
         console.log('?? [JOB] Job block clicked for editing:', { jobId, machineId, jobDate });
-        
-        // Open modal for editing existing job
-        window.openJobModal(machineId, jobDate, jobId);
-        
+        (window.openJobModal || window.openJobModalSafely)(machineId, jobDate, jobId);
         return true;
     }, {
         jobId: event.target.closest('.job-block')?.getAttribute('data-job-id'),
@@ -888,7 +897,6 @@ document.addEventListener('keydown', function(event) {
         const modalContainer = document.getElementById('modal-container') || 
                               document.getElementById('job-modal-container') ||
                               document.querySelector('.modal-backdrop');
-        
         if (modalContainer && modalContainer.style.display !== 'none' && 
             !modalContainer.classList.contains('hidden')) {
             window.closeJobModal();
@@ -897,3 +905,76 @@ document.addEventListener('keydown', function(event) {
 });
 
 console.log('? [SCHEDULER-UI] Global functions loaded and ready');
+
+// Global wrappers used by Razor onclick attributes (prevent undefined)
+window.changeZoom = function(direction) {
+    try {
+        if (window.opcentrixSchedulerUI) {
+            if (direction > 0) {
+                window.opcentrixSchedulerUI.zoomIn();
+            } else if (direction < 0) {
+                window.opcentrixSchedulerUI.zoomOut();
+            }
+            return true;
+        }
+        // Fallback: bump zoom in URL
+        const levels = ['2month','month','week','12h','6h','4h','2h','1h','30min','15min'];
+        const url = new URL(window.location);
+        const current = url.searchParams.get('zoom') || 'week';
+        const idx = Math.max(0, Math.min(levels.length - 1, levels.indexOf(current) + (direction > 0 ? 1 : -1)));
+        url.searchParams.set('zoom', levels[idx]);
+        window.location.href = url.toString();
+        return true;
+    } catch (e) {
+        console.error('[Scheduler] changeZoom error', e);
+        return false;
+    }
+};
+
+window.toggleOrientation = function(orientation) {
+    try {
+        if (orientation !== 'horizontal' && orientation !== 'vertical') return false;
+        const url = new URL(window.location);
+        url.searchParams.set('orientation', orientation);
+        window.location.href = url.toString();
+        return true;
+    } catch (e) {
+        console.error('[Scheduler] toggleOrientation error', e);
+        return false;
+    }
+};
+
+window.navigatePeriod = function(direction) {
+    try {
+        const url = new URL(window.location);
+        const zoom = url.searchParams.get('zoom') || 'week';
+        const startStr = url.searchParams.get('startDate');
+        const base = startStr ? new Date(startStr) : new Date();
+        const d = new Date(base);
+        if (zoom.includes('month')) {
+            d.setMonth(d.getMonth() + (direction || 0));
+        } else if (zoom === 'week') {
+            d.setDate(d.getDate() + (7 * (direction || 0)));
+        } else {
+            d.setDate(d.getDate() + (direction || 0));
+        }
+        url.searchParams.set('startDate', d.toISOString().split('T')[0]);
+        window.location.href = url.toString();
+        return true;
+    } catch (e) {
+        console.error('[Scheduler] navigatePeriod error', e);
+        return false;
+    }
+};
+
+window.navigateToToday = function() {
+    try {
+        const url = new URL(window.location);
+        url.searchParams.delete('startDate');
+        window.location.href = url.toString();
+        return true;
+    } catch (e) {
+        console.error('[Scheduler] navigateToToday error', e);
+        return false;
+    }
+};

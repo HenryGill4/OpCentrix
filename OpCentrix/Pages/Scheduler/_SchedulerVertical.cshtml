@@ -38,8 +38,9 @@
             {
                 var machineJobs = Model.Jobs.Where(j => j.MachineId == machine).ToList();
                 var jobCount = machineJobs.Count;
+                var machineClass = $"machine-{machine.ToLower()} {machine.ToLower()}";
                 
-                <div class="machine-column scheduler-grid-header bg-white border-b border-r font-bold text-indigo-800"
+                <div class="machine-column scheduler-grid-header bg-white border-b border-r font-bold text-indigo-800 @machineClass"
                      data-machine="@machine">
                     <div class="flex flex-col items-center justify-center h-full p-2 min-h-[80px]">
                         <div class="text-lg font-bold">@machine</div>
@@ -117,12 +118,17 @@
                         {
                             var machineJobs = Model.Jobs.Where(j => j.MachineId == machine).OrderBy(j => j.ScheduledStart).ToList();
                             var cellClasses = new List<string> { 
-                                "machine-column", "scheduler-grid-cell", "group", "relative", "cursor-pointer", "border-b", "border-r"
+                                "machine-column", "scheduler-grid-cell", "group", "relative", "cursor-pointer", "border-b", "border-r", $"machine-{machine.ToLower()}", machine.ToLower()
                             };
                             
                             if (isCurrentTimeSlot) cellClasses.Add("current-time");
                             else if (isWeekend) cellClasses.Add("weekend");
                             else if (isPastWorkHours) cellClasses.Add("off-hours");
+                            
+                            var slotEndDateTime = slotDateTime.Add(TimeSpan.FromMinutes(slotMinutes));
+                            var startingJobs = machineJobs.Where(job => job.ScheduledStart >= slotDateTime && job.ScheduledStart < slotEndDateTime).ToList();
+                            var overlappingJobs = machineJobs.Where(job => job.ScheduledStart < slotEndDateTime && job.ScheduledEnd > slotDateTime).ToList();
+                            var showAddBtn = !overlappingJobs.Any();
                             
                             <div class="@string.Join(" ", cellClasses)" 
                                  onclick="openJobModal('@machine', '@slotDateTime.ToString("yyyy-MM-ddTHH:mm")')"
@@ -131,81 +137,56 @@
                                  data-machine="@machine"
                                  style="min-height: 60px; min-width: 150px;">
                                  
-                                <!-- Jobs starting in this slot span vertically across subsequent time rows -->
-                                @{
-                                    // Determine jobs whose start falls in this slot
-                                    var slotEndDateTime = slotDateTime.Add(TimeSpan.FromMinutes(slotMinutes));
-                                    var startingJobs = machineJobs.Where(job => job.ScheduledStart >= slotDateTime && job.ScheduledStart < slotEndDateTime).ToList();
-                                }
-                                
                                 @foreach (var job in startingJobs)
                                 {
-                                    // Calculate vertical position and height spanning multiple slots
-                                    var leftPosition = job.CalculateGridPosition(startDate, slotMinutes);
                                     var widthSlots = job.CalculateGridWidth(slotMinutes);
-                                    var jobStartSlot = (int)Math.Floor(leftPosition);
+                                    var offsetMinutes = (job.ScheduledStart - slotDateTime).TotalMinutes;
+                                    if (offsetMinutes < 0) offsetMinutes = 0;
+                                    if (offsetMinutes > slotMinutes) offsetMinutes = slotMinutes;
+                                    var offsetPx = 2 + (offsetMinutes / slotMinutes) * (rowPx - 4);
+                                    var totalPx = (widthSlots * rowPx) - (offsetPx - 2);
+                                    var maxVisibleSlotsFromStart = (totalSlots - currentSlot);
+                                    var maxVisiblePx = (maxVisibleSlotsFromStart * rowPx) - (offsetPx - 2);
+                                    var heightPx = Math.Max(24, Math.Min(totalPx, maxVisiblePx));
+
+                                    var jobLabel = $"Job: {job.PartNumber} ({job.Status}) - {job.ScheduledStart:MMM dd HH:mm} to {job.ScheduledEnd:MMM dd HH:mm} - Qty: {job.Quantity}";
+                                    if (!string.IsNullOrEmpty(job.SlsMaterial)) jobLabel += $" - {job.SlsMaterial}";
                                     
-                                    if (jobStartSlot == currentSlot)
-                                    {
-                                        // Offset inside starting slot (in minutes)
-                                        var offsetMinutes = (job.ScheduledStart - slotDateTime).TotalMinutes;
-                                        if (offsetMinutes < 0) offsetMinutes = 0;
-                                        if (offsetMinutes > slotMinutes) offsetMinutes = slotMinutes;
-                                        var offsetPx = 2 + (offsetMinutes / slotMinutes) * (rowPx - 4);
-                                        
-                                        // Height across all slots (clamped to visible range)
-                                        var totalPx = (widthSlots * rowPx) - (offsetPx - 2);
-                                        var maxVisibleSlotsFromStart = (totalSlots - currentSlot);
-                                        var maxVisiblePx = (maxVisibleSlotsFromStart * rowPx) - (offsetPx - 2);
-                                        var heightPx = Math.Max(24, Math.Min(totalPx, maxVisiblePx));
-                                        
-                                        var jobLabel = $"Job: {job.PartNumber} ({job.Status}) - {job.ScheduledStart:MMM dd HH:mm} to {job.ScheduledEnd:MMM dd HH:mm} - Qty: {job.Quantity}";
-                                        if (!string.IsNullOrEmpty(job.SlsMaterial)) jobLabel += $" - {job.SlsMaterial}";
-                                        
-                                        <div class="absolute job-block @machine.ToLower() status-@job.Status.ToLower().Replace(" ", "-")" 
-                                             style="left: 2px; right: 2px; top:@offsetPx.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)px; height:@heightPx.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)px; z-index: 200;"
-                                             data-material="@job.SlsMaterial"
-                                             data-priority="@job.Priority"
-                                             data-status="@job.Status"
-                                             onclick="event.stopPropagation(); openJobModal('@machine', '@job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")', @job.Id)"
-                                             title="@jobLabel"
-                                             data-job-id="@job.Id"
-                                             data-machine-id="@machine"
-                                             data-job-date="@job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")">
-                                            <div class="job-block-content p-1">
-                                                <div class="job-block-title text-xs truncate">@job.PartNumber</div>
-                                                <div class="job-block-subtitle text-xs truncate opacity-90">
-                                                    @if (!string.IsNullOrEmpty(job.SlsMaterial))
-                                                    {
-                                                        @job.SlsMaterial.Substring(0, Math.Min(job.SlsMaterial.Length, 14))@(job.SlsMaterial.Length > 14 ? "..." : "")
-                                                    }
-                                                </div>
-                                                <div class="job-block-meta text-xs flex justify-between">
-                                                    <span>@job.DurationHours.ToString("F1")h</span>
-                                                    <span>@job.Status</span>
-                                                </div>
+                                    <div class="absolute job-block machine-@machine.ToLower() @machine.ToLower() status-@job.Status.ToLower().Replace(" ", "-")" 
+                                         style="left: 2px; right: 2px; top:@offsetPx.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)px; height:@heightPx.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)px; z-index: 200;"
+                                         data-material="@job.SlsMaterial"
+                                         data-priority="@job.Priority"
+                                         data-status="@job.Status"
+                                         onclick="event.stopPropagation(); openJobModal('@machine', '@job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")', @job.Id)"
+                                         title="@jobLabel"
+                                         data-job-id="@job.Id"
+                                         data-machine-id="@machine"
+                                         data-job-date="@job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")">
+                                        <div class="job-block-content p-1">
+                                            <div class="job-block-title text-xs truncate">@job.PartNumber</div>
+                                            <div class="job-block-subtitle text-xs truncate opacity-90">
+                                                @if (!string.IsNullOrEmpty(job.SlsMaterial))
+                                                {
+                                                    @job.SlsMaterial.Substring(0, Math.Min(job.SlsMaterial.Length, 14))@(job.SlsMaterial.Length > 14 ? "..." : "")
+                                                }
+                                            </div>
+                                            <div class="job-block-meta text-xs flex justify-between">
+                                                <span>@job.DurationHours.ToString("F1")h</span>
+                                                <span>@job.Status</span>
                                             </div>
                                         </div>
-                                    }
+                                    </div>
                                 }
                                 
-                                <!-- Enhanced Add Job button for vertical layout when empty cell -->
-                                @{
-                                    var hasStartHere = startingJobs.Any();
-                                }
-                                @if (!hasStartHere)
+                                @if (showAddBtn)
                                 {
-                                    <div class="absolute z-20 top-2 right-2 opacity-0 group-hover:opacity-100 transition-all duration-300 
-                                                bg-indigo-600 text-white rounded-full w-6 h-6 text-xs font-bold shadow-lg 
-                                                hover:bg-indigo-700 hover:scale-110 flex items-center justify-center pointer-events-none
-                                                transform group-hover:scale-100 scale-90">
+                                    <div class="add-job-btn">
                                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path>
                                         </svg>
                                     </div>
                                 }
                                 
-                                <!-- Time indicator for current slot -->
                                 @if (isCurrentTimeSlot)
                                 {
                                     <div class="absolute top-1 left-1 w-2 h-2 bg-blue-600 rounded-full animate-pulse z-30"></div>
