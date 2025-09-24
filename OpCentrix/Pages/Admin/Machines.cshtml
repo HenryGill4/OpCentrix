@@ -94,7 +94,7 @@
     <!-- Search and Filter Section -->
     <div class="bg-white rounded-lg shadow p-6">
         <h3 class="text-lg font-medium text-gray-900 mb-4">Search & Filter</h3>
-        <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700">Search</label>
                 <input type="text" name="searchTerm" value="@Model.SearchTerm" placeholder="Machine ID, name, location..." 
@@ -130,6 +130,20 @@
                     }
                 </select>
             </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Machine Type</label>
+                <select name="machineTypeFilter" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">All Types</option>
+                    <option value="SLS" selected="@(Model.MachineTypeFilter == "SLS")">SLS</option>
+                    <option value="CNC" selected="@(Model.MachineTypeFilter == "CNC")">CNC</option>
+                    <option value="EDM" selected="@(Model.MachineTypeFilter == "EDM")">EDM</option>
+                    <option value="Coating" selected="@(Model.MachineTypeFilter == "Coating")">Coating</option>
+                    <option value="Inspection" selected="@(Model.MachineTypeFilter == "Inspection")">Inspection</option>
+                    <option value="Assembly" selected="@(Model.MachineTypeFilter == "Assembly")">Assembly</option>
+                    <option value="Other" selected="@(Model.MachineTypeFilter == "Other")">Other</option>
+                </select>
+            </div>
             
             <div class="flex items-end">
                 <button type="submit" class="w-full px-4 py-2 bg-gray-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:outline-none focus:border-gray-700 focus:ring ring-gray-300 transition ease-in-out duration-150">
@@ -152,25 +166,25 @@
                     <thead class="bg-gray-50">
                         <tr>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                <a href="?searchTerm=@Model.SearchTerm&statusFilter=@Model.StatusFilter&materialFilter=@Model.MaterialFilter&sortBy=MachineId&sortDirection=@Model.GetNextSortDirection("MachineId")" 
+                                <a href="?searchTerm=@Model.SearchTerm&statusFilter=@Model.StatusFilter&materialFilter=@Model.MaterialFilter&machineTypeFilter=@Model.MachineTypeFilter&sortBy=MachineId&sortDirection=@Model.GetNextSortDirection("MachineId")" 
                                    class="flex items-center hover:text-gray-700">
                                     Machine ID @Model.GetSortIcon("MachineId")
                                 </a>
                             </th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                <a href="?searchTerm=@Model.SearchTerm&statusFilter=@Model.StatusFilter&materialFilter=@Model.MaterialFilter&sortBy=Name&sortDirection=@Model.GetNextSortDirection("Name")" 
+                                <a href="?searchTerm=@Model.SearchTerm&statusFilter=@Model.StatusFilter&materialFilter=@Model.MaterialFilter&machineTypeFilter=@Model.MachineTypeFilter&sortBy=Name&sortDirection=@Model.GetNextSortDirection("Name")" 
                                    class="flex items-center hover:text-gray-700">
                                     Machine Name @Model.GetSortIcon("Name")
                                 </a>
                             </th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                <a href="?searchTerm=@Model.SearchTerm&statusFilter=@Model.StatusFilter&materialFilter=@Model.MaterialFilter&sortBy=Status&sortDirection=@Model.GetNextSortDirection("Status")" 
+                                <a href="?searchTerm=@Model.SearchTerm&statusFilter=@Model.StatusFilter&materialFilter=@Model.MaterialFilter&machineTypeFilter=@Model.MachineTypeFilter&sortBy=Status&sortDirection=@Model.GetNextSortDirection("Status")" 
                                    class="flex items-center hover:text-gray-700">
                                     Status @Model.GetSortIcon("Status")
                                 </a>
                             </th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                <a href="?searchTerm=@Model.SearchTerm&statusFilter=@Model.StatusFilter&materialFilter=@Model.MaterialFilter&sortBy=Location&sortDirection=@Model.GetNextSortDirection("Location")" 
+                                <a href="?searchTerm=@Model.SearchTerm&statusFilter=@Model.StatusFilter&materialFilter=@Model.MaterialFilter&machineTypeFilter=@Model.MachineTypeFilter&sortBy=Location&sortDirection=@Model.GetNextSortDirection("Location")" 
                                    class="flex items-center hover:text-gray-700">
                                     Location @Model.GetSortIcon("Location")
                                 </a>
@@ -182,7 +196,7 @@
                                 Build Volume
                             </th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                <a href="?searchTerm=@Model.SearchTerm&statusFilter=@Model.StatusFilter&materialFilter=@Model.MaterialFilter&sortBy=Priority&sortDirection=@Model.GetNextSortDirection("Priority")" 
+                                <a href="?searchTerm=@Model.SearchTerm&statusFilter=@Model.StatusFilter&materialFilter=@Model.MaterialFilter&machineTypeFilter=@Model.MachineTypeFilter&sortBy=Priority&sortDirection=@Model.GetNextSortDirection("Priority")" 
                                    class="flex items-center hover:text-gray-700">
                                     Priority @Model.GetSortIcon("Priority")
                                 </a>
@@ -248,7 +262,7 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <div class="flex items-center justify-end space-x-2">
-                                        <button onclick="editMachine(@machine.Id, '@machine.MachineId', '@machine.MachineName', '@machine.MachineModel', '@machine.SerialNumber', '@machine.Location', '@machine.SupportedMaterials', '@machine.CurrentMaterial', '@machine.Status', @(machine.IsActive ? "true" : "false"), @(machine.IsAvailableForScheduling ? "true" : "false"), @machine.Priority, @machine.BuildLengthMm, @machine.BuildWidthMm, @machine.BuildHeightMm, @machine.MaxLaserPowerWatts, @machine.MaxScanSpeedMmPerSec, @machine.MinLayerThicknessMicrons, @machine.MaxLayerThicknessMicrons, @machine.MaintenanceIntervalHours, '@machine.OpcUaEndpointUrl', @(machine.OpcUaEnabled ? "true" : "false"), '@machine.ColorHex')" 
+                                        <button onclick="editMachine(@machine.Id, '@machine.MachineId', '@machine.MachineName', '@machine.MachineType', '@machine.MachineModel', '@machine.SerialNumber', '@machine.Location', '@machine.SupportedMaterials', '@machine.CurrentMaterial', '@machine.Status', @(machine.IsActive ? "true" : "false"), @(machine.IsAvailableForScheduling ? "true" : "false"), @machine.Priority, @machine.BuildLengthMm, @machine.BuildWidthMm, @machine.BuildHeightMm, @machine.MaxLaserPowerWatts, @machine.MaxScanSpeedMmPerSec, @machine.MinLayerThicknessMicrons, @machine.MaxLayerThicknessMicrons, @machine.MaintenanceIntervalHours, '@machine.OpcUaEndpointUrl', @(machine.OpcUaEnabled ? "true" : "false"), '@machine.ColorHex')" 
                                                 class="text-blue-600 hover:text-blue-900" title="Edit Machine">
                                             ✏️
                                         </button>
@@ -399,9 +413,23 @@
                             <input type="text" name="CreateMachineRequest.MachineName" id="machineName" required minlength="3" maxlength="100" 
                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                         </div>
-                        
+
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Machine Type*</label>
+                            <select name="CreateMachineRequest.MachineType" id="machineType" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <option value="Auto" selected>Auto (infer)</option>
+                                <option value="SLS">SLS</option>
+                                <option value="CNC">CNC</option>
+                                <option value="EDM">EDM</option>
+                                <option value="Coating">Coating</option>
+                                <option value="Inspection">Inspection</option>
+                                <option value="Assembly">Assembly</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Machine Model*</label>
                             <select name="CreateMachineRequest.MachineModel" id="machineModel" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                                 <option value="TruPrint 3000">TruPrint 3000 (SLS)</option>
                                 <option value="TruPrint 1000">TruPrint 1000 (SLS)</option>
@@ -743,11 +771,20 @@
     <script>
         let isEditMode = false;
 
+        function setFormPrefix(prefix){
+            document.querySelectorAll('#machineForm [name^="CreateMachineRequest."], #machineForm [name^="EditMachineRequest."]').forEach(el => {
+                const idx = el.name.indexOf('.');
+                const prop = idx > -1 ? el.name.substring(idx + 1) : el.name;
+                el.name = prefix + '.' + prop;
+            });
+        }
+
         function showCreateMachineModal() {
             isEditMode = false;
             document.getElementById('machineModalTitle').textContent = 'Add New Machine';
             document.getElementById('machineSubmitBtn').textContent = 'Create Machine';
             document.getElementById('machineForm').action = '?handler=CreateMachine';
+            setFormPrefix('CreateMachineRequest');
             document.getElementById('editingMachineId').value = '';
             
             // Clear form
@@ -756,16 +793,18 @@
             document.getElementById('machineModal').classList.remove('hidden');
         }
 
-        function editMachine(id, machineId, machineName, machineModel, serialNumber, location, supportedMaterials, currentMaterial, status, isActive, isAvailableForScheduling, priority, buildLengthMm, buildWidthMm, buildHeightMm, maxLaserPowerWatts, maxScanSpeedMmPerSec, minLayerThicknessMicrons, maxLayerThicknessMicrons, maintenanceIntervalHours, opcUaEndpointUrl, opcUaEnabled, colorHex) {
+        function editMachine(id, machineId, machineName, machineType, machineModel, serialNumber, location, supportedMaterials, currentMaterial, status, isActive, isAvailableForScheduling, priority, buildLengthMm, buildWidthMm, buildHeightMm, maxLaserPowerWatts, maxScanSpeedMmPerSec, minLayerThicknessMicrons, maxLayerThicknessMicrons, maintenanceIntervalHours, opcUaEndpointUrl, opcUaEnabled, colorHex) {
             isEditMode = true;
             document.getElementById('machineModalTitle').textContent = 'Edit Machine';
             document.getElementById('machineSubmitBtn').textContent = 'Update Machine';
             document.getElementById('machineForm').action = '?handler=EditMachine';
+            setFormPrefix('EditMachineRequest');
             document.getElementById('editingMachineId').value = id;
             
             // Populate form
             document.getElementById('machineId').value = machineId;
             document.getElementById('machineName').value = machineName;
+            document.getElementById('machineType').value = machineType || 'Auto';
             document.getElementById('machineModel').value = machineModel;  // Use machineModel parameter correctly
             document.getElementById('serialNumber').value = serialNumber;
             document.getElementById('location').value = location;
@@ -776,8 +815,8 @@
             document.getElementById('currentMaterial').value = currentMaterial;
             
             document.getElementById('status').value = status;
-            document.getElementById('isActive').checked = isActive;
-            document.getElementById('isAvailableForScheduling').checked = isAvailableForScheduling;
+            document.getElementById('isActive').checked = (''+isActive) === 'true';
+            document.getElementById('isAvailableForScheduling').checked = (''+isAvailableForScheduling) === 'true';
             document.getElementById('priority').value = priority;
             document.getElementById('buildLengthMm').value = buildLengthMm;
             document.getElementById('buildWidthMm').value = buildWidthMm;
@@ -788,7 +827,7 @@
             document.getElementById('maxLayerThicknessMicrons').value = maxLayerThicknessMicrons;
             document.getElementById('maintenanceIntervalHours').value = maintenanceIntervalHours;
             document.getElementById('opcUaEndpointUrl').value = opcUaEndpointUrl;
-            document.getElementById('opcUaEnabled').checked = opcUaEnabled;
+            document.getElementById('opcUaEnabled').checked = (''+opcUaEnabled) === 'true';
             document.getElementById('colorHex').value = colorHex || '#6366F1';
             document.getElementById('colorHexText').value = colorHex || '#6366F1';
             
@@ -821,7 +860,7 @@
         }
 
         function updateCurrentMaterialDropdown() {
-            const supportedMaterials = document.getElementById('supportedMaterials').value.split(',').map(m => m.trim());
+            const supportedMaterials = document.getElementById('supportedMaterials').value.split(',').map(m => m.trim()).filter(Boolean);
             const currentMaterialSelect = document.getElementById('currentMaterial');
             const options = currentMaterialSelect.querySelectorAll('option');
             
@@ -838,7 +877,7 @@
 
         function loadMaterialsFromText() {
             const supportedMaterials = document.getElementById('supportedMaterials').value;
-            const materialCodes = supportedMaterials.split(',').map(m => m.trim());
+            const materialCodes = supportedMaterials.split(',').map(m => m.trim()).filter(Boolean);
             
             // Clear all checkboxes first
             document.querySelectorAll('.material-checkbox').forEach(cb => cb.checked = false);
@@ -862,6 +901,7 @@
         function clearMachineForm() {
             document.getElementById('machineId').value = '';
             document.getElementById('machineName').value = '';
+            document.getElementById('machineType').value = 'Auto';
             document.getElementById('machineModel').value = 'TruPrint 3000';
             document.getElementById('serialNumber').value = '';
             document.getElementById('location').value = '';

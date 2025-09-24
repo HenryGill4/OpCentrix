@@ -45,6 +45,7 @@ public class MachinesModel : PageModel
     public string SearchTerm { get; set; } = string.Empty;
     public string StatusFilter { get; set; } = string.Empty;
     public string MaterialFilter { get; set; } = string.Empty;
+    public string MachineTypeFilter { get; set; } = string.Empty; // NEW
     public string SortBy { get; set; } = "MachineId";
     public string SortDirection { get; set; } = "asc";
 
@@ -71,6 +72,7 @@ public class MachinesModel : PageModel
             SearchTerm = Request.Query["searchTerm"].FirstOrDefault() ?? string.Empty;
             StatusFilter = Request.Query["statusFilter"].FirstOrDefault() ?? string.Empty;
             MaterialFilter = Request.Query["materialFilter"].FirstOrDefault() ?? string.Empty;
+            MachineTypeFilter = Request.Query["machineTypeFilter"].FirstOrDefault() ?? string.Empty; // NEW
             SortBy = Request.Query["sortBy"].FirstOrDefault() ?? "MachineId";
             SortDirection = Request.Query["sortDirection"].FirstOrDefault() ?? "asc";
 
@@ -372,6 +374,12 @@ public class MachinesModel : PageModel
         {
             query = query.Where(m => m.SupportedMaterials.Contains(MaterialFilter) ||
                                    m.CurrentMaterial.Contains(MaterialFilter));
+        }
+
+        // NEW: filter by machine type
+        if (!string.IsNullOrWhiteSpace(MachineTypeFilter))
+        {
+            query = query.Where(m => m.MachineType == MachineTypeFilter);
         }
 
         query = SortDirection.ToLower() == "desc"
