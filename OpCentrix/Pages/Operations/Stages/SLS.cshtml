@@ -7,336 +7,59 @@
 
 @section Styles {
     <style>
-    /* SLS Operations Dashboard CSS - Following PrintTracking mobile patterns */
-    .sls-dashboard-container {
-        min-height: 100vh;
-        background-color: #f8f9fa;
-        padding: 1rem;
-        max-width: 1200px;
-        margin: 0 auto;
-    }
+    /* SLS Operations Dashboard CSS - Updated: removed legacy colored left borders */
+    .sls-dashboard-container { min-height:100vh; background-color:#f8f9fa; padding:1rem; max-width:1200px; margin:0 auto; }
+    .sls-header { background:linear-gradient(135deg,#007bff,#0056b3); color:#fff; padding:1.5rem; border-radius:8px; margin-bottom:1.5rem; text-align:center; box-shadow:0 4px 8px rgba(0,0,0,.1); }
+    .sls-header h1 { margin:0; font-size:1.75rem; font-weight:600; }
+    .stage-badge { display:inline-block; margin-top:.5rem; padding:.25rem .75rem; background:rgba(255,255,255,.2); border-radius:1rem; font-size:.875rem; }
 
-    /* Header styling - matches PrintTracking pattern */
-    .sls-header {
-        background: linear-gradient(135deg, #007bff, #0056b3);
-        color: white;
-        padding: 1.5rem;
-        border-radius: 8px;
-        margin-bottom: 1.5rem;
-        text-align: center;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
+    .sls-stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1rem; margin-bottom:2rem; }
+    .stat-card { background:#fff; border-radius:8px; padding:1.25rem; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,.08); transition:transform .2s ease, box-shadow .2s ease; position:relative; }
+    .stat-card:hover { transform:translateY(-2px); box-shadow:0 6px 14px -4px rgba(0,0,0,.18); }
+    .stat-value { font-size:2rem; font-weight:600; color:#007bff; margin-bottom:.25rem; }
+    .stat-label { font-size:.75rem; letter-spacing:.5px; text-transform:uppercase; color:#666; }
 
-    .sls-header h1 {
-        margin: 0;
-        font-size: 1.75rem;
-        font-weight: 600;
-    }
+    .sls-machines-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:1rem; margin-bottom:2rem; }
+    .machine-card { background:#fff; border-radius:8px; padding:1.25rem; box-shadow:0 2px 6px rgba(0,0,0,.08); position:relative; }
+    .machine-card:before { content:""; position:absolute; inset:0; border-radius:8px; pointer-events:none; box-shadow:inset 0 0 0 2px rgba(0,123,255,.18); }
 
-    .stage-badge {
-        display: inline-block;
-        margin-top: 0.5rem;
-        padding: 0.25rem 0.75rem;
-        background: rgba(255,255,255,0.2);
-        border-radius: 1rem;
-        font-size: 0.875rem;
-    }
+    .machine-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; }
+    .machine-name { font-weight:600; color:#333; margin:0; }
+    .machine-status { padding:.25rem .75rem; border-radius:1rem; font-size:.75rem; font-weight:500; }
+    .status-idle { background:#e3f2fd; color:#1565c0; } .status-building { background:#e8f5e8; color:#2e7d32; } .status-maintenance { background:#fff3e0; color:#f57c00; } .status-error { background:#ffebee; color:#c62828; }
 
-    /* Statistics grid */
-    .sls-stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1rem;
-        margin-bottom: 2rem;
-    }
+    .job-section { background:#fff; border-radius:8px; margin-bottom:1.5rem; box-shadow:0 2px 6px rgba(0,0,0,.08); overflow:hidden; }
+    .section-header { background:#f8f9fa; padding:1rem 1.25rem; border-bottom:1px solid #e9ecef; margin:0; }
+    .section-title { margin:0; font-size:1.05rem; font-weight:600; color:#333; display:flex; align-items:center; gap:.5rem; }
+    .job-list { padding:0; margin:0; list-style:none; }
+    .job-item { padding:1.25rem; border-bottom:1px solid #e9ecef; transition:background-color .2s ease, box-shadow .2s ease; position:relative; }
+    .job-item:last-child { border-bottom:none; }
+    .job-item:hover { background:#f8f9fa; }
+    /* Removed left border; use subtle indicator bar */
+    .job-item.active:before, .job-item.queued:before, .job-item.completed:before { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; border-radius:0 4px 4px 0; }
+    .job-item.active:before { background:#28a745; }
+    .job-item.queued:before { background:#007bff; }
+    .job-item.completed:before { background:#6c757d; }
+    .job-item.active { background:#f0f8ff; }
+    .job-item.completed { background:#f8fff9; }
 
-    .stat-card {
-        background: white;
-        border-radius: 8px;
-        padding: 1.25rem;
-        text-align: center;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        border-left: 4px solid #007bff;
-        transition: transform 0.2s ease;
-    }
+    .job-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:.75rem; flex-wrap:wrap; gap:.5rem; }
+    .job-title { font-weight:600; color:#333; margin:0; font-size:1rem; }
+    .job-meta { display:flex; gap:1rem; font-size:.8rem; color:#555; margin-bottom:.5rem; flex-wrap:wrap; }
+    .job-actions { display:flex; gap:.75rem; margin-top:.75rem; }
 
-    .stat-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-    }
+    .btn { min-height:44px; min-width:120px; font-size:.8rem; border-radius:6px; font-weight:500; transition:all .2s ease; border:none; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:.5rem; }
+    .btn:hover { transform:translateY(-1px); box-shadow:0 2px 4px rgba(0,0,0,.2); }
+    .btn-success { background:#28a745; color:#fff; } .btn-warning { background:#ffc107; color:#212529; } .btn-primary { background:#007bff; color:#fff; } .btn-secondary { background:#6c757d; color:#fff; }
 
-    .stat-value {
-        font-size: 2rem;
-        font-weight: bold;
-        color: #007bff;
-        margin-bottom: 0.25rem;
-    }
+    .empty-state { text-align:center; padding:3rem 1.5rem; color:#6c757d; }
+    .empty-state i { font-size:3rem; margin-bottom:1rem; opacity:.5; }
 
-    .stat-label {
-        font-size: 0.875rem;
-        color: #666;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
+    .htmx-indicator { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:9999; background:#fff; padding:1.5rem; border-radius:8px; box-shadow:0 4px 8px rgba(0,0,0,.2); }
+    .htmx-indicator.htmx-request { display:flex; align-items:center; gap:.75rem; }
 
-    /* Machine status grid */
-    .sls-machines-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 1rem;
-        margin-bottom: 2rem;
-    }
-
-    .machine-card {
-        background: white;
-        border-radius: 8px;
-        padding: 1.25rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        border-left: 4px solid #007bff;
-    }
-
-    .machine-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1rem;
-    }
-
-    .machine-name {
-        font-weight: 600;
-        color: #333;
-        margin: 0;
-    }
-
-    .machine-status {
-        padding: 0.25rem 0.75rem;
-        border-radius: 1rem;
-        font-size: 0.75rem;
-        font-weight: 500;
-    }
-
-    .status-idle { background-color: #e3f2fd; color: #1565c0; }
-    .status-building { background-color: #e8f5e8; color: #2e7d32; }
-    .status-maintenance { background-color: #fff3e0; color: #f57c00; }
-    .status-error { background-color: #ffebee; color: #c62828; }
-
-    /* Job sections */
-    .job-section {
-        background: white;
-        border-radius: 8px;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        overflow: hidden;
-    }
-
-    .section-header {
-        background: #f8f9fa;
-        padding: 1rem 1.25rem;
-        border-bottom: 1px solid #e9ecef;
-        margin: 0;
-    }
-
-    .section-title {
-        margin: 0;
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: #333;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .job-list {
-        padding: 0;
-        margin: 0;
-        list-style: none;
-    }
-
-    .job-item {
-        padding: 1.25rem;
-        border-bottom: 1px solid #e9ecef;
-        transition: background-color 0.2s ease;
-    }
-
-    .job-item:last-child {
-        border-bottom: none;
-    }
-
-    .job-item:hover {
-        background-color: #f8f9fa;
-    }
-
-    .job-item.active {
-        background-color: #f0f8ff;
-        border-left: 4px solid #28a745;
-    }
-
-    .job-item.queued {
-        background-color: #fff;
-        border-left: 4px solid #007bff;
-    }
-
-    .job-item.completed {
-        background-color: #f8fff9;
-        border-left: 4px solid #6c757d;
-    }
-
-    .job-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 0.75rem;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-    }
-
-    .job-title {
-        font-weight: 600;
-        color: #333;
-        margin: 0;
-        font-size: 1rem;
-    }
-
-    .job-meta {
-        display: flex;
-        gap: 1rem;
-        font-size: 0.875rem;
-        color: #666;
-        margin-bottom: 0.75rem;
-        flex-wrap: wrap;
-    }
-
-    .job-actions {
-        display: flex;
-        gap: 0.75rem;
-        margin-top: 0.75rem;
-    }
-
-    /* Buttons - Touch-friendly for tablets */
-    .btn {
-        min-height: 44px;
-        min-width: 120px;
-        font-size: 0.875rem;
-        border-radius: 6px;
-        font-weight: 500;
-        transition: all 0.2s ease;
-        border: none;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-    }
-
-    .btn:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    }
-
-    .btn-success {
-        background-color: #28a745;
-        color: white;
-    }
-
-    .btn-warning {
-        background-color: #ffc107;
-        color: #212529;
-    }
-
-    .btn-primary {
-        background-color: #007bff;
-        color: white;
-    }
-
-    .btn-secondary {
-        background-color: #6c757d;
-        color: white;
-    }
-
-    /* Empty state */
-    .empty-state {
-        text-align: center;
-        padding: 3rem 1.5rem;
-        color: #6c757d;
-    }
-
-    .empty-state i {
-        font-size: 3rem;
-        margin-bottom: 1rem;
-        opacity: 0.5;
-    }
-
-    .empty-state h4 {
-        margin-bottom: 0.5rem;
-        color: #6c757d;
-    }
-
-    /* Loading indicator */
-    .htmx-indicator {
-        display: none;
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        z-index: 9999;
-        background: white;
-        padding: 1.5rem;
-        border-radius: 8px;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-
-    .htmx-indicator.htmx-request {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
-
-    /* Responsive design */
-    @@media (max-width: 768px) {
-        .sls-dashboard-container {
-            padding: 0.75rem;
-        }
-
-        .sls-header {
-            padding: 1rem;
-        }
-
-        .sls-header h1 {
-            font-size: 1.5rem;
-        }
-
-        .sls-stats-grid {
-            grid-template-columns: repeat(2, 1fr);
-        }
-
-        .sls-machines-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .job-header {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-
-        .job-actions {
-            width: 100%;
-        }
-
-        .btn {
-            width: 100%;
-        }
-    }
-
-    @@media (max-width: 480px) {
-        .sls-stats-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .job-meta {
-            flex-direction: column;
-            gap: 0.25rem;
-        }
-    }
+    @@media (max-width:768px){ .sls-dashboard-container{padding:.75rem;} .sls-header{padding:1rem;} .sls-header h1{font-size:1.5rem;} .sls-stats-grid{grid-template-columns:repeat(2,1fr);} .sls-machines-grid{grid-template-columns:1fr;} .job-header{flex-direction:column; align-items:flex-start;} .job-actions{width:100%;} .btn{width:100%;} }
+    @@media (max-width:480px){ .sls-stats-grid{grid-template-columns:1fr;} .job-meta{flex-direction:column; gap:.25rem;} }
     </style>
 }
 

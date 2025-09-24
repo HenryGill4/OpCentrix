@@ -13,6 +13,8 @@
 .scheduler-vertical .machine-column-header {position:relative;}
 .scheduler-vertical .machine-color-dot {width:10px;height:10px;border-radius:2px;display:inline-block;}
 .scheduler-vertical .job-block { color:#fff; border-radius:6px; transition:background-color .15s ease, box-shadow .15s ease; background:var(--machine-color,#6366F1); box-shadow:0 4px 10px -2px rgba(0,0,0,.25); }
+/* Override legacy per-machine left border rules (e.g. .machine-cnc1) */
+.scheduler-vertical .machine-column[class*='machine-'] { border-left:0 !important; box-shadow:none; }
 </style>
 <div class="scheduler-grid-container scheduler-vertical opcentrix-card" data-zoom="@zoom" data-orientation="vertical" data-total-slots="@totalSlots">
     <div class="scheduler-machines-header">

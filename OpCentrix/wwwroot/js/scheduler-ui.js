@@ -20,7 +20,14 @@
 .scheduler-horizontal-container .job-block, 
 .scheduler-vertical .job-block, 
 .scheduler-embedded .job-block {background:var(--machine-color,#6366F1)!important;color:#fff!important;border-radius:6px;}
-.job-block .job-block-content{background:transparent!important;color:inherit!important;}`;
+.job-block .job-block-content{background:transparent!important;color:inherit!important;}
+/* Remove legacy left borders from machine label variants */
+.scheduler-machine-label[class*='machine-']{border-left:0!important;}
+
+/* Remove legacy per-machine job block border-left + forced legacy color */
+.job-block[class*='machine-']{border-left:0!important;}
+.job-block.machine-cnc1{background:var(--machine-color,#6366F1)!important;}
+`;
                 document.head.appendChild(style);
             }
             const machineColors = {};
@@ -38,6 +45,7 @@
                     j.style.setProperty('--machine-color', c);
                     j.style.setProperty('background', c, 'important');
                     j.style.setProperty('color', '#fff', 'important');
+                    j.style.removeProperty('border-left');
                 }
             });
         } catch(e){ console.warn('hydrateSchedulerColors error', e); }
