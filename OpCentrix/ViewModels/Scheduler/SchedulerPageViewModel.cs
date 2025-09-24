@@ -14,5 +14,6 @@ namespace OpCentrix.ViewModels.Scheduler
         public int SlotsPerDay { get; set; } = 1;
         public int SlotMinutes { get; set; } = 1440;
         public Dictionary<string, int> MachineRowHeights { get; set; } = new();
+        public Dictionary<string, string> MachineColors { get; set; } = new(); // NEW: MachineId -> ColorHex
     }
 }

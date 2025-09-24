@@ -62,8 +62,19 @@ namespace OpCentrix.Pages.Scheduler
             try
             {
                 await LoadAvailableMachinesAsync(operationId);
+                // Backfill colors if missing
+                foreach(var m in AvailableMachines)
+                {
+                    if(string.IsNullOrWhiteSpace(m.ColorHex))
+                    {
+                        m.ColorHex = AssignColor(m.MachineId, AvailableMachines);
+                        _context.Machines.Update(m);
+                    }
+                }
+                await _context.SaveChangesAsync();
                 ViewModel = _schedulerService.GetSchedulerData(zoom, startDate);
                 ViewModel.Machines = AvailableMachines.Select(m => m.MachineId).ToList();
+                ViewModel.MachineColors = AvailableMachines.ToDictionary(m => m.MachineId, m => string.IsNullOrWhiteSpace(m.ColorHex) ? m.EffectiveColorHex : m.ColorHex!);
                 await LoadAvailablePartsAsync(operationId);
                 await LoadJobsAsync(operationId);
                 await GenerateSummaryAsync(operationId);
@@ -90,6 +101,7 @@ namespace OpCentrix.Pages.Scheduler
                 await LoadAvailableMachinesAsync(opId);
                 ViewModel = _schedulerService.GetSchedulerData(zoom, startDate);
                 ViewModel.Machines = AvailableMachines.Select(m => m.MachineId).ToList();
+                ViewModel.MachineColors = AvailableMachines.ToDictionary(m => m.MachineId, m => string.IsNullOrWhiteSpace(m.ColorHex) ? m.EffectiveColorHex : m.ColorHex!);
                 await LoadJobsAsync(opId);
                 await GenerateSummaryAsync(opId);
 
@@ -116,6 +128,7 @@ namespace OpCentrix.Pages.Scheduler
                 await LoadAvailableMachinesAsync(opId);
                 ViewModel = _schedulerService.GetSchedulerData(zoom, startDate);
                 ViewModel.Machines = AvailableMachines.Select(m => m.MachineId).ToList();
+                ViewModel.MachineColors = AvailableMachines.ToDictionary(m => m.MachineId, m => string.IsNullOrWhiteSpace(m.ColorHex) ? m.EffectiveColorHex : m.ColorHex!);
                 await LoadJobsAsync(opId);
                 await GenerateSummaryAsync(opId);
                 return Partial("_FooterSummary", Summary);
@@ -290,19 +303,26 @@ namespace OpCentrix.Pages.Scheduler
 
         private string GetGridRefreshScript(string message)
         {
-            // Builds a JS snippet that closes modal, shows message, refreshes grid + summary via HTMX without full reload
+            // Temporary visual bandaid: show loading overlay to mask color flicker while grid refreshes
             return $@"<script>(function(){{
-                const m = document.getElementById('modal-container');
-                if(m){{m.style.display='none';m.classList.add('hidden');m.innerHTML='';}}
+                const overlay = document.getElementById('loading-indicator');
+                const modal = document.getElementById('modal-container');
+                if(modal){{ modal.style.display='none'; modal.classList.add('hidden'); modal.innerHTML=''; }}
                 document.body.style.overflow='';
                 if(window.showSuccessNotification){{window.showSuccessNotification('{message}');}}
                 const qs = window.location.search;
-                if(window.htmx){{
-                    htmx.ajax('GET','/Scheduler?handler=RefreshGrid'+(qs?qs.replace('?','&'):''),{{target:'#scheduler-main-content',swap:'innerHTML'}})
-                        .then(()=>{{console.log('Grid refreshed');}});
-                    htmx.ajax('GET','/Scheduler?handler=RefreshSummary'+(qs?qs.replace('?','&'):''),{{target:'#footer-summary',swap:'innerHTML'}})
-                        .then(()=>{{console.log('Summary refreshed');}});
-                }} else {{ window.location.reload(); }}
+                const refresh = () => {{
+
+                    if(!window.htmx){{ window.location.reload(); return; }}
+                    const gridReq = htmx.ajax('GET','/Scheduler?handler=RefreshGrid'+(qs?qs.replace('?','&'):''),{{target:'#scheduler-main-content',swap:'innerHTML'}});
+                    const summaryReq = htmx.ajax('GET','/Scheduler?handler=RefreshSummary'+(qs?qs.replace('?','&'):''),{{target:'#footer-summary',swap:'innerHTML'}});
+                    Promise.all([gridReq, summaryReq]).then(()=>{{
+                        if(overlay) overlay.classList.add('hidden');
+                    }}).catch(()=>{{ if(overlay) overlay.classList.add('hidden'); }});
+                }};
+                if(overlay) overlay.classList.remove('hidden');
+                // Small delay to hide white glitch before content arrives (BANDAID - replace with smoother incremental rendering later)
+                setTimeout(refresh, 350);
             }})();</script>";
         }
 
@@ -827,6 +847,16 @@ namespace OpCentrix.Pages.Scheduler
                 _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error updating job duration", operationId);
                 return new JsonResult(new { success = false, error = "Error updating job duration" });
             }
+        }
+
+        private string AssignColor(string machineId, List<Machine> all)
+        {
+            var palette = new[]{"#6366F1","#0EA5E9","#10B981","#F59E0B","#EC4899","#8B5CF6","#14B8A6","#F97316","#EF4444","#3B82F6","#84CC16","#9333EA","#06B6D4","#F43F5E","#A855F7"};
+            var used = all.Where(m=>!string.IsNullOrWhiteSpace(m.ColorHex)).Select(m=>m.ColorHex!).ToHashSet();
+            var free = palette.FirstOrDefault(c=>!used.Contains(c));
+            if(free!=null) return free;
+            var hash = machineId.Aggregate(17,(acc,ch)=>acc*31+ch);
+            return palette[Math.Abs(hash)%palette.Length];
         }
     }
 

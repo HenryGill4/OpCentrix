@@ -906,75 +906,58 @@ document.addEventListener('keydown', function(event) {
 
 console.log('? [SCHEDULER-UI] Global functions loaded and ready');
 
-// Global wrappers used by Razor onclick attributes (prevent undefined)
-window.changeZoom = function(direction) {
+// Apply machine colors to job blocks immediately (DB-driven ColorHex)
+window.applyMachineColors = function(){
     try {
-        if (window.opcentrixSchedulerUI) {
-            if (direction > 0) {
-                window.opcentrixSchedulerUI.zoomIn();
-            } else if (direction < 0) {
-                window.opcentrixSchedulerUI.zoomOut();
+        const colorMap = {};
+        document.querySelectorAll('.scheduler-machine-label').forEach(lbl=>{
+            const m = lbl.getAttribute('data-machine');
+            const style = getComputedStyle(lbl);
+            const c = style.getPropertyValue('--machine-color').trim();
+            if(m && c) colorMap[m] = c;
+        });
+        document.querySelectorAll('.scheduler-vertical .machine-column-header').forEach(h=>{
+            const m = h.getAttribute('data-machine');
+            const style = getComputedStyle(h);
+            const c = style.getPropertyValue('--machine-color').trim();
+            if(m && c) colorMap[m] = c;
+        });
+        document.querySelectorAll('.job-block').forEach(j=>{
+            const m = j.getAttribute('data-machine') || j.getAttribute('data-machine-id');
+            if(m && colorMap[m]){
+                j.style.background = colorMap[m];
+                j.style.color = '#fff';
             }
-            return true;
+        });
+    } catch(e){ console.warn('applyMachineColors failed', e);} 
+};
+
+// Observe DOM for new job blocks (before HTMX full refresh script fires)
+(function(){
+    const target = document.getElementById('scheduler-main-content');
+    if(!target) return;
+    const mo = new MutationObserver(muts=>{
+        let added = false;
+        for(const m of muts){
+            if([...m.addedNodes].some(n=> n.nodeType===1 && n.classList && n.classList.contains('job-block'))){ added=true; break; }
         }
-        // Fallback: bump zoom in URL
-        const levels = ['2month','month','week','12h','6h','4h','2h','1h','30min','15min'];
-        const url = new URL(window.location);
-        const current = url.searchParams.get('zoom') || 'week';
-        const idx = Math.max(0, Math.min(levels.length - 1, levels.indexOf(current) + (direction > 0 ? 1 : -1)));
-        url.searchParams.set('zoom', levels[idx]);
-        window.location.href = url.toString();
-        return true;
-    } catch (e) {
-        console.error('[Scheduler] changeZoom error', e);
-        return false;
-    }
-};
+        if(added) window.applyMachineColors();
+    });
+    mo.observe(target,{childList:true,subtree:true});
+})();
 
-window.toggleOrientation = function(orientation) {
-    try {
-        if (orientation !== 'horizontal' && orientation !== 'vertical') return false;
-        const url = new URL(window.location);
-        url.searchParams.set('orientation', orientation);
-        window.location.href = url.toString();
-        return true;
-    } catch (e) {
-        console.error('[Scheduler] toggleOrientation error', e);
-        return false;
-    }
-};
+// Initial run after load
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', ()=> setTimeout(window.applyMachineColors,60));
+else setTimeout(window.applyMachineColors,60);
 
-window.navigatePeriod = function(direction) {
-    try {
-        const url = new URL(window.location);
-        const zoom = url.searchParams.get('zoom') || 'week';
-        const startStr = url.searchParams.get('startDate');
-        const base = startStr ? new Date(startStr) : new Date();
-        const d = new Date(base);
-        if (zoom.includes('month')) {
-            d.setMonth(d.getMonth() + (direction || 0));
-        } else if (zoom === 'week') {
-            d.setDate(d.getDate() + (7 * (direction || 0)));
-        } else {
-            d.setDate(d.getDate() + (direction || 0));
-        }
-        url.searchParams.set('startDate', d.toISOString().split('T')[0]);
-        window.location.href = url.toString();
-        return true;
-    } catch (e) {
-        console.error('[Scheduler] navigatePeriod error', e);
-        return false;
+// Extend existing HTMX afterSwap hook to re-color
+document.addEventListener('htmx:afterSwap', (ev)=>{
+    if(ev.detail.target.id==='scheduler-main-content' || ev.detail.target.closest('#scheduler-main-content')){
+        setTimeout(window.applyMachineColors,50);
     }
-};
+});
 
-window.navigateToToday = function() {
-    try {
-        const url = new URL(window.location);
-        url.searchParams.delete('startDate');
-        window.location.href = url.toString();
-        return true;
-    } catch (e) {
-        console.error('[Scheduler] navigateToToday error', e);
-        return false;
-    }
-};
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = OpCentrixSchedulerUI;
+}

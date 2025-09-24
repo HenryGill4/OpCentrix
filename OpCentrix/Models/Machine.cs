@@ -402,4 +402,31 @@ public class Machine
     public double TotalOperatingHours { get; set; } = 0;
 
     #endregion
+
+    /// <summary>
+    /// Hex color code for machine representation
+    /// </summary>
+    [StringLength(9)]
+    public string? ColorHex { get; set; } = string.Empty; // NEW: persisted color (e.g. #3B82F6)
+
+    /// <summary>
+    /// Effective hex color code, considering machine ID for deterministic assignment
+    /// </summary>
+    [NotMapped]
+    public string EffectiveColorHex => !string.IsNullOrWhiteSpace(ColorHex)
+        ? ColorHex!
+        : DeterministicPaletteColor(MachineId);
+
+    private static readonly string[] _palette = new[]
+    {
+        "#6366F1","#0EA5E9","#10B981","#F59E0B","#EC4899","#8B5CF6","#14B8A6","#F97316","#EF4444","#3B82F6","#84CC16","#9333EA","#06B6D4","#F43F5E","#A855F7"
+    };
+
+    private static string DeterministicPaletteColor(string key)
+    {
+        if (string.IsNullOrEmpty(key)) return _palette[0];
+        var hash = key.Aggregate(17,(acc,ch)=>acc*31+ch);
+        var idx = Math.Abs(hash)%_palette.Length;
+        return _palette[idx];
+    }
 }

@@ -633,7 +633,8 @@ public class MachinesModel : PageModel
             CreatedDate = DateTime.UtcNow,
             LastModifiedDate = DateTime.UtcNow,
             CreatedBy = User.Identity?.Name ?? "Admin",
-            LastModifiedBy = User.Identity?.Name ?? "Admin"
+            LastModifiedBy = User.Identity?.Name ?? "Admin",
+            ColorHex = string.IsNullOrWhiteSpace(dto.ColorHex) ? AssignColor(dto.MachineId) : dto.ColorHex
         };
     }
 
@@ -663,6 +664,19 @@ public class MachinesModel : PageModel
         machine.OpcUaEnabled = dto.OpcUaEnabled;
         machine.LastModifiedBy = User.Identity?.Name ?? "Admin";
         machine.LastModifiedDate = DateTime.UtcNow;
+        if (!string.IsNullOrWhiteSpace(dto.ColorHex)) machine.ColorHex = dto.ColorHex;
+        if (string.IsNullOrWhiteSpace(machine.ColorHex)) machine.ColorHex = AssignColor(machine.MachineId);
+    }
+
+    private string AssignColor(string machineId)
+    {
+        var palette = new[]{"#6366F1","#0EA5E9","#10B981","#F59E0B","#EC4899","#8B5CF6","#14B8A6","#F97316","#EF4444","#3B82F6","#84CC16","#9333EA","#06B6D4","#F43F5E","#A855F7"};
+        if (!Machines.Any()) return palette[0];
+        var used = Machines.Where(m=>!string.IsNullOrEmpty(m.ColorHex)).Select(m=>m.ColorHex!).ToHashSet();
+        var available = palette.FirstOrDefault(c=>!used.Contains(c));
+        if (available!=null) return available;
+        var hash = machineId.Aggregate(17,(acc,ch)=>acc*31+ch);
+        return palette[Math.Abs(hash)%palette.Length];
     }
 
     public void LoadMachineForEditing(Machine machine)
@@ -732,6 +746,7 @@ public class CreateMachineDto
     public double MaintenanceIntervalHours { get; set; } = 500;
     public string? OpcUaEndpointUrl { get; set; }
     public bool OpcUaEnabled { get; set; } = false;
+    public string? ColorHex { get; set; } // NEW
 }
 
 public class EditMachineDto
@@ -757,6 +772,7 @@ public class EditMachineDto
     public double MaintenanceIntervalHours { get; set; }
     public string? OpcUaEndpointUrl { get; set; }
     public bool OpcUaEnabled { get; set; }
+    public string? ColorHex { get; set; } // NEW
 }
 
 public class CreateCapabilityDto

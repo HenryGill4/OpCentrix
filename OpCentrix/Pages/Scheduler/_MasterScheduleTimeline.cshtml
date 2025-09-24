@@ -1,84 +1,167 @@
 @model List<OpCentrix.ViewModels.Analytics.MasterScheduleTimeSlot>
-
 @{
     var timeSlots = Model ?? new List<OpCentrix.ViewModels.Analytics.MasterScheduleTimeSlot>();
-    var machines = timeSlots.GroupBy(t => t.MachineId).Select(g => g.Key).OrderBy(m => m).ToList();
-    var startTime = timeSlots.Any() ? timeSlots.Min(t => t.StartTime).Date : DateTime.Today;
-    var endTime = timeSlots.Any() ? timeSlots.Max(t => t.EndTime).Date.AddDays(1) : DateTime.Today.AddDays(7);
-    var timeSpan = endTime - startTime;
-    var days = (int)timeSpan.TotalDays;
-}
+    if (timeSlots.Any())
+    {
+        var globalStart = timeSlots.Min(t => t.StartTime);
+        var globalEnd = timeSlots.Max(t => t.EndTime);
+        // Normalize to hour start/end for cleaner grid
+        globalStart = new DateTime(globalStart.Year, globalStart.Month, globalStart.Day, globalStart.Hour, 0, 0, globalStart.Kind);
+        globalEnd = new DateTime(globalEnd.Year, globalEnd.Month, globalEnd.Day, globalEnd.Hour, 0, 0, globalEnd.Kind);
+        if (globalEnd <= globalStart) globalEnd = globalStart.AddHours(1);
+        var totalMinutes = (globalEnd - globalStart).TotalMinutes;
+        var totalDays = (globalEnd - globalStart).TotalDays;
 
-@if (!timeSlots.Any())
-{
-    <div class="text-center py-8 text-gray-500">
-        <svg class="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-        </svg>
-        <p>No timeline data available for the selected period.</p>
-    </div>
-}
-else
-{
-    <div class="timeline-grid" style="grid-template-columns: 120px repeat(@days, minmax(80px, 1fr));">
-        <!-- Header Row -->
-        <div class="timeline-header">Machine</div>
-        @for (int day = 0; day < days; day++)
+        // Dynamic zoom / segment resolution
+        int segmentMinutes;
+        string zoomLabel;
+        if (totalDays <= 3)
         {
-            var date = startTime.AddDays(day);
-            <div class="timeline-header">
-                @date.ToString("MMM dd")
-                <div class="text-xs text-gray-400">@date.ToString("ddd")</div>
-            </div>
+            segmentMinutes = 60; // hourly
+            zoomLabel = "hour";
         }
-        
-        <!-- Machine Rows -->
-        @foreach (var machine in machines)
+        else if (totalDays <= 14)
         {
-            <div class="timeline-machine">@machine</div>
-            
-            @for (int day = 0; day < days; day++)
-            {
-                var date = startTime.AddDays(day);
-                var daySlots = timeSlots.Where(t => t.MachineId == machine && 
-                                               t.StartTime.Date == date.Date).ToList();
-                
-                <div class="timeline-slot @(daySlots.Any() ? "slot-occupied" : "") @(daySlots.Any(s => s.IsConflict) ? "slot-conflict" : "") @(daySlots.Any(s => s.IsMaintenanceSlot) ? "slot-maintenance" : "")">
-                    @if (daySlots.Any())
-                    {
-                        @foreach (var slot in daySlots.Take(2))
-                        {
-                            <div class="text-xs mb-1" title="@slot.DisplayText">
-                                @slot.PartNumber
-                            </div>
-                        }
-                        @if (daySlots.Count > 2)
-                        {
-                            <div class="text-xs text-gray-400">+@(daySlots.Count - 2) more</div>
-                        }
-                    }
+            segmentMinutes = 6 * 60; // 6h blocks
+            zoomLabel = "6h";
+        }
+        else if (totalDays <= 60)
+        {
+            segmentMinutes = 24 * 60; // daily
+            zoomLabel = "day";
+        }
+        else
+        {
+            segmentMinutes = 7 * 24 * 60; // weekly
+            zoomLabel = "week";
+        }
+        var segmentCount = (int)Math.Ceiling(totalMinutes / segmentMinutes);
+        var machines = timeSlots
+            .GroupBy(t => t.MachineId)
+            .Select(g => g.Key)
+            .OrderBy(m => m)
+            .ToList();
+        var slotWidthCss = zoomLabel switch { "hour" => "48px", "6h" => "52px", "day" => "64px", _ => "80px" }; // adaptive widths
+        var headerFormat = zoomLabel switch { "hour" => "MMM dd HH:mm", "6h" => "MMM dd HH\"h\"", "day" => "MMM dd", _ => "'Wk '##" };
+
+        <div class="ms-timeline-wrapper" data-zoom="@zoomLabel">
+            <div class="ms-timeline-grid" style="--ms-slot-width:@slotWidthCss; grid-template-columns: 160px repeat(@segmentCount, var(--ms-slot-width));">
+                <!-- Header Left Cell -->
+                <div class="ms-tl-header ms-tl-header-sticky">Machine / Resource
+                    <div class="ms-zoom-indicator">@zoomLabel view</div>
                 </div>
-            }
-        }
-    </div>
-    
-    <!-- Timeline Legend -->
-    <div class="mt-4 flex flex-wrap gap-4 text-xs">
-        <div class="flex items-center">
-            <div class="w-4 h-4 bg-blue-100 border border-blue-300 mr-2"></div>
-            <span>Scheduled Jobs</span>
+                @for (int i = 0; i < segmentCount; i++)
+                {
+                    var segStart = globalStart.AddMinutes(i * segmentMinutes);
+                    var segEnd = segStart.AddMinutes(segmentMinutes);
+                    string label;
+                    if (zoomLabel == "week")
+                    {
+                        // Show week number + short date span
+                        var cal = System.Globalization.CultureInfo.CurrentCulture.Calendar;
+                        var week = cal.GetWeekOfYear(segStart, System.Globalization.CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
+                        label = $"W{week}\n{segStart:MMM dd}";
+                    }
+                    else if (zoomLabel == "hour")
+                    {
+                        label = segStart.ToString("HH:mm");
+                    }
+                    else if (zoomLabel == "6h")
+                    {
+                        label = $"{segStart:MMM dd}\n{segStart:HH}h";
+                    }
+                    else // day
+                    {
+                        label = segStart.ToString("MMM dd\nddd");
+                    }
+                    <div class="ms-tl-header">@label</div>
+                }
+
+                @foreach (var machine in machines)
+                {
+                    <div class="ms-machine-label">
+                        <div class="ms-machine-name">@machine</div>
+                        <a class="ms-open-scheduler" href="/Scheduler?machine=@machine&startDate=@globalStart:yyyy-MM-dd" title="Open detailed scheduler for @machine">Detail »</a>
+                    </div>
+                    @for (int i = 0; i < segmentCount; i++)
+                    {
+                        <div class="ms-time-cell" data-seg="@i"></div>
+                    }
+
+                    <!-- Absolute job layer spanning the full width after the row cells -->
+                    <div class="ms-job-layer" style="grid-column: 2 / span @segmentCount; grid-row: span 1;">
+                        @{
+                            var jobsForMachine = timeSlots.Where(t => t.MachineId == machine).OrderBy(t => t.StartTime).ToList();
+                            int laneCount = 0; // simple lane allocation to handle overlaps
+                            var activeLanes = new List<(DateTime end, int lane)>();
+                            foreach (var job in jobsForMachine)
+                            {
+                                // Determine lane (first lane whose end <= job.StartTime)
+                                int lane = 0;
+                                for (int li = 0; li < activeLanes.Count; li++)
+                                {
+                                    if (activeLanes[li].end <= job.StartTime)
+                                    {
+                                        lane = activeLanes[li].lane;
+                                        activeLanes[li] = (job.EndTime, lane);
+                                        goto laneFound;
+                                    }
+                                }
+                                lane = laneCount++;
+                                activeLanes.Add((job.EndTime, lane));
+                            laneFound:;
+
+                                var startOffset = (job.StartTime - globalStart).TotalMinutes;
+                                var endOffset = (job.EndTime - globalStart).TotalMinutes;
+                                if (endOffset < 0 || startOffset > totalMinutes) { continue; }
+                                startOffset = Math.Max(0, startOffset);
+                                endOffset = Math.Min(totalMinutes, endOffset);
+                                var widthPct = (endOffset - startOffset) / totalMinutes * 100.0;
+                                var leftPct = startOffset / totalMinutes * 100.0;
+                                var durationHours = (endOffset - startOffset) / 60.0;
+                                var statusClass = job.Status?.ToLower().Replace(" ", "-") ?? "scheduled";
+                                var priority = job.Priority;
+                                var conflictClass = job.IsConflict ? " ms-job-conflict" : string.Empty;
+                                var maintClass = job.IsMaintenanceSlot ? " ms-job-maint" : string.Empty;
+                                var progress = Math.Max(0, Math.Min(100, job.ProgressPercent));
+                                var tooltip = $"{job.PartNumber} (Job #{job.JobId})\nStatus: {job.Status}  Priority: P{priority}\nStart: {job.StartTime:MMM dd yyyy HH:mm}  End: {job.EndTime:MMM dd yyyy HH:mm}\nDuration: {durationHours:F1}h  Progress: {progress:F0}%";
+                                <div class="ms-job-block status-@statusClass@conflictClass@maintClass" title="@tooltip"
+                                     data-job-id="@job.JobId" data-machine="@job.MachineId" style="left:@leftPct.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)%;width:@widthPct.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)%;top:@(lane * 26)px;">
+                                    <div class="ms-job-head">
+                                        <span class="ms-job-part">@job.PartNumber</span>
+                                        <span class="ms-job-duration">@durationHours.ToString("F1")h</span>
+                                    </div>
+                                    <div class="ms-job-meta">
+                                        <span class="ms-job-status">@job.Status</span>
+                                        <span class="ms-job-priority p@priority">P@priority</span>
+                                    </div>
+                                    @if (progress > 0 && progress < 100)
+                                    {
+                                        <div class="ms-progress"><div class="ms-progress-bar" style="width:@progress%;"></div></div>
+                                    }
+                                </div>
+                            }
+                        }
+                        <div class="ms-row-height-guard" style="height:@(Math.Max(1, activeLanes.Count) * 26 + 4)px;"></div>
+                    </div>
+                }
+            </div>
+            <div class="ms-timeline-legend">
+                <div><span class="ms-leg-box leg-status-scheduled"></span> Scheduled</div>
+                <div><span class="ms-leg-box leg-status-building"></span> Building / Running</div>
+                <div><span class="ms-leg-box leg-status-completed"></span> Completed</div>
+                <div><span class="ms-leg-box leg-conflict"></span> Conflict</div>
+                <div><span class="ms-leg-box leg-maint"></span> Maintenance</div>
+            </div>
         </div>
-        <div class="flex items-center">
-            <div class="w-4 h-4 bg-red-100 border border-red-300 mr-2"></div>
-            <span>Conflicts</span>
+    }
+    else
+    {
+        <div class="text-center py-8 text-gray-500">
+            <svg class="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            <p>No timeline data available for the selected period.</p>
         </div>
-        <div class="flex items-center">
-            <div class="w-4 h-4 bg-yellow-100 border border-yellow-300 mr-2"></div>
-            <span>Maintenance</span>
-        </div>
-        <div class="flex items-center">
-            <div class="w-4 h-4 bg-gray-50 border border-gray-200 mr-2"></div>
-            <span>Available</span>
-        </div>
-    </div>
+    }
 }

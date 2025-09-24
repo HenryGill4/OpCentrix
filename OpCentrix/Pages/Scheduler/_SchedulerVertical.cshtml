@@ -12,7 +12,16 @@
     // Base metrics for vertical view
     var rowPx = 60; // matches min-height used in cells
     var startDate = Model.Dates.FirstOrDefault().Date;
+    string GetColor(string m)=> Model.MachineColors!=null && Model.MachineColors.TryGetValue(m, out var c) ? c : "#6366F1";
 }
+<style>
+    /* Vertical scheduler color enhancements */
+    .scheduler-vertical .machine-column-header {position:relative; border-top:4px solid var(--machine-color,#6366F1);}    
+    .scheduler-vertical .machine-column-header::after {content:""; position:absolute; inset:0; background:linear-gradient(180deg,var(--machine-color,#6366F1)0%,transparent 85%); opacity:.10; pointer-events:none;}
+    .scheduler-vertical .machine-color-dot {width:10px; height:10px; border-radius:2px; display:inline-block;}
+    .scheduler-vertical .job-block {background:var(--machine-color,#6366F1)!important;color:#fff;}
+    .scheduler-vertical .job-block[class*='status-'] {background:var(--machine-color,#6366F1)!important;}
+</style>
 
 <!-- Task 10: Vertical Scheduler Layout Implementation -->
 <div class="scheduler-grid-container scheduler-vertical opcentrix-card" 
@@ -38,12 +47,15 @@
             {
                 var machineJobs = Model.Jobs.Where(j => j.MachineId == machine).ToList();
                 var jobCount = machineJobs.Count;
-                var machineClass = $"machine-{machine.ToLower()} {machine.ToLower()}";
+                var color = GetColor(machine);
                 
-                <div class="machine-column scheduler-grid-header bg-white border-b border-r font-bold text-indigo-800 @machineClass"
-                     data-machine="@machine">
+                <div class="machine-column scheduler-grid-header bg-white border-b border-r font-bold text-indigo-800 machine-column-header" 
+                     data-machine="@machine" style="--machine-color:@color">
                     <div class="flex flex-col items-center justify-center h-full p-2 min-h-[80px]">
-                        <div class="text-lg font-bold">@machine</div>
+                        <div class="flex items-center space-x-2 text-lg font-bold">
+                            <span class="machine-color-dot" style="background:@color"></span>
+                            <span>@machine</span>
+                        </div>
                         <div class="text-xs opacity-75 mt-1">@jobCount job@(jobCount != 1 ? "s" : "")</div>
                         @if (machineJobs.Any())
                         {
@@ -129,13 +141,14 @@
                             var startingJobs = machineJobs.Where(job => job.ScheduledStart >= slotDateTime && job.ScheduledStart < slotEndDateTime).ToList();
                             var overlappingJobs = machineJobs.Where(job => job.ScheduledStart < slotEndDateTime && job.ScheduledEnd > slotDateTime).ToList();
                             var showAddBtn = !overlappingJobs.Any();
+                            var color = GetColor(machine);
                             
                             <div class="@string.Join(" ", cellClasses)" 
-                                 onclick="openJobModal('@machine', '@slotDateTime.ToString("yyyy-MM-ddTHH:mm")')"
+                                 onclick="openJobModalSafely('@machine', '@slotDateTime.ToString("yyyy-MM-ddTHH:mm")')"
                                  title="Click to add job at @slotDateTime.ToString("MMM dd, yyyy HH:mm")"
                                  data-slot-time="@slotDateTime.ToString("yyyy-MM-ddTHH:mm")"
                                  data-machine="@machine"
-                                 style="min-height: 60px; min-width: 150px;">
+                                 style="min-height: 60px; min-width: 150px; --machine-color:@color">
                                  
                                 @foreach (var job in startingJobs)
                                 {
@@ -152,25 +165,20 @@
                                     var jobLabel = $"Job: {job.PartNumber} ({job.Status}) - {job.ScheduledStart:MMM dd HH:mm} to {job.ScheduledEnd:MMM dd HH:mm} - Qty: {job.Quantity}";
                                     if (!string.IsNullOrEmpty(job.SlsMaterial)) jobLabel += $" - {job.SlsMaterial}";
                                     
-                                    <div class="absolute job-block machine-@machine.ToLower() @machine.ToLower() status-@job.Status.ToLower().Replace(" ", "-")" 
-                                         style="left: 2px; right: 2px; top:@offsetPx.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)px; height:@heightPx.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)px; z-index: 200;"
-                                         data-material="@job.SlsMaterial"
-                                         data-priority="@job.Priority"
-                                         data-status="@job.Status"
-                                         onclick="event.stopPropagation(); openJobModal('@machine', '@job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")', @job.Id)"
-                                         title="@jobLabel"
-                                         data-job-id="@job.Id"
-                                         data-machine-id="@machine"
-                                         data-job-date="@job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")">
+                                    var rush = false; 
+                                    try { rush = (bool)(job.GetType().GetProperty("IsRushJob")?.GetValue(job) ?? false); } 
+                                    catch { }
+
+                                    <div class="absolute job-block machine-@machine.ToLower() status-@job.Status.ToLower().Replace(" ", "-")@(rush?" rush-job":"")" style="left:2px;right:2px;top:@offsetPx.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)px;height:@heightPx.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)px;z-index:200;--machine-color:@color" data-material="@job.SlsMaterial" data-priority="@job.Priority" data-status="@job.Status" onclick="event.stopPropagation(); openJobModalSafely('@machine','@job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")',@job.Id)" title="@jobLabel" data-job-id="@job.Id" data-machine-id="@machine" data-job-date="@job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")">
                                         <div class="job-block-content p-1">
                                             <div class="job-block-title text-xs truncate">@job.PartNumber</div>
-                                            <div class="job-block-subtitle text-xs truncate opacity-90">
+                                            <div class="job-block-subtitle text-[10px] truncate opacity-90">
                                                 @if (!string.IsNullOrEmpty(job.SlsMaterial))
                                                 {
                                                     @job.SlsMaterial.Substring(0, Math.Min(job.SlsMaterial.Length, 14))@(job.SlsMaterial.Length > 14 ? "..." : "")
                                                 }
                                             </div>
-                                            <div class="job-block-meta text-xs flex justify-between">
+                                            <div class="job-block-meta text-[10px] flex justify-between">
                                                 <span>@job.DurationHours.ToString("F1")h</span>
                                                 <span>@job.Status</span>
                                             </div>

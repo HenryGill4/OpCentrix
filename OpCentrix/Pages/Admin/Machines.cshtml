@@ -187,6 +187,7 @@
                                     Priority @Model.GetSortIcon("Priority")
                                 </a>
                             </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Color</th>
                             <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Actions
                             </th>
@@ -198,11 +199,15 @@
                             <tr class="hover:bg-gray-50">
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex items-center">
+                                        <span class="inline-block w-3 h-3 rounded-full mr-2 border border-gray-300" style="background:@(string.IsNullOrWhiteSpace(machine.ColorHex)? machine.EffectiveColorHex : machine.ColorHex)"></span>
                                         <div class="text-sm font-medium text-gray-900">@machine.MachineId</div>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm text-gray-900">@machine.MachineName</div>
+                                    <div class="text-sm text-gray-900 flex items-center space-x-2">
+                                        <span>@machine.MachineName</span>
+                                        <span class="px-2 py-0.5 rounded text-xs border" style="background:@(string.IsNullOrWhiteSpace(machine.ColorHex)? machine.EffectiveColorHex : machine.ColorHex);color:#fff;">@((string.IsNullOrWhiteSpace(machine.ColorHex)? machine.EffectiveColorHex : machine.ColorHex))</span>
+                                    </div>
                                     <div class="text-sm text-gray-500">@machine.MachineType @(machine.MachineModel ?? "")</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
@@ -243,7 +248,7 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <div class="flex items-center justify-end space-x-2">
-                                        <button onclick="editMachine(@machine.Id, '@machine.MachineId', '@machine.MachineName', '@machine.MachineModel', '@machine.SerialNumber', '@machine.Location', '@machine.SupportedMaterials', '@machine.CurrentMaterial', '@machine.Status', @(machine.IsActive ? "true" : "false"), @(machine.IsAvailableForScheduling ? "true" : "false"), @machine.Priority, @machine.BuildLengthMm, @machine.BuildWidthMm, @machine.BuildHeightMm, @machine.MaxLaserPowerWatts, @machine.MaxScanSpeedMmPerSec, @machine.MinLayerThicknessMicrons, @machine.MaxLayerThicknessMicrons, @machine.MaintenanceIntervalHours, '@machine.OpcUaEndpointUrl', @(machine.OpcUaEnabled ? "true" : "false"))" 
+                                        <button onclick="editMachine(@machine.Id, '@machine.MachineId', '@machine.MachineName', '@machine.MachineModel', '@machine.SerialNumber', '@machine.Location', '@machine.SupportedMaterials', '@machine.CurrentMaterial', '@machine.Status', @(machine.IsActive ? "true" : "false"), @(machine.IsAvailableForScheduling ? "true" : "false"), @machine.Priority, @machine.BuildLengthMm, @machine.BuildWidthMm, @machine.BuildHeightMm, @machine.MaxLaserPowerWatts, @machine.MaxScanSpeedMmPerSec, @machine.MinLayerThicknessMicrons, @machine.MaxLayerThicknessMicrons, @machine.MaintenanceIntervalHours, '@machine.OpcUaEndpointUrl', @(machine.OpcUaEnabled ? "true" : "false"), '@machine.ColorHex')" 
                                                 class="text-blue-600 hover:text-blue-900" title="Edit Machine">
                                             ✏️
                                         </button>
@@ -601,6 +606,16 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Display Color -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Display Color</label>
+                        <div class="mt-1 flex items-center space-x-2">
+                            <input type="color" name="CreateMachineRequest.ColorHex" id="colorHex" value="#6366F1" class="h-9 w-14 p-0 border border-gray-300 rounded cursor-pointer" />
+                            <input type="text" id="colorHexText" maxlength="9" class="mt-1 block w-28 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm" value="#6366F1" />
+                            <span class="text-xs text-gray-500">Used for schedule/job colors</span>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="flex items-center justify-end space-x-2 mt-6 pt-6 border-t">
@@ -741,7 +756,7 @@
             document.getElementById('machineModal').classList.remove('hidden');
         }
 
-        function editMachine(id, machineId, machineName, machineModel, serialNumber, location, supportedMaterials, currentMaterial, status, isActive, isAvailableForScheduling, priority, buildLengthMm, buildWidthMm, buildHeightMm, maxLaserPowerWatts, maxScanSpeedMmPerSec, minLayerThicknessMicrons, maxLayerThicknessMicrons, maintenanceIntervalHours, opcUaEndpointUrl, opcUaEnabled) {
+        function editMachine(id, machineId, machineName, machineModel, serialNumber, location, supportedMaterials, currentMaterial, status, isActive, isAvailableForScheduling, priority, buildLengthMm, buildWidthMm, buildHeightMm, maxLaserPowerWatts, maxScanSpeedMmPerSec, minLayerThicknessMicrons, maxLayerThicknessMicrons, maintenanceIntervalHours, opcUaEndpointUrl, opcUaEnabled, colorHex) {
             isEditMode = true;
             document.getElementById('machineModalTitle').textContent = 'Edit Machine';
             document.getElementById('machineSubmitBtn').textContent = 'Update Machine';
@@ -774,6 +789,8 @@
             document.getElementById('maintenanceIntervalHours').value = maintenanceIntervalHours;
             document.getElementById('opcUaEndpointUrl').value = opcUaEndpointUrl;
             document.getElementById('opcUaEnabled').checked = opcUaEnabled;
+            document.getElementById('colorHex').value = colorHex || '#6366F1';
+            document.getElementById('colorHexText').value = colorHex || '#6366F1';
             
             document.getElementById('machineModal').classList.remove('hidden');
         }
@@ -869,7 +886,11 @@
             document.getElementById('maintenanceIntervalHours').value = '500';
             document.getElementById('opcUaEndpointUrl').value = '';
             document.getElementById('opcUaEnabled').checked = false;
+            document.getElementById('colorHex').value = '#6366F1';
+            document.getElementById('colorHexText').value = '#6366F1';
         }
+        document.getElementById('colorHex').addEventListener('input', e => { document.getElementById('colorHexText').value = e.target.value; });
+        document.getElementById('colorHexText').addEventListener('input', e => { if(/^#?[0-9a-fA-F]{3,8}$/.test(e.target.value)){ document.getElementById('colorHex').value = e.target.value.startsWith('#')? e.target.value: '#'+e.target.value; }});
 
         // Close modals when clicking outside
         window.addEventListener('click', function(event) {

@@ -267,6 +267,9 @@ builder.Services.AddScoped<IBuildTimeAnalyticsService, BuildTimeAnalyticsService
 // NEW: Stage Dashboard Seeding Service for comprehensive test data
 builder.Services.AddScoped<StageDashboardSeedingService>();
 
+// NEW: Core manufacturing data seeding (materials + machines + demo part)
+builder.Services.AddScoped<CoreManufacturingDataSeedingService>();
+
 // Update PrintTrackingService registration to include cohort service and stage progression service
 builder.Services.AddScoped<IPrintTrackingService>(provider =>
 {
@@ -284,6 +287,21 @@ builder.Services.AddScoped<OpCentrix.Services.Admin.IProductionStageSeederServic
 // builder.Services.AddScoped<IStageTemplateService, StageTemplateService>();
 
 var app = builder.Build();
+
+// Ensure core manufacturing data (idempotent lightweight seeding)
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        var coreSeeder = scope.ServiceProvider.GetRequiredService<CoreManufacturingDataSeedingService>();
+        await coreSeeder.EnsureCoreManufacturingDataAsync();
+    }
+    catch (Exception ex)
+    {
+        var log = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        log.LogError(ex, "❌ [CORE-SEED] Failed during startup core data ensure");
+    }
+}
 
 // Configure the HTTP request pipeline
 if (!app.Environment.IsDevelopment())
@@ -552,5 +570,4 @@ static async Task CreateDefaultStagesDirectly(SchedulerContext context, Microsof
 
 app.Run();
 
-// Make Program class accessible for testing
 public partial class Program { }
