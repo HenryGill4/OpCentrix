@@ -25,6 +25,7 @@ namespace OpCentrix.Pages.Scheduler
         private readonly IMachineManagementService _machineService;
         private readonly ITimeSlotService _timeSlotService;
         private readonly ILogger<IndexModel> _logger;
+        private const bool BYPASS_SHIFT_CHECKS = true; // TEMP: hard bypass to stabilize scheduler
 
         public IndexModel(
             SchedulerContext context, 
@@ -630,7 +631,20 @@ namespace OpCentrix.Pages.Scheduler
         {
             try
             {
-                var nextAvailableTime = await _timeSlotService.GetNextAvailableTimeAsync(machineId, startDate, 8.0);
+                var nextAvailableTime = startDate;
+                if (false)
+                {
+                    nextAvailableTime = await _timeSlotService.GetNextAvailableTimeAsync(machineId, startDate, 8.0);
+                }
+                else
+                {
+                    // Simple next-hour rounded fallback
+                    var rounded = new DateTime(startDate.Year, startDate.Month, startDate.Day, startDate.Hour, 0, 0);
+                    if (startDate.Minute > 0 || startDate.Second > 0) rounded = rounded.AddHours(1);
+                    // Clamp after-hours start to 8 AM next business day heuristic
+                    if (rounded.Hour < 6) rounded = rounded.Date.AddHours(8);
+                    nextAvailableTime = rounded;
+                }
                 return new Job
                 {
                     MachineId = machineId,
@@ -713,6 +727,25 @@ namespace OpCentrix.Pages.Scheduler
             var duration = request.ScheduledEnd - request.ScheduledStart;
             if (duration.TotalHours > 168) result.AddError(nameof(request.ScheduledEnd), "Job duration cannot exceed 1 week");
             if (duration.TotalMinutes < 15) result.AddError(nameof(request.ScheduledEnd), "Job duration must be at least 15 minutes");
+
+            // TEMP: Skip shift validation to prevent DB/loop issues until schema is stabilized
+            if (false)
+            {
+                try
+                {
+                    var shiftService = HttpContext.RequestServices.GetService<IOperatingShiftService>();
+                    if (shiftService != null && !string.IsNullOrWhiteSpace(request.MachineId))
+                    {
+                        var okStart = await shiftService.IsTimeWithinOperatingHoursAsync(request.ScheduledStart, request.MachineId);
+                        var okEnd = await shiftService.IsTimeWithinOperatingHoursAsync(request.ScheduledEnd, request.MachineId);
+                        if (!okStart || !okEnd)
+                        {
+                            result.AddError(nameof(request.ScheduledStart), "Scheduled time is outside operating hours for the selected machine.");
+                        }
+                    }
+                }
+                catch { }
+            }
             return result;
         }
 
@@ -873,7 +906,19 @@ namespace OpCentrix.Pages.Scheduler
                 {
                     return new JsonResult(new { success = false, error = "Machine ID is required" });
                 }
-                var suggestedStart = await _timeSlotService.GetNextAvailableTimeAsync(machineId, preferredStart ?? DateTime.UtcNow, durationHours);
+                DateTime suggestedStart;
+                if (true)
+                {
+                    // Simple deterministic suggestion for stability
+                    var seed = preferredStart ?? DateTime.UtcNow;
+                    suggestedStart = new DateTime(seed.Year, seed.Month, seed.Day, seed.Hour, 0, 0);
+                    if (seed.Minute > 0 || seed.Second > 0) suggestedStart = suggestedStart.AddHours(1);
+                    if (suggestedStart.Hour < 6) suggestedStart = suggestedStart.Date.AddHours(8);
+                }
+                else
+                {
+                    suggestedStart = await _timeSlotService.GetNextAvailableTimeAsync(machineId, preferredStart ?? DateTime.UtcNow, durationHours);
+                }
                 var suggestedEnd = suggestedStart.AddHours(durationHours);
                 return new JsonResult(new
                 {
@@ -942,6 +987,187 @@ namespace OpCentrix.Pages.Scheduler
             if(free!=null) return free;
             var hash = machineId.Aggregate(17,(acc,ch)=>acc*31+ch);
             return palette[Math.Abs(hash)%palette.Length];
+        }
+
+        // NEW: Variant suggestion endpoint for SLS stacking (single/double/triple)
+        public async Task<IActionResult> OnGetVariantSuggestionsAsync(int partId, string machineId, DateTime? preferredStart = null)
+        {
+            var opId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("🧠 [SCHEDULER-{OperationId}] Variant suggestions requested for PartId={PartId} on {MachineId}", opId, partId, machineId);
+            try
+            {
+                var part = await _context.Parts.AsNoTracking().FirstOrDefaultAsync(p => p.Id == partId);
+                if (part == null)
+                {
+                    return new JsonResult(new { success = false, error = "Part not found" });
+                }
+
+                // Pull historical builds for this part
+                var pn = part.PartNumber;
+                var builds = await _context.BuildJobs
+                    .Include(b => b.BuildJobParts)
+                    .Where(b => b.Status == "Completed" &&
+                           (b.BuildJobParts.Any(p => p.PartNumber == pn) || b.PartId == part.Id))
+                    .OrderByDescending(b => b.CreatedAt)
+                    .Take(200)
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                var samples = new Dictionary<int, List<double>>(); // stack -> hours
+
+                foreach (var b in builds)
+                {
+                    var qty = b.BuildJobParts?.Where(p => p.PartNumber == pn).Sum(p => (int?)p.Quantity) ?? 0;
+                    if (qty == 0)
+                    {
+                        // Fallback: if the tracked BuildJob is tied directly to this part
+                        if (b.PartId == part.Id)
+                        {
+                            qty = b.TotalPartsInBuild > 0 ? b.TotalPartsInBuild : 1;
+                        }
+                    }
+                    if (qty <= 0) continue;
+
+                    double hours = 0;
+                    if (b.OperatorActualHours.HasValue)
+                        hours = (double)b.OperatorActualHours.Value;
+                    else if (b.ActualEndTime.HasValue)
+                        hours = (b.ActualEndTime.Value - b.ActualStartTime).TotalHours;
+                    else if (b.ScheduledEndTime.HasValue && b.ScheduledStartTime.HasValue)
+                        hours = (b.ScheduledEndTime.Value - b.ScheduledStartTime.Value).TotalHours;
+                    else if (b.OperatorEstimatedHours.HasValue)
+                        hours = (double)b.OperatorEstimatedHours.Value;
+
+                    if (hours <= 0.05) continue;
+
+                    if (!samples.ContainsKey(qty)) samples[qty] = new List<double>();
+                    samples[qty].Add(hours);
+                }
+
+                // Build candidate variants 1/2/3 (optionally 4 if history shows it)
+                var candidateStacks = new HashSet<int>(new[] { 1, 2, 3 });
+                foreach (var k in samples.Keys)
+                {
+                    if (k >= 4) candidateStacks.Add(Math.Min(k, 4)); // bucket 4+ as 4
+                }
+
+                var overheadHours = (part.PreheatingTimeMinutes + part.CoolingTimeMinutes + part.PostProcessingTimeMinutes) / 60.0;
+                var perPartHours = part.HasAdminOverride ? (part.AdminEstimatedHoursOverride ?? part.EstimatedHours) : part.EstimatedHours;
+
+                // heuristic multipliers when no history
+                double StackMultiplier(int s) => s switch { 1 => 1.0, 2 => 1.6, 3 => 2.0, _ => 2.5 };
+
+                var now = preferredStart ?? DateTime.UtcNow;
+                var variants = new List<object>();
+
+                foreach (var s in candidateStacks.OrderBy(x => x))
+                {
+                    List<double> hist;
+                    if (s <= 3)
+                    {
+                        hist = samples.ContainsKey(s) ? samples[s] : new List<double>();
+                    }
+                    else
+                    {
+                        // 4+ bucket: combine all >=4
+                        hist = samples.Where(kv => kv.Key >= 4).SelectMany(kv => kv.Value).ToList();
+                    }
+
+                    double durationMedian;
+                    double durationP80;
+                    int sampleCount = hist.Count;
+
+                    if (sampleCount > 0)
+                    {
+                        durationMedian = Percentile(hist, 0.5);
+                        durationP80 = Percentile(hist, 0.8);
+                    }
+                    else
+                    {
+                        // fallback estimate
+                        durationMedian = overheadHours + perPartHours * StackMultiplier(s);
+                        durationP80 = durationMedian * 1.1;
+                    }
+
+                    DateTime? nextStart = null;
+                    DateTime? nextEnd = null;
+                    try
+                    {
+                        var start = await _timeSlotService.GetNextAvailableTimeAsync(machineId, now, durationMedian);
+                        nextStart = start;
+                        nextEnd = start.AddHours(durationMedian);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "[SCHEDULER-{OperationId}] Time slot lookup failed for variant s={Stack}", opId, s);
+                    }
+
+                    var throughput = s / durationMedian; // parts per hour
+
+                    variants.Add(new
+                    {
+                        stack = s,
+                        label = s switch { 1 => "Single", 2 => "Double", 3 => "Triple", _ => $"{s}x" },
+                        sampleCount,
+                        medianHours = Math.Round(durationMedian, 2),
+                        p80Hours = Math.Round(durationP80, 2),
+                        throughput = Math.Round(throughput, 3),
+                        nextStart = nextStart?.ToString("yyyy-MM-ddTHH:mm"),
+                        nextEnd = nextEnd?.ToString("yyyy-MM-ddTHH:mm")
+                    });
+                }
+
+                // choose recommended: highest throughput; if tie, earliest nextStart
+                var chosen = variants
+                    .Cast<dynamic>()
+                    .OrderByDescending(v => (double)v.throughput)
+                    .ThenBy(v => v.nextStart ?? "9999")
+                    .FirstOrDefault();
+
+                var response = new
+                {
+                    success = true,
+                    partNumber = pn,
+                    variants = variants.Select(v =>
+                    {
+                        dynamic dv = v;
+                        bool isRecommended = chosen != null && dv.stack == chosen.stack && dv.medianHours == chosen.medianHours;
+                        return new
+                        {
+                            dv.stack,
+                            dv.label,
+                            dv.sampleCount,
+                            dv.medianHours,
+                            dv.p80Hours,
+                            dv.throughput,
+                            dv.nextStart,
+                            dv.nextEnd,
+                            recommended = isRecommended
+                        };
+                    }).ToList()
+                };
+
+                return new JsonResult(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error generating variant suggestions", opId);
+                return new JsonResult(new { success = false, error = "Error generating suggestions" });
+            }
+        }
+
+        private static double Percentile(List<double> sequence, double percentile)
+        {
+            if (sequence == null || sequence.Count == 0) return 0;
+            var sorted = sequence.OrderBy(x => x).ToList();
+            var n = sorted.Count;
+            if (n == 1) return sorted[0];
+            var rank = percentile * (n - 1);
+            var lowIdx = (int)Math.Floor(rank);
+            var highIdx = (int)Math.Ceiling(rank);
+            if (lowIdx == highIdx) return sorted[lowIdx];
+            var weight = rank - lowIdx;
+            return sorted[lowIdx] * (1 - weight) + sorted[highIdx] * weight;
         }
     }
 

@@ -4,6 +4,8 @@
     ViewData["Title"] = "Production Stage Configuration";
     ViewData["PageHeader"] = "?? Production Stage Configuration";
     ViewData["PageDescription"] = "Configure and manage manufacturing stages with custom fields and machine assignments";
+    // Use Admin layout for proper nav highlighting
+    Layout = "~/Pages/Admin/Shared/_AdminLayout.cshtml";
 }
 
 <div class="container-fluid">
@@ -552,7 +554,57 @@
     </div>
 </div>
 
-<!-- Additional modals and scripts remain the same as before... -->
+<!-- Reorder Stages Modal (added) -->
+<div class="modal fade" id="reorderModal" tabindex="-1" aria-labelledby="reorderModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="ReorderStages" id="reorderForm">
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h5 class="modal-title" id="reorderModalLabel">
+                        <i class="fas fa-sort me-2"></i>Reorder Production Stages
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small mb-2">Drag and drop to change order. First stage should be at the top.</p>
+                    <ul class="list-group" id="sortableStages">
+                        @foreach (var s in Model.ProductionStages.OrderBy(x => x.DisplayOrder))
+                        {
+                            <li class="list-group-item d-flex align-items-center" draggable="true" ondragstart="onDragStart(event)" ondragover="onDragOver(event)" ondrop="onDrop(event)" data-id="@s.Id">
+                                <i class="fas fa-grip-vertical me-2 text-muted"></i>
+                                <span class="badge bg-secondary me-2">@s.DisplayOrder</span>
+                                <span>@s.Name</span>
+                            </li>
+                        }
+                    </ul>
+                    <input type="hidden" name="ReorderStageIds" id="reorderStageIds" />
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" onclick="prepareStageOrder()">
+                        <i class="fas fa-save me-1"></i>Save Order
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Stage Modal (added container for dynamic content) -->
+<div class="modal fade" id="editStageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Edit Stage</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="editStageForm">
+                <!-- Content injected by editStage(stageId) -->
+            </div>
+        </div>
+    </div>
+</div>
 
 @section Scripts {
     <script>
@@ -561,6 +613,7 @@
         // Global variables
         let availableMachines = [];
         let customFields = [];
+        let draggedItem = null; // for reorder DnD
         
         // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
@@ -878,7 +931,7 @@
         }
 
         function updateFieldOptions(fieldId) {
-            const typeSelect = document.querySelector(`[data-field-id="${fieldId}"].field-type`);
+            const typeSelect = document.querySelector(`[data-field-id="${fieldId}"]\.field-type`);
             const fieldType = typeSelect.value;
             
             // Hide all option panels
@@ -896,6 +949,7 @@
                     if (numberOptions) numberOptions.style.display = 'block';
                     break;
                 case 'dropdown':
+                    if (dropdownOptions) numberOptions?.style && (numberOptions.style.display = 'none');
                     if (dropdownOptions) dropdownOptions.style.display = 'block';
                     break;
                 case 'text':
@@ -909,16 +963,16 @@
         function updateCustomFieldsConfig() {
             const fields = customFields.map(fieldData => {
                 const fieldId = fieldData.id;
-                const name = document.querySelector(`[data-field-id="${fieldId}"].field-name`)?.value || '';
-                const label = document.querySelector(`[data-field-id="${fieldId}"].field-label`)?.value || '';
-                const type = document.querySelector(`[data-field-id="${fieldId}"].field-type`)?.value || 'text';
-                const unit = document.querySelector(`[data-field-id="${fieldId}"].field-unit`)?.value || '';
-                const displayOrder = parseInt(document.querySelector(`[data-field-id="${fieldId}"].field-order`)?.value) || 0;
-                const defaultValue = document.querySelector(`[data-field-id="${fieldId}"].field-default`)?.value || '';
-                const placeholderText = document.querySelector(`[data-field-id="${fieldId}"].field-placeholder`)?.value || '';
-                const description = document.querySelector(`[data-field-id="${fieldId}"].field-description`)?.value || '';
-                const required = document.querySelector(`[data-field-id="${fieldId}"].field-required`)?.checked || false;
-                const readOnly = document.querySelector(`[data-field-id="${fieldId}"].field-readonly`)?.checked || false;
+                const name = document.querySelector(`[data-field-id="${fieldId}"]\.field-name`)?.value || '';
+                const label = document.querySelector(`[data-field-id="${fieldId}"]\.field-label`)?.value || '';
+                const type = document.querySelector(`[data-field-id="${fieldId}"]\.field-type`)?.value || 'text';
+                const unit = document.querySelector(`[data-field-id="${fieldId}"]\.field-unit`)?.value || '';
+                const displayOrder = parseInt(document.querySelector(`[data-field-id="${fieldId}"]\.field-order`)?.value) || 0;
+                const defaultValue = document.querySelector(`[data-field-id="${fieldId}"]\.field-default`)?.value || '';
+                const placeholderText = document.querySelector(`[data-field-id="${fieldId}"]\.field-placeholder`)?.value || '';
+                const description = document.querySelector(`[data-field-id="${fieldId}"]\.field-description`)?.value || '';
+                const required = document.querySelector(`[data-field-id="${fieldId}"]\.field-required`)?.checked || false;
+                const readOnly = document.querySelector(`[data-field-id="${fieldId}"]\.field-readonly`)?.checked || false;
                 
                 // Type-specific options
                 let minValue = null;
@@ -927,17 +981,17 @@
                 let validationPattern = null;
                 
                 if (type === 'number') {
-                    const minInput = document.querySelector(`[data-field-id="${fieldId}"].field-min`);
-                    const maxInput = document.querySelector(`[data-field-id="${fieldId}"].field-max`);
+                    const minInput = document.querySelector(`[data-field-id="${fieldId}"]\.field-min`);
+                    const maxInput = document.querySelector(`[data-field-id="${fieldId}"]\.field-max`);
                     minValue = minInput?.value ? parseFloat(minInput.value) : null;
                     maxValue = maxInput?.value ? parseFloat(maxInput.value) : null;
                 } else if (type === 'dropdown') {
-                    const optionsText = document.querySelector(`[data-field-id="${fieldId}"].field-options`)?.value || '';
+                    const optionsText = document.querySelector(`[data-field-id="${fieldId}"]\.field-options`)?.value || '';
                     options = optionsText ? 
                         optionsText.split('\n').map(opt => opt.trim()).filter(opt => opt.length > 0) : 
                         [];
                 } else if (type === 'text') {
-                    validationPattern = document.querySelector(`[data-field-id="${fieldId}"].field-pattern`)?.value || null;
+                    validationPattern = document.querySelector(`[data-field-id="${fieldId}"]\.field-pattern`)?.value || null;
                 }
 
                 return {
@@ -1101,66 +1155,59 @@
                 form.submit();
             }
         }
+
+        // ---------- Reorder Modal drag & drop helpers ----------
+        function onDragStart(e) {
+            draggedItem = e.currentTarget;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', draggedItem.dataset.id);
+            e.currentTarget.classList.add('dragging');
+        }
+
+        function onDragOver(e) {
+            e.preventDefault();
+            const target = e.currentTarget;
+            if (!draggedItem || target === draggedItem) return;
+            const list = target.parentNode;
+            const bounding = target.getBoundingClientRect();
+            const offset = e.clientY - bounding.top;
+            if (offset > bounding.height / 2) {
+                list.insertBefore(draggedItem, target.nextSibling);
+            } else {
+                list.insertBefore(draggedItem, target);
+            }
+        }
+
+        function onDrop(e) {
+            e.preventDefault();
+            if (draggedItem) {
+                draggedItem.classList.remove('dragging');
+                draggedItem = null;
+            }
+        }
+
+        function prepareStageOrder() {
+            const items = document.querySelectorAll('#sortableStages .list-group-item');
+            const ids = Array.from(items).map(li => li.getAttribute('data-id'));
+            const input = document.getElementById('reorderStageIds');
+            if (input) input.value = ids.join(',');
+        }
     </script>
 }
 
 @section Styles {
     <style>
-        .sortable-ghost {
-            opacity: 0.4;
-            background: #f8f9fa;
-        }
-        
-        .sortable-chosen {
-            background: #e3f2fd;
-        }
-        
-        .sortable-drag {
-            background: #fff;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        }
-        
-        #sortableStages .list-group-item {
-            cursor: move;
-            user-select: none;
-            transition: all 0.2s ease;
-        }
-        
-        #sortableStages .list-group-item:hover {
-            background-color: #f8f9fa;
-        }
-        
-        #sortableStages .list-group-item.dragging {
-            opacity: 0.8;
-            transform: rotate(2deg);
-        }
-        
-        .fas.fa-grip-vertical {
-            cursor: grab;
-        }
-        
-        .fas.fa-grip-vertical:active {
-            cursor: grabbing;
-        }
-
-        .btn.disabled {
-            pointer-events: none;
-            opacity: 0.6;
-        }
-        
-        .custom-field-card {
-            border-left: 4px solid #007bff;
-            transition: all 0.3s ease;
-        }
-        
-        .custom-field-card:hover {
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        
-        .number-options, .dropdown-options, .text-options {
-            border-top: 1px solid #dee2e6;
-            padding-top: 1rem;
-            margin-top: 1rem;
-        }
+        .sortable-ghost { opacity: 0.4; background: #f8f9fa; }
+        .sortable-chosen { background: #e3f2fd; }
+        .sortable-drag { background: #fff; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+        #sortableStages .list-group-item { cursor: move; user-select: none; transition: all 0.2s ease; }
+        #sortableStages .list-group-item:hover { background-color: #f8f9fa; }
+        #sortableStages .list-group-item.dragging { opacity: 0.8; transform: rotate(2deg); }
+        .fas.fa-grip-vertical { cursor: grab; }
+        .fas.fa-grip-vertical:active { cursor: grabbing; }
+        .btn.disabled { pointer-events: none; opacity: 0.6; }
+        .custom-field-card { border-left: 4px solid #007bff; transition: all 0.3s ease; }
+        .custom-field-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .number-options, .dropdown-options, .text-options { border-top: 1px solid #dee2e6; padding-top: 1rem; margin-top: 1rem; }
     </style>
 }

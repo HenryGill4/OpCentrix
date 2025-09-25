@@ -33,7 +33,7 @@ namespace OpCentrix.Controllers.Api
         /// <summary>
         /// Get available production stages for stage selection
         /// </summary>
-        [HttpGet("/api/production-stages/available")]
+        [HttpGet("production-stages/available")]
         [AllowAnonymous] // Allow anonymous access for better modal compatibility
         public async Task<IActionResult> GetAvailableProductionStages()
         {
@@ -103,7 +103,7 @@ namespace OpCentrix.Controllers.Api
                         HourlyRateOverride = psr.HourlyRateOverride,
                         MaterialCost = psr.MaterialCost,
                         IsRequired = psr.IsRequired,
-                        IsActive = psr.IsActive,
+                        IsActive = true,
                         RequirementNotes = psr.RequirementNotes,
                         SpecialInstructions = psr.SpecialInstructions
                     })

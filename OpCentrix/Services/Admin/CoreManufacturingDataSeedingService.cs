@@ -52,8 +52,8 @@ public class CoreManufacturingDataSeedingService
     }
 
     /// <summary>
-    /// Runtime schema repair: adds missing Machine.ColorHex column if migrations failed (SQLite only).
-    /// EF believes column exists (model snapshot) so migrations won't recreate it; use PRAGMA check.
+    /// Runtime schema repair: adds missing columns if migrations failed (SQLite only).
+    /// EF may believe columns exist (model snapshot) so migrations won't recreate them; use PRAGMA checks.
     /// </summary>
     private async Task EnsureSchemaRepairsAsync()
     {
@@ -63,6 +63,7 @@ public class CoreManufacturingDataSeedingService
             if (dbConnection.State != ConnectionState.Open)
                 await dbConnection.OpenAsync();
 
+            // Machines.ColorHex column repair (existing)
             bool hasColorHex = false;
             using (var cmd = dbConnection.CreateCommand())
             {
@@ -91,10 +92,81 @@ public class CoreManufacturingDataSeedingService
             {
                 _logger.LogDebug("[SCHEMA-REPAIR] Machines.ColorHex column present - no action.");
             }
+
+            // Parts stacking columns repair (new)
+            var partsColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            using (var cmd = dbConnection.CreateCommand())
+            {
+                cmd.CommandText = "PRAGMA table_info('Parts');";
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    partsColumns.Add(reader.GetString(1));
+                }
+            }
+
+            // Guard: Parts table might not exist yet in a broken DB. Skip gracefully.
+            if (partsColumns.Count == 0)
+            {
+                _logger.LogWarning("?? [SCHEMA-REPAIR] Parts table not found during schema repair. Skipping Parts patches.");
+                return;
+            }
+
+            if (!partsColumns.Contains("AllowStacking"))
+            {
+                _logger.LogWarning("?? [SCHEMA-REPAIR] Parts.AllowStacking missing. Applying runtime patch...");
+                using var alter = dbConnection.CreateCommand();
+                alter.CommandText = "ALTER TABLE Parts ADD COLUMN AllowStacking INTEGER NOT NULL DEFAULT 0;";
+                await alter.ExecuteNonQueryAsync();
+                _logger.LogInformation("? [SCHEMA-REPAIR] Added Parts.AllowStacking column successfully.");
+            }
+            else
+            {
+                _logger.LogDebug("[SCHEMA-REPAIR] Parts.AllowStacking column present - no action.");
+            }
+
+            if (!partsColumns.Contains("SingleStackDurationHours"))
+            {
+                _logger.LogWarning("?? [SCHEMA-REPAIR] Parts.SingleStackDurationHours missing. Applying runtime patch...");
+                using var alter = dbConnection.CreateCommand();
+                alter.CommandText = "ALTER TABLE Parts ADD COLUMN SingleStackDurationHours REAL NULL;";
+                await alter.ExecuteNonQueryAsync();
+                _logger.LogInformation("? [SCHEMA-REPAIR] Added Parts.SingleStackDurationHours column successfully.");
+            }
+            else
+            {
+                _logger.LogDebug("[SCHEMA-REPAIR] Parts.SingleStackDurationHours column present - no action.");
+            }
+
+            if (!partsColumns.Contains("DoubleStackDurationHours"))
+            {
+                _logger.LogWarning("?? [SCHEMA-REPAIR] Parts.DoubleStackDurationHours missing. Applying runtime patch...");
+                using var alter = dbConnection.CreateCommand();
+                alter.CommandText = "ALTER TABLE Parts ADD COLUMN DoubleStackDurationHours REAL NULL;";
+                await alter.ExecuteNonQueryAsync();
+                _logger.LogInformation("? [SCHEMA-REPAIR] Added Parts.DoubleStackDurationHours column successfully.");
+            }
+            else
+            {
+                _logger.LogDebug("[SCHEMA-REPAIR] Parts.DoubleStackDurationHours column present - no action.");
+            }
+
+            if (!partsColumns.Contains("TripleStackDurationHours"))
+            {
+                _logger.LogWarning("?? [SCHEMA-REPAIR] Parts.TripleStackDurationHours missing. Applying runtime patch...");
+                using var alter = dbConnection.CreateCommand();
+                alter.CommandText = "ALTER TABLE Parts ADD COLUMN TripleStackDurationHours REAL NULL;";
+                await alter.ExecuteNonQueryAsync();
+                _logger.LogInformation("? [SCHEMA-REPAIR] Added Parts.TripleStackDurationHours column successfully.");
+            }
+            else
+            {
+                _logger.LogDebug("[SCHEMA-REPAIR] Parts.TripleStackDurationHours column present - no action.");
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "? [SCHEMA-REPAIR] Failed to verify/repair Machines.ColorHex column");
+            _logger.LogError(ex, "? [SCHEMA-REPAIR] Failed to verify/repair schema");
         }
     }
 

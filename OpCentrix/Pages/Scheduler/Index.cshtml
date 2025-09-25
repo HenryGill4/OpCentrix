@@ -5,9 +5,10 @@
 @{
     ViewData["Title"] = "Production Scheduler";
     ViewData["Description"] = "Schedule and manage production jobs across all machines";
-    Layout = "~/Pages/Shared/_UserLayout.cshtml";
+    var adminLayout = "~/Pages/Admin/Shared/_AdminLayout.cshtml";
+    var userLayout = "~/Pages/Shared/_UserLayout.cshtml";
+    Layout = (User.IsInRole("Admin") || User.IsInRole("Manager")) ? adminLayout : userLayout;
 
-    // Restored server-side scheduler setup
     var zoomLevels = new[] { "2month", "month", "week", "12h", "6h", "4h", "2h", "1h", "30min", "15min" };
     var zoomParam = Request.Query["zoom"].FirstOrDefault() ?? "week";
     var zoomIndex = Array.IndexOf(zoomLevels, zoomParam);
@@ -87,12 +88,13 @@
                 <span class="mini-pill bg-blue-100 text-blue-700">@viewModel.Machines.Count machines</span>
             </div>
 
-            <!-- Refresh Button -->
+            <!-- Schedule-side machine management buttons -->
             <div class="control-group">
-                <button onclick="window.location.reload()" class="primary-btn" title="Refresh scheduler">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                    Refresh
-                </button>
+                <a href="/Admin/Machines?showCreate=1" class="primary-btn" title="Add machine">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+                    Add Machine
+                </a>
+                <button type="button" class="secondary-btn" onclick="openModifySelectedMachine()" title="Modify selected machine">Modify Machine</button>
             </div>
         </div>
     </div>
@@ -115,17 +117,6 @@
     <partial name="_FooterSummary" model="Model.Summary" />
 </div>
 
-<!-- Modal Container -->
-<div id="modal-container" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 modal-backdrop"></div>
-
-<!-- Loading Indicator -->
-<div id="loading-indicator" class="loading-indicator hidden">
-    <div class="loading-content">
-        <div class="opcentrix-spinner"></div>
-        <span class="font-medium text-gray-900">Loading...</span>
-    </div>
-</div>
-
 @section Styles {
     <link rel="stylesheet" href="~/css/scheduler.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/scheduler-modal.css" asp-append-version="true" />
@@ -136,4 +127,20 @@
 
 @section Scripts {
     <script src="~/js/scheduler-ui.js" asp-append-version="true"></script>
+    <script src="~/js/job-form.js" asp-append-version="true"></script>
+    <script>
+        // Modify button behavior: open Admin/Machines edit for currently hovered/last-clicked machine
+        let lastSelectedMachineId = null;
+        document.addEventListener('click', function(e){
+            const cell = e.target.closest('[data-machine]');
+            if(cell){ lastSelectedMachineId = cell.getAttribute('data-machine'); }
+        });
+        function openModifySelectedMachine(){
+            if(!lastSelectedMachineId){
+                alert('Click on a machine row or column first to select a machine.');
+                return;
+            }
+            window.location.href = '/Admin/Machines?editMachine=' + encodeURIComponent(lastSelectedMachineId);
+        }
+    </script>
 }

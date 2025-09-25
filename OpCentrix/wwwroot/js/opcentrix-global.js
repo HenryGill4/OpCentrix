@@ -572,6 +572,68 @@
     };
     
     // ===================================================================
+    // GLOBAL MODAL + LOADING HELPERS
+    // ===================================================================
+    window.showModal = function() {
+        try {
+            const container = document.getElementById('modal-container');
+            if (container) {
+                container.style.display = 'flex';
+                container.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+                return true;
+            }
+            console.warn('[GLOBAL] #modal-container not found');
+            return false;
+        } catch (e) {
+            console.error('[GLOBAL] showModal error', e);
+            return false;
+        }
+    };
+
+    window.hideModal = function() {
+        try {
+            const container = document.getElementById('modal-container');
+            if (container) {
+                container.style.display = 'none';
+                container.classList.add('hidden');
+                container.innerHTML = '';
+                document.body.style.overflow = '';
+                return true;
+            }
+            console.warn('[GLOBAL] #modal-container not found');
+            return false;
+        } catch (e) {
+            console.error('[GLOBAL] hideModal error', e);
+            return false;
+        }
+    };
+
+    window.showLoadingIndicator = function(message) {
+        try {
+            const indicator = document.getElementById('loading-indicator');
+            if (indicator) {
+                const span = indicator.querySelector('span');
+                if (span && message) span.textContent = message;
+                indicator.classList.remove('hidden');
+                return true;
+            }
+            return false;
+        } catch { return false; }
+    };
+
+    window.hideLoadingIndicator = function() {
+        try {
+            const indicator = document.getElementById('loading-indicator');
+            if (indicator) {
+                indicator.classList.add('hidden');
+                return true;
+            }
+            return false;
+        } catch { return false; }
+    };
+
+    // ===================================================================
     // AUTO-INITIALIZATION
     // ===================================================================
     

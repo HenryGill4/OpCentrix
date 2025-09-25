@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using OpCentrix.Models;
 using OpCentrix.Services.Admin;
 using OpCentrix.Services;
+using Microsoft.EntityFrameworkCore;
+using OpCentrix.Data;
 
 namespace OpCentrix.Pages.Admin;
 
@@ -17,12 +19,14 @@ public class ShiftsModel : PageModel
     private readonly IOperatingShiftService _shiftService;
     private readonly IAuthenticationService _authService;
     private readonly ILogger<ShiftsModel> _logger;
+    private readonly SchedulerContext _context;
 
-    public ShiftsModel(IOperatingShiftService shiftService, IAuthenticationService authService, ILogger<ShiftsModel> logger)
+    public ShiftsModel(IOperatingShiftService shiftService, IAuthenticationService authService, ILogger<ShiftsModel> logger, SchedulerContext context)
     {
         _shiftService = shiftService;
         _authService = authService;
         _logger = logger;
+        _context = context;
     }
 
     // Properties for the page
@@ -67,6 +71,7 @@ public class ShiftsModel : PageModel
                 Description = "Standard Shift"
             };
 
+            await LoadMachinesAsync();
             return Partial("_ShiftForm", this);
         }
         catch (Exception ex)
@@ -91,6 +96,7 @@ public class ShiftsModel : PageModel
             }
 
             Input = shift;
+            await LoadMachinesAsync();
             return Partial("_ShiftForm", this);
         }
         catch (Exception ex)
@@ -123,6 +129,7 @@ public class ShiftsModel : PageModel
                 }
                 
                 ViewData["ValidationErrors"] = validationErrors;
+                await LoadMachinesAsync();
                 return Partial("_ShiftForm", this);
             }
 
@@ -162,6 +169,7 @@ public class ShiftsModel : PageModel
                 _logger.LogWarning("?? [SHIFTS-{OperationId}] Failed to save shift - conflicts detected", operationId);
                 ModelState.AddModelError("", "Failed to save shift. Check for conflicts with existing shifts.");
                 ViewData["ValidationErrors"] = new List<string> { "Failed to save shift. Check for conflicts with existing shifts." };
+                await LoadMachinesAsync();
                 return Partial("_ShiftForm", this);
             }
         }
@@ -170,6 +178,7 @@ public class ShiftsModel : PageModel
             _logger.LogError(ex, "? [SHIFTS] Error saving shift");
             ModelState.AddModelError("", "An error occurred while saving the shift");
             ViewData["ValidationErrors"] = new List<string> { "An error occurred while saving the shift" };
+            await LoadMachinesAsync();
             return Partial("_ShiftForm", this);
         }
     }
@@ -437,6 +446,19 @@ public class ShiftsModel : PageModel
             _logger.LogError(ex, "? [SHIFTS] Error validating shift");
             errors.Add("Error validating shift");
             return errors;
+        }
+    }
+
+    private async Task LoadMachinesAsync()
+    {
+        try
+        {
+            var machines = await _context.Machines.Where(m => m.IsActive).OrderBy(m => m.MachineId).ToListAsync();
+            ViewData["Machines"] = machines;
+        }
+        catch
+        {
+            ViewData["Machines"] = new List<OpCentrix.Models.Machine>();
         }
     }
 }

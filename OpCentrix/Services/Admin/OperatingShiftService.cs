@@ -13,11 +13,13 @@ public interface IOperatingShiftService
     Task<List<OperatingShift>> GetAllShiftsAsync();
     Task<List<OperatingShift>> GetActiveShiftsAsync();
     Task<List<OperatingShift>> GetShiftsForDayAsync(DayOfWeek dayOfWeek);
+    Task<List<OperatingShift>> GetShiftsForDayAsync(DayOfWeek dayOfWeek, string? machineId);
     Task<OperatingShift?> GetShiftAsync(int id);
     Task<bool> CreateShiftAsync(OperatingShift shift);
     Task<bool> UpdateShiftAsync(OperatingShift shift);
     Task<bool> DeleteShiftAsync(int id);
     Task<bool> IsTimeWithinOperatingHoursAsync(DateTime dateTime);
+    Task<bool> IsTimeWithinOperatingHoursAsync(DateTime dateTime, string? machineId);
     Task<List<OperatingShift>> GetConflictingShiftsAsync(OperatingShift shift);
     Task<TimeSpan> GetShiftDurationAsync(int shiftId);
     Task<List<OperatingShift>> GetHolidayShiftsAsync();
@@ -27,11 +29,44 @@ public class OperatingShiftService : IOperatingShiftService
 {
     private readonly SchedulerContext _context;
     private readonly ILogger<OperatingShiftService> _logger;
+    private bool? _hasMachineIdColumn;
 
     public OperatingShiftService(SchedulerContext context, ILogger<OperatingShiftService> logger)
     {
         _context = context;
         _logger = logger;
+    }
+
+    private async Task<bool> HasMachineIdColumnAsync()
+    {
+        if (_hasMachineIdColumn.HasValue) return _hasMachineIdColumn.Value;
+        try
+        {
+            var connection = _context.Database.GetDbConnection();
+            if (connection.State != System.Data.ConnectionState.Open)
+                await connection.OpenAsync();
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "PRAGMA table_info('OperatingShifts');";
+            using var reader = await cmd.ExecuteReaderAsync();
+            var found = false;
+            while (await reader.ReadAsync())
+            {
+                // PRAGMA table_info columns: cid, name, type, notnull, dflt_value, pk
+                var colName = reader.GetString(1);
+                if (string.Equals(colName, "MachineId", StringComparison.OrdinalIgnoreCase))
+                {
+                    found = true; break;
+                }
+            }
+            _hasMachineIdColumn = found;
+            return found;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to check OperatingShifts schema; assuming no MachineId column");
+            _hasMachineIdColumn = false;
+            return false;
+        }
     }
 
     public async Task<List<OperatingShift>> GetAllShiftsAsync()
@@ -80,6 +115,27 @@ public class OperatingShiftService : IOperatingShiftService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving shifts for day {DayOfWeek}", dayOfWeek);
+            return new List<OperatingShift>();
+        }
+    }
+
+    public async Task<List<OperatingShift>> GetShiftsForDayAsync(DayOfWeek dayOfWeek, string? machineId)
+    {
+        try
+        {
+            var dayNumber = (int)dayOfWeek;
+            var hasMachineCol = await HasMachineIdColumnAsync();
+            var query = _context.OperatingShifts.AsQueryable();
+            query = query.Where(s => s.DayOfWeek == dayNumber && s.IsActive && !s.IsHoliday);
+            if (hasMachineCol)
+            {
+                query = query.Where(s => s.MachineId == null || s.MachineId == "" || s.MachineId == machineId);
+            }
+            return await query.OrderBy(s => s.StartTime).ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving shifts for day {DayOfWeek} and machine {MachineId}", dayOfWeek, machineId);
             return new List<OperatingShift>();
         }
     }
@@ -219,30 +275,73 @@ public class OperatingShiftService : IOperatingShiftService
         }
     }
 
+    public async Task<bool> IsTimeWithinOperatingHoursAsync(DateTime dateTime, string? machineId)
+    {
+        try
+        {
+            var dayOfWeek = (int)dateTime.DayOfWeek;
+            var hasMachineCol = await HasMachineIdColumnAsync();
+ 
+             // Machine-specific override for specific date
+            var specificQuery = _context.OperatingShifts
+                .Where(s => s.SpecificDate.HasValue && s.SpecificDate.Value.Date == dateTime.Date && s.IsActive);
+            if (hasMachineCol)
+            {
+                specificQuery = specificQuery.Where(s => s.MachineId == null || s.MachineId == "" || s.MachineId == machineId);
+            }
+            var specificDateShift = await specificQuery.FirstOrDefaultAsync();
+
+            if (specificDateShift != null)
+            {
+                return specificDateShift.IsTimeWithinShift(dateTime);
+            }
+
+            var query = _context.OperatingShifts
+                .Where(s => s.DayOfWeek == dayOfWeek && s.IsActive && !s.IsHoliday && !s.SpecificDate.HasValue);
+            if (hasMachineCol)
+            {
+                query = query.Where(s => s.MachineId == null || s.MachineId == "" || s.MachineId == machineId);
+            }
+            var shifts = await query.ToListAsync();
+
+            return shifts.Any(s => s.IsTimeWithinShift(dateTime));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking if time {DateTime} is within operating hours for machine {MachineId}", dateTime, machineId);
+            return false;
+        }
+    }
+
     public async Task<List<OperatingShift>> GetConflictingShiftsAsync(OperatingShift shift)
     {
         try
         {
             var conflictingShifts = new List<OperatingShift>();
+            var hasMachineCol = await HasMachineIdColumnAsync();
+ 
+            
 
             if (shift.SpecificDate.HasValue)
             {
                 // Check conflicts with other specific date shifts
-                conflictingShifts = await _context.OperatingShifts
-                    .Where(s => s.SpecificDate.HasValue && 
-                               s.SpecificDate.Value.Date == shift.SpecificDate.Value.Date &&
-                               s.IsActive)
-                    .ToListAsync();
+                var q = _context.OperatingShifts
+                    .Where(s => s.SpecificDate.HasValue && s.SpecificDate.Value.Date == shift.SpecificDate.Value.Date && s.IsActive);
+                if (hasMachineCol)
+                    q = q.Where(s => s.MachineId == shift.MachineId);
+                conflictingShifts = await q.ToListAsync();
             }
             else
             {
                 // Check conflicts with same day of week shifts
-                conflictingShifts = await _context.OperatingShifts
-                    .Where(s => s.DayOfWeek == shift.DayOfWeek && 
-                               !s.SpecificDate.HasValue &&
-                               s.IsActive)
-                    .ToListAsync();
+                var q = _context.OperatingShifts
+                    .Where(s => s.DayOfWeek == shift.DayOfWeek && !s.SpecificDate.HasValue && s.IsActive);
+                if (hasMachineCol)
+                    q = q.Where(s => s.MachineId == shift.MachineId);
+                conflictingShifts = await q.ToListAsync();
             }
+ 
+            
 
             // Filter for actual time overlaps
             return conflictingShifts.Where(s => ShiftsOverlap(shift, s)).ToList();
@@ -310,7 +409,7 @@ public class OperatingShiftService : IOperatingShiftService
 /// </summary>
 public static class DefaultOperatingShifts
 {
-    public static List<OperatingShift> GetStandardBusinessHours()
+    public static List<OperatingShift> GetStandardBusinessHours(string? machineId = null)
     {
         var shifts = new List<OperatingShift>();
 
@@ -319,6 +418,7 @@ public static class DefaultOperatingShifts
         {
             shifts.Add(new OperatingShift
             {
+                MachineId = machineId,
                 DayOfWeek = day,
                 StartTime = new TimeSpan(8, 0, 0),
                 EndTime = new TimeSpan(17, 0, 0),
@@ -332,7 +432,7 @@ public static class DefaultOperatingShifts
         return shifts;
     }
 
-    public static List<OperatingShift> Get24x7Schedule()
+    public static List<OperatingShift> Get24x7Schedule(string? machineId = null)
     {
         var shifts = new List<OperatingShift>();
 
@@ -341,6 +441,7 @@ public static class DefaultOperatingShifts
         {
             shifts.Add(new OperatingShift
             {
+                MachineId = machineId,
                 DayOfWeek = day,
                 StartTime = new TimeSpan(0, 0, 0),
                 EndTime = new TimeSpan(23, 59, 59),
@@ -354,7 +455,7 @@ public static class DefaultOperatingShifts
         return shifts;
     }
 
-    public static List<OperatingShift> GetTwoShiftSchedule()
+    public static List<OperatingShift> GetTwoShiftSchedule(string? machineId = null)
     {
         var shifts = new List<OperatingShift>();
 
@@ -364,6 +465,7 @@ public static class DefaultOperatingShifts
             // First shift: 6 AM to 2 PM
             shifts.Add(new OperatingShift
             {
+                MachineId = machineId,
                 DayOfWeek = day,
                 StartTime = new TimeSpan(6, 0, 0),
                 EndTime = new TimeSpan(14, 0, 0),
@@ -376,6 +478,7 @@ public static class DefaultOperatingShifts
             // Second shift: 2 PM to 10 PM
             shifts.Add(new OperatingShift
             {
+                MachineId = machineId,
                 DayOfWeek = day,
                 StartTime = new TimeSpan(14, 0, 0),
                 EndTime = new TimeSpan(22, 0, 0),

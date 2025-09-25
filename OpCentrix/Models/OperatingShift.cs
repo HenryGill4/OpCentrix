@@ -13,6 +13,13 @@ public class OperatingShift
     public int Id { get; set; }
 
     /// <summary>
+    /// Optional Machine scope. Null/empty = Global (applies to all machines)
+    /// Uses Machine.MachineId (string) as identifier when set
+    /// </summary>
+    [StringLength(50)]
+    public string? MachineId { get; set; }
+
+    /// <summary>
     /// Day of the week (0 = Sunday, 1 = Monday, etc.)
     /// </summary>
     [Range(0, 6)]

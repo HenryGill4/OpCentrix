@@ -172,14 +172,14 @@
                             @foreach (var shift in dayShifts)
                             {
                                 <div class="@(shift.IsActive ? "bg-white border-l-4 border-green-500" : "bg-gray-100 border-l-4 border-red-300") 
-                                           rounded-lg p-3 mb-2 shadow-sm">
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex-1">
-                                            <div class="font-medium text-sm text-gray-900">
-                                                @shift.StartTime.ToString(@"h\:mm") - @shift.EndTime.ToString(@"h\:mm")
-                                            </div>
-                                            <div class="text-xs text-gray-500 truncate">@shift.Description</div>
-                                            <div class="text-xs mt-1">
+                                            rounded-lg p-3 mb-2 shadow-sm">
+                                     <div class="flex items-center justify-between">
+                                         <div class="flex-1">
+                                             <div class="font-medium text-sm text-gray-900">
+                                                 @shift.StartTime.ToString(@"h\:mm") - @shift.EndTime.ToString(@"h\:mm")
+                                             </div>
+                                            <div class="text-xs text-gray-500 truncate">@shift.Description @if(!string.IsNullOrEmpty(shift.MachineId)){<span class="ml-1 inline-block px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">@shift.MachineId</span>} else {<span class="ml-1 inline-block px-1.5 py-0.5 rounded bg-gray-50 text-gray-700">Global</span>}</div>
+                                             <div class="text-xs mt-1">
                                                 <span class="@(shift.IsActive ? "text-green-600 bg-green-100" : "text-red-600 bg-red-100") 
                                                              px-2 py-1 rounded-full">
                                                     @(shift.IsActive ? "Active" : "Inactive")
@@ -290,7 +290,7 @@
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-900">@holiday.Description</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                @holiday.StartTime.ToString(@"h\:mm tt") - @holiday.EndTime.ToString(@"h\:mm tt")
+                                @holiday.StartTime.ToString(@"h\:mm tt") - @holiday.EndTime.ToString(@"h\:mm tt") @if(!string.IsNullOrEmpty(holiday.MachineId)){<span class="ml-2 inline-block px-2 py-0.5 rounded bg-blue-50 text-blue-700">@holiday.MachineId</span>} else {<span class="ml-2 inline-block px-2 py-0.5 rounded bg-gray-50 text-gray-700">Global</span>}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 @holiday.DurationHours.ToString("F1") hours

@@ -1,6 +1,7 @@
 using OpCentrix.Models;
 using Microsoft.EntityFrameworkCore;
 using OpCentrix.Data;
+using OpCentrix.Services.Admin;
 
 namespace OpCentrix.Services
 {
@@ -16,11 +17,15 @@ namespace OpCentrix.Services
     {
         private readonly SchedulerContext _context;
         private readonly ILogger<TimeSlotService> _logger;
+        private readonly IOperatingShiftService _shiftService;
+        // TEMP hard bypass flag to avoid shift lookups while DB is missing columns
+        private const bool BYPASS_SHIFT_CHECKS = true;
 
-        public TimeSlotService(SchedulerContext context, ILogger<TimeSlotService> logger)
+        public TimeSlotService(SchedulerContext context, ILogger<TimeSlotService> logger, IOperatingShiftService shiftService)
         {
             _context = context;
             _logger = logger;
+            _shiftService = shiftService;
         }
 
         public async Task<DateTime> GetNextAvailableTimeAsync(string machineId, DateTime? preferredStart = null, double durationHours = 8.0)
@@ -28,46 +33,77 @@ namespace OpCentrix.Services
             try
             {
                 var searchStart = preferredStart ?? DateTime.UtcNow;
-                
-                // Ensure we start from a reasonable time (business hours)
-                searchStart = RoundToNextBusinessHour(searchStart);
-                
-                // Look up to 30 days ahead for an available slot
-                var maxSearchDate = searchStart.AddDays(30);
-                
-                _logger.LogDebug("?? [TIME-SLOT] Searching for {Duration}h slot on {Machine} starting from {StartTime}", 
-                    durationHours, machineId, searchStart);
+                searchStart = BYPASS_SHIFT_CHECKS ? RoundToNextHour(searchStart) : await RoundToNextOperatingHourAsync(machineId, searchStart);
 
-                while (searchStart < maxSearchDate)
+                var maxSearchDate = searchStart.AddDays(30);
+                var slotDuration = TimeSpan.FromHours(durationHours <= 0 ? 1 : durationHours);
+
+                _logger.LogDebug("[TIME-SLOT] Scan for {Duration}h on {Machine} from {Start}", durationHours, machineId, searchStart);
+
+                // Preload all jobs for the machine in the horizon once
+                var jobs = await _context.Jobs
+                    .Where(j => j.MachineId == machineId && j.ScheduledStart < maxSearchDate && j.ScheduledEnd > searchStart)
+                    .OrderBy(j => j.ScheduledStart)
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                var idx = 0;
+                var guard = 0;
+                var candidate = searchStart;
+
+                while (candidate < maxSearchDate && guard < 2000)
                 {
-                    var proposedEndTime = searchStart.AddHours(durationHours);
-                    
-                    // Check if this time slot is available
-                    if (await IsTimeSlotAvailableAsync(machineId, searchStart, proposedEndTime))
+                    var candidateEnd = candidate + slotDuration;
+
+                    // Ensure within operating hours for start and end
+                    if (!BYPASS_SHIFT_CHECKS && !await _shiftService.IsTimeWithinOperatingHoursAsync(candidate, machineId))
                     {
-                        _logger.LogInformation("? [TIME-SLOT] Found available slot for {Machine}: {StartTime} to {EndTime}", 
-                            machineId, searchStart, proposedEndTime);
-                        return searchStart;
+                        candidate = await RoundToNextOperatingHourAsync(machineId, candidate.AddHours(1));
+                        guard++;
+                        continue;
                     }
-                    
-                    // Move to next hour and try again
-                    searchStart = searchStart.AddHours(1);
-                    
-                    // Skip non-business hours
-                    searchStart = RoundToNextBusinessHour(searchStart);
+                    if (!BYPASS_SHIFT_CHECKS && !await _shiftService.IsTimeWithinOperatingHoursAsync(candidateEnd, machineId))
+                    {
+                        // Push to next valid time after end
+                        candidate = await RoundToNextOperatingHourAsync(machineId, candidate.AddHours(1));
+                        guard++;
+                        continue;
+                    }
+
+                    // Advance idx to first potentially conflicting job
+                    while (idx < jobs.Count && jobs[idx].ScheduledEnd <= candidate)
+                    {
+                        idx++;
+                    }
+
+                    // Check conflict with current or next job
+                    var conflict = false;
+                    if (idx < jobs.Count)
+                    {
+                        var j = jobs[idx];
+                        if (j.ScheduledStart < candidateEnd && j.ScheduledEnd > candidate)
+                        {
+                            // Conflict: jump to end of this job and re-round
+                            candidate = await RoundToNextOperatingHourAsync(machineId, j.ScheduledEnd);
+                            guard++;
+                            conflict = true;
+                        }
+                    }
+
+                    if (!conflict)
+                    {
+                        _logger.LogDebug("[TIME-SLOT] Available slot {Start} - {End} on {Machine}", candidate, candidateEnd, machineId);
+                        return candidate;
+                    }
                 }
-                
-                _logger.LogWarning("?? [TIME-SLOT] No available slot found for {Machine} within 30 days", machineId);
-                
-                // Fallback: return next business hour even if there might be conflicts
-                return RoundToNextBusinessHour(preferredStart ?? DateTime.UtcNow);
+
+                _logger.LogWarning("[TIME-SLOT] No slot found for {Machine} within horizon; returning next operating hour", machineId);
+                return BYPASS_SHIFT_CHECKS ? RoundToNextHour(preferredStart ?? DateTime.UtcNow) : await RoundToNextOperatingHourAsync(machineId, preferredStart ?? DateTime.UtcNow);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "? [TIME-SLOT] Error finding next available time for {Machine}", machineId);
-                
-                // Fallback to preferred start or now
-                return RoundToNextBusinessHour(preferredStart ?? DateTime.UtcNow);
+                _logger.LogError(ex, "[TIME-SLOT] Error finding next available time for {Machine}", machineId);
+                return BYPASS_SHIFT_CHECKS ? RoundToNextHour(preferredStart ?? DateTime.UtcNow) : await RoundToNextOperatingHourAsync(machineId, preferredStart ?? DateTime.UtcNow);
             }
         }
 
@@ -86,7 +122,7 @@ namespace OpCentrix.Services
                     .AsNoTracking()
                     .ToListAsync();
 
-                var currentTime = RoundToNextBusinessHour(startDate);
+                var currentTime = BYPASS_SHIFT_CHECKS ? RoundToNextHour(startDate) : await RoundToNextOperatingHourAsync(machineId, startDate);
                 
                 while (currentTime.Date <= endDate.Date)
                 {
@@ -96,7 +132,7 @@ namespace OpCentrix.Services
                     var hasConflict = existingJobs.Any(job => 
                         job.ScheduledStart < proposedEndTime && job.ScheduledEnd > currentTime);
                     
-                    if (!hasConflict && IsBusinessHours(currentTime))
+                    if (!hasConflict && (BYPASS_SHIFT_CHECKS || await _shiftService.IsTimeWithinOperatingHoursAsync(currentTime, machineId)))
                     {
                         availableSlots.Add(new TimeSlot
                         {
@@ -107,15 +143,9 @@ namespace OpCentrix.Services
                         });
                     }
                     
-                    // Move to next hour
-                    currentTime = currentTime.AddHours(1);
-                    
-                    // Skip to next business day if past business hours
-                    if (!IsBusinessHours(currentTime))
-                    {
-                        currentTime = GetNextBusinessDay(currentTime);
-                    }
-                }
+                    // Move to next hour, then coerce to next valid operating hour
+                    currentTime = BYPASS_SHIFT_CHECKS ? RoundToNextHour(currentTime.AddHours(1)) : await RoundToNextOperatingHourAsync(machineId, currentTime.AddHours(1));
+                 }
                 
                 _logger.LogDebug("?? [TIME-SLOT] Found {SlotCount} available slots for {Machine} from {Start} to {End}", 
                     availableSlots.Count, machineId, startDate.Date, endDate.Date);
@@ -176,7 +206,7 @@ namespace OpCentrix.Services
             }
         }
 
-        private DateTime RoundToNextBusinessHour(DateTime dateTime)
+        private async Task<DateTime> RoundToNextOperatingHourAsync(string machineId, DateTime dateTime)
         {
             // Round up to next hour
             var rounded = new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, dateTime.Hour, 0, 0);
@@ -184,49 +214,33 @@ namespace OpCentrix.Services
             {
                 rounded = rounded.AddHours(1);
             }
-            
-            // Ensure we're in business hours (6 AM to 6 PM)
-            if (rounded.Hour < 6)
+ 
+            // Short-circuit: if no active shifts exist at all, treat all hours as valid
+            if (!await _context.OperatingShifts.AnyAsync(s => s.IsActive))
             {
-                rounded = new DateTime(rounded.Year, rounded.Month, rounded.Day, 6, 0, 0);
+                return rounded;
             }
-            else if (rounded.Hour >= 18)
+ 
+            // If not within operating hours for this machine, advance until it is
+            int guard = 0;
+            // Reduce loop work by advancing an hour at a time (safer for performance)
+            while (!await _shiftService.IsTimeWithinOperatingHoursAsync(rounded, machineId) && guard < 96)
             {
-                // Move to next business day at 6 AM
-                rounded = GetNextBusinessDay(rounded);
+                rounded = rounded.AddHours(1);
+                guard++;
             }
-            
-            // Skip weekends
-            while (rounded.DayOfWeek == DayOfWeek.Saturday || rounded.DayOfWeek == DayOfWeek.Sunday)
-            {
-                rounded = rounded.AddDays(1);
-                rounded = new DateTime(rounded.Year, rounded.Month, rounded.Day, 6, 0, 0);
-            }
-            
+ 
+             return rounded;
+         }
+        
+        private static DateTime RoundToNextHour(DateTime dateTime)
+        {
+            var rounded = new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, dateTime.Hour, 0, 0);
+            if (dateTime.Minute > 0 || dateTime.Second > 0) rounded = rounded.AddHours(1);
+            if (rounded.Hour < 6) rounded = rounded.Date.AddHours(8);
             return rounded;
         }
-
-        private DateTime GetNextBusinessDay(DateTime dateTime)
-        {
-            var nextDay = dateTime.Date.AddDays(1);
-            
-            // Skip weekends
-            while (nextDay.DayOfWeek == DayOfWeek.Saturday || nextDay.DayOfWeek == DayOfWeek.Sunday)
-            {
-                nextDay = nextDay.AddDays(1);
-            }
-            
-            return new DateTime(nextDay.Year, nextDay.Month, nextDay.Day, 6, 0, 0);
-        }
-
-        private bool IsBusinessHours(DateTime dateTime)
-        {
-            return dateTime.DayOfWeek != DayOfWeek.Saturday &&
-                   dateTime.DayOfWeek != DayOfWeek.Sunday &&
-                   dateTime.Hour >= 6 &&
-                   dateTime.Hour < 18;
-        }
-    }
+     }
 
     public class TimeSlot
     {

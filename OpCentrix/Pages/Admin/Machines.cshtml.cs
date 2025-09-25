@@ -7,6 +7,8 @@ using OpCentrix.Services.Admin;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
+using System.Text.Json;
+using System.Security.Cryptography;
 
 namespace OpCentrix.Pages.Admin;
 
@@ -17,7 +19,7 @@ namespace OpCentrix.Pages.Admin;
 /// - Proper separation of concerns
 /// </summary>
 [Authorize(Policy = "AdminOnly")]
-public class MachinesModel : PageModel
+public partial class MachinesModel : PageModel
 {
     private readonly SchedulerContext _context;
     private readonly IMaterialService _materialService;
@@ -78,6 +80,49 @@ public class MachinesModel : PageModel
 
             await LoadPageDataAsync();
 
+            // Deep-link helpers
+            var showCreate = Request.Query["showCreate"].FirstOrDefault() ?? Request.Query["showCreateMachine"].FirstOrDefault();
+            if (!string.IsNullOrEmpty(showCreate) && (showCreate == "1" || bool.TryParse(showCreate, out var sc) && sc))
+            {
+                ViewData["ShowCreateMachineModal"] = true;
+            }
+            var editMachine = Request.Query["editMachine"].FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(editMachine))
+            {
+                var m = Machines.FirstOrDefault(x => x.MachineId.Equals(editMachine, StringComparison.OrdinalIgnoreCase));
+                if (m != null)
+                {
+                    var payload = new
+                    {
+                        m.Id,
+                        m.MachineId,
+                        MachineName = m.MachineName ?? m.Name ?? string.Empty,
+                        m.MachineType,
+                        m.MachineModel,
+                        m.SerialNumber,
+                        m.Location,
+                        SupportedMaterials = m.SupportedMaterials ?? string.Empty,
+                        CurrentMaterial = m.CurrentMaterial ?? string.Empty,
+                        m.Status,
+                        m.IsActive,
+                        m.IsAvailableForScheduling,
+                        m.Priority,
+                        m.BuildLengthMm,
+                        m.BuildWidthMm,
+                        m.BuildHeightMm,
+                        m.MaxLaserPowerWatts,
+                        m.MaxScanSpeedMmPerSec,
+                        m.MinLayerThicknessMicrons,
+                        m.MaxLayerThicknessMicrons,
+                        m.MaintenanceIntervalHours,
+                        OpcUaEndpointUrl = m.OpcUaEndpointUrl ?? string.Empty,
+                        m.OpcUaEnabled,
+                        ColorHex = m.ColorHex ?? m.EffectiveColorHex
+                    };
+                    ViewData["EditMachineDataJson"] = JsonSerializer.Serialize(payload);
+                }
+            }
+
             _logger.LogInformation("✅ Machine management page loaded - {MachineCount} machines", Machines.Count);
         }
         catch (Exception ex)
@@ -108,8 +153,11 @@ public class MachinesModel : PageModel
                 return Page();
             }
 
-            // Create machine from DTO
-            var machine = CreateMachineFromDto(CreateMachineRequest);
+            // Build used colors from DB to prevent duplicates
+            var usedColors = await GetUsedColorsAsync();
+
+            // Create machine from DTO, assign randomized non-repeating color
+            var machine = CreateMachineFromDto(CreateMachineRequest, usedColors);
 
             _context.Machines.Add(machine);
             await _context.SaveChangesAsync();
@@ -630,16 +678,17 @@ public class MachinesModel : PageModel
             }
         }
         if (source.Contains("TRUPRINT") || source.Contains("TRU PRINT") || source.Contains("SLS") || source.Contains("SELECTIVE LASER")) return "SLS";
-        if (source.Contains("CNC") || source.Contains("HAAS") || source.Contains("MAZAK") || source.Contains("DOOSAN") ) return "CNC";
+        if (source.Contains("CNC") || source.Contains("HAAS") || source.Contains("MAZAK") || source.Contains("DOOSAN")) return "CNC";
         if (source.Contains("EDM") || source.Contains("WIRE EDM")) return "EDM";
         if (source.Contains("COAT") || source.Contains("CERAKOTE")) return "Coating";
         if (source.Contains("INSPECTION") || source.Contains("QC") || source.Contains("CMM")) return "Inspection";
         return "Other";
     }
 
-    private Machine CreateMachineFromDto(CreateMachineDto dto)
+    private Machine CreateMachineFromDto(CreateMachineDto dto, HashSet<string> usedColors)
     {
         var normalizedType = NormalizeMachineType(dto.MachineType, dto.MachineModel, dto.MachineName);
+        var color = string.IsNullOrWhiteSpace(dto.ColorHex) ? AssignColor(usedColors, dto.MachineId) : dto.ColorHex!;
         return new Machine
         {
             MachineId = dto.MachineId,
@@ -678,7 +727,7 @@ public class MachinesModel : PageModel
             LastModifiedDate = DateTime.UtcNow,
             CreatedBy = User.Identity?.Name ?? "Admin",
             LastModifiedBy = User.Identity?.Name ?? "Admin",
-            ColorHex = string.IsNullOrWhiteSpace(dto.ColorHex) ? AssignColor(dto.MachineId) : dto.ColorHex
+            ColorHex = color
         };
     }
 
@@ -710,18 +759,73 @@ public class MachinesModel : PageModel
         machine.LastModifiedBy = User.Identity?.Name ?? "Admin";
         machine.LastModifiedDate = DateTime.UtcNow;
         if (!string.IsNullOrWhiteSpace(dto.ColorHex)) machine.ColorHex = dto.ColorHex;
-        if (string.IsNullOrWhiteSpace(machine.ColorHex)) machine.ColorHex = AssignColor(machine.MachineId);
+        // If color is still empty (legacy records), assign a non-repeating color
+        if (string.IsNullOrWhiteSpace(machine.ColorHex))
+        {
+            var used = _context.Machines.Where(m => m.ColorHex != null && m.ColorHex != "").Select(m => m.ColorHex!).ToList();
+            machine.ColorHex = AssignColor(new HashSet<string>(used, StringComparer.OrdinalIgnoreCase), machine.MachineId);
+        }
     }
 
-    private string AssignColor(string machineId)
+    // Randomized, non-repeating color assignment helper
+    private string AssignColor(HashSet<string> usedColors, string seed)
     {
         var palette = new[]{"#6366F1","#0EA5E9","#10B981","#F59E0B","#EC4899","#8B5CF6","#14B8A6","#F97316","#EF4444","#3B82F6","#84CC16","#9333EA","#06B6D4","#F43F5E","#A855F7"};
-        if (!Machines.Any()) return palette[0];
-        var used = Machines.Where(m=>!string.IsNullOrEmpty(m.ColorHex)).Select(m=>m.ColorHex!).ToHashSet();
-        var available = palette.FirstOrDefault(c=>!used.Contains(c));
-        if (available!=null) return available;
-        var hash = machineId.Aggregate(17,(acc,ch)=>acc*31+ch);
-        return palette[Math.Abs(hash)%palette.Length];
+        var comparer = StringComparer.OrdinalIgnoreCase;
+        var used = new HashSet<string>(usedColors.Where(c => !string.IsNullOrWhiteSpace(c)), comparer);
+        var unused = palette.Where(c => !used.Contains(c)).ToList();
+        if (unused.Count > 0)
+        {
+            var idx = RandomNumberGenerator.GetInt32(unused.Count);
+            return unused[idx];
+        }
+        // Fallback: generate a new random distinct color not currently used
+        for (int i = 0; i < 50; i++)
+        {
+            var hex = RandomHexColor();
+            if (!used.Contains(hex)) return hex;
+        }
+        // Last resort: hash-based deterministic choice to ensure a color
+        var hash = seed.Aggregate(17, (acc, ch) => acc * 31 + ch);
+        return palette[Math.Abs(hash) % palette.Length];
+    }
+
+    private static string RandomHexColor()
+    {
+        // Bright-ish color generation via HSV with fixed S/V ranges
+        // h in [0,360), s in [0.55,0.9], v in [0.75,1]
+        var h = RandomNumberGenerator.GetInt32(0, 360);
+        var s = 0.55 + (RandomNumberGenerator.GetInt32(0, 36) / 100.0); // 0.55 .. 0.9
+        var v = 0.75 + (RandomNumberGenerator.GetInt32(0, 26) / 100.0); // 0.75 .. 1.0
+        (int r, int g, int b) = HsvToRgb(h, s, v);
+        return $"#{r:X2}{g:X2}{b:X2}";
+    }
+
+    private static (int r, int g, int b) HsvToRgb(double h, double s, double v)
+    {
+        var c = v * s;
+        var x = c * (1 - Math.Abs((h / 60.0) % 2 - 1));
+        var m = v - c;
+        double r1 = 0, g1 = 0, b1 = 0;
+        if (h < 60) { r1 = c; g1 = x; b1 = 0; }
+        else if (h < 120) { r1 = x; g1 = c; b1 = 0; }
+        else if (h < 180) { r1 = 0; g1 = c; b1 = x; }
+        else if (h < 240) { r1 = 0; g1 = x; b1 = c; }
+        else if (h < 300) { r1 = x; g1 = 0; b1 = c; }
+        else { r1 = c; g1 = 0; b1 = x; }
+        int r = (int)Math.Round((r1 + m) * 255);
+        int g = (int)Math.Round((g1 + m) * 255);
+        int b = (int)Math.Round((b1 + m) * 255);
+        return (r, g, b);
+    }
+
+    private async Task<HashSet<string>> GetUsedColorsAsync()
+    {
+        var list = await _context.Machines
+            .Where(m => m.ColorHex != null && m.ColorHex != "")
+            .Select(m => m.ColorHex!)
+            .ToListAsync();
+        return new HashSet<string>(list, StringComparer.OrdinalIgnoreCase);
     }
 
     public void LoadMachineForEditing(Machine machine)

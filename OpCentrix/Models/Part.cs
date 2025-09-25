@@ -8,7 +8,7 @@ namespace OpCentrix.Models
     /// Enhanced Part model for B&T Manufacturing - Supports firearms, suppressors, and complex manufacturing workflows
     /// Includes manufacturing stages, regulatory compliance, and specialized B&T requirements
     /// </summary>
-    public class Part
+    public partial class Part
     {
         public int Id { get; set; }
         
@@ -1160,6 +1160,23 @@ namespace OpCentrix.Models
             }
         }
 
+        #endregion
+
+        #region SLS Stacking Configuration - NEW
+        [Display(Name = "Allow Stacking")]
+        public bool AllowStacking { get; set; } = false;
+
+        [Range(0.1, 500.0)]
+        [Display(Name = "Single (1x) Duration (hours)")]
+        public double? SingleStackDurationHours { get; set; }
+
+        [Range(0.1, 500.0)]
+        [Display(Name = "Double (2x) Duration (hours)")]
+        public double? DoubleStackDurationHours { get; set; }
+
+        [Range(0.1, 500.0)]
+        [Display(Name = "Triple (3x) Duration (hours)")]
+        public double? TripleStackDurationHours { get; set; }
         #endregion
     }
 }

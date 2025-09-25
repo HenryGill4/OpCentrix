@@ -139,7 +139,7 @@
                             <option value="">Select Component Type</option>
                             @if (Model.PartFormData?.ComponentTypes != null)
                             {
-                                @foreach (var componentType in Model.PartFormData.ComponentTypes)
+                                foreach (var componentType in Model.PartFormData.ComponentTypes)
                                 {
                                     <option value="@componentType.Id">@componentType.Name - @componentType.Description</option>
                                 }
@@ -155,7 +155,7 @@
                             <option value="">Select Compliance Category</option>
                             @if (Model.PartFormData?.ComplianceCategories != null)
                             {
-                                @foreach (var category in Model.PartFormData.ComplianceCategories)
+                                foreach (var category in Model.PartFormData.ComplianceCategories)
                                 {
                                     <option value="@category.Id" data-regulatory-level="@category.RegulatoryLevel">
                                         @category.Name (@category.RegulatoryLevel)
@@ -311,7 +311,7 @@
                                 <div class="d-grid gap-2" id="availableStagesContainer">
                                     @if (Model.PartFormData?.AvailableStages != null)
                                     {
-                                        @foreach (var stage in Model.PartFormData.AvailableStages.Take(5))
+                                        foreach (var stage in Model.PartFormData.AvailableStages.Take(5))
                                         {
                                             <button type="button" class="btn btn-outline-primary btn-sm" onclick="(window.stageManager && window.stageManager.addStage) ? window.stageManager.addStage(@stage.Id) : window.addStageFromList && window.addStageFromList(@stage.Id)">
                                                 <i class="fas fa-plus me-1"></i>@stage.Name
@@ -359,7 +359,43 @@
                         </select>
                         <span asp-validation-for="Part.ProcessType" class="text-danger"></span>
                     </div>
-                    
+
+                    <!-- NEW: SLS stacking configuration -->
+                    <div class="col-12 mt-3">
+                        <h6 class="text-secondary border-bottom pb-2 mb-3">
+                            <i class="fas fa-layer-group me-2"></i>SLS Stacking & Duration Settings
+                        </h6>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="form-check mt-2">
+                            <input asp-for="Part.AllowStacking" class="form-check-input" type="checkbox" id="allowStackingCheckbox" />
+                            <label class="form-check-label" asp-for="Part.AllowStacking">Allow Stacking for this Part</label>
+                        </div>
+                        <div class="form-text">Enables scheduling as double or triple stacks</div>
+                    </div>
+
+                    <div class="col-md-8">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-12 col-md-4">
+                                <label asp-for="Part.SingleStackDurationHours" class="form-label">Single (1x) Hours</label>
+                                <input asp-for="Part.SingleStackDurationHours" type="number" step="0.1" min="0.1" class="form-control" />
+                                <span asp-validation-for="Part.SingleStackDurationHours" class="text-danger"></span>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label asp-for="Part.DoubleStackDurationHours" class="form-label">Double (2x) Hours</label>
+                                <input asp-for="Part.DoubleStackDurationHours" type="number" step="0.1" min="0.1" class="form-control" />
+                                <span asp-validation-for="Part.DoubleStackDurationHours" class="text-danger"></span>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label asp-for="Part.TripleStackDurationHours" class="form-label">Triple (3x) Hours</label>
+                                <input asp-for="Part.TripleStackDurationHours" type="number" step="0.1" min="0.1" class="form-control" />
+                                <span asp-validation-for="Part.TripleStackDurationHours" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="form-text">If left blank, scheduler will estimate from base hours and history</div>
+                    </div>
+
                     <div class="col-md-4">
                         <label asp-for="Part.MaterialCostPerKg" class="form-label">Material Cost ($/kg)</label>
                         <input asp-for="Part.MaterialCostPerKg" type="number" step="0.01" class="form-control" />
@@ -813,4 +849,17 @@
 
     console.log('✅ [_PartForm] Enhanced initialization complete with comprehensive debugging');
     console.log('💡 [_PartForm] Use debugStageManager() in console to check status');
+</script>
+
+<script>
+// Simple UX: disable duration inputs if AllowStacking is unchecked
+(function(){
+  function toggleStackInputs(){
+    const on = document.getElementById('allowStackingCheckbox')?.checked;
+    ['Part_SingleStackDurationHours','Part_DoubleStackDurationHours','Part_TripleStackDurationHours']
+      .forEach(id=>{ const el=document.getElementById(id); if(el){ el.disabled = !on; el.classList.toggle('bg-light', !on);} });
+  }
+  document.addEventListener('change', function(e){ if(e.target && e.target.id==='allowStackingCheckbox'){ toggleStackInputs(); }});
+  document.addEventListener('DOMContentLoaded', toggleStackInputs);
+})();
 </script>

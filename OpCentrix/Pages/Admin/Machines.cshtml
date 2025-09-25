@@ -978,5 +978,21 @@
                 return false;
             }
         });
+
+        document.addEventListener('DOMContentLoaded', function(){
+            // Show Create if requested
+            var showCreate = '@(ViewData["ShowCreateMachineModal"] != null ? "1" : "")';
+            if(showCreate === '1') {
+                showCreateMachineModal();
+            }
+            // Open Edit if payload provided
+            var editPayload = '@(ViewData["EditMachineDataJson"] ?? "")'.trim();
+            if(editPayload && editPayload !== ''){
+                try{
+                    var m = JSON.parse(editPayload);
+                    editMachine(m.Id, m.MachineId, m.MachineName, m.MachineType, m.MachineModel, m.SerialNumber, m.Location, m.SupportedMaterials, m.CurrentMaterial, m.Status, m.IsActive, m.IsAvailableForScheduling, m.Priority, m.BuildLengthMm, m.BuildWidthMm, m.BuildHeightMm, m.MaxLaserPowerWatts, m.MaxScanSpeedMmPerSec, m.MinLayerThicknessMicrons, m.MaxLayerThicknessMicrons, m.MaintenanceIntervalHours, m.OpcUaEndpointUrl, m.OpcUaEnabled, m.ColorHex);
+                }catch(e){ console.error('Failed to parse EditMachine payload', e); }
+            }
+        });
     </script>
 }

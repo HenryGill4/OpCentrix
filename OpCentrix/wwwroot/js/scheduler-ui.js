@@ -80,7 +80,7 @@
 
     // Dismiss on backdrop click / ESC
     document.addEventListener('click', e=>{
-        if(e.target.classList && (e.target.classList.contains('modal-backdrop') || e.target.id==='modal-container')){ window.closeJobModal(); }
+        if(e.target && (e.target.id==='modal-container' || e.target.classList.contains('modal-backdrop'))){ window.closeJobModal(); }
     });
     document.addEventListener('keydown', e=>{ if(e.key==='Escape') window.closeJobModal(); });
 
@@ -142,8 +142,14 @@
 
     // Re-hydrate after HTMX swaps
     document.addEventListener('htmx:afterSwap', e=>{
-        if(e.detail && (e.detail.target.id==='scheduler-main-content' || (e.detail.target.closest && e.detail.target.closest('#scheduler-main-content')))){
-            setTimeout(()=>{ hydrateSchedulerColors(); attachGridHandlers(); },30);
+        if(!e.detail || !e.detail.target) return;
+        const t = e.detail.target;
+        if(t.id==='scheduler-main-content' || (t.closest && t.closest('#scheduler-main-content'))){
+            setTimeout(()=>{ hydrateSchedulerColors(); attachGridHandlers(); }, 30);
+        }
+        if(t.id==='modal-container' || (t.closest && t.closest('#modal-container'))){
+            const mc = document.getElementById('modal-container');
+            if(mc){ mc.style.display='flex'; mc.classList.remove('hidden'); document.body.style.overflow='hidden'; }
         }
     });
 

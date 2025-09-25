@@ -197,7 +197,7 @@ namespace OpCentrix.Data
                 entity.Property(e => e.RequiredMachineType).HasMaxLength(100).HasDefaultValue("TruPrint 3000");
                 entity.Property(e => e.PreferredMachines).HasMaxLength(200).HasDefaultValue("TI1,TI2");
                 entity.Property(e => e.QualityStandards).HasMaxLength(500).HasDefaultValue("ASTM F3001, ISO 17296");
-                entity.Property(e => e.ToleranceRequirements).HasMaxLength(500).HasDefaultValue("±0.1mm typical");
+                entity.Property(e => e.ToleranceRequirements).HasMaxLength(500).HasDefaultValue("+/-0.1mm typical");
                 entity.Property(e => e.RequiredSkills).HasMaxLength(500).HasDefaultValue("SLS Operation,Powder Handling");
                 entity.Property(e => e.RequiredCertifications).HasMaxLength(500).HasDefaultValue("SLS Operation Certification");
                 entity.Property(e => e.RequiredTooling).HasMaxLength(500).HasDefaultValue("Build Platform,Powder Sieve");
@@ -222,6 +222,7 @@ namespace OpCentrix.Data
                 entity.Property(e => e.BTTestingRequirements).HasMaxLength(500).HasDefaultValue("");
                 entity.Property(e => e.BTQualityStandards).HasMaxLength(500).HasDefaultValue("");
                 entity.Property(e => e.BTRegulatoryNotes).HasMaxLength(200).HasDefaultValue("");
+               
 
                 // Foreign key relationships for B&T
                 entity.HasOne(e => e.PartClassification)
@@ -546,6 +547,7 @@ namespace OpCentrix.Data
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Description).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.MachineId).HasMaxLength(50);
                 entity.Property(e => e.CreatedBy).HasMaxLength(100).HasDefaultValue("System");
                 entity.Property(e => e.LastModifiedBy).HasMaxLength(100).HasDefaultValue("System");
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
@@ -557,6 +559,7 @@ namespace OpCentrix.Data
                 entity.HasIndex(e => e.IsHoliday);
                 entity.HasIndex(e => e.SpecificDate);
                 entity.HasIndex(e => new { e.DayOfWeek, e.IsActive });
+                entity.HasIndex(e => new { e.MachineId, e.DayOfWeek });
             });
 
             // Configure SystemSetting entity
