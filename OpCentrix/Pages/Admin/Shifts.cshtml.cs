@@ -20,13 +20,15 @@ public class ShiftsModel : PageModel
     private readonly IAuthenticationService _authService;
     private readonly ILogger<ShiftsModel> _logger;
     private readonly SchedulerContext _context;
+    private readonly IOperatorAssignmentService _assignmentService;
 
-    public ShiftsModel(IOperatingShiftService shiftService, IAuthenticationService authService, ILogger<ShiftsModel> logger, SchedulerContext context)
+    public ShiftsModel(IOperatingShiftService shiftService, IAuthenticationService authService, ILogger<ShiftsModel> logger, SchedulerContext context, IOperatorAssignmentService assignmentService)
     {
         _shiftService = shiftService;
         _authService = authService;
         _logger = logger;
         _context = context;
+        _assignmentService = assignmentService;
     }
 
     // Properties for the page
@@ -34,7 +36,12 @@ public class ShiftsModel : PageModel
     public List<OperatingShift> HolidayShifts { get; set; } = new();
     public Dictionary<int, List<OperatingShift>> ShiftsByDay { get; set; } = new();
     public List<string> ConflictErrors { get; set; } = new();
-    
+    // Assignments panel data
+    public List<Machine> Machines { get; set; } = new();
+    public List<MachineOperatorAssignment> Assignments { get; set; } = new();
+    public List<User> EligibleOperators { get; set; } = new();
+    public string? SelectedMachineId { get; set; }
+
     // Form binding
     [BindProperty]
     public OperatingShift Input { get; set; } = new();
@@ -43,6 +50,7 @@ public class ShiftsModel : PageModel
     {
         try
         {
+            await EnsureDefaultShiftsSeededAsync();
             await LoadShiftsAsync();
             _logger.LogInformation("?? [SHIFTS] Admin shifts page loaded - {ShiftCount} shifts, {HolidayCount} holidays", 
                 Shifts.Count, HolidayShifts.Count);
@@ -269,6 +277,7 @@ public class ShiftsModel : PageModel
                 "business" => DefaultOperatingShifts.GetStandardBusinessHours(),
                 "24x7" => DefaultOperatingShifts.Get24x7Schedule(),
                 "twoshift" => DefaultOperatingShifts.GetTwoShiftSchedule(),
+                "plant" => DefaultOperatingShifts.GetPlantTwoShiftSchedule(),
                 _ => new List<OperatingShift>()
             };
 
@@ -326,6 +335,7 @@ public class ShiftsModel : PageModel
                 "business" => DefaultOperatingShifts.GetStandardBusinessHours(),
                 "24x7" => DefaultOperatingShifts.Get24x7Schedule(),
                 "twoshift" => DefaultOperatingShifts.GetTwoShiftSchedule(),
+                "plant" => DefaultOperatingShifts.GetPlantTwoShiftSchedule(),
                 _ => new List<OperatingShift>()
             };
 
@@ -460,5 +470,195 @@ public class ShiftsModel : PageModel
         {
             ViewData["Machines"] = new List<OpCentrix.Models.Machine>();
         }
+    }
+
+    private async Task EnsureDefaultShiftsSeededAsync()
+    {
+        try
+        {
+            // If there are no shifts at all, seed the plant schedule as global defaults
+            var anyShifts = await _context.OperatingShifts.AnyAsync();
+            if (!anyShifts)
+            {
+                var currentUser = await _authService.GetCurrentUserAsync(HttpContext);
+                var userName = currentUser?.Username ?? "System";
+
+                var defaults = DefaultOperatingShifts.GetPlantTwoShiftSchedule();
+                foreach (var s in defaults)
+                {
+                    s.CreatedBy = userName;
+                    s.LastModifiedBy = userName;
+                }
+
+                var created = 0;
+                foreach (var shift in defaults)
+                {
+                    var ok = await _shiftService.CreateShiftAsync(shift);
+                    if (ok) created++;
+                }
+
+                TempData["ShiftsSeeded"] = created;
+                _logger.LogInformation("? [SHIFTS] Seeded {Count} default plant schedule shifts", created);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "? [SHIFTS] Error seeding default shifts");
+        }
+    }
+
+    // Assignments Panel Handlers
+    public async Task<IActionResult> OnGetAssignmentsAsync(string? machineId)
+    {
+        try
+        {
+            SelectedMachineId = machineId;
+            await LoadMachinesAndEligibleOperatorsAsync();
+            if (string.IsNullOrEmpty(SelectedMachineId) && Machines.Any())
+            {
+                SelectedMachineId = Machines.First().MachineId;
+            }
+            Assignments = string.IsNullOrEmpty(SelectedMachineId)
+                ? new List<MachineOperatorAssignment>()
+                : await _assignmentService.GetAssignmentsByMachineAsync(SelectedMachineId);
+
+            return Partial("~/Pages/Admin/Shared/_AssignmentsPanel.cshtml", this);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[ASSIGN] Error loading assignments panel for {MachineId}", machineId);
+            return new JsonResult(new { success = false, message = "Error loading assignments" });
+        }
+    }
+
+    public async Task<IActionResult> OnPostAssignAsync([FromBody] AssignRequest request)
+    {
+        try
+        {
+            var actor = (await _authService.GetCurrentUserAsync(HttpContext))?.Username ?? "System";
+
+            if (!request.force)
+            {
+                var warn = await _assignmentService.CheckDoubleAssignmentWarningAsync(request.userId, request.machineId);
+                if (!string.IsNullOrEmpty(warn))
+                {
+                    return new JsonResult(new { success = false, warning = warn });
+                }
+            }
+
+            var (success, warning, assignment) = await _assignmentService.AssignOperatorAsync(
+                request.machineId, request.userId, request.isPrimary, request.effectiveFrom, request.effectiveTo, actor);
+            return new JsonResult(new
+            {
+                success,
+                warning,
+                assignment = assignment == null ? null : new
+                {
+                    assignment.Id,
+                    assignment.MachineId,
+                    assignment.UserId,
+                    assignment.IsPrimary,
+                    assignment.EffectiveFrom,
+                    assignment.EffectiveTo,
+                    assignment.IsActive
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[ASSIGN] Error assigning operator");
+            return new JsonResult(new { success = false, message = "Error assigning operator" });
+        }
+    }
+
+    public async Task<IActionResult> OnPostUnassignAsync([FromBody] UnassignRequest request)
+    {
+        try
+        {
+            var actor = (await _authService.GetCurrentUserAsync(HttpContext))?.Username ?? "System";
+            var ok = await _assignmentService.UnassignAsync(request.assignmentId, actor);
+            return new JsonResult(new { success = ok });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[ASSIGN] Error unassigning operator");
+            return new JsonResult(new { success = false, message = "Error unassigning operator" });
+        }
+    }
+
+    public async Task<IActionResult> OnPostSetPrimaryAsync([FromBody] SetPrimaryRequest request)
+    {
+        try
+        {
+            var actor = (await _authService.GetCurrentUserAsync(HttpContext))?.Username ?? "System";
+            var ok = await _assignmentService.SetPrimaryAsync(request.assignmentId, actor);
+            return new JsonResult(new { success = ok });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[ASSIGN] Error setting primary assignment");
+            return new JsonResult(new { success = false, message = "Error updating primary assignment" });
+        }
+    }
+
+    private async Task LoadMachinesAndEligibleOperatorsAsync()
+    {
+        Machines = await _context.Machines.Where(m => m.IsActive).OrderBy(m => m.MachineId).ToListAsync();
+        var eligibleRoles = new[]
+        {
+            UserRoles.Operator,
+            UserRoles.PrintingSpecialist,
+            UserRoles.EDMSpecialist,
+            UserRoles.MachiningSpecialist,
+            UserRoles.CoatingSpecialist,
+            UserRoles.QCSpecialist
+        };
+        EligibleOperators = await _context.Users
+            .Where(u => u.IsActive && eligibleRoles.Contains(u.Role))
+            .OrderBy(u => u.FullName)
+            .ToListAsync();
+    }
+
+    // Request DTOs for JSON binding
+    public class AssignRequest
+    {
+        public string machineId { get; set; } = string.Empty;
+        public int userId { get; set; }
+        public bool isPrimary { get; set; }
+        public DateTime? effectiveFrom { get; set; }
+        public DateTime? effectiveTo { get; set; }
+        public bool force { get; set; }
+    }
+
+    public class UnassignRequest
+    {
+        public int assignmentId { get; set; }
+    }
+
+    public class SetPrimaryRequest
+    {
+        public int assignmentId { get; set; }
+    }
+
+    // Form-post friendly variants (for environments where JSON antiforgery header pairing fails)
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> OnPostAssignFormAsync(string machineId, int userId, bool isPrimary, DateTime? effectiveFrom, DateTime? effectiveTo, bool force = false)
+    {
+        var req = new AssignRequest { machineId = machineId, userId = userId, isPrimary = isPrimary, effectiveFrom = effectiveFrom, effectiveTo = effectiveTo, force = force };
+        return await OnPostAssignAsync(req);
+    }
+
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> OnPostUnassignFormAsync(int assignmentId)
+    {
+        var req = new UnassignRequest { assignmentId = assignmentId };
+        return await OnPostUnassignAsync(req);
+    }
+
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> OnPostSetPrimaryFormAsync(int assignmentId)
+    {
+        var req = new SetPrimaryRequest { assignmentId = assignmentId };
+        return await OnPostSetPrimaryAsync(req);
     }
 }

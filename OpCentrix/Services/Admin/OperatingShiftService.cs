@@ -205,6 +205,7 @@ public class OperatingShiftService : IOperatingShiftService
             existing.IsActive = shift.IsActive;
             existing.Description = shift.Description;
             existing.SpecificDate = shift.SpecificDate;
+            existing.MachineId = shift.MachineId; // ensure machine scope updates are saved
             existing.LastModifiedDate = DateTime.UtcNow;
             existing.LastModifiedBy = shift.LastModifiedBy;
 
@@ -455,14 +456,63 @@ public static class DefaultOperatingShifts
         return shifts;
     }
 
-    public static List<OperatingShift> GetTwoShiftSchedule(string? machineId = null)
+    public static List<OperatingShift> GetPlantTwoShiftSchedule(string? machineId = null)
     {
         var shifts = new List<OperatingShift>();
 
-        // Monday through Friday, two shifts
+        // Monday through Friday: 06:00–15:30 and 15:30–00:00 (cross-midnight)
         for (int day = 1; day <= 5; day++)
         {
-            // First shift: 6 AM to 2 PM
+            shifts.Add(new OperatingShift
+            {
+                MachineId = machineId,
+                DayOfWeek = day,
+                StartTime = new TimeSpan(6, 0, 0),
+                EndTime = new TimeSpan(15, 30, 0),
+                IsActive = true,
+                IsHoliday = false,
+                Description = "Day Shift",
+                CreatedBy = "System"
+            });
+
+            shifts.Add(new OperatingShift
+            {
+                MachineId = machineId,
+                DayOfWeek = day,
+                StartTime = new TimeSpan(15, 30, 0),
+                EndTime = new TimeSpan(0, 0, 0), // midnight
+                IsActive = true,
+                IsHoliday = false,
+                Description = "Night Shift",
+                CreatedBy = "System"
+            });
+        }
+
+        // Saturday and Sunday: 06:00–18:00
+        foreach (var day in new[] { 0, 6 }) // Sunday=0, Saturday=6
+        {
+            shifts.Add(new OperatingShift
+            {
+                MachineId = machineId,
+                DayOfWeek = day,
+                StartTime = new TimeSpan(6, 0, 0),
+                EndTime = new TimeSpan(18, 0, 0),
+                IsActive = true,
+                IsHoliday = false,
+                Description = "Weekend Shift",
+                CreatedBy = "System"
+            });
+        }
+
+        return shifts;
+    }
+
+    public static List<OperatingShift> GetTwoShiftSchedule(string? machineId = null)
+    {
+        // Keep legacy schedule for template compatibility; prefer GetPlantTwoShiftSchedule for current plant hours
+        var shifts = new List<OperatingShift>();
+        for (int day = 1; day <= 5; day++)
+        {
             shifts.Add(new OperatingShift
             {
                 MachineId = machineId,
@@ -474,8 +524,6 @@ public static class DefaultOperatingShifts
                 Description = "First Shift",
                 CreatedBy = "System"
             });
-
-            // Second shift: 2 PM to 10 PM
             shifts.Add(new OperatingShift
             {
                 MachineId = machineId,
@@ -488,7 +536,6 @@ public static class DefaultOperatingShifts
                 CreatedBy = "System"
             });
         }
-
         return shifts;
     }
 }

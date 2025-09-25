@@ -181,6 +181,7 @@ builder.Services.AddScoped<OpCentrix.Services.Admin.ILogViewerService, OpCentrix
 builder.Services.AddScoped<OpCentrix.Services.Admin.IAdminDataSeedingService, OpCentrix.Services.Admin.AdminDataSeedingService>();
 builder.Services.AddScoped<OpCentrix.Services.Admin.ISystemConfigurationService, OpCentrix.Services.Admin.SystemConfigurationService>();
 builder.Services.AddScoped<OpCentrix.Services.Admin.IMachineManagementService, OpCentrix.Services.Admin.MachineManagementService>();
+builder.Services.AddScoped<OpCentrix.Services.Admin.IOperatorAssignmentService, OpCentrix.Services.Admin.OperatorAssignmentService>();
 
 // TASK 16: Database Management Service
 builder.Services.AddScoped<OpCentrix.Services.Admin.IDatabaseManagementService, OpCentrix.Services.Admin.DatabaseManagementService>();

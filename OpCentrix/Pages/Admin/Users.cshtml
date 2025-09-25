@@ -169,8 +169,9 @@
                                             data-email="@user.Email"
                                             data-role="@user.Role"
                                             data-department="@user.Department"
-                                            data-isactive="@user.IsActive.ToString().ToLower()"
-                                            class="inline-flex items-center text-blue-600 hover:text-blue-900 text-sm">
+                                            data-isactive="@user.IsActive"
+                                            class="inline-flex items-center text-blue-600 hover:text-blue-900 text-sm"
+                                            onclick="showEditUserModal(this)">
                                         <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                         </svg>
@@ -187,13 +188,13 @@
                                         </svg>
                                         Reset Password
                                     </button>
-                                    <form method="post" asp-page-handler="DeleteUser" class="inline">
+                                    <form method="post" asp-page="/Admin/Users" asp-page-handler="DeleteUser" class="inline">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="userId" value="@user.Id">
-                                        <button type="submit" 
-                                                data-action="confirm-delete"
-                                                data-item-name="@user.FullName (@user.Username)"
-                                                class="inline-flex items-center text-red-600 hover:text-red-900 text-sm">
+                                        <button type="submit" formaction="?handler=DeleteUser"
+                                                 data-action="confirm-delete"
+                                                 data-item-name="@user.FullName (@user.Username)"
+                                                 class="inline-flex items-center text-red-600 hover:text-red-900 text-sm">
                                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                             </svg>
@@ -245,43 +246,39 @@
         <form id="userForm" method="post" asp-page-handler="CreateUser" class="p-6">
             @Html.AntiForgeryToken()
             
-            <!-- Validation Summary -->
-            <div asp-validation-summary="All" class="alert alert-danger mb-4 hidden" role="alert"></div>
+            <!-- Validation Summary (compact) -->
+            <div asp-validation-summary="ModelOnly" class="oc-validation-summary validation-summary-valid mb-4" role="alert"></div>
             
-            <input type="hidden" id="editingUserId" name="userId" value="">
+            <input type="hidden" id="editingUserId" name="EditingUserId" value="">
             
             <div class="space-y-4">
                 <div class="form-field">
-                    <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
-                    <input type="text" id="username" name="username" required 
-                           class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
-                    <span class="text-red-500 text-xs invalid-feedback"></span>
+                    <label asp-for="UserInput.Username" class="block text-sm font-medium text-gray-700"></label>
+                    <input asp-for="UserInput.Username" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" />
+                    <span asp-validation-for="UserInput.Username" class="mt-1 text-xs text-red-600"></span>
                 </div>
                 
                 <div class="form-field">
-                    <label for="fullName" class="block text-sm font-medium text-gray-700">Full Name</label>
-                    <input type="text" id="fullName" name="fullName" required 
-                           class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
-                    <span class="text-red-500 text-xs invalid-feedback"></span>
+                    <label asp-for="UserInput.FullName" class="block text-sm font-medium text-gray-700"></label>
+                    <input asp-for="UserInput.FullName" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" />
+                    <span asp-validation-for="UserInput.FullName" class="mt-1 text-xs text-red-600"></span>
                 </div>
                 
                 <div class="form-field">
-                    <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
-                    <input type="email" id="email" name="email" 
-                           class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
-                    <span class="text-red-500 text-xs invalid-feedback"></span>
+                    <label asp-for="UserInput.Email" class="block text-sm font-medium text-gray-700"></label>
+                    <input asp-for="UserInput.Email" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" />
+                    <span asp-validation-for="UserInput.Email" class="mt-1 text-xs text-red-600"></span>
                 </div>
                 
                 <div class="form-field" id="passwordField">
-                    <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
-                    <input type="password" id="password" name="password" required 
-                           class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
-                    <span class="text-red-500 text-xs invalid-feedback"></span>
+                    <label asp-for="UserInput.Password" class="block text-sm font-medium text-gray-700"></label>
+                    <input asp-for="UserInput.Password" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" />
+                    <span asp-validation-for="UserInput.Password" class="mt-1 text-xs text-red-600"></span>
                 </div>
                 
                 <div class="form-field">
-                    <label for="role" class="block text-sm font-medium text-gray-700">Role</label>
-                    <select id="role" name="role" required 
+                    <label asp-for="UserInput.Role" class="block text-sm font-medium text-gray-700"></label>
+                    <select asp-for="UserInput.Role" required 
                             class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                         <option value="">Select Role</option>
                         <option value="Admin">Administrator</option>
@@ -296,12 +293,12 @@
                         <option value="QCSpecialist">QC Specialist</option>
                         <option value="Analyst">Analyst</option>
                     </select>
-                    <span class="text-red-500 text-xs invalid-feedback"></span>
+                    <span asp-validation-for="UserInput.Role" class="mt-1 text-xs text-red-600"></span>
                 </div>
                 
                 <div class="form-field">
-                    <label for="department" class="block text-sm font-medium text-gray-700">Department</label>
-                    <select id="department" name="department" 
+                    <label asp-for="UserInput.Department" class="block text-sm font-medium text-gray-700"></label>
+                    <select asp-for="UserInput.Department" 
                             class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                         <option value="">Select Department</option>
                         <option value="Administration">Administration</option>
@@ -315,16 +312,14 @@
                         <option value="Quality Control">Quality Control</option>
                         <option value="Analytics">Analytics</option>
                     </select>
-                    <span class="text-red-500 text-xs invalid-feedback"></span>
+                    <span asp-validation-for="UserInput.Department" class="mt-1 text-xs text-red-600"></span>
                 </div>
                 
                 <div class="form-field">
                     <label class="flex items-center">
-                        <input type="checkbox" id="isActive" name="isActive" value="true" checked 
-                               class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
+                        <input asp-for="UserInput.IsActive" class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded" />
                         <span class="ml-2 text-sm text-gray-700">Active User</span>
                     </label>
-                    <input type="hidden" name="isActive" value="false">
                 </div>
             </div>
             
@@ -370,9 +365,9 @@
             @Html.AntiForgeryToken()
             
             <!-- Validation Summary -->
-            <div asp-validation-summary="All" class="alert alert-danger mb-4 hidden" role="alert"></div>
+            <div asp-validation-summary="ModelOnly" class="oc-validation-summary validation-summary-valid mb-4" role="alert"></div>
             
-            <input type="hidden" id="passwordUserId" name="userId" value="">
+            <input type="hidden" id="passwordUserId" name="PasswordReset.UserId" value="">
             
             <div class="mb-4">
                 <p class="text-sm text-gray-600">Reset password for: <span id="passwordUsername" class="font-medium"></span></p>
@@ -380,17 +375,16 @@
             
             <div class="space-y-4">
                 <div class="form-field">
-                    <label for="newPassword" class="block text-sm font-medium text-gray-700">New Password</label>
-                    <input type="password" id="newPassword" name="newPassword" required minlength="6"
-                           class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
-                    <span class="text-red-500 text-xs invalid-feedback"></span>
+                    <label asp-for="PasswordReset.NewPassword" class="block text-sm font-medium text-gray-700"></label>
+                    <input asp-for="PasswordReset.NewPassword" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" />
+                    <span asp-validation-for="PasswordReset.NewPassword" class="mt-1 text-xs text-red-600"></span>
+                    <p class="mt-1 text-xs text-amber-600" data-match-warning style="display:none">New password must be different from the current password.</p>
                 </div>
                 
                 <div class="form-field">
-                    <label for="confirmPassword" class="block text-sm font-medium text-gray-700">Confirm Password</label>
-                    <input type="password" id="confirmPassword" name="confirmPassword" required minlength="6"
-                           class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
-                    <span class="text-red-500 text-xs invalid-feedback"></span>
+                    <label asp-for="PasswordReset.ConfirmPassword" class="block text-sm font-medium text-gray-700"></label>
+                    <input asp-for="PasswordReset.ConfirmPassword" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" />
+                    <span asp-validation-for="PasswordReset.ConfirmPassword" class="mt-1 text-xs text-red-600"></span>
                 </div>
             </div>
             
@@ -425,221 +419,211 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-    
     <script>
-        // Users Page JavaScript - Using OpCentrix Admin Module
-        document.addEventListener('DOMContentLoaded', function() {
-            
-            // Setup custom data action handlers
-            setupCustomActions();
-            
-            // Setup password confirmation validation
-            setupPasswordValidation();
-            
-            console.log('? [USERS] Page initialized successfully');
-        });
+    // Init
+    document.addEventListener('DOMContentLoaded', function () {
+        setupCustomActions();
+        setupPasswordValidation();
+        hookLiveValidation('#userForm');
+        hookLiveValidation('#passwordForm');
 
-        /**
-         * Setup custom data action handlers
-         */
-        function setupCustomActions() {
-            document.addEventListener('click', function(e) {
-                const target = e.target;
-                
-                // Handle edit user action
-                if (target.getAttribute('data-action') === 'edit-user') {
-                    e.preventDefault();
-                    showEditUserModal(target);
-                }
-                
-                // Handle password reset modal setup
-                if (target.getAttribute('data-action') === 'show-modal' && 
-                    target.getAttribute('data-target') === 'passwordModal') {
-                    e.preventDefault();
-                    showPasswordResetModal(target);
-                }
-            });
+        const resetUserId = '@TempData["PasswordResetUserId"]';
+        const resetUsername = '@TempData["PasswordResetUsername"]';
+        if (resetUserId && resetUserId !== '') {
+            document.getElementById('passwordUserId').value = resetUserId;
+            document.getElementById('passwordUsername').textContent = resetUsername || '';
+            if (window.OpCentrixAdmin?.Modal) {
+                OpCentrixAdmin.Modal.show('passwordModal');
+            }
         }
+    });
 
-        /**
-         * Show edit user modal with data
-         */
-        function showEditUserModal(button) {
-            const userId = button.getAttribute('data-user-id');
-            const username = button.getAttribute('data-username');
-            const fullName = button.getAttribute('data-fullname');
-            const email = button.getAttribute('data-email');
-            const role = button.getAttribute('data-role');
-            const department = button.getAttribute('data-department');
-            const isActive = button.getAttribute('data-isactive') === 'true';
+    // Delegated actions
+    function setupCustomActions() {
+        document.addEventListener('click', function (e) {
+            const editBtn = e.target.closest('[data-action="edit-user"]');
+            if (editBtn) {
+                e.preventDefault();
+                window.showEditUserModal(editBtn);
+                return;
+            }
 
-            // Update modal title and form action
-            document.getElementById('userModalTitle').textContent = 'Edit User';
-            document.querySelector('#userSubmitBtn .submit-text').innerHTML = `
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                </svg>
-                Update User
-            `;
-            document.getElementById('userForm').action = '?handler=EditUser';
+            const resetBtn = e.target.closest('[data-action="show-modal"][data-target="passwordModal"]');
+            if (resetBtn) {
+                e.preventDefault();
+                showPasswordResetModal(resetBtn);
+                return;
+            }
             
-            // Populate form fields
-            document.getElementById('editingUserId').value = userId;
-            document.getElementById('username').value = username;
-            document.getElementById('fullName').value = fullName;
-            document.getElementById('email').value = email || '';
-            document.getElementById('role').value = role;
-            document.getElementById('department').value = department || '';
-            document.getElementById('isActive').checked = isActive;
-            
-            // Hide password field for editing
-            const passwordField = document.getElementById('passwordField');
-            passwordField.style.display = 'none';
-            document.getElementById('password').required = false;
-            
-            // Show modal
+            const delBtn = e.target.closest('[data-action="confirm-delete"]');
+            if (delBtn) {
+                e.preventDefault();
+                const form = delBtn.closest('form');
+                if (!form) return;
+                const name = delBtn.getAttribute('data-item-name') || 'this user';
+                if (confirm(`Delete ${name}? This action cannot be undone.`)) {
+                    form.submit();
+                }
+                return;
+            }
+        });
+    }
+
+    // Edit modal
+    window.showEditUserModal = function (button) {
+        const userId = button.getAttribute('data-user-id');
+        const username = button.getAttribute('data-username');
+        const fullName = button.getAttribute('data-fullname');
+        const email = button.getAttribute('data-email');
+        const role = button.getAttribute('data-role');
+        const department = button.getAttribute('data-department');
+        const isActive = button.getAttribute('data-isactive') === 'true';
+
+        document.getElementById('userModalTitle').textContent = 'Edit User';
+        document.querySelector('#userSubmitBtn .submit-text').innerHTML = `
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+            </svg>
+            Update User`;
+        document.getElementById('userForm').action = '?handler=EditUser';
+
+        document.getElementById('editingUserId').value = userId;
+        const $ = (s) => document.querySelector(s);
+        $('[name="UserInput.Username"]').value = username || '';
+        $('[name="UserInput.FullName"]').value = fullName || '';
+        $('[name="UserInput.Email"]').value = email || '';
+        $('[name="UserInput.Role"]').value = role || '';
+        $('[name="UserInput.Department"]').value = department || '';
+        const activeEl = $('[name="UserInput.IsActive"]');
+        if (activeEl) activeEl.checked = isActive;
+
+        const passwordField = document.getElementById('passwordField');
+        passwordField.style.display = 'none';
+        const pwdInput = passwordField.querySelector('input');
+        if (pwdInput) pwdInput.required = false;
+
+        if (window.OpCentrixAdmin?.Modal) {
             OpCentrixAdmin.Modal.show('userModal');
         }
+        resetFormValidation('#userForm');
+    }
 
-        /**
-         * Show password reset modal with user data
-         */
-        function showPasswordResetModal(button) {
-            const userId = button.getAttribute('data-user-id');
-            const username = button.getAttribute('data-username');
-            
-            // Populate hidden fields
-            document.getElementById('passwordUserId').value = userId;
-            document.getElementById('passwordUsername').textContent = username;
-            
-            // Clear password fields
-            document.getElementById('newPassword').value = '';
-            document.getElementById('confirmPassword').value = '';
-            
-            // Show modal
+    // Password reset modal
+    function showPasswordResetModal(button) {
+        const userId = button.getAttribute('data-user-id');
+        const username = button.getAttribute('data-username');
+        document.getElementById('passwordUserId').value = userId;
+        document.getElementById('passwordUsername').textContent = username;
+        const np = document.getElementById('PasswordReset_NewPassword');
+        const cp = document.getElementById('PasswordReset_ConfirmPassword');
+        if (np) np.value = '';
+        if (cp) cp.value = '';
+        if (window.OpCentrixAdmin?.Modal) {
             OpCentrixAdmin.Modal.show('passwordModal');
         }
+        resetFormValidation('#passwordForm');
+    }
 
-        /**
-         * Setup password confirmation validation
-         */
-        function setupPasswordValidation() {
-            const newPasswordField = document.getElementById('newPassword');
-            const confirmPasswordField = document.getElementById('confirmPassword');
-            
-            if (newPasswordField && confirmPasswordField) {
-                // Add custom validation method for password confirmation
-                if (window.jQuery && window.jQuery.validator) {
-                    jQuery.validator.addMethod('passwordConfirmation', function(value, element) {
-                        return value === newPasswordField.value;
-                    }, 'Passwords do not match.');
-                    
-                    // Apply validation rule
-                    jQuery(confirmPasswordField).rules('add', {
-                        passwordConfirmation: true
-                    });
-                }
-                
-                // Add real-time password confirmation check
-                confirmPasswordField.addEventListener('input', function() {
-                    validatePasswordConfirmation();
-                });
-                
-                newPasswordField.addEventListener('input', function() {
-                    if (confirmPasswordField.value) {
-                        validatePasswordConfirmation();
-                    }
-                });
-            }
+    // jQuery unobtrusive helpers
+    function hookLiveValidation(formSelector) {
+        const form = document.querySelector(formSelector);
+        if (!form) return;
+        form.addEventListener('input', function (e) {
+            const validator = window.jQuery && window.jQuery(form).data('validator');
+            if (validator) validator.element(e.target);
+        });
+        form.addEventListener('change', function (e) {
+            const validator = window.jQuery && window.jQuery(form).data('validator');
+            if (validator) validator.element(e.target);
+        });
+    }
+
+    function resetFormValidation(formSelector) {
+        if (!window.jQuery) return;
+        const $form = jQuery(formSelector);
+        if (!$form.length) return;
+        if ($form.data('validator')) {
+            $form.validate().resetForm();
         }
+        $form.find('.input-validation-error').removeClass('input-validation-error');
+        $form.find('.field-validation-error').removeClass('field-validation-error').addClass('field-validation-valid').text('');
+        $form.find('.oc-validation-summary').removeClass('validation-summary-errors').addClass('validation-summary-valid').empty();
+        if (jQuery.validator && jQuery.validator.unobtrusive) {
+            jQuery.validator.unobtrusive.parse($form);
+        }
+    }
 
-        /**
-         * Validate password confirmation
-         */
-        function validatePasswordConfirmation() {
-            const newPassword = document.getElementById('newPassword').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-            const confirmField = document.getElementById('confirmPassword');
-            
-            if (confirmPassword && newPassword !== confirmPassword) {
-                confirmField.classList.add('border-red-500');
-                confirmField.classList.remove('border-green-500');
-                showFieldError(confirmField, 'Passwords do not match.');
-                return false;
-            } else if (confirmPassword) {
-                confirmField.classList.remove('border-red-500');
-                confirmField.classList.add('border-green-500');
-                hideFieldError(confirmField);
-                return true;
+    // Password confirmation and server-side same-password hint
+    function setupPasswordValidation() {
+        const newPasswordField = document.getElementById('PasswordReset_NewPassword');
+        const confirmPasswordField = document.getElementById('PasswordReset_ConfirmPassword');
+        if (newPasswordField && confirmPasswordField) {
+            if (window.jQuery && window.jQuery.validator) {
+                jQuery.validator.addMethod('passwordConfirmation', function (value) {
+                    return value === newPasswordField.value;
+                }, 'Passwords do not match.');
+                jQuery(confirmPasswordField).rules('add', { passwordConfirmation: true });
             }
+            confirmPasswordField.addEventListener('input', validatePasswordConfirmation);
+            newPasswordField.addEventListener('input', function () {
+                if (confirmPasswordField.value) validatePasswordConfirmation();
+                const warn = document.querySelector('[data-match-warning]');
+                if (warn) warn.style.display = 'none';
+            });
+        }
+        // If server flagged same-password error, show amber hint
+        const newPwdSpan = document.querySelector('[data-valmsg-for="PasswordReset.NewPassword"]');
+        const warn = document.querySelector('[data-match-warning]');
+        if (newPwdSpan && warn && newPwdSpan.textContent.includes('different')) {
+            warn.style.display = 'block';
+        }
+    }
+
+    function validatePasswordConfirmation() {
+        const newPassword = document.getElementById('PasswordReset_NewPassword')?.value || '';
+        const confirmPassword = document.getElementById('PasswordReset_ConfirmPassword')?.value || '';
+        const confirmField = document.getElementById('PasswordReset_ConfirmPassword');
+        if (!confirmField) return true;
+        if (confirmPassword && newPassword !== confirmPassword) {
+            confirmField.classList.add('border-red-500');
+            confirmField.classList.remove('border-green-500');
+            return false;
+        } else if (confirmPassword) {
+            confirmField.classList.remove('border-red-500');
+            confirmField.classList.add('border-green-500');
             return true;
         }
-
-        /**
-         * Show field error
-         */
-        function showFieldError(field, message) {
-            const errorSpan = field.parentNode.querySelector('.invalid-feedback');
-            if (errorSpan) {
-                errorSpan.textContent = message;
-                errorSpan.style.display = 'block';
-            }
-        }
-
-        /**
-         * Hide field error
-         */
-        function hideFieldError(field) {
-            const errorSpan = field.parentNode.querySelector('.invalid-feedback');
-            if (errorSpan) {
-                errorSpan.textContent = '';
-                errorSpan.style.display = 'none';
-            }
-        }
-
-        // Reset modal when opening for new user
-        document.addEventListener('click', function(e) {
-            if (e.target.getAttribute('data-action') === 'show-modal' && 
-                e.target.getAttribute('data-target') === 'userModal' &&
-                !e.target.getAttribute('data-user-id')) {
-                
-                // Reset for new user creation
-                document.getElementById('userModalTitle').textContent = 'Add New User';
-                document.querySelector('#userSubmitBtn .submit-text').innerHTML = `
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                    </svg>
-                    Create User
-                `;
-                document.getElementById('userForm').action = '?handler=CreateUser';
-                document.getElementById('editingUserId').value = '';
-                
-                // Show password field for new users
-                const passwordField = document.getElementById('passwordField');
-                passwordField.style.display = 'block';
-                document.getElementById('password').required = true;
-                
-                // Clear form
-                OpCentrixAdmin.Form.reset('userForm');
-            }
-        });
-
-        // Global functions for backward compatibility
-        window.UsersPage = {
-            showEditUserModal,
-            showPasswordResetModal,
-            validatePasswordConfirmation
-        };
+        return true;
+    }
     </script>
 }
 
 <style>
-    /* Enhanced styles for user management */
-    .form-field input:focus, 
-    .form-field select:focus {
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        border-color: #3b82f6;
+    /* Modern validation styles */
+    .oc-validation-summary.validation-summary-errors {
+        background: #fef2f2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem;
     }
+    .oc-validation-summary ul { margin: 0; padding-left: 1rem; }
+    
+    /* Input error state driven by unobtrusive validation */
+    .input-validation-error {
+        border-color: #ef4444 !important;
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+        background-color: #fff !important;
+    }
+    .field-validation-error { color: #dc2626; }
+    .field-validation-valid { display: none; }
+    
+     /* Enhanced styles for user management */
+     .form-field input:focus, 
+     .form-field select:focus {
+         box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+         border-color: #3b82f6;
+     }
     
     .form-field input.border-red-500:focus {
         box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
@@ -651,10 +635,7 @@
         border-color: #10b981;
     }
     
-    .invalid-feedback {
-        display: none;
-        margin-top: 0.25rem;
-    }
+    .invalid-feedback { display: none; margin-top: 0.25rem; }
     
     /* Loading state styles */
     .submit-loading {

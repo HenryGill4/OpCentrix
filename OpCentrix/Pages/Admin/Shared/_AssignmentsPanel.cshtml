@@ -1,0 +1,136 @@
+@model OpCentrix.Pages.Admin.ShiftsModel
+
+<div class="p-4">
+    <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center space-x-2">
+            <label class="text-sm text-gray-600">Machine</label>
+            <select id="assignMachineSelect" class="border rounded px-2 py-1 text-sm"
+                    onchange="loadAssignments(this.value)">
+                @foreach (var m in Model.Machines)
+                {
+                    <option value="@m.MachineId" selected="@(Model.SelectedMachineId == m.MachineId)">@m.MachineId - @m.MachineName</option>
+                }
+            </select>
+        </div>
+        <div>
+            <button class="text-sm text-blue-600 hover:text-blue-800" onclick="refreshAssignments()">Refresh</button>
+        </div>
+    </div>
+
+    <div class="bg-gray-50 border rounded p-3 mb-4">
+        <form id="assignForm" onsubmit="return submitAssignment(event)">
+            @Html.AntiForgeryToken()
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
+                <div class="md:col-span-2">
+                    <label class="text-xs text-gray-600">Operator</label>
+                    <select id="assignUser" class="w-full border rounded px-2 py-1 text-sm" required>
+                        <option value="">Select operator</option>
+                        @foreach (var u in Model.EligibleOperators)
+                        {
+                            <option value="@u.Id">@u.FullName (@u.Role)</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs text-gray-600">Primary</label>
+                    <input type="checkbox" id="assignPrimary" class="ml-2">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-600">From</label>
+                    <input type="date" id="assignFrom" class="w-full border rounded px-2 py-1 text-sm">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-600">To</label>
+                    <input type="date" id="assignTo" class="w-full border rounded px-2 py-1 text-sm">
+                </div>
+            </div>
+            <div class="mt-2 text-right">
+                <button type="submit" class="bg-blue-600 text-white px-3 py-1 rounded text-sm">Assign</button>
+            </div>
+        </form>
+    </div>
+
+    <div>
+        <h4 class="text-sm font-semibold text-gray-800 mb-2">Assignments</h4>
+        @if (Model.Assignments.Any())
+        {
+            <div class="space-y-2">
+                @foreach (var a in Model.Assignments)
+                {
+                    var user = a.User ?? Model.EligibleOperators.FirstOrDefault(u => u.Id == a.UserId);
+                    <div class="flex items-center justify-between border rounded p-2 bg-white">
+                        <div class="text-sm">
+                            <span class="font-medium">@user?.FullName</span>
+                            <span class="text-gray-500 ml-2">@user?.Role</span>
+                            @if (a.IsPrimary)
+                            {
+                                <span class="ml-2 text-green-700 bg-green-100 px-2 py-0.5 rounded text-xs">Primary</span>
+                            }
+                            @if (a.EffectiveFrom.HasValue || a.EffectiveTo.HasValue)
+                            {
+                                <span class="ml-2 text-xs text-gray-500">(@(a.EffectiveFrom?.ToString("yyyy-MM-dd") ?? "-") ? @(a.EffectiveTo?.ToString("yyyy-MM-dd") ?? "-"))</span>
+                            }
+                        </div>
+                        <div class="space-x-2">
+                            @if (!a.IsPrimary)
+                            {
+                                <button class="text-xs text-blue-600" onclick="setPrimary(@a.Id)">Set Primary</button>
+                            }
+                            <button class="text-xs text-red-600" onclick="unassign(@a.Id)">Unassign</button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="text-sm text-gray-500">No assignments yet.</div>
+        }
+    </div>
+</div>
+
+<script>
+function loadAssignments(machineId){
+  htmx.ajax('GET', `/Admin/Shifts?handler=Assignments&machineId=${encodeURIComponent(machineId)}`, {target: '#assignmentsDrawer .modal-content', swap: 'innerHTML'});
+}
+function refreshAssignments(){
+  const sel = document.getElementById('assignMachineSelect');
+  if(sel){ loadAssignments(sel.value); }
+}
+async function submitAssignment(e){
+  e.preventDefault();
+  const sel = document.getElementById('assignMachineSelect');
+  const machineId = sel ? sel.value : '';
+  const userId = document.getElementById('assignUser').value;
+  const isPrimary = document.getElementById('assignPrimary').checked;
+  const from = document.getElementById('assignFrom').value || null;
+  const to = document.getElementById('assignTo').value || null;
+  let resp = await fetch(`/Admin/Shifts?handler=Assign`, { method:'POST', headers:{'Content-Type':'application/json','RequestVerificationToken': getAntiForgeryToken()}, body: JSON.stringify({ machineId, userId: parseInt(userId), isPrimary, effectiveFrom: from, effectiveTo: to }) });
+  let data = await resp.json();
+  if(data.warning && !data.success){
+    if(confirm(data.warning)){
+      resp = await fetch(`/Admin/Shifts?handler=Assign`, { method:'POST', headers:{'Content-Type':'application/json','RequestVerificationToken': getAntiForgeryToken()}, body: JSON.stringify({ machineId, userId: parseInt(userId), isPrimary, effectiveFrom: from, effectiveTo: to, force: true }) });
+      data = await resp.json();
+    } else {
+      return false;
+    }
+  }
+  if(data.success){ refreshAssignments(); } else { alert(data.message || 'Failed to assign'); }
+  return false;
+}
+async function unassign(id){
+  if(!confirm('Unassign this operator?')) return;
+  const resp = await fetch(`/Admin/Shifts?handler=Unassign`, { method:'POST', headers:{'Content-Type':'application/json','RequestVerificationToken': getAntiForgeryToken()}, body: JSON.stringify({ assignmentId: id }) });
+  const data = await resp.json();
+  if(data.success){ refreshAssignments(); } else { alert('Failed to unassign'); }
+}
+async function setPrimary(id){
+  const resp = await fetch(`/Admin/Shifts?handler=SetPrimary`, { method:'POST', headers:{'Content-Type':'application/json','RequestVerificationToken': getAntiForgeryToken()}, body: JSON.stringify({ assignmentId: id }) });
+  const data = await resp.json();
+  if(data.success){ refreshAssignments(); } else { alert('Failed to set primary'); }
+}
+function getAntiForgeryToken(){
+  const el = document.querySelector('input[name="__RequestVerificationToken"]');
+  return el ? el.value : '';
+}
+</script>

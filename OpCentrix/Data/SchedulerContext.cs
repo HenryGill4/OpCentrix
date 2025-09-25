@@ -37,6 +37,7 @@ namespace OpCentrix.Data
         public DbSet<ArchivedJob> ArchivedJobs { get; set; }
         public DbSet<AdminAlert> AdminAlerts { get; set; }
         public DbSet<FeatureToggle> FeatureToggles { get; set; }
+        public DbSet<MachineOperatorAssignment> MachineOperatorAssignments { get; set; }
 
         // Print tracking tables
         public DbSet<BuildJob> BuildJobs { get; set; }
@@ -538,6 +539,32 @@ namespace OpCentrix.Data
                 entity.HasIndex(e => new { e.Severity, e.Priority });
                 entity.HasIndex(e => new { e.ReportedDate, e.Status });
             });
+
+            // Configure MachineOperatorAssignment entity
+            modelBuilder.Entity<MachineOperatorAssignment>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.MachineId).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.CreatedBy).HasMaxLength(100).HasDefaultValue("System");
+                entity.Property(e => e.LastModifiedBy).HasMaxLength(100).HasDefaultValue("System");
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
+
+                entity.HasOne<User>()
+                      .WithMany()
+                      .HasForeignKey(e => e.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => e.MachineId);
+                entity.HasIndex(e => e.UserId);
+                entity.HasIndex(e => e.IsActive);
+                entity.HasIndex(e => new { e.MachineId, e.IsPrimary });
+                entity.HasIndex(e => new { e.UserId, e.IsActive });
+
+                entity.ToTable(t => t.HasCheckConstraint("CK_Assignment_DateRange",
+                    "(EffectiveTo IS NULL) OR (EffectiveFrom IS NULL) OR (EffectiveTo >= EffectiveFrom)"));
+            });
+
         }
 
         private void ConfigureAdminEntities(ModelBuilder modelBuilder)

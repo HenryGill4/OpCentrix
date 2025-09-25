@@ -95,12 +95,22 @@ public class UsersModel : PageModel
                 TempData["Error"] = "Input validation failed. Please check field lengths and try again.";
                 return Page();
             }
-            
-            if (!ModelState.IsValid)
+ 
+            // Validate only the UserInput model to avoid unrelated ModelState noise
+            ModelState.Clear();
+            var valid = TryValidateModel(UserInput, nameof(UserInput));
+            // For Create, password is required (handled manually so Edit can omit it)
+            if (string.IsNullOrWhiteSpace(UserInput.Password))
+            {
+                ModelState.AddModelError("UserInput.Password", "Password is required.");
+                valid = false;
+            }
+            if (!valid)
             {
                 await LoadUsersAsync();
                 await LoadStatisticsAsync();
                 TempData["Error"] = "Please correct the validation errors and try again.";
+                LogModelStateErrors();
                 return Page();
             }
 
@@ -189,11 +199,17 @@ public class UsersModel : PageModel
                 return Page();
             }
 
-            if (!ModelState.IsValid)
+            // Bind posted values into UserInput (password not required on edit)
+            ModelState.Clear();
+            var updated = await TryUpdateModelAsync(UserInput, nameof(UserInput));
+            // Ignore password validation for edit
+            ModelState.Remove("UserInput.Password");
+            if (!updated || !ModelState.IsValid)
             {
                 await LoadUsersAsync();
                 await LoadStatisticsAsync();
                 TempData["Error"] = "Please correct the validation errors and try again.";
+                LogModelStateErrors();
                 return Page();
             }
 
@@ -237,16 +253,26 @@ public class UsersModel : PageModel
             }
 
             // Update user properties
-            user.Username = UserInput.Username;
-            user.FullName = UserInput.FullName;
-            user.Email = UserInput.Email;
-            user.Role = UserInput.Role;
-            user.Department = UserInput.Department;
-            user.IsActive = UserInput.IsActive;
+            var form = Request.Form;
+            var newUsername = form["UserInput.Username"].ToString();
+            var newFullName = form["UserInput.FullName"].ToString();
+            var newEmail = form["UserInput.Email"].ToString();
+            var newRole = form["UserInput.Role"].ToString();
+            var newDept = form["UserInput.Department"].ToString();
+            var activeStr = form["UserInput.IsActive"].ToString();
+
+            user.Username = string.IsNullOrWhiteSpace(newUsername) ? user.Username : newUsername;
+            user.FullName = string.IsNullOrWhiteSpace(newFullName) ? user.FullName : newFullName;
+            user.Email = string.IsNullOrWhiteSpace(newEmail) ? user.Email : newEmail;
+            user.Role = string.IsNullOrWhiteSpace(newRole) ? user.Role : newRole;
+            user.Department = string.IsNullOrWhiteSpace(newDept) ? user.Department : newDept;
+            if (bool.TryParse(activeStr, out var active)) user.IsActive = active;
             user.LastModifiedBy = User.Identity?.Name ?? "Admin";
             user.LastModifiedDate = DateTime.UtcNow;
 
-            var success = await _authenticationService.UpdateUserAsync(user);
+            _logger.LogInformation("Updating user {UserId}: Role={Role}, Dept={Dept}, IsActive={Active}", user.Id, user.Role, user.Department, user.IsActive);
+            await _context.SaveChangesAsync();
+            var success = true;
 
             if (success)
             {
@@ -288,6 +314,31 @@ public class UsersModel : PageModel
             {
                 TempData["Error"] = "User not found.";
                 return RedirectToPage();
+            }
+
+            // Validate only the password reset model
+            ModelState.Clear();
+            if (!TryValidateModel(PasswordReset, nameof(PasswordReset)))
+            {
+                await LoadUsersAsync();
+                await LoadStatisticsAsync();
+                TempData["Error"] = "Please correct the password validation errors and try again.";
+                LogModelStateErrors();
+                TempData["PasswordResetUsername"] = user.Username;
+                TempData["PasswordResetUserId"] = PasswordReset.UserId;
+                return Page();
+            }
+
+            // Additional rule: New password must be different from current
+            if (_authenticationService.VerifyPassword(PasswordReset.NewPassword, user.PasswordHash))
+            {
+                ModelState.AddModelError("PasswordReset.NewPassword", "New password must be different from the current password.");
+                await LoadUsersAsync();
+                await LoadStatisticsAsync();
+                TempData["Error"] = "Password must be different from the current password.";
+                TempData["PasswordResetUsername"] = user.Username;
+                TempData["PasswordResetUserId"] = PasswordReset.UserId;
+                return Page();
             }
 
             var success = await _authenticationService.ChangePasswordAsync(PasswordReset.UserId, PasswordReset.NewPassword);
@@ -534,6 +585,20 @@ public class UsersModel : PageModel
         return isValid;
     }
 
+    private void LogModelStateErrors()
+    {
+        if (ModelState.IsValid) return;
+        var errors = ModelState
+            .Where(kvp => kvp.Value?.Errors.Count > 0)
+            .Select(kvp => new
+            {
+                Field = kvp.Key,
+                Errors = kvp.Value!.Errors.Select(e => string.IsNullOrWhiteSpace(e.ErrorMessage) ? e.Exception?.Message : e.ErrorMessage)
+            })
+            .ToList();
+        _logger.LogWarning("ModelState invalid with {Count} fields: {Errors}", errors.Count, string.Join(" | ", errors.Select(e => $"{e.Field}: {string.Join(", ", e.Errors)}")));
+    }
+
     public void LoadUserForEditing(User user)
     {
         EditingUserId = user.Id;
@@ -627,7 +692,6 @@ public class UserCreateEditModel
     [Display(Name = "Email Address")]
     public string Email { get; set; } = string.Empty;
 
-    [Required]
     [StringLength(50, MinimumLength = 6, ErrorMessage = "Password must be between 6 and 50 characters")]
     [DataType(DataType.Password)]
     [Display(Name = "Password")]

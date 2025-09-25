@@ -26,7 +26,7 @@
                         <ul class="mt-2 text-sm text-red-700">
                             @foreach (var error in errors)
                             {
-                                <li>• @error</li>
+                                <li>@error</li>
                             }
                         </ul>
                     </div>
@@ -66,7 +66,7 @@
                                 {
                                     foreach (var m in machines)
                                     {
-                                        <option value="@m.MachineId">@m.MachineId - @m.MachineName</option>
+                                        <option value="@m.MachineId" selected="@(Model.Input.MachineId == m.MachineId)">@m.MachineId - @m.MachineName</option>
                                     }
                                 }
                             </select>
@@ -156,7 +156,12 @@
                                 </svg>
                                 <span class="text-sm text-gray-500">
                                     @(Model.Input.StartTime.ToString(@"h\:mm tt")) - @(Model.Input.EndTime.ToString(@"h\:mm tt"))
-                                </span>
+                                    @if(!string.IsNullOrEmpty(Model.Input.MachineId)) {
+                                        <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-xs">@Model.Input.MachineId</span>
+                                    } else {
+                                        <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-xs">Global</span>
+                                    }
+                                 </span>
                             </div>
                         </div>
                     </div>

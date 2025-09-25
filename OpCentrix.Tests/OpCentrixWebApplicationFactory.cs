@@ -62,14 +62,24 @@ public class OpCentrixWebApplicationFactory : WebApplicationFactory<Program>
         if (context.Users.Any())
             return;
 
-        // Seed test users
+        // Local helper to match AuthenticationService hashing
+        static string Hash(string password)
+        {
+            using var sha256 = System.Security.Cryptography.SHA256.Create();
+            var salted = password + "OpCentrixSalt2024!";
+            var bytes = System.Text.Encoding.UTF8.GetBytes(salted);
+            var hash = sha256.ComputeHash(bytes);
+            return Convert.ToBase64String(hash);
+        }
+
+        // Seed test users (password: admin123)
         var users = new[]
         {
             new User 
             { 
                 Username = "admin", 
                 Email = "admin@opcentrix.com", 
-                PasswordHash = "AQAAAAEAACcQAAAAEJ7u3m6mJ9Fj+dCFf3Qg4KH4Gv6tQgKp5Xs8Zc2Vh7Ql6Qw8Er9Ty1Ui0Op3As4Qg==", // admin123
+                PasswordHash = Hash("admin123"),
                 Role = "Admin", 
                 IsActive = true,
                 CreatedDate = DateTime.UtcNow,
@@ -79,7 +89,7 @@ public class OpCentrixWebApplicationFactory : WebApplicationFactory<Program>
             { 
                 Username = "operator", 
                 Email = "operator@opcentrix.com", 
-                PasswordHash = "AQAAAAEAACcQAAAAEJ7u3m6mJ9Fj+dCFf3Qg4KH4Gv6tQgKp5Xs8Zc2Vh7Ql6Qw8Er9Ty1Ui0Op3As4Qg==", // admin123
+                PasswordHash = Hash("admin123"),
                 Role = "Operator", 
                 IsActive = true,
                 CreatedDate = DateTime.UtcNow,
@@ -89,7 +99,7 @@ public class OpCentrixWebApplicationFactory : WebApplicationFactory<Program>
             { 
                 Username = "manager", 
                 Email = "manager@opcentrix.com", 
-                PasswordHash = "AQAAAAEAACcQAAAAEJ7u3m6mJ9Fj+dCFf3Qg4KH4Gv6tQgKp5Xs8Zc2Vh7Ql6Qw8Er9Ty1Ui0Op3As4Qg==", // admin123
+                PasswordHash = Hash("admin123"),
                 Role = "Manager", 
                 IsActive = true,
                 CreatedDate = DateTime.UtcNow,
@@ -99,7 +109,7 @@ public class OpCentrixWebApplicationFactory : WebApplicationFactory<Program>
             { 
                 Username = "readonly", 
                 Email = "readonly@opcentrix.com", 
-                PasswordHash = "AQAAAAEAACcQAAAAEJ7u3m6mJ9Fj+dCFf3Qg4KH4Gv6tQgKp5Xs8Zc2Vh7Ql6Qw8Er9Ty1Ui0Op3As4Qg==", // admin123
+                PasswordHash = Hash("admin123"),
                 Role = "ReadOnly", 
                 IsActive = true,
                 CreatedDate = DateTime.UtcNow,
