@@ -554,28 +554,24 @@ public class ShiftsModel : PageModel
     }
 
     // Form-post friendly variants (for environments where JSON antiforgery header pairing fails)
-    [ValidateAntiForgeryToken]
     public async Task<IActionResult> OnPostAssignFormAsync(string machineId, int userId, bool isPrimary, DateTime? effectiveFrom, DateTime? effectiveTo, bool force = false)
     {
         var req = new AssignRequest { machineId = machineId, userId = userId, isPrimary = isPrimary, effectiveFrom = effectiveFrom, effectiveTo = effectiveTo, force = force };
         return await OnPostAssignAsync(req);
     }
 
-    [ValidateAntiForgeryToken]
     public async Task<IActionResult> OnPostUnassignFormAsync(int assignmentId)
     {
         var req = new UnassignRequest { assignmentId = assignmentId };
         return await OnPostUnassignAsync(req);
     }
 
-    [ValidateAntiForgeryToken]
     public async Task<IActionResult> OnPostSetPrimaryFormAsync(int assignmentId)
     {
         var req = new SetPrimaryRequest { assignmentId = assignmentId };
         return await OnPostSetPrimaryAsync(req);
     }
 
-    [ValidateAntiForgeryToken]
     public async Task<IActionResult> OnPostDeleteAsync(int id)
     {
         try
@@ -654,7 +650,6 @@ public class ShiftsModel : PageModel
         }
     }
 
-    [ValidateAntiForgeryToken]
     public async Task<IActionResult> OnPostApplyTemplateAsync(string template, bool clearExisting = false)
     {
         try

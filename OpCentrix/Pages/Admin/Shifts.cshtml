@@ -5,7 +5,7 @@
     Layout = "~/Pages/Admin/Shared/_AdminLayout.cshtml";
 }
 
-<!-- Ensure HTMX is available (CDN fallback) -->
+<!-- Ensure HTMX is available -->
 <script>
     if (!window.htmx) {
         document.write('<script src="https://unpkg.com/htmx.org@1.9.12"><\/script>');
@@ -24,13 +24,24 @@
             if(window.showModal){ window.showModal(); }
         }
     });
-    // Global success auto hard-refresh for JSON success responses
     document.addEventListener('htmx:afterRequest', function (e) {
         try{
-            var xhr = e.detail.xhr; if(!xhr) return; var ct = (xhr.getResponseHeader && xhr.getResponseHeader('Content-Type'))||''; if(ct.indexOf('application/json')!==-1){ var data = JSON.parse(xhr.responseText||'{}'); if(data && data.success){ // hard refresh (bypass bfcache)
-                if(data.redirect){ window.location.href = data.redirect; } else { window.location.href = window.location.href.split('#')[0]; }
-            } }
-        }catch(err){ console.warn('afterRequest parse error', err); }
+            var xhr = e.detail.xhr; 
+            if(!xhr) return; 
+            var ct = (xhr.getResponseHeader && xhr.getResponseHeader('Content-Type'))||''; 
+            if(ct.indexOf('application/json')!==-1){ 
+                var data = JSON.parse(xhr.responseText||'{}'); 
+                if(data && data.success){ 
+                    if(data.redirect){ 
+                        window.location.href = data.redirect; 
+                    } else { 
+                        window.location.href = window.location.href.split('#')[0]; 
+                    }
+                } 
+            }
+        }catch(err){ 
+            console.warn('afterRequest parse error', err); 
+        }
     });
 </script>
 
@@ -43,358 +54,933 @@
             <span class="font-medium">Success:</span> Default shifts applied (@TempData["ShiftsSeeded"]) and loaded.
         </div>
     }
-    <div class="oc-toolbar flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
-        <div class="flex-1 min-w-0">
-            <h1 class="oc-h1 tracking-tight">Operating Shifts</h1>
-            <p class="oc-sub mt-1 text-sm leading-5">Define working hours and production schedules. The stacked timeline view provides maximum horizontal space per day.</p>
-        </div>
-        <div class="flex items-center flex-wrap gap-3 action-cluster">
-            <!-- Template Actions -->
-            <div class="relative inline-block text-left">
-                <button id="templateDropdown" type="button" class="btn ghost elevated inline-flex items-center bg-white text-gray-700">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                    </svg>
-                    Templates
-                    <svg class="w-4 h-4 ml-2 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" id="templateChevron">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                    </svg>
-                </button>
-                <div id="templateMenu" class="template-menu hidden absolute right-0 mt-2 w-72 rounded-xl shadow-2xl bg-white ring-1 ring-black/5 z-50 overflow-hidden animate-scale-fade">
-                    <div class="py-2">
-                        <div class="px-4 pb-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Quick Apply</div>
-                        <button onclick="loadTemplate('business')" class="template-item">
-                            <div class="ti-icon bg-blue-100 text-blue-600">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H9m0 0H5m0 0H3"></path></svg>
-                            </div>
-                            <div class="flex-1 min-w-0 text-left">
-                                <div class="font-medium text-gray-900 line-clamp-1">Standard Business Hours</div>
-                                <div class="text-xs text-gray-500">Mon–Fri, 8 AM – 5 PM</div>
-                            </div>
-                        </button>
-                        <button onclick="loadTemplate('twoshift')" class="template-item">
-                            <div class="ti-icon bg-green-100 text-green-600">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                            </div>
-                            <div class="flex-1 min-w-0 text-left">
-                                <div class="font-medium text-gray-900 line-clamp-1">Two-Shift Schedule</div>
-                                <div class="text-xs text-gray-500">Mon–Fri, 6 AM–2 PM & 2 PM–10 PM</div>
-                            </div>
-                        </button>
-                        <button onclick="loadTemplate('24x7')" class="template-item">
-                            <div class="ti-icon bg-rose-100 text-rose-600">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                            </div>
-                            <div class="flex-1 min-w-0 text-left">
-                                <div class="font-medium text-gray-900 line-clamp-1">24/7 Operations</div>
-                                <div class="text-xs text-gray-500">All days, continuous</div>
-                            </div>
-                        </button>
+    
+    <div class="oc-toolbar">
+        <div class="container mx-auto flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+            <div class="flex-1 min-w-0">
+                <h1 class="oc-h1 tracking-tight">Operating Shifts</h1>
+                <p class="oc-sub mt-1 text-sm leading-5">Define working hours and production schedules with iOS-style calendar interface</p>
+            </div>
+            <div class="flex items-center flex-wrap gap-3 action-cluster">
+                <!-- Template Actions -->
+                <div class="relative inline-block text-left">
+                    <button id="templateDropdown" type="button" class="btn ghost elevated">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        Templates
+                        <svg class="w-4 h-4 ml-2 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" id="templateChevron">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+                    <div id="templateMenu" class="template-menu hidden absolute right-0 mt-2 w-72 shadow-2xl bg-white ring-1 ring-black/5 z-50 overflow-hidden animate-scale-fade">
+                        <div class="py-2">
+                            <div class="px-4 pb-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Quick Apply</div>
+                            <button onclick="loadTemplate('business')" class="template-item w-full text-left">
+                                <div class="ti-icon bg-blue-100 text-blue-600 mr-3">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H9m0 0H5m0 0H3"></path></svg>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="font-medium text-gray-900">Business Hours</div>
+                                    <div class="text-xs text-gray-500">Mon–Fri, 8 AM – 5 PM</div>
+                                </div>
+                            </button>
+                            <button onclick="loadTemplate('twoshift')" class="template-item w-full text-left">
+                                <div class="ti-icon bg-green-100 text-green-600 mr-3">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="font-medium text-gray-900">Two-Shift</div>
+                                    <div class="text-xs text-gray-500">Day & Evening shifts</div>
+                                </div>
+                            </button>
+                            <button onclick="loadTemplate('24x7')" class="template-item w-full text-left">
+                                <div class="ti-icon bg-rose-100 text-rose-600 mr-3">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="font-medium text-gray-900">24/7 Operations</div>
+                                    <div class="text-xs text-gray-500">Continuous coverage</div>
+                                </div>
+                            </button>
+                        </div>
                     </div>
                 </div>
+                <!-- Add Shift Button -->
+                <button hx-get="/Admin/Shifts?handler=Add" 
+                        hx-target="#modal-container"
+                        hx-swap="innerHTML"
+                        hx-on:htmx:afterSwap="showModal()"
+                        class="btn primary elevated">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    <span class="hidden sm:inline ml-2">Add Shift</span>
+                </button>
+                <!-- Assignments Button -->
+                <button hx-get="/Admin/Shifts?handler=Assignments"
+                        hx-target="#assignmentsDrawer .modal-content"
+                        hx-swap="innerHTML"
+                        hx-on:htmx:afterSwap="showAssignmentsDrawer()"
+                        class="btn secondary elevated">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span class="hidden sm:inline ml-2">Assignments</span>
+                </button>
             </div>
-            <!-- Add Shift Button -->
-            <button hx-get="/Admin/Shifts?handler=Add" 
-                    hx-target="#modal-container"
-                    hx-swap="innerHTML"
-                    hx-on:htmx:afterSwap="showModal()"
-                    class="btn primary elevated">
-                <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                </svg>
-                <span class="hidden sm:inline">Add Shift</span>
-            </button>
-            <!-- Assignments Button -->
-            <button hx-get="/Admin/Shifts?handler=Assignments"
-                    hx-target="#assignmentsDrawer .modal-content"
-                    hx-swap="innerHTML"
-                    hx-on:htmx:afterSwap="showAssignmentsDrawer()"
-                    class="btn secondary elevated">
-                <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <span class="hidden sm:inline">Assignments</span>
-            </button>
         </div>
     </div>
 </div>
 
 <!-- Summary Cards -->
-<div class="oc-summary-grid mb-8">
-    <div class="oc-stat animate-pop">
-        <div class="flex items-center gap-4">
-            <div class="oc-stat-icon bg-blue-50 text-blue-600">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            </div>
-            <div>
-                <p class="label">Total Shifts</p>
-                <p class="value">@Model.Shifts.Count</p>
-            </div>
-        </div>
-    </div>
-    <div class="oc-stat animate-pop" style="--pop-d:60ms">
-        <div class="flex items-center gap-4">
-            <div class="oc-stat-icon bg-green-50 text-green-600">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            </div>
-            <div>
-                <p class="label">Active Shifts</p>
-                <p class="value">@Model.Shifts.Count(s => s.IsActive)</p>
-            </div>
-        </div>
-    </div>
-    <div class="oc-stat animate-pop" style="--pop-d:120ms">
-        <div class="flex items-center gap-4">
-            <div class="oc-stat-icon bg-amber-50 text-amber-600">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-            </div>
-            <div>
-                <p class="label">Holiday Schedules</p>
-                <p class="value">@Model.HolidayShifts.Count</p>
-            </div>
-        </div>
-    </div>
-    <div class="oc-stat animate-pop" style="--pop-d:180ms">
-        <div class="flex items-center gap-4">
-            <div class="oc-stat-icon bg-purple-50 text-purple-600">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-            </div>
-            <div>
-                <p class="label">Coverage</p>
-                <p class="value">@(Model.ShiftsByDay.Keys.Count) days</p>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Stacked Weekly Timeline -->
-<div class="oc-card mb-10 overflow-hidden">
-    <div class="px-6 py-4 border-b border-gray-100 flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-gradient-to-r from-white to-slate-50">
-        <div>
-            <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2"><span class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-blue-100 text-blue-600 text-xs font-bold">7</span> Weekly Timeline (Stacked)</h2>
-            <p class="text-xs text-gray-500 mt-1">Each day spans full width (00:00 → 24:00). Overlaps & overnight shifts are split and highlighted.</p>
-        </div>
-        <div class="flex items-center gap-3 text-[10px] tracking-wide font-medium text-gray-500 flex-wrap legend-row">
-            <span class="legend-block act">Active</span>
-            <span class="legend-block ina">Inactive</span>
-            <span class="legend-block hol">Holiday</span>
-            <span class="legend-block ov">Overlap</span>
-        </div>
-    </div>
-    <div class="stacked-week" id="stackedWeek">
-        @{
-            var daysOfWeek = new[] { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
-            for (int i = 0; i < 7; i++)
-            {
-                var dayShifts = Model.ShiftsByDay.GetValueOrDefault(i, new List<OpCentrix.Models.OperatingShift>())
-                                .OrderBy(s=>s.StartTime).ThenBy(s=>s.EndTime).ToList();
-                <div class="day-row" data-day-index="@i">
-                    <div class="day-meta">
-                        <div class="d-label">@daysOfWeek[i]</div>
-                        <div class="d-count">@dayShifts.Count shift@((dayShifts.Count==1)?"":"s")</div>
-                        <button type="button" class="d-add" title="Add shift" onclick="quickAddShift(@i)">+</button>
-                    </div>
-                    <div class="day-track-wrapper">
-                        <div class="hour-grid" aria-hidden="true">
-                            @for(int h=0; h<=24; h+=2){<div class="hg" style="--h:@h"><span>@(h==0?"12a":h<12? h+"a": h==12? "12p": (h-12)+"p")</span></div>}
-                        </div>
-                        <div class="track" data-day="@i">
-                            @if(dayShifts.Any()){
-                                // Build ranges
-                                var ranges = new List<(int s,int e, OpCentrix.Models.OperatingShift shift)>();
-                                foreach(var sh in dayShifts){
-                                    var sm = (int)sh.StartTime.TotalMinutes;
-                                    var em = (int)sh.EndTime.TotalMinutes;
-                                    if(em < sm) em += 1440; // overnight
-                                    ranges.Add((sm,em,sh));
-                                }
-                                // Overlap detection
-                                var overlapIds = new HashSet<int>();
-                                for(int a=0;a<ranges.Count;a++){
-                                    for(int b=a+1;b<ranges.Count;b++){
-                                        if(ranges[b].s < ranges[a].e && ranges[b].e > ranges[a].s){
-                                            overlapIds.Add(ranges[a].shift.Id);
-                                            overlapIds.Add(ranges[b].shift.Id);
-                                        }
-                                    }
-                                }
-                                foreach(var r in ranges){
-                                    var sh = r.shift;
-                                    var sm = r.s; var em = r.e;
-                                    var segments = new List<(int segStart,int segEnd,bool wrap)>();
-                                    if(em > 1440){
-                                        segments.Add((sm,1440,false));
-                                        segments.Add((0,em-1440,true));
-                                    } else {
-                                        segments.Add((sm,em,false));
-                                    }
-                                    foreach(var seg in segments){
-                                        var length = seg.segEnd - seg.segStart;
-                                        double startPct = seg.segStart / 1440.0 * 100.0;
-                                        double widthPct = length / 1440.0 * 100.0;
-                                        var duration = sh.DurationHours.ToString("F1");
-                                        var extraCls = (sh.IsActive?"":" inactive") + (sh.IsHoliday?" holiday":"") + (overlapIds.Contains(sh.Id)?" overlap":"") + (seg.wrap?" wrap":"");
-                                        <div class="shift-block@extraCls" style="--start:@startPct:F4;--width:@widthPct:F4" data-id="@sh.Id">
-                                            <div class="sb-inner" title="@sh.Description (@((new DateTime(1,1,1)+sh.StartTime).ToString("h:mm")) - @((new DateTime(1,1,1)+sh.EndTime).ToString("h:mm")))">
-                                                <div class="sb-times">@((new DateTime(1,1,1)+sh.StartTime).ToString("h:mm")) – @((new DateTime(1,1,1)+sh.EndTime).ToString("h:mm"))</div>
-                                                <div class="sb-desc">@sh.Description @if(!string.IsNullOrEmpty(sh.MachineId)){<span class="sb-tag">@sh.MachineId</span>} else {<span class="sb-tag gl">Global</span>}</div>
-                                                <div class="sb-meta">
-                                                    <span class="chip">@duration h</span>
-                                                    @if(sh.IsHoliday){<span class="chip hol">Holiday</span>}
-                                                    <span class="chip @(sh.IsActive?"on":"off")">@(sh.IsActive?"Active":"Inactive")</span>
-                                                    @if(overlapIds.Contains(sh.Id)){<span class="chip ov">Overlap</span>}
-                                                </div>
-                                                <div class="sb-actions">
-                                                    <button hx-get="/Admin/Shifts?handler=Edit&id=@sh.Id" hx-target="#modal-container" hx-swap="innerHTML" hx-on:htmx:afterSwap="showModal()" class="sb-btn">Edit</button>
-                                                    <button hx-get="/Admin/Shifts?handler=ToggleActive&id=@sh.Id" hx-include="#af-token-form" hx-swap="none" class="sb-btn">@(sh.IsActive?"Disable":"Enable")</button>
-                                                    <button hx-post="/Admin/Shifts?handler=Delete&id=@sh.Id" hx-include="#af-token-form" hx-confirm="Delete shift?" hx-swap="none" class="sb-btn danger">Del</button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    }
-                                }
-                            } else {
-                                <div class="empty-track">No shifts <button type="button" class="inline-add" onclick="quickAddShift(@i)">Add</button></div>
-                            }
-                        </div>
-                    </div>
+<div class="container mx-auto">
+    <div class="oc-summary-grid">
+        <div class="oc-stat animate-pop">
+            <div class="flex items-center gap-4">
+                <div class="oc-stat-icon bg-blue-50 text-blue-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 </div>
-            }
-        }
+                <div>
+                    <p class="label">Total Shifts</p>
+                    <p class="value">@Model.Shifts.Count</p>
+                </div>
+            </div>
+        </div>
+        <div class="oc-stat animate-pop" style="--pop-d:60ms">
+            <div class="flex items-center gap-4">
+                <div class="oc-stat-icon bg-green-50 text-green-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+                <div>
+                    <p class="label">Active Shifts</p>
+                    <p class="value">@Model.Shifts.Count(s => s.IsActive)</p>
+                </div>
+            </div>
+        </div>
+        <div class="oc-stat animate-pop" style="--pop-d:120ms">
+            <div class="flex items-center gap-4">
+                <div class="oc-stat-icon bg-purple-50 text-purple-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
+                </div>
+                <div>
+                    <p class="label">Night Shifts</p>
+                    <p class="value">@Model.Shifts.Count(s => s.IsActive && s.EndTime < s.StartTime)</p>
+                </div>
+            </div>
+        </div>
+        <div class="oc-stat animate-pop" style="--pop-d:180ms">
+            <div class="flex items-center gap-4">
+                <div class="oc-stat-icon bg-amber-50 text-amber-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                </div>
+                <div>
+                    <p class="label">Coverage</p>
+                    <p class="value">@(Model.ShiftsByDay.Keys.Count) days</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- iOS-Style Calendar -->
+    <div class="calendar-container animate-fade-in">
+        <div class="calendar-header">
+            <div class="calendar-nav">
+                <button class="nav-btn" onclick="ShiftCalendar.navigateMonth(-1)" title="Previous Month" aria-label="Previous Month">‹</button>
+                <div class="calendar-title" id="calendarTitle">December 2024</div>
+                <button class="nav-btn" onclick="ShiftCalendar.navigateMonth(1)" title="Next Month" aria-label="Next Month">›</button>
+            </div>
+            <div class="zoom-controls">
+                <button class="zoom-btn active" data-zoom="month" onclick="ShiftCalendar.setZoomLevel('month')">Month</button>
+                <button class="zoom-btn" data-zoom="week" onclick="ShiftCalendar.setZoomLevel('week')">Week</button>
+                <button class="zoom-btn" data-zoom="day" onclick="ShiftCalendar.setZoomLevel('day')">Day</button>
+            </div>
+        </div>
+
+        <div class="calendar-content" id="calendarContent">
+            <!-- Loading indicator -->
+            <div class="loading-indicator" id="loadingIndicator" style="display: none;">
+                <div class="loading-spinner"></div>
+                <p>Loading shift calendar...</p>
+            </div>
+        </div>
+
+        <!-- Calendar Legend -->
+        <div class="calendar-legend">
+            <div class="legend-items">
+                <div class="legend-item">
+                    <div class="legend-dot day-shift"></div>
+                    <span>Day Shifts</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot night-shift"></div>
+                    <span>Night Shifts</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot holiday"></div>
+                    <span>Holidays</span>
+                </div>
+            </div>
+            <div class="legend-actions">
+                <span id="selectedInfo" class="selected-info"></span>
+                <span class="legend-help">Click days to add shifts • Hover for details • Swipe to navigate</span>
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- Holiday Shifts Table -->
+<!-- Holiday Shifts Table (if any) -->
 @if (Model.HolidayShifts.Any())
 {
-    <div class="oc-card modern-table mb-16">
-        <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-slate-50 to-white">
-            <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2"><span class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-amber-100 text-amber-600 text-xs font-bold">H</span> Holiday & Special Date Schedules</h2>
-            <p class="text-xs text-gray-500 mt-1">Specific-date or holiday overrides.</p>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50/70 backdrop-blur">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-[10px] font-semibold tracking-wider text-gray-600 uppercase">Date</th>
-                        <th class="px-6 py-3 text-left text-[10px] font-semibold tracking-wider text-gray-600 uppercase">Description</th>
-                        <th class="px-6 py-3 text-left text-[10px] font-semibold tracking-wider text-gray-600 uppercase">Hours</th>
-                        <th class="px-6 py-3 text-left text-[10px] font-semibold tracking-wider text-gray-600 uppercase">Duration</th>
-                        <th class="px-6 py-3 text-left text-[10px] font-semibold tracking-wider text-gray-600 uppercase">Status</th>
-                        <th class="px-6 py-3 text-left text-[10px] font-semibold tracking-wider text-gray-600 uppercase">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-100">
-                    @foreach (var holiday in Model.HolidayShifts)
-                    {
-                        <tr class="hover:bg-blue-50/40 transition-colors">
-                            <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-900 font-medium">
-                                @if (holiday.SpecificDate.HasValue)
-                                {
-                                    @holiday.SpecificDate.Value.ToString("MMM dd, yyyy")
-                                }
-                                else
-                                {
-                                    <span class="text-gray-500">@holiday.DayName</span>
-                                }
-                            </td>
-                            <td class="px-6 py-3 text-sm text-gray-800">@holiday.Description</td>
-                            <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-900">
-                                @((new DateTime(1,1,1)+holiday.StartTime).ToString("h:mm tt")) - @((new DateTime(1,1,1)+holiday.EndTime).ToString("h:mm tt"))
-                                @if(!string.IsNullOrEmpty(holiday.MachineId)){<span class="ml-2 inline-block px-2 py-0.5 rounded bg-blue-50 text-blue-700">@holiday.MachineId</span>} else {<span class="ml-2 inline-block px-2 py-0.5 rounded bg-gray-50 text-gray-700">Global</span>}
-                            </td>
-                            <td class="px-6 py-3 whitespace-nowrap text-xs text-gray-600 font-medium">@holiday.DurationHours.ToString("F1") h</td>
-                            <td class="px-6 py-3 whitespace-nowrap">
-                                <span class="status-chip @(holiday.IsActive ? "on" : "off")">@(holiday.IsActive ? "Active" : "Inactive")</span>
-                            </td>
-                            <td class="px-6 py-3 whitespace-nowrap text-sm font-medium space-x-2">
-                                <button hx-get="/Admin/Shifts?handler=Edit&id=@holiday.Id" 
-                                        hx-target="#modal-container" 
-                                        hx-swap="innerHTML" 
-                                        hx-on:htmx:afterSwap="showModal()" 
-                                        class="table-act edit">Edit</button>
-                                <button hx-post="/Admin/Shifts?handler=Delete&id=@holiday.Id"
-                                        hx-include="#af-token-form"
-                                        hx-confirm="Are you sure you want to delete this holiday schedule?"
-                                        hx-swap="none"
-                                        class="table-act del">Delete</button>
-                            </td>
+    <div class="container mx-auto mt-8">
+        <div class="oc-card">
+            <div class="px-6 py-4 border-b border-gray-100">
+                <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <span class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-amber-100 text-amber-600 text-xs font-bold">H</span> 
+                    Holiday Schedules
+                </h2>
+                <p class="text-xs text-gray-500 mt-1">Special date overrides for holidays and non-standard operating days</p>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        @foreach (var holiday in Model.HolidayShifts)
+                        {
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                                    @if (holiday.SpecificDate.HasValue)
+                                    {
+                                        @holiday.SpecificDate.Value.ToString("MMM dd, yyyy")
+                                    }
+                                    else
+                                    {
+                                        <span class="text-gray-500">@holiday.DayName</span>
+                                    }
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-900">@holiday.Description</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    @((new DateTime(1,1,1)+holiday.StartTime).ToString("h:mm tt")) - @((new DateTime(1,1,1)+holiday.EndTime).ToString("h:mm tt"))
+                                    @if(!string.IsNullOrEmpty(holiday.MachineId))
+                                    {
+                                        <span class="ml-2 inline-block px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-xs">@holiday.MachineId</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="ml-2 inline-block px-2 py-0.5 rounded bg-gray-50 text-gray-700 text-xs">Global</span>
+                                    }
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">@holiday.DurationHours.ToString("F1")h</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="status-chip @(holiday.IsActive ? "on" : "off")">@(holiday.IsActive ? "Active" : "Inactive")</span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                                    <button hx-get="/Admin/Shifts?handler=Edit&id=@holiday.Id" 
+                                            hx-target="#modal-container" 
+                                            hx-swap="innerHTML" 
+                                            hx-on:htmx:afterSwap="showModal()" 
+                                            class="table-act edit"
+                                            title="Edit holiday shift">Edit</button>
+                                    <button hx-post="/Admin/Shifts?handler=Delete&id=@holiday.Id"
+                                            hx-include="#af-token-form"
+                                            hx-confirm="Delete this holiday schedule?"
+                                            hx-swap="none"
+                                            class="table-act del"
+                                            title="Delete holiday shift">Delete</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 }
 
-<!-- Hidden antiforgery token for fetch requests -->
+<!-- Hidden Elements -->
 <form id="af-token-form" method="post" class="hidden">@Html.AntiForgeryToken()</form>
 
 <!-- Assignments Drawer -->
 <div id="assignmentsDrawer" class="fixed inset-0 z-[9998] hidden">
     <div class="absolute inset-0 bg-black/50" onclick="hideAssignmentsDrawer()"></div>
-    <div class="absolute right-0 top-0 h-full w-full max-w-xl bg-white shadow-xl flex flex-col">
+    <div class="absolute right-0 top-0 h-full w-full max-w-xl bg-white shadow-xl flex flex-col rounded-l-2xl">
         <div class="p-4 border-b flex items-center justify-between">
-            <h3 class="text-lg font-semibold text-gray-900">Operator Assignments</h3>
-            <button class="text-gray-400 hover:text-gray-600" onclick="hideAssignmentsDrawer()" type="button">
+            <h3 class="text-lg font-semibold">Operator Assignments</h3>
+            <button class="text-gray-400 hover:text-gray-600" onclick="hideAssignmentsDrawer()" title="Close drawer">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
         <div class="modal-content flex-1 overflow-auto"></div>
     </div>
-    <style>#assignmentsDrawer.show{ display:block; }</style>
-    <script>
-        function showAssignmentsDrawer(){var d = document.getElementById('assignmentsDrawer'); if(d){ d.classList.add('show'); d.classList.remove('hidden'); }}
-        function hideAssignmentsDrawer(){var d = document.getElementById('assignmentsDrawer'); if(d){ d.classList.remove('show'); d.classList.add('hidden'); }}
-    </script>
 </div>
 
 <!-- Modal container -->
 <div id="modal-container" class="fixed inset-0 z-[9999] hidden oc-modal-container"></div>
 
-<!-- Shifts Page Script -->
+<!-- Shift Data for JavaScript (Fixed JSON serialization) -->
+<script type="application/json" id="shiftsData">
+@{
+    var shiftsDataObject = new {
+        shifts = Model.Shifts.Where(s => s.IsActive && !s.IsHoliday).Select(s => new {
+            id = s.Id,
+            dayOfWeek = s.DayOfWeek,
+            startTime = s.StartTime.ToString(@"hh\:mm"),
+            endTime = s.EndTime.ToString(@"hh\:mm"),
+            description = s.Description,
+            isActive = s.IsActive,
+            isHoliday = s.IsHoliday,
+            isOvernight = s.EndTime < s.StartTime,
+            duration = Math.Round(s.DurationHours, 2),
+            machineId = s.MachineId ?? ""
+        }).ToList(),
+        holidays = Model.HolidayShifts.Select(h => new {
+            id = h.Id,
+            specificDate = h.SpecificDate?.ToString("yyyy-MM-dd"),
+            dayOfWeek = h.DayOfWeek,
+            startTime = h.StartTime.ToString(@"hh\:mm"),
+            endTime = h.EndTime.ToString(@"hh\:mm"),
+            description = h.Description,
+            isActive = h.IsActive,
+            duration = Math.Round(h.DurationHours, 2)
+        }).ToList()
+    };
+}
+@Html.Raw(System.Text.Json.JsonSerializer.Serialize(shiftsDataObject, new System.Text.Json.JsonSerializerOptions
+{
+    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+    WriteIndented = false
+}))
+</script>
+
+<!-- Enhanced iOS-Style Calendar Script -->
 <script>
-(function() {
-    'use strict';
-    const templateDropdown = document.getElementById('templateDropdown');
-    const templateMenu = document.getElementById('templateMenu');
-    const templateChevron = document.getElementById('templateChevron');
-    if (templateDropdown && templateMenu) {
-        templateDropdown.addEventListener('click', function(e) {
-            e.stopPropagation();
-            templateMenu.classList.toggle('hidden');
-            templateChevron?.classList.toggle('rotate-180');
+// Comprehensive Shift Calendar System
+class ShiftCalendar {
+    constructor() {
+        this.currentDate = new Date();
+        this.currentZoom = 'month';
+        this.selectedDay = null;
+        this.shiftsData = null;
+        this.touchStartX = null;
+        this.touchStartY = null;
+        this.isLoading = false;
+        
+        this.init();
+    }
+    
+    init() {
+        try {
+            this.loadShiftsData();
+            this.setupEventListeners();
+            this.hideLoading();
+            this.render();
+            this.updateTitle();
+        } catch (error) {
+            console.error('Error initializing shift calendar:', error);
+            this.showError('Failed to initialize calendar');
+        }
+    }
+    
+    loadShiftsData() {
+        const dataScript = document.getElementById('shiftsData');
+        if (dataScript) {
+            try {
+                this.shiftsData = JSON.parse(dataScript.textContent);
+                console.log('Loaded shifts data:', this.shiftsData);
+            } catch (e) {
+                console.error('Failed to parse shifts data:', e);
+                this.shiftsData = { shifts: [], holidays: [] };
+            }
+        } else {
+            console.warn('No shifts data found');
+            this.shiftsData = { shifts: [], holidays: [] };
+        }
+    }
+    
+    showLoading() {
+        this.isLoading = true;
+        const indicator = document.getElementById('loadingIndicator');
+        if (indicator) {
+            indicator.style.display = 'flex';
+        }
+    }
+    
+    hideLoading() {
+        this.isLoading = false;
+        const indicator = document.getElementById('loadingIndicator');
+        if (indicator) {
+            indicator.style.display = 'none';
+        }
+    }
+    
+    showError(message) {
+        const content = document.getElementById('calendarContent');
+        if (content) {
+            content.innerHTML = `
+                <div class="error-message">
+                    <div class="error-icon">⚠️</div>
+                    <p>${message}</p>
+                    <button onclick="location.reload()" class="btn primary">Retry</button>
+                </div>
+            `;
+        }
+    }
+    
+    setupEventListeners() {
+        // Template dropdown
+        const templateDropdown = document.getElementById('templateDropdown');
+        const templateMenu = document.getElementById('templateMenu');
+        const templateChevron = document.getElementById('templateChevron');
+        
+        if (templateDropdown && templateMenu) {
+            templateDropdown.addEventListener('click', (e) => {
+                e.stopPropagation();
+                templateMenu.classList.toggle('hidden');
+                templateChevron?.classList.toggle('rotate-180');
+            });
+            
+            document.addEventListener('click', () => {
+                if (!templateMenu.classList.contains('hidden')) {
+                    templateMenu.classList.add('hidden');
+                    templateChevron?.classList.remove('rotate-180');
+                }
+            });
+        }
+        
+        // Touch/swipe support
+        document.addEventListener('touchstart', (e) => {
+            if (e.target.closest('.calendar-content')) {
+                this.touchStartX = e.touches[0].clientX;
+                this.touchStartY = e.touches[0].clientY;
+            }
         });
-        document.addEventListener('click', function() {
-            if(!templateMenu.classList.contains('hidden')){
-                templateMenu.classList.add('hidden');
-                templateChevron?.classList.remove('rotate-180');
+        
+        document.addEventListener('touchend', (e) => {
+            if (!this.touchStartX || !this.touchStartY) return;
+            
+            const touchEndX = e.changedTouches[0].clientX;
+            const touchEndY = e.changedTouches[0].clientY;
+            const diffX = this.touchStartX - touchEndX;
+            const diffY = this.touchStartY - touchEndY;
+            
+            // Horizontal swipe detection (minimum 50px)
+            if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+                e.preventDefault();
+                if (diffX > 0) {
+                    this.navigateMonth(1); // Swipe left - next month
+                } else {
+                    this.navigateMonth(-1); // Swipe right - previous month
+                }
+            }
+            
+            this.touchStartX = null;
+            this.touchStartY = null;
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            
+            switch(e.key) {
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    this.navigateMonth(-1);
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    this.navigateMonth(1);
+                    break;
+                case '1':
+                    e.preventDefault();
+                    this.setZoomLevel('month');
+                    break;
+                case '2':
+                    e.preventDefault();
+                    this.setZoomLevel('week');
+                    break;
+                case '3':
+                    e.preventDefault();
+                    this.setZoomLevel('day');
+                    break;
             }
         });
     }
-    window.quickAddShift = function(dayOfWeek) {
-        const url = `/Admin/Shifts?handler=Add&dayOfWeek=${dayOfWeek}`;
-        htmx.ajax('GET', url, { target: '#modal-container', swap: 'innerHTML' });
-    };
-    window.loadTemplate = function(template) {
-        templateMenu.classList.add('hidden');
-        templateChevron?.classList.remove('rotate-180');
-        htmx.ajax('GET', `/Admin/Shifts?handler=LoadTemplate&template=${template}`, { swap: 'none' });
-    };
-    window.applyTemplate = function(template, clearExisting = false) {
-        htmx.ajax('POST', '/Admin/Shifts?handler=ApplyTemplate', {
-             values: { template: template, clearExisting: clearExisting },
-             swap: 'none'
-         });
-    };
-    // (Individual handlers removed; global afterRequest now handles reload)
-    window.showModal = function(){
-        var m = document.getElementById('modal-container');
-        if(m && m.innerHTML.trim()){ m.classList.remove('hidden'); m.classList.add('show'); document.body.classList.add('modal-open'); }
-    };
-    window.hideModal = function(){
-        var m = document.getElementById('modal-container');
-        if(m){ m.classList.add('hidden'); m.classList.remove('show'); m.innerHTML=''; document.body.classList.remove('modal-open'); }
-    };
-})();
+    
+    navigateMonth(direction) {
+        this.currentDate.setMonth(this.currentDate.getMonth() + direction);
+        this.render();
+        this.updateTitle();
+    }
+    
+    setZoomLevel(zoom) {
+        if (this.currentZoom === zoom) return;
+        
+        this.currentZoom = zoom;
+        const buttons = document.querySelectorAll('.zoom-btn');
+        
+        // Update button states
+        buttons.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.zoom === zoom);
+        });
+        
+        this.render();
+    }
+    
+    updateTitle() {
+        const titleEl = document.getElementById('calendarTitle');
+        if (titleEl) {
+            const options = { month: 'long', year: 'numeric' };
+            titleEl.textContent = this.currentDate.toLocaleDateString('en-US', options);
+        }
+    }
+    
+    render() {
+        if (this.isLoading) return;
+        
+        const content = document.getElementById('calendarContent');
+        if (!content) return;
+        
+        try {
+            content.innerHTML = '';
+            content.className = `calendar-content ${this.currentZoom}-view`;
+            
+            switch (this.currentZoom) {
+                case 'month':
+                    this.renderMonthView(content);
+                    break;
+                case 'week':
+                    this.renderWeekView(content);
+                    break;
+                case 'day':
+                    this.renderDayView(content);
+                    break;
+            }
+        } catch (error) {
+            console.error('Error rendering calendar:', error);
+            this.showError('Failed to render calendar view');
+        }
+    }
+    
+    renderMonthView(container) {
+        const grid = document.createElement('div');
+        grid.className = 'calendar-grid month-view';
+        
+        // Weekday headers
+        const weekdays = document.createElement('div');
+        weekdays.className = 'calendar-weekdays';
+        ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(day => {
+            const header = document.createElement('div');
+            header.className = 'weekday-header';
+            header.textContent = day;
+            weekdays.appendChild(header);
+        });
+        grid.appendChild(weekdays);
+        
+        // Calendar days
+        const weeks = document.createElement('div');
+        weeks.className = 'calendar-weeks';
+        
+        const firstDay = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth(), 1);
+        const startDate = new Date(firstDay);
+        startDate.setDate(startDate.getDate() - firstDay.getDay());
+        
+        for (let week = 0; week < 6; week++) {
+            for (let day = 0; day < 7; day++) {
+                const currentDate = new Date(startDate);
+                currentDate.setDate(currentDate.getDate() + (week * 7 + day));
+                
+                const dayEl = this.createDayCell(currentDate, 'month');
+                weeks.appendChild(dayEl);
+            }
+        }
+        
+        grid.appendChild(weeks);
+        container.appendChild(grid);
+    }
+    
+    renderWeekView(container) {
+        const grid = document.createElement('div');
+        grid.className = 'calendar-grid week-view';
+        
+        // Get start of current week
+        const startOfWeek = new Date(this.currentDate);
+        startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+        
+        // Weekday headers
+        const weekdays = document.createElement('div');
+        weekdays.className = 'calendar-weekdays';
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        dayNames.forEach((day, index) => {
+            const currentDay = new Date(startOfWeek);
+            currentDay.setDate(currentDay.getDate() + index);
+            
+            const header = document.createElement('div');
+            header.className = 'weekday-header';
+            header.innerHTML = `
+                <span class="day-name">${day}</span>
+                <span class="day-date">${currentDay.getDate()}</span>
+            `;
+            weekdays.appendChild(header);
+        });
+        grid.appendChild(weekdays);
+        
+        // Week days
+        const weekEl = document.createElement('div');
+        weekEl.className = 'calendar-week';
+        
+        for (let day = 0; day < 7; day++) {
+            const currentDate = new Date(startOfWeek);
+            currentDate.setDate(currentDate.getDate() + day);
+            
+            const dayEl = this.createDayCell(currentDate, 'week');
+            weekEl.appendChild(dayEl);
+        }
+        
+        grid.appendChild(weekEl);
+        container.appendChild(grid);
+    }
+    
+    renderDayView(container) {
+        const dayContainer = document.createElement('div');
+        dayContainer.className = 'day-view-container';
+        
+        const dayEl = this.createDayCell(this.currentDate, 'day');
+        dayContainer.appendChild(dayEl);
+        
+        container.appendChild(dayContainer);
+    }
+    
+    createDayCell(date, viewType) {
+        const dayEl = document.createElement('div');
+        const isToday = date.toDateString() === new Date().toDateString();
+        const isOtherMonth = viewType === 'month' && date.getMonth() !== this.currentDate.getMonth();
+        
+        dayEl.className = `calendar-day ${isToday ? 'today' : ''} ${isOtherMonth ? 'other-month' : ''}`;
+        dayEl.dataset.date = date.toISOString().split('T')[0];
+        dayEl.dataset.dayOfWeek = date.getDay().toString();
+        
+        // Day content
+        const content = document.createElement('div');
+        content.className = 'day-content';
+        
+        // Day number
+        const dayNumber = document.createElement('div');
+        dayNumber.className = 'day-number';
+        dayNumber.textContent = date.getDate().toString();
+        content.appendChild(dayNumber);
+        
+        // Get shifts for this day
+        const dayShifts = this.getShiftsForDay(date.getDay());
+        
+        // Shift indicators
+        const indicators = document.createElement('div');
+        indicators.className = 'shift-indicators';
+        
+        if (dayShifts.length > 0) {
+            const maxShifts = viewType === 'month' ? 4 : 8;
+            dayShifts.slice(0, maxShifts).forEach(shift => {
+                const indicator = this.createShiftIndicator(shift, viewType);
+                indicators.appendChild(indicator);
+            });
+            
+            if (dayShifts.length > maxShifts) {
+                const more = document.createElement('div');
+                more.className = 'shift-more';
+                more.textContent = `+${dayShifts.length - maxShifts} more`;
+                indicators.appendChild(more);
+            }
+        }
+        
+        content.appendChild(indicators);
+        
+        // Coverage bar
+        const coverage = this.calculateDayCoverage(dayShifts);
+        const coverageBar = document.createElement('div');
+        coverageBar.className = 'coverage-bar';
+        const coverageFill = document.createElement('div');
+        coverageFill.className = 'coverage-fill';
+        coverageFill.style.width = `${coverage}%`;
+        coverageBar.appendChild(coverageFill);
+        content.appendChild(coverageBar);
+        
+        // Coverage percentage (shown on hover)
+        const coveragePercent = document.createElement('div');
+        coveragePercent.className = 'coverage-percent';
+        coveragePercent.textContent = `${Math.round(coverage)}%`;
+        content.appendChild(coveragePercent);
+        
+        // Add shift button
+        const addBtn = document.createElement('button');
+        addBtn.className = 'add-shift-btn';
+        addBtn.textContent = '+';
+        addBtn.title = 'Add shift for this day';
+        addBtn.onclick = (e) => {
+            e.stopPropagation();
+            this.quickAddShift(date.getDay());
+        };
+        content.appendChild(addBtn);
+        
+        // Timeline view for day zoom
+        if (viewType === 'day') {
+            const timeline = this.createTimelineView(dayShifts);
+            content.appendChild(timeline);
+        }
+        
+        dayEl.appendChild(content);
+        
+        // Click handler
+        dayEl.onclick = () => this.selectDay(date);
+        
+        return dayEl;
+    }
+    
+    createShiftIndicator(shift, viewType) {
+        const indicator = document.createElement('div');
+        let className = 'shift-dot';
+        
+        if (shift.isHoliday) className += ' holiday';
+        else if (shift.isOvernight) className += ' night-shift';
+        else className += ' day-shift';
+        
+        if (!shift.isActive) className += ' inactive';
+        
+        indicator.className = className;
+        indicator.dataset.shiftId = shift.id;
+        indicator.title = `${shift.description} (${this.formatTime(shift.startTime)} - ${this.formatTime(shift.endTime)}) - ${shift.duration}h`;
+        
+        if (viewType !== 'month') {
+            const details = document.createElement('div');
+            details.className = 'shift-details';
+            
+            const time = document.createElement('div');
+            time.className = 'shift-time';
+            time.textContent = `${this.formatTime(shift.startTime)} - ${this.formatTime(shift.endTime)}`;
+            details.appendChild(time);
+            
+            const desc = document.createElement('div');
+            desc.className = 'shift-description';
+            desc.textContent = shift.description + (shift.machineId ? ` (${shift.machineId})` : '');
+            details.appendChild(desc);
+            
+            indicator.appendChild(details);
+        }
+        
+        // Action buttons for week/day view
+        if (viewType !== 'month') {
+            const actions = document.createElement('div');
+            actions.className = 'shift-actions';
+            
+            const editBtn = document.createElement('button');
+            editBtn.className = 'shift-action-btn edit';
+            editBtn.innerHTML = '✏';
+            editBtn.title = 'Edit shift';
+            editBtn.onclick = (e) => {
+                e.stopPropagation();
+                this.editShift(shift.id);
+            };
+            actions.appendChild(editBtn);
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'shift-action-btn delete';
+            deleteBtn.innerHTML = '×';
+            deleteBtn.title = 'Delete shift';
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation();
+                this.deleteShift(shift.id);
+            };
+            actions.appendChild(deleteBtn);
+            
+            indicator.appendChild(actions);
+        }
+        
+        return indicator;
+    }
+    
+    createTimelineView(shifts) {
+        const timeline = document.createElement('div');
+        timeline.className = 'timeline-view';
+        
+        const hours = document.createElement('div');
+        hours.className = 'timeline-hours';
+        
+        // Hour labels
+        const labels = document.createElement('div');
+        labels.className = 'hour-labels';
+        for (let hour = 0; hour < 24; hour++) {
+            const label = document.createElement('div');
+            label.className = 'hour-label';
+            label.textContent = this.formatHour(hour);
+            labels.appendChild(label);
+        }
+        hours.appendChild(labels);
+        
+        // Timeline track
+        const track = document.createElement('div');
+        track.className = 'timeline-track';
+        
+        shifts.forEach(shift => {
+            const shiftEl = document.createElement('div');
+            let className = 'timeline-shift';
+            
+            if (shift.isHoliday) className += ' holiday';
+            else if (shift.isOvernight) className += ' night-shift';
+            else className += ' day-shift';
+            
+            shiftEl.className = className;
+            
+            // Calculate position
+            const [startHour, startMin] = shift.startTime.split(':').map(Number);
+            const [endHour, endMin] = shift.endTime.split(':').map(Number);
+            
+            let startDecimal = startHour + (startMin / 60);
+            let endDecimal = endHour + (endMin / 60);
+            
+            if (shift.isOvernight && endDecimal < startDecimal) {
+                endDecimal += 24;
+            }
+            
+            const top = startDecimal * 25; // 25px per hour
+            const height = Math.min((endDecimal - startDecimal) * 25, 600 - top);
+            
+            shiftEl.style.top = `${top}px`;
+            shiftEl.style.height = `${Math.max(height, 20)}px`; // Minimum height
+            
+            // Content
+            const content = document.createElement('div');
+            content.innerHTML = `
+                <strong>${shift.description}</strong><br>
+                <small>${this.formatTime(shift.startTime)} - ${this.formatTime(shift.endTime)}</small>
+                ${shift.machineId ? `<br><small>Machine: ${shift.machineId}</small>` : ''}
+            `;
+            shiftEl.appendChild(content);
+            
+            // Click to edit
+            shiftEl.onclick = () => this.editShift(shift.id);
+            shiftEl.title = 'Click to edit shift';
+            
+            track.appendChild(shiftEl);
+        });
+        
+        hours.appendChild(track);
+        timeline.appendChild(hours);
+        
+        return timeline;
+    }
+    
+    formatTime(timeString) {
+        const [hours, minutes] = timeString.split(':').map(Number);
+        const period = hours >= 12 ? 'PM' : 'AM';
+        const displayHours = hours % 12 || 12;
+        return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+    }
+    
+    formatHour(hour) {
+        if (hour === 0) return '12 AM';
+        if (hour < 12) return `${hour} AM`;
+        if (hour === 12) return '12 PM';
+        return `${hour - 12} PM`;
+    }
+    
+    getShiftsForDay(dayOfWeek) {
+        if (!this.shiftsData || !this.shiftsData.shifts) return [];
+        return this.shiftsData.shifts.filter(shift => shift.dayOfWeek === dayOfWeek);
+    }
+    
+    calculateDayCoverage(shifts) {
+        if (!shifts || shifts.length === 0) return 0;
+        
+        const minutes = new Array(1440).fill(false); // 24 hours * 60 minutes
+        
+        shifts.forEach(shift => {
+            if (!shift.isActive) return;
+            
+            const [startHour, startMin] = shift.startTime.split(':').map(Number);
+            const [endHour, endMin] = shift.endTime.split(':').map(Number);
+            
+            let startMinutes = startHour * 60 + startMin;
+            let endMinutes = endHour * 60 + endMin;
+            
+            if (shift.isOvernight && endMinutes < startMinutes) {
+                // Handle overnight shift
+                for (let i = startMinutes; i < 1440; i++) minutes[i] = true;
+                for (let i = 0; i < endMinutes; i++) minutes[i] = true;
+            } else {
+                for (let i = startMinutes; i < endMinutes && i < 1440; i++) {
+                    minutes[i] = true;
+                }
+            }
+        });
+        
+        const coveredMinutes = minutes.filter(m => m).length;
+        return (coveredMinutes / 1440) * 100;
+    }
+    
+    selectDay(date) {
+        // Remove previous selection
+        document.querySelectorAll('.calendar-day.selected').forEach(el => {
+            el.classList.remove('selected');
+        });
+        
+        // Add selection to current day
+        const dayEl = document.querySelector(`[data-date="${date.toISOString().split('T')[0]}"]`);
+        if (dayEl) {
+            dayEl.classList.add('selected');
+        }
+        
+        this.selectedDay = date;
+        const info = document.getElementById('selectedInfo');
+        if (info) {
+            const dayShifts = this.getShiftsForDay(date.getDay());
+            const coverage = this.calculateDayCoverage(dayShifts);
+            info.textContent = `${date.toLocaleDateString()} - ${dayShifts.length} shift(s), ${Math.round(coverage)}% coverage`;
+        }
+    }
+    
+    quickAddShift(dayOfWeek) {
+        htmx.ajax('GET', `/Admin/Shifts?handler=Add&dayOfWeek=${dayOfWeek}`, { 
+            target: '#modal-container', 
+            swap: 'innerHTML' 
+        });
+    }
+    
+    editShift(shiftId) {
+        htmx.ajax('GET', `/Admin/Shifts?handler=Edit&id=${shiftId}`, { 
+            target: '#modal-container', 
+            swap: 'innerHTML' 
+        });
+    }
+    
+    deleteShift(shiftId) {
+        if (confirm('Delete this shift? This action cannot be undone.')) {
+            htmx.ajax('POST', `/Admin/Shifts?handler=Delete&id=${shiftId}`, { 
+                values: { '__RequestVerificationToken': document.querySelector('#af-token-form input')?.value },
+                swap: 'none' 
+            });
+        }
+    }
+}
+
+// Preserve class; expose instance separately
+let __shiftCalendarInstance=null;
+Object.assign(ShiftCalendar,{navigateMonth:(d)=>{__shiftCalendarInstance?.navigateMonth(d);},setZoomLevel:(z)=>{__shiftCalendarInstance?.setZoomLevel(z);}});
+
+document.addEventListener('DOMContentLoaded',()=>{try{__shiftCalendarInstance=new ShiftCalendar();}catch(e){console.error('Calendar init failed',e);} });
+
+function quickAddShift(day){__shiftCalendarInstance?.quickAddShift(day);} 
+function editShift(id){__shiftCalendarInstance?.editShift(id);} 
+function deleteShift(id){__shiftCalendarInstance?.deleteShift(id);} 
+function loadTemplate(t){const m=document.getElementById('templateMenu');const c=document.getElementById('templateChevron');m?.classList.add('hidden');c?.classList.remove('rotate-180');htmx.ajax('GET',`/Admin/Shifts?handler=LoadTemplate&template=${t}`,{swap:'none'});} 
+function showModal(){const m=document.getElementById('modal-container');if(m&&m.innerHTML.trim()){m.classList.remove('hidden');m.classList.add('show');document.body.classList.add('modal-open');}}
+function hideModal(){const m=document.getElementById('modal-container');if(m){m.classList.add('hidden');m.classList.remove('show');m.innerHTML='';document.body.classList.remove('modal-open');}}
+function showAssignmentsDrawer(){document.getElementById('assignmentsDrawer')?.classList.remove('hidden');}
+function hideAssignmentsDrawer(){document.getElementById('assignmentsDrawer')?.classList.add('hidden');}
 </script>
