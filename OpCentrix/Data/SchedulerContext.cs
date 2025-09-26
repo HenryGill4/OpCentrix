@@ -550,7 +550,8 @@ namespace OpCentrix.Data
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
                 entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
 
-                entity.HasOne<User>()
+                // FIX: Use explicit navigation to avoid shadow FK (UserId1)
+                entity.HasOne(e => e.User)
                       .WithMany()
                       .HasForeignKey(e => e.UserId)
                       .OnDelete(DeleteBehavior.Cascade);

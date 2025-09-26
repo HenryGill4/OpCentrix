@@ -62,25 +62,46 @@ public class ShiftsModel : PageModel
         }
     }
 
-    public async Task<IActionResult> OnGetAddAsync()
+    public async Task<IActionResult> OnGetAddAsync(int? dayOfWeek)
     {
         try
         {
-            // Return empty form for adding new shift
             var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogInformation("?? [SHIFTS-{OperationId}] Loading add shift form", operationId);
+            _logger.LogInformation("?? [SHIFTS-{OperationId}] Loading add shift form (dayOfWeek={Day})", operationId, dayOfWeek);
+
+            var targetDay = dayOfWeek.HasValue && dayOfWeek.Value is >= 0 and <= 6 ? dayOfWeek.Value : 1;
+
+            // Pull raw list first (SQLite cannot order by TimeSpan directly in translation reliably)
+            var existingForDay = await _context.OperatingShifts
+                .Where(s => !s.IsHoliday && !s.SpecificDate.HasValue && s.DayOfWeek == targetDay && (s.MachineId == null || s.MachineId == ""))
+                .ToListAsync();
+            existingForDay = existingForDay.OrderBy(s => s.StartTime).ToList();
+
+            (TimeSpan start, TimeSpan end)? gap = FindFirstGap(existingForDay);
+            var suggestedStart = gap?.start ?? new TimeSpan(0, 0, 0);
+            var suggestedEnd = gap?.end ?? new TimeSpan(6, 0, 0);
+            if (suggestedEnd <= suggestedStart)
+            {
+                suggestedEnd = suggestedStart.Add(TimeSpan.FromHours(1));
+                if (suggestedEnd.Days > 0) suggestedEnd = new TimeSpan(23, 59, 0);
+            }
 
             Input = new OperatingShift
             {
-                DayOfWeek = 1, // Monday default
-                StartTime = new TimeSpan(8, 0, 0), // 8 AM default
-                EndTime = new TimeSpan(17, 0, 0), // 5 PM default
+                DayOfWeek = targetDay,
+                StartTime = suggestedStart,
+                EndTime = suggestedEnd,
                 IsActive = true,
-                Description = "Standard Shift"
+                Description = "New Shift"
             };
 
+            ViewData["ExistingShiftsForDay"] = existingForDay
+                .Select(s => $"{s.Description} {s.StartTime:hh\\:mm}-{s.EndTime:hh\\:mm}")
+                .ToList();
+            ViewData["SuggestedGap"] = $"Suggested free slot: {Input.StartTime:hh\\:mm}-{Input.EndTime:hh\\:mm}";
+
             await LoadMachinesAsync();
-            return Partial("_ShiftForm", this);
+            return Partial("~/Pages/Admin/Shared/_ShiftForm.cshtml", this);
         }
         catch (Exception ex)
         {
@@ -105,7 +126,7 @@ public class ShiftsModel : PageModel
 
             Input = shift;
             await LoadMachinesAsync();
-            return Partial("_ShiftForm", this);
+            return Partial("~/Pages/Admin/Shared/_ShiftForm.cshtml", this);
         }
         catch (Exception ex)
         {
@@ -125,20 +146,42 @@ public class ShiftsModel : PageModel
             _logger.LogInformation("?? [SHIFTS-{OperationId}] Saving shift: {DayName} {StartTime}-{EndTime} by {User}", 
                 operationId, Input.DayName, Input.StartTime, Input.EndTime, userName);
 
-            // Validate the shift
+            // First pass validation
             var validationErrors = await ValidateShiftAsync(Input);
+
+            // If ONLY conflicts and they are exact duplicate of an existing shift, promote to update instead of blocking
+            if (Input.Id == 0 && validationErrors.Any() && validationErrors.All(e => e.StartsWith("Conflicts with existing shift")))
+            {
+                var duplicateId = await FindExactDuplicateShiftIdAsync(Input);
+                if (duplicateId.HasValue)
+                {
+                    _logger.LogInformation("?? [SHIFTS-{OperationId}] Detected exact duplicate, promoting create to update of Id {Id}", operationId, duplicateId.Value);
+                    Input.Id = duplicateId.Value; // convert to update
+                    validationErrors.Clear();
+                }
+            }
+
             if (validationErrors.Any())
             {
                 _logger.LogWarning("?? [SHIFTS-{OperationId}] Validation failed: {ErrorCount} errors", operationId, validationErrors.Count);
-                
+
+                // If conflicts present, compute and show a suggested next free gap
+                if (validationErrors.Any(e => e.StartsWith("Conflicts with existing shift")))
+                {
+                    var suggestion = await SuggestNextFreeGapAsync(Input);
+                    if (suggestion.HasValue)
+                    {
+                        ViewData["SuggestedGap"] = $"Suggested free slot: {suggestion.Value.start:hh\\:mm}-{suggestion.Value.end:hh\\:mm}";
+                    }
+                }
+
                 foreach (var error in validationErrors)
                 {
                     ModelState.AddModelError("", error);
                 }
-                
                 ViewData["ValidationErrors"] = validationErrors;
                 await LoadMachinesAsync();
-                return Partial("_ShiftForm", this);
+                return Partial("~/Pages/Admin/Shared/_ShiftForm.cshtml", this);
             }
 
             // Set audit fields
@@ -147,11 +190,9 @@ public class ShiftsModel : PageModel
                 Input.CreatedBy = userName;
                 Input.CreatedDate = DateTime.UtcNow;
             }
-            
             Input.LastModifiedBy = userName;
             Input.LastModifiedDate = DateTime.UtcNow;
 
-            // Save the shift
             bool success;
             if (Input.Id == 0)
             {
@@ -174,11 +215,11 @@ public class ShiftsModel : PageModel
             }
             else
             {
-                _logger.LogWarning("?? [SHIFTS-{OperationId}] Failed to save shift - conflicts detected", operationId);
+                _logger.LogWarning("?? [SHIFTS-{OperationId}] Failed to save shift - conflicts detected after service call", operationId);
                 ModelState.AddModelError("", "Failed to save shift. Check for conflicts with existing shifts.");
                 ViewData["ValidationErrors"] = new List<string> { "Failed to save shift. Check for conflicts with existing shifts." };
                 await LoadMachinesAsync();
-                return Partial("_ShiftForm", this);
+                return Partial("~/Pages/Admin/Shared/_ShiftForm.cshtml", this);
             }
         }
         catch (Exception ex)
@@ -187,198 +228,70 @@ public class ShiftsModel : PageModel
             ModelState.AddModelError("", "An error occurred while saving the shift");
             ViewData["ValidationErrors"] = new List<string> { "An error occurred while saving the shift" };
             await LoadMachinesAsync();
-            return Partial("_ShiftForm", this);
+            return Partial("~/Pages/Admin/Shared/_ShiftForm.cshtml", this);
         }
     }
 
-    public async Task<IActionResult> OnPostDeleteAsync(int id)
+    private async Task<int?> FindExactDuplicateShiftIdAsync(OperatingShift candidate)
     {
         try
         {
-            var operationId = Guid.NewGuid().ToString("N")[..8];
-            var currentUser = await _authService.GetCurrentUserAsync(HttpContext);
-            var userName = currentUser?.Username ?? "Unknown";
-
-            _logger.LogInformation("?? [SHIFTS-{OperationId}] Deleting shift {ShiftId} by {User}", operationId, id, userName);
-
-            var success = await _shiftService.DeleteShiftAsync(id);
-            
-            if (success)
-            {
-                _logger.LogInformation("? [SHIFTS-{OperationId}] Shift {ShiftId} deleted successfully", operationId, id);
-                return new JsonResult(new { success = true, message = "Shift deleted successfully" });
-            }
-            else
-            {
-                _logger.LogWarning("?? [SHIFTS-{OperationId}] Failed to delete shift {ShiftId}", operationId, id);
-                return new JsonResult(new { success = false, message = "Failed to delete shift" });
-            }
+            var dup = await _context.OperatingShifts
+                .Where(s => s.DayOfWeek == candidate.DayOfWeek
+                            && s.StartTime == candidate.StartTime
+                            && s.EndTime == candidate.EndTime
+                            && s.IsHoliday == candidate.IsHoliday
+                            && (s.MachineId ?? "") == (candidate.MachineId ?? "") )
+                .OrderBy(s => s.Id)
+                .FirstOrDefaultAsync();
+            return dup?.Id;
         }
-        catch (Exception ex)
+        catch
         {
-            _logger.LogError(ex, "? [SHIFTS] Error deleting shift {ShiftId}", id);
-            return new JsonResult(new { success = false, message = "Error deleting shift" });
+            return null;
         }
     }
 
-    public async Task<IActionResult> OnGetToggleActiveAsync(int id)
+    private async Task<(TimeSpan start, TimeSpan end)?> SuggestNextFreeGapAsync(OperatingShift baseShift)
     {
         try
         {
-            var operationId = Guid.NewGuid().ToString("N")[..8];
-            var currentUser = await _authService.GetCurrentUserAsync(HttpContext);
-            var userName = currentUser?.Username ?? "Unknown";
-
-            _logger.LogInformation("?? [SHIFTS-{OperationId}] Toggling active status for shift {ShiftId} by {User}", operationId, id, userName);
-
-            var shift = await _shiftService.GetShiftAsync(id);
-            if (shift == null)
+            var list = await _context.OperatingShifts
+                .Where(s => s.DayOfWeek == baseShift.DayOfWeek && !s.IsHoliday && !s.SpecificDate.HasValue && (s.MachineId == baseShift.MachineId || (s.MachineId == null && baseShift.MachineId == null)))
+                .ToListAsync();
+            var normalized = list.OrderBy(s => s.StartTime).ToList();
+            // find first gap of at least 30 minutes that does not overlap
+            TimeSpan cursor = TimeSpan.Zero;
+            foreach (var s in normalized)
             {
-                return new JsonResult(new { success = false, message = "Shift not found" });
-            }
-
-            shift.IsActive = !shift.IsActive;
-            shift.LastModifiedBy = userName;
-            shift.LastModifiedDate = DateTime.UtcNow;
-
-            var success = await _shiftService.UpdateShiftAsync(shift);
-            
-            if (success)
-            {
-                _logger.LogInformation("? [SHIFTS-{OperationId}] Shift {ShiftId} status toggled to {Status}", 
-                    operationId, id, shift.IsActive ? "Active" : "Inactive");
-                return new JsonResult(new { 
-                    success = true, 
-                    message = $"Shift {(shift.IsActive ? "activated" : "deactivated")} successfully",
-                    isActive = shift.IsActive
-                });
-            }
-            else
-            {
-                return new JsonResult(new { success = false, message = "Failed to update shift status" });
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "? [SHIFTS] Error toggling shift {ShiftId} status", id);
-            return new JsonResult(new { success = false, message = "Error updating shift status" });
-        }
-    }
-
-    public async Task<IActionResult> OnGetLoadTemplateAsync(string template)
-    {
-        try
-        {
-            var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogInformation("?? [SHIFTS-{OperationId}] Loading template: {Template}", operationId, template);
-
-            List<OperatingShift> templateShifts = template switch
-            {
-                "business" => DefaultOperatingShifts.GetStandardBusinessHours(),
-                "24x7" => DefaultOperatingShifts.Get24x7Schedule(),
-                "twoshift" => DefaultOperatingShifts.GetTwoShiftSchedule(),
-                "plant" => DefaultOperatingShifts.GetPlantTwoShiftSchedule(),
-                _ => new List<OperatingShift>()
-            };
-
-            if (!templateShifts.Any())
-            {
-                return new JsonResult(new { success = false, message = "Unknown template" });
-            }
-
-            // Apply template shifts
-            var currentUser = await _authService.GetCurrentUserAsync(HttpContext);
-            var userName = currentUser?.Username ?? "System";
-
-            foreach (var shift in templateShifts)
-            {
-                shift.CreatedBy = userName;
-                shift.LastModifiedBy = userName;
-            }
-
-            // First, clear existing active shifts (optional - ask user for confirmation)
-            var existingShifts = await _shiftService.GetActiveShiftsAsync();
-            
-            return new JsonResult(new { 
-                success = true, 
-                message = $"Template '{template}' loaded. This will add {templateShifts.Count} shifts.",
-                shifts = templateShifts.Select(s => new {
-                    dayOfWeek = s.DayOfWeek,
-                    dayName = s.DayName,
-                    startTime = s.StartTime.ToString(@"hh\:mm"),
-                    endTime = s.EndTime.ToString(@"hh\:mm"),
-                    description = s.Description
-                }),
-                existingCount = existingShifts.Count
-            });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "? [SHIFTS] Error loading template {Template}", template);
-            return new JsonResult(new { success = false, message = "Error loading template" });
-        }
-    }
-
-    public async Task<IActionResult> OnPostApplyTemplateAsync(string template, bool clearExisting = false)
-    {
-        try
-        {
-            var operationId = Guid.NewGuid().ToString("N")[..8];
-            var currentUser = await _authService.GetCurrentUserAsync(HttpContext);
-            var userName = currentUser?.Username ?? "System";
-
-            _logger.LogInformation("?? [SHIFTS-{OperationId}] Applying template {Template} by {User} (clearExisting: {ClearExisting})", 
-                operationId, template, userName, clearExisting);
-
-            List<OperatingShift> templateShifts = template switch
-            {
-                "business" => DefaultOperatingShifts.GetStandardBusinessHours(),
-                "24x7" => DefaultOperatingShifts.Get24x7Schedule(),
-                "twoshift" => DefaultOperatingShifts.GetTwoShiftSchedule(),
-                "plant" => DefaultOperatingShifts.GetPlantTwoShiftSchedule(),
-                _ => new List<OperatingShift>()
-            };
-
-            if (!templateShifts.Any())
-            {
-                return new JsonResult(new { success = false, message = "Unknown template" });
-            }
-
-            // Clear existing shifts if requested
-            if (clearExisting)
-            {
-                var existingShifts = await _shiftService.GetActiveShiftsAsync();
-                foreach (var shift in existingShifts)
+                var st = s.StartTime;
+                var en = s.EndTime;
+                if (en < st) en = en.Add(TimeSpan.FromDays(1));
+                if (st > cursor)
                 {
-                    await _shiftService.DeleteShiftAsync(shift.Id);
+                    var gap = st - cursor;
+                    if (gap >= TimeSpan.FromMinutes(30))
+                    {
+                        var length = TimeSpan.FromHours( (baseShift.EndTime - baseShift.StartTime).TotalHours < 0 ? 1 : (baseShift.EndTime - baseShift.StartTime).TotalHours );
+                        if (length <= TimeSpan.Zero) length = TimeSpan.FromHours(1);
+                        var proposedEnd = cursor + (length > gap ? gap : length);
+                        return (cursor, proposedEnd);
+                    }
                 }
-                _logger.LogInformation("?? [SHIFTS-{OperationId}] Cleared {Count} existing shifts", operationId, existingShifts.Count);
+                cursor = TimeSpan.FromMinutes(Math.Max(cursor.TotalMinutes, en.TotalMinutes % (24*60)));
             }
-
-            // Apply template shifts
-            var successCount = 0;
-            foreach (var shift in templateShifts)
+            // after last
+            if (cursor < TimeSpan.FromHours(24) - TimeSpan.FromMinutes(30))
             {
-                shift.CreatedBy = userName;
-                shift.LastModifiedBy = userName;
-                
-                var success = await _shiftService.CreateShiftAsync(shift);
-                if (success) successCount++;
+                var end = cursor + TimeSpan.FromHours(1);
+                if (end > TimeSpan.FromHours(24)) end = TimeSpan.FromHours(24) - TimeSpan.FromMinutes(1);
+                return (cursor, end);
             }
-
-            _logger.LogInformation("? [SHIFTS-{OperationId}] Applied template: {SuccessCount}/{TotalCount} shifts created", 
-                operationId, successCount, templateShifts.Count);
-
-            return new JsonResult(new { 
-                success = true, 
-                message = $"Template applied successfully. Created {successCount} out of {templateShifts.Count} shifts.",
-                redirect = "/Admin/Shifts"
-            });
+            return null;
         }
-        catch (Exception ex)
+        catch
         {
-            _logger.LogError(ex, "? [SHIFTS] Error applying template {Template}", template);
-            return new JsonResult(new { success = false, message = "Error applying template" });
+            return null;
         }
     }
 
@@ -660,5 +573,199 @@ public class ShiftsModel : PageModel
     {
         var req = new SetPrimaryRequest { assignmentId = assignmentId };
         return await OnPostSetPrimaryAsync(req);
+    }
+
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> OnPostDeleteAsync(int id)
+    {
+        try
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            var currentUser = await _authService.GetCurrentUserAsync(HttpContext);
+            var userName = currentUser?.Username ?? "Unknown";
+            _logger.LogInformation("?? [SHIFTS-{OperationId}] Deleting shift {ShiftId} by {User}", operationId, id, userName);
+            var success = await _shiftService.DeleteShiftAsync(id);
+            if (success)
+            {
+                _logger.LogInformation("? [SHIFTS-{OperationId}] Shift {ShiftId} deleted successfully", operationId, id);
+                return new JsonResult(new { success = true, message = "Shift deleted" });
+            }
+            _logger.LogWarning("?? [SHIFTS-{OperationId}] Failed to delete shift {ShiftId}", operationId, id);
+            return new JsonResult(new { success = false, message = "Delete failed" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "? [SHIFTS] Error deleting shift {ShiftId}", id);
+            return new JsonResult(new { success = false, message = "Error deleting shift" });
+        }
+    }
+
+    public async Task<IActionResult> OnGetToggleActiveAsync(int id)
+    {
+        try
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            var currentUser = await _authService.GetCurrentUserAsync(HttpContext);
+            var userName = currentUser?.Username ?? "Unknown";
+            _logger.LogInformation("?? [SHIFTS-{OperationId}] Toggling active status for shift {ShiftId} by {User}", operationId, id, userName);
+            var shift = await _shiftService.GetShiftAsync(id);
+            if (shift == null)
+                return new JsonResult(new { success = false, message = "Shift not found" });
+            shift.IsActive = !shift.IsActive;
+            shift.LastModifiedBy = userName;
+            shift.LastModifiedDate = DateTime.UtcNow;
+            var success = await _shiftService.UpdateShiftAsync(shift);
+            if (success)
+            {
+                return new JsonResult(new { success = true, isActive = shift.IsActive });
+            }
+            return new JsonResult(new { success = false, message = "Failed to toggle shift" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "? [SHIFTS] Error toggling shift {ShiftId}", id);
+            return new JsonResult(new { success = false, message = "Error toggling shift" });
+        }
+    }
+
+    public async Task<IActionResult> OnGetLoadTemplateAsync(string template)
+    {
+        try
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("?? [SHIFTS-{OperationId}] Loading template: {Template}", operationId, template);
+            List<OperatingShift> templateShifts = template switch
+            {
+                "business" => DefaultOperatingShifts.GetStandardBusinessHours(),
+                "24x7" => DefaultOperatingShifts.Get24x7Schedule(),
+                "twoshift" => DefaultOperatingShifts.GetTwoShiftSchedule(),
+                "plant" => DefaultOperatingShifts.GetPlantTwoShiftSchedule(),
+                _ => new List<OperatingShift>()
+            };
+            if (!templateShifts.Any())
+                return new JsonResult(new { success = false, message = "Unknown template" });
+            var existing = await _shiftService.GetAllShiftsAsync();
+            return new JsonResult(new { success = true, count = templateShifts.Count, existingCount = existing.Count });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "? [SHIFTS] Error loading template {Template}", template);
+            return new JsonResult(new { success = false, message = "Error loading template" });
+        }
+    }
+
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> OnPostApplyTemplateAsync(string template, bool clearExisting = false)
+    {
+        try
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            var currentUser = await _authService.GetCurrentUserAsync(HttpContext);
+            var userName = currentUser?.Username ?? "System";
+            _logger.LogInformation("?? [SHIFTS-{OperationId}] Applying template {Template} (clearExisting={Clear})", operationId, template, clearExisting);
+            List<OperatingShift> templateShifts = template switch
+            {
+                "business" => DefaultOperatingShifts.GetStandardBusinessHours(),
+                "24x7" => DefaultOperatingShifts.Get24x7Schedule(),
+                "twoshift" => DefaultOperatingShifts.GetTwoShiftSchedule(),
+                "plant" => DefaultOperatingShifts.GetPlantTwoShiftSchedule(),
+                _ => new List<OperatingShift>()
+            };
+            if (!templateShifts.Any())
+                return new JsonResult(new { success = false, message = "Unknown template" });
+            if (clearExisting)
+            {
+                var existing = await _shiftService.GetAllShiftsAsync();
+                foreach (var s in existing)
+                    await _shiftService.DeleteShiftAsync(s.Id);
+            }
+            var created = 0;
+            foreach (var s in templateShifts)
+            {
+                s.CreatedBy = userName;
+                s.LastModifiedBy = userName;
+                if (await _shiftService.CreateShiftAsync(s)) created++;
+            }
+            return new JsonResult(new { success = true, message = $"Template applied: {created}/{templateShifts.Count} shifts", redirect = "/Admin/Shifts" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "? [SHIFTS] Error applying template {Template}", template);
+            return new JsonResult(new { success = false, message = "Error applying template" });
+        }
+    }
+
+    private static (TimeSpan start, TimeSpan end)? FindFirstGap(List<OperatingShift> shifts)
+    {
+        // Normalize list with adjusted overnight shifts (end < start treated as crossing midnight)
+        var normalized = new List<(TimeSpan start, TimeSpan end)>();
+        foreach (var s in shifts)
+        {
+            var st = s.StartTime;
+            var en = s.EndTime;
+            if (en < st) en = en.Add(TimeSpan.FromDays(1)); // treat as >24h timeline
+            normalized.Add((st, en));
+        }
+        normalized = normalized.OrderBy(t => t.start).ToList();
+
+        // Start-of-day gap (midnight to first shift)
+        TimeSpan dayStart = TimeSpan.Zero;
+        if (!normalized.Any())
+        {
+            return (TimeSpan.FromHours(6), TimeSpan.FromHours(12)); // empty day, arbitrary 6-12 block
+        }
+        var first = normalized.First();
+        if (first.start > dayStart)
+        {
+            return (dayStart, first.start);
+        }
+        // Gaps between shifts
+        for (int i = 0; i < normalized.Count - 1; i++)
+        {
+            var a = normalized[i];
+            var b = normalized[i + 1];
+            if (b.start > a.end)
+            {
+                // found a gap
+                var length = b.start - a.end;
+                if (length >= TimeSpan.FromMinutes(30))
+                {
+                    // choose up to 6h or entire gap if smaller
+                    var proposedEnd = a.end + (length > TimeSpan.FromHours(6) ? TimeSpan.FromHours(6) : length);
+                    return (a.end, proposedEnd);
+                }
+            }
+        }
+        // End-of-day gap (after last shift until midnight)
+        var last = normalized.Last();
+        var dayEnd = TimeSpan.FromDays(1); // 24:00 represented as 1 day
+        if (last.end < dayEnd)
+        {
+            var remaining = dayEnd - last.end;
+            var block = remaining > TimeSpan.FromHours(6) ? TimeSpan.FromHours(6) : remaining;
+            return (last.end >= TimeSpan.FromHours(24) ? TimeSpan.FromHours(23) : last.end, last.end + block);
+        }
+        return null;
+    }
+
+    public async Task<IActionResult> OnPostAsync()
+    {
+        // Fallback router: if a specific handler wasn't matched (framework fell back to implicit handler)
+        var rawHandler = Request.Query["handler"].ToString();
+        if (!string.IsNullOrWhiteSpace(rawHandler))
+        {
+            switch (rawHandler.ToLowerInvariant())
+            {
+                case "delete":
+                    if (int.TryParse(Request.Query["id"], out var delId))
+                    {
+                        return await OnPostDeleteAsync(delId);
+                    }
+                    return new JsonResult(new { success = false, message = "Invalid shift id" });
+            }
+        }
+        // Default: reload page data and show full page (implicit behavior)
+        await OnGetAsync();
+        return Page();
     }
 }

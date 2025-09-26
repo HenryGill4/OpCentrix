@@ -26,9 +26,56 @@ namespace OpCentrix.Services.Admin
             _logger = logger;
         }
 
-        public Task<List<MachineOperatorAssignment>> GetAssignmentsByMachineAsync(string machineId)
+        private async Task EnsureAssignmentsTableAsync()
         {
-            return _context.Set<MachineOperatorAssignment>()
+            try
+            {
+                var conn = _context.Database.GetDbConnection();
+                if (conn.State != System.Data.ConnectionState.Open)
+                    await conn.OpenAsync();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name='MachineOperatorAssignments';";
+                var exists = (await cmd.ExecuteScalarAsync()) != null;
+                if (exists) return;
+
+                _logger.LogWarning("[ASSIGN-SCHEMA] MachineOperatorAssignments table missing. Creating...");
+                using var tx = await _context.Database.BeginTransactionAsync();
+                using var create = conn.CreateCommand();
+                create.CommandText = @"
+CREATE TABLE IF NOT EXISTS MachineOperatorAssignments (
+    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+    MachineId TEXT NOT NULL,
+    UserId INTEGER NOT NULL,
+    IsPrimary INTEGER NOT NULL DEFAULT 0,
+    EffectiveFrom TEXT NULL,
+    EffectiveTo TEXT NULL,
+    IsActive INTEGER NOT NULL DEFAULT 1,
+    CreatedDate TEXT NOT NULL DEFAULT (datetime('now')),
+    LastModifiedDate TEXT NOT NULL DEFAULT (datetime('now')),
+    CreatedBy TEXT NOT NULL DEFAULT 'System',
+    LastModifiedBy TEXT NOT NULL DEFAULT 'System',
+    FOREIGN KEY (UserId) REFERENCES Users(Id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS IX_Assignments_MachineId ON MachineOperatorAssignments(MachineId);
+CREATE INDEX IF NOT EXISTS IX_Assignments_UserId ON MachineOperatorAssignments(UserId);
+CREATE INDEX IF NOT EXISTS IX_Assignments_IsActive ON MachineOperatorAssignments(IsActive);
+CREATE INDEX IF NOT EXISTS IX_Assignments_Machine_Primary ON MachineOperatorAssignments(MachineId, IsPrimary);
+CREATE INDEX IF NOT EXISTS IX_Assignments_User_Active ON MachineOperatorAssignments(UserId, IsActive);
+";
+                await create.ExecuteNonQueryAsync();
+                await tx.CommitAsync();
+                _logger.LogInformation("[ASSIGN-SCHEMA] MachineOperatorAssignments table created.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[ASSIGN-SCHEMA] Failed ensuring MachineOperatorAssignments table");
+            }
+        }
+
+        public async Task<List<MachineOperatorAssignment>> GetAssignmentsByMachineAsync(string machineId)
+        {
+            await EnsureAssignmentsTableAsync();
+            return await _context.Set<MachineOperatorAssignment>()
                 .Where(a => a.MachineId == machineId)
                 .Include(a => a.User)
                 .OrderByDescending(a => a.IsActive)
@@ -38,17 +85,19 @@ namespace OpCentrix.Services.Admin
                 .ToListAsync();
         }
 
-        public Task<List<MachineOperatorAssignment>> GetAssignmentsByUserAsync(int userId)
+        public async Task<List<MachineOperatorAssignment>> GetAssignmentsByUserAsync(int userId)
         {
-            return _context.Set<MachineOperatorAssignment>()
+            await EnsureAssignmentsTableAsync();
+            return await _context.Set<MachineOperatorAssignment>()
                 .Where(a => a.UserId == userId)
                 .AsNoTracking()
                 .ToListAsync();
         }
 
-        public Task<MachineOperatorAssignment?> GetAsync(int id)
+        public async Task<MachineOperatorAssignment?> GetAsync(int id)
         {
-            return _context.Set<MachineOperatorAssignment>()
+            await EnsureAssignmentsTableAsync();
+            return await _context.Set<MachineOperatorAssignment>()
                 .Include(a => a.User)
                 .FirstOrDefaultAsync(a => a.Id == id);
         }
@@ -58,6 +107,7 @@ namespace OpCentrix.Services.Admin
         {
             try
             {
+                await EnsureAssignmentsTableAsync();
                 // ensure user exists and is active
                 var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId && u.IsActive);
                 if (user == null)
@@ -109,6 +159,7 @@ namespace OpCentrix.Services.Admin
         {
             try
             {
+                await EnsureAssignmentsTableAsync();
                 var entity = await _context.Set<MachineOperatorAssignment>().FirstOrDefaultAsync(a => a.Id == assignmentId);
                 if (entity == null) return false;
                 entity.IsActive = false;
@@ -128,6 +179,7 @@ namespace OpCentrix.Services.Admin
         {
             try
             {
+                await EnsureAssignmentsTableAsync();
                 var entity = await _context.Set<MachineOperatorAssignment>().FirstOrDefaultAsync(a => a.Id == assignmentId);
                 if (entity == null) return false;
 
@@ -158,6 +210,7 @@ namespace OpCentrix.Services.Admin
         {
             try
             {
+                await EnsureAssignmentsTableAsync();
                 var activeAssignments = await _context.Set<MachineOperatorAssignment>()
                     .Where(a => a.UserId == userId && a.IsActive)
                     .ToListAsync();

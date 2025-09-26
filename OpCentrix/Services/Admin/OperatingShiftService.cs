@@ -69,14 +69,38 @@ public class OperatingShiftService : IOperatingShiftService
         }
     }
 
+    private async Task EnsureMachineIdColumnAsync()
+    {
+        var hasCol = await HasMachineIdColumnAsync();
+        if (hasCol) return;
+        try
+        {
+            var connection = _context.Database.GetDbConnection();
+            if (connection.State != System.Data.ConnectionState.Open)
+                await connection.OpenAsync();
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "ALTER TABLE OperatingShifts ADD COLUMN MachineId TEXT NULL;";
+            await cmd.ExecuteNonQueryAsync();
+            _hasMachineIdColumn = true;
+            _logger.LogInformation("[SHIFT-SCHEMA] Added OperatingShifts.MachineId column at runtime");
+        }
+        catch (Exception ex)
+        {
+            // If adding fails (e.g., no permissions), just log; queries that return entities will still fail without the column
+            _logger.LogWarning(ex, "[SHIFT-SCHEMA] Failed to add OperatingShifts.MachineId column");
+        }
+    }
+
     public async Task<List<OperatingShift>> GetAllShiftsAsync()
     {
         try
         {
-            return await _context.OperatingShifts
+            await EnsureMachineIdColumnAsync();
+            var list = await _context.OperatingShifts.ToListAsync();
+            return list
                 .OrderBy(s => s.DayOfWeek)
                 .ThenBy(s => s.StartTime)
-                .ToListAsync();
+                .ToList();
         }
         catch (Exception ex)
         {
@@ -89,11 +113,14 @@ public class OperatingShiftService : IOperatingShiftService
     {
         try
         {
-            return await _context.OperatingShifts
+            await EnsureMachineIdColumnAsync();
+            var list = await _context.OperatingShifts
                 .Where(s => s.IsActive)
+                .ToListAsync();
+            return list
                 .OrderBy(s => s.DayOfWeek)
                 .ThenBy(s => s.StartTime)
-                .ToListAsync();
+                .ToList();
         }
         catch (Exception ex)
         {
@@ -107,10 +134,11 @@ public class OperatingShiftService : IOperatingShiftService
         try
         {
             var dayNumber = (int)dayOfWeek;
-            return await _context.OperatingShifts
+            await EnsureMachineIdColumnAsync();
+            var list = await _context.OperatingShifts
                 .Where(s => s.DayOfWeek == dayNumber && s.IsActive && !s.IsHoliday)
-                .OrderBy(s => s.StartTime)
                 .ToListAsync();
+            return list.OrderBy(s => s.StartTime).ToList();
         }
         catch (Exception ex)
         {
@@ -124,6 +152,7 @@ public class OperatingShiftService : IOperatingShiftService
         try
         {
             var dayNumber = (int)dayOfWeek;
+            await EnsureMachineIdColumnAsync();
             var hasMachineCol = await HasMachineIdColumnAsync();
             var query = _context.OperatingShifts.AsQueryable();
             query = query.Where(s => s.DayOfWeek == dayNumber && s.IsActive && !s.IsHoliday);
@@ -131,7 +160,8 @@ public class OperatingShiftService : IOperatingShiftService
             {
                 query = query.Where(s => s.MachineId == null || s.MachineId == "" || s.MachineId == machineId);
             }
-            return await query.OrderBy(s => s.StartTime).ToListAsync();
+            var list = await query.ToListAsync();
+            return list.OrderBy(s => s.StartTime).ToList();
         }
         catch (Exception ex)
         {
@@ -246,6 +276,7 @@ public class OperatingShiftService : IOperatingShiftService
     {
         try
         {
+            await EnsureMachineIdColumnAsync();
             var dayOfWeek = (int)dateTime.DayOfWeek;
             
             // Check for specific date overrides first
@@ -280,6 +311,7 @@ public class OperatingShiftService : IOperatingShiftService
     {
         try
         {
+            await EnsureMachineIdColumnAsync();
             var dayOfWeek = (int)dateTime.DayOfWeek;
             var hasMachineCol = await HasMachineIdColumnAsync();
  
@@ -318,6 +350,7 @@ public class OperatingShiftService : IOperatingShiftService
     {
         try
         {
+            await EnsureMachineIdColumnAsync();
             var conflictingShifts = new List<OperatingShift>();
             var hasMachineCol = await HasMachineIdColumnAsync();
  
@@ -375,11 +408,14 @@ public class OperatingShiftService : IOperatingShiftService
     {
         try
         {
-            return await _context.OperatingShifts
+            await EnsureMachineIdColumnAsync();
+            var list = await _context.OperatingShifts
                 .Where(s => s.IsHoliday)
+                .ToListAsync();
+            return list
                 .OrderBy(s => s.SpecificDate ?? DateTime.MaxValue)
                 .ThenBy(s => s.DayOfWeek)
-                .ToListAsync();
+                .ToList();
         }
         catch (Exception ex)
         {

@@ -556,7 +556,7 @@
 }
 
 /* Ensure material-specific backgrounds do not override machine colors */
-.job-block[data-material*="Ti-6Al-4V"],
+/*.job-block[data-material*="Ti-6Al-4V"],
 .job-block[data-material*="Inconel"],
 .job-block[data-material*="Ti-6Al-4V Grade"],
 .job-block[data-material*="Titanium"],
@@ -564,7 +564,7 @@
 .job-block[data-material*="INCONEL"] {
     background: unset !important;
 }
-
+*/
 /* ENHANCED: Responsive Design */
 @media (max-width: 1024px) {
     :root {
