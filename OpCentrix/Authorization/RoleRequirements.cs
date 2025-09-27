@@ -182,27 +182,64 @@ namespace OpCentrix.Authorization
     }
 
     /// <summary>
-    /// Requires Print Tracking access (Admin, Manager, Operator, PrintingSpecialist) - FIXED for print tracking pages
+    /// CRITICAL FIX: Enhanced Print Tracking access with comprehensive error handling
+    /// Requires Print Tracking access (Admin, Manager, Operator, PrintingSpecialist)
     /// </summary>
     public class PrintTrackingAccessAttribute : Attribute, IAuthorizationFilter
     {
         public void OnAuthorization(AuthorizationFilterContext context)
         {
-            var user = context.HttpContext.User;
-
-            if (!user.Identity?.IsAuthenticated == true)
+            try
             {
-                context.Result = new RedirectToPageResult("/Account/Login");
-                return;
+                var user = context.HttpContext.User;
+                var logger = context.HttpContext.RequestServices
+                    .GetService<Microsoft.Extensions.Logging.ILogger<PrintTrackingAccessAttribute>>();
+
+                if (!user.Identity?.IsAuthenticated == true)
+                {
+                    logger?.LogWarning("PrintTracking access denied - user not authenticated");
+                    context.Result = new RedirectToPageResult("/Account/Login", new { returnUrl = context.HttpContext.Request.Path });
+                    return;
+                }
+
+                // ENHANCED: Get user details for debugging
+                var userName = user.Identity?.Name ?? "Unknown";
+                var userIdClaim = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "";
+                
+                // FIXED: Check both claim types consistently with enhanced logging
+                var userRole = user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ??
+                              user.FindFirst("Role")?.Value ?? "";
+
+                logger?.LogInformation("PrintTracking access check - User: {UserName} (ID: {UserId}), Role: {UserRole}", 
+                    userName, userIdClaim, userRole);
+
+                var allowedRoles = new[] { "Admin", "Manager", "Operator", "PrintingSpecialist" };
+                
+                if (string.IsNullOrEmpty(userRole))
+                {
+                    logger?.LogError("PrintTracking access denied - no role claim found for user {UserName}", userName);
+                    context.Result = new RedirectToPageResult("/Account/AccessDenied");
+                    return;
+                }
+                
+                if (!allowedRoles.Contains(userRole))
+                {
+                    logger?.LogWarning("PrintTracking access denied - user {UserName} has role '{UserRole}' which is not in allowed roles: {AllowedRoles}", 
+                        userName, userRole, string.Join(", ", allowedRoles));
+                    context.Result = new RedirectToPageResult("/Account/AccessDenied");
+                    return;
+                }
+
+                logger?.LogInformation("PrintTracking access granted for user {UserName} with role {UserRole}", userName, userRole);
             }
-
-            // FIXED: Check both claim types consistently and ensure Admin has access
-            var userRole = user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ??
-                          user.FindFirst("Role")?.Value ?? "";
-            var allowedRoles = new[] { "Admin", "Manager", "Operator", "PrintingSpecialist" };
-            
-            if (!allowedRoles.Contains(userRole))
+            catch (Exception ex)
             {
+                var logger = context.HttpContext.RequestServices
+                    .GetService<Microsoft.Extensions.Logging.ILogger<PrintTrackingAccessAttribute>>();
+                    
+                logger?.LogError(ex, "Error in PrintTrackingAccessAttribute authorization");
+                
+                // Fail safely by denying access
                 context.Result = new RedirectToPageResult("/Account/AccessDenied");
             }
         }

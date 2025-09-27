@@ -183,7 +183,7 @@
     </div>
 
     <!-- iOS-Style Calendar -->
-    <div class="calendar-container animate-fade-in">
+    <div class="calendar-container animate-fade-in" id="calendarContainer">
         <div class="calendar-header">
             <div class="calendar-nav">
                 <button class="nav-btn" onclick="ShiftCalendar.navigateMonth(-1)" title="Previous Month" aria-label="Previous Month">‹</button>
@@ -373,6 +373,7 @@ class ShiftCalendar {
         this.touchStartX = null;
         this.touchStartY = null;
         this.isLoading = false;
+        this.stateKey = 'shiftsCalendarState';
         
         this.init();
     }
@@ -380,13 +381,88 @@ class ShiftCalendar {
     init() {
         try {
             this.loadShiftsData();
+            this.restoreState();
             this.setupEventListeners();
             this.hideLoading();
             this.render();
             this.updateTitle();
+            this.restoreScrollPosition();
         } catch (error) {
             console.error('Error initializing shift calendar:', error);
             this.showError('Failed to initialize calendar');
+        }
+    }
+    
+    saveState() {
+        try {
+            const state = {
+                currentDate: this.currentDate.toISOString(),
+                currentZoom: this.currentZoom,
+                selectedDay: this.selectedDay ? this.selectedDay.toISOString() : null,
+                scrollPosition: {
+                    x: window.pageXOffset || document.documentElement.scrollLeft,
+                    y: window.pageYOffset || document.documentElement.scrollTop
+                },
+                timestamp: Date.now()
+            };
+            localStorage.setItem(this.stateKey, JSON.stringify(state));
+        } catch (error) {
+            console.warn('Failed to save calendar state:', error);
+        }
+    }
+    
+    restoreState() {
+        try {
+            const saved = localStorage.getItem(this.stateKey);
+            if (!saved) return;
+            
+            const state = JSON.parse(saved);
+            const now = Date.now();
+            const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+            
+            // Only restore if state is less than 24 hours old
+            if (state.timestamp && (now - state.timestamp) > maxAge) {
+                localStorage.removeItem(this.stateKey);
+                return;
+            }
+            
+            if (state.currentDate) {
+                this.currentDate = new Date(state.currentDate);
+            }
+            
+            if (state.currentZoom && ['month', 'week', 'day'].includes(state.currentZoom)) {
+                this.currentZoom = state.currentZoom;
+            }
+            
+            if (state.selectedDay) {
+                this.selectedDay = new Date(state.selectedDay);
+            }
+            
+            console.log('Restored calendar state:', state);
+        } catch (error) {
+            console.warn('Failed to restore calendar state:', error);
+            localStorage.removeItem(this.stateKey);
+        }
+    }
+    
+    restoreScrollPosition() {
+        try {
+            const saved = localStorage.getItem(this.stateKey);
+            if (!saved) return;
+            
+            const state = JSON.parse(saved);
+            if (state.scrollPosition) {
+                // Restore scroll position after a brief delay to ensure page is fully rendered
+                setTimeout(() => {
+                    window.scrollTo({
+                        left: state.scrollPosition.x || 0,
+                        top: state.scrollPosition.y || 0,
+                        behavior: 'smooth'
+                    });
+                }, 100);
+            }
+        } catch (error) {
+            console.warn('Failed to restore scroll position:', error);
         }
     }
     
@@ -456,6 +532,22 @@ class ShiftCalendar {
             });
         }
         
+        // Save state on page unload
+        window.addEventListener('beforeunload', () => {
+            this.saveState();
+        });
+        
+        // Save state on scroll (throttled)
+        let scrollTimeout;
+        window.addEventListener('scroll', () => {
+            if (scrollTimeout) {
+                clearTimeout(scrollTimeout);
+            }
+            scrollTimeout = setTimeout(() => {
+                this.saveState();
+            }, 250);
+        });
+        
         // Touch/swipe support
         document.addEventListener('touchstart', (e) => {
             if (e.target.closest('.calendar-content')) {
@@ -472,13 +564,12 @@ class ShiftCalendar {
             const diffX = this.touchStartX - touchEndX;
             const diffY = this.touchStartY - touchEndY;
             
-            // Horizontal swipe detection (minimum 50px)
             if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
                 e.preventDefault();
                 if (diffX > 0) {
-                    this.navigateMonth(1); // Swipe left - next month
+                    this.navigateMonth(1);
                 } else {
-                    this.navigateMonth(-1); // Swipe right - previous month
+                    this.navigateMonth(-1);
                 }
             }
             
@@ -519,6 +610,7 @@ class ShiftCalendar {
         this.currentDate.setMonth(this.currentDate.getMonth() + direction);
         this.render();
         this.updateTitle();
+        this.saveState();
     }
     
     setZoomLevel(zoom) {
@@ -527,12 +619,12 @@ class ShiftCalendar {
         this.currentZoom = zoom;
         const buttons = document.querySelectorAll('.zoom-btn');
         
-        // Update button states
         buttons.forEach(btn => {
             btn.classList.toggle('active', btn.dataset.zoom === zoom);
         });
         
         this.render();
+        this.saveState();
     }
     
     updateTitle() {
@@ -552,6 +644,12 @@ class ShiftCalendar {
         try {
             content.innerHTML = '';
             content.className = `calendar-content ${this.currentZoom}-view`;
+            
+            // Update zoom button states
+            const buttons = document.querySelectorAll('.zoom-btn');
+            buttons.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.zoom === this.currentZoom);
+            });
             
             switch (this.currentZoom) {
                 case 'month':
@@ -574,7 +672,6 @@ class ShiftCalendar {
         const grid = document.createElement('div');
         grid.className = 'calendar-grid month-view';
         
-        // Weekday headers
         const weekdays = document.createElement('div');
         weekdays.className = 'calendar-weekdays';
         ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(day => {
@@ -585,7 +682,6 @@ class ShiftCalendar {
         });
         grid.appendChild(weekdays);
         
-        // Calendar days
         const weeks = document.createElement('div');
         weeks.className = 'calendar-weeks';
         
@@ -611,11 +707,9 @@ class ShiftCalendar {
         const grid = document.createElement('div');
         grid.className = 'calendar-grid week-view';
         
-        // Get start of current week
         const startOfWeek = new Date(this.currentDate);
         startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
         
-        // Weekday headers
         const weekdays = document.createElement('div');
         weekdays.className = 'calendar-weekdays';
         const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -633,7 +727,6 @@ class ShiftCalendar {
         });
         grid.appendChild(weekdays);
         
-        // Week days
         const weekEl = document.createElement('div');
         weekEl.className = 'calendar-week';
         
@@ -663,25 +756,22 @@ class ShiftCalendar {
         const dayEl = document.createElement('div');
         const isToday = date.toDateString() === new Date().toDateString();
         const isOtherMonth = viewType === 'month' && date.getMonth() !== this.currentDate.getMonth();
+        const isSelected = this.selectedDay && date.toDateString() === this.selectedDay.toDateString();
         
-        dayEl.className = `calendar-day ${isToday ? 'today' : ''} ${isOtherMonth ? 'other-month' : ''}`;
+        dayEl.className = `calendar-day ${isToday ? 'today' : ''} ${isOtherMonth ? 'other-month' : ''} ${isSelected ? 'selected' : ''}`;
         dayEl.dataset.date = date.toISOString().split('T')[0];
         dayEl.dataset.dayOfWeek = date.getDay().toString();
         
-        // Day content
         const content = document.createElement('div');
         content.className = 'day-content';
         
-        // Day number
         const dayNumber = document.createElement('div');
         dayNumber.className = 'day-number';
         dayNumber.textContent = date.getDate().toString();
         content.appendChild(dayNumber);
         
-        // Get shifts for this day
         const dayShifts = this.getShiftsForDay(date.getDay());
         
-        // Shift indicators
         const indicators = document.createElement('div');
         indicators.className = 'shift-indicators';
         
@@ -702,7 +792,6 @@ class ShiftCalendar {
         
         content.appendChild(indicators);
         
-        // Coverage bar
         const coverage = this.calculateDayCoverage(dayShifts);
         const coverageBar = document.createElement('div');
         coverageBar.className = 'coverage-bar';
@@ -712,13 +801,11 @@ class ShiftCalendar {
         coverageBar.appendChild(coverageFill);
         content.appendChild(coverageBar);
         
-        // Coverage percentage (shown on hover)
         const coveragePercent = document.createElement('div');
         coveragePercent.className = 'coverage-percent';
         coveragePercent.textContent = `${Math.round(coverage)}%`;
         content.appendChild(coveragePercent);
         
-        // Add shift button
         const addBtn = document.createElement('button');
         addBtn.className = 'add-shift-btn';
         addBtn.textContent = '+';
@@ -729,15 +816,12 @@ class ShiftCalendar {
         };
         content.appendChild(addBtn);
         
-        // Timeline view for day zoom
         if (viewType === 'day') {
             const timeline = this.createTimelineView(dayShifts);
             content.appendChild(timeline);
         }
         
         dayEl.appendChild(content);
-        
-        // Click handler
         dayEl.onclick = () => this.selectDay(date);
         
         return dayEl;
@@ -772,10 +856,7 @@ class ShiftCalendar {
             details.appendChild(desc);
             
             indicator.appendChild(details);
-        }
-        
-        // Action buttons for week/day view
-        if (viewType !== 'month') {
+            
             const actions = document.createElement('div');
             actions.className = 'shift-actions';
             
@@ -812,7 +893,6 @@ class ShiftCalendar {
         const hours = document.createElement('div');
         hours.className = 'timeline-hours';
         
-        // Hour labels
         const labels = document.createElement('div');
         labels.className = 'hour-labels';
         for (let hour = 0; hour < 24; hour++) {
@@ -823,7 +903,6 @@ class ShiftCalendar {
         }
         hours.appendChild(labels);
         
-        // Timeline track
         const track = document.createElement('div');
         track.className = 'timeline-track';
         
@@ -837,7 +916,6 @@ class ShiftCalendar {
             
             shiftEl.className = className;
             
-            // Calculate position
             const [startHour, startMin] = shift.startTime.split(':').map(Number);
             const [endHour, endMin] = shift.endTime.split(':').map(Number);
             
@@ -848,13 +926,12 @@ class ShiftCalendar {
                 endDecimal += 24;
             }
             
-            const top = startDecimal * 25; // 25px per hour
+            const top = startDecimal * 25;
             const height = Math.min((endDecimal - startDecimal) * 25, 600 - top);
             
             shiftEl.style.top = `${top}px`;
-            shiftEl.style.height = `${Math.max(height, 20)}px`; // Minimum height
+            shiftEl.style.height = `${Math.max(height, 20)}px`;
             
-            // Content
             const content = document.createElement('div');
             content.innerHTML = `
                 <strong>${shift.description}</strong><br>
@@ -863,7 +940,6 @@ class ShiftCalendar {
             `;
             shiftEl.appendChild(content);
             
-            // Click to edit
             shiftEl.onclick = () => this.editShift(shift.id);
             shiftEl.title = 'Click to edit shift';
             
@@ -898,7 +974,7 @@ class ShiftCalendar {
     calculateDayCoverage(shifts) {
         if (!shifts || shifts.length === 0) return 0;
         
-        const minutes = new Array(1440).fill(false); // 24 hours * 60 minutes
+        const minutes = new Array(1440).fill(false);
         
         shifts.forEach(shift => {
             if (!shift.isActive) return;
@@ -910,7 +986,6 @@ class ShiftCalendar {
             let endMinutes = endHour * 60 + endMin;
             
             if (shift.isOvernight && endMinutes < startMinutes) {
-                // Handle overnight shift
                 for (let i = startMinutes; i < 1440; i++) minutes[i] = true;
                 for (let i = 0; i < endMinutes; i++) minutes[i] = true;
             } else {
@@ -925,12 +1000,10 @@ class ShiftCalendar {
     }
     
     selectDay(date) {
-        // Remove previous selection
         document.querySelectorAll('.calendar-day.selected').forEach(el => {
             el.classList.remove('selected');
         });
         
-        // Add selection to current day
         const dayEl = document.querySelector(`[data-date="${date.toISOString().split('T')[0]}"]`);
         if (dayEl) {
             dayEl.classList.add('selected');
@@ -943,6 +1016,8 @@ class ShiftCalendar {
             const coverage = this.calculateDayCoverage(dayShifts);
             info.textContent = `${date.toLocaleDateString()} - ${dayShifts.length} shift(s), ${Math.round(coverage)}% coverage`;
         }
+        
+        this.saveState();
     }
     
     quickAddShift(dayOfWeek) {
@@ -969,18 +1044,52 @@ class ShiftCalendar {
     }
 }
 
-// Preserve class; expose instance separately
-let __shiftCalendarInstance=null;
-Object.assign(ShiftCalendar,{navigateMonth:(d)=>{__shiftCalendarInstance?.navigateMonth(d);},setZoomLevel:(z)=>{__shiftCalendarInstance?.setZoomLevel(z);}});
+// Global instance and static methods
+let __shiftCalendarInstance = null;
+Object.assign(ShiftCalendar, {
+    navigateMonth: (d) => { __shiftCalendarInstance?.navigateMonth(d); },
+    setZoomLevel: (z) => { __shiftCalendarInstance?.setZoomLevel(z); }
+});
 
-document.addEventListener('DOMContentLoaded',()=>{try{__shiftCalendarInstance=new ShiftCalendar();}catch(e){console.error('Calendar init failed',e);} });
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        __shiftCalendarInstance = new ShiftCalendar();
+    } catch (e) {
+        console.error('Calendar init failed', e);
+    }
+});
 
-function quickAddShift(day){__shiftCalendarInstance?.quickAddShift(day);} 
-function editShift(id){__shiftCalendarInstance?.editShift(id);} 
-function deleteShift(id){__shiftCalendarInstance?.deleteShift(id);} 
-function loadTemplate(t){const m=document.getElementById('templateMenu');const c=document.getElementById('templateChevron');m?.classList.add('hidden');c?.classList.remove('rotate-180');htmx.ajax('GET',`/Admin/Shifts?handler=LoadTemplate&template=${t}`,{swap:'none'});} 
-function showModal(){const m=document.getElementById('modal-container');if(m&&m.innerHTML.trim()){m.classList.remove('hidden');m.classList.add('show');document.body.classList.add('modal-open');}}
-function hideModal(){const m=document.getElementById('modal-container');if(m){m.classList.add('hidden');m.classList.remove('show');m.innerHTML='';document.body.classList.remove('modal-open');}}
-function showAssignmentsDrawer(){document.getElementById('assignmentsDrawer')?.classList.remove('hidden');}
-function hideAssignmentsDrawer(){document.getElementById('assignmentsDrawer')?.classList.add('hidden');}
+function quickAddShift(day) { __shiftCalendarInstance?.quickAddShift(day); }
+function editShift(id) { __shiftCalendarInstance?.editShift(id); }
+function deleteShift(id) { __shiftCalendarInstance?.deleteShift(id); }
+function loadTemplate(t) {
+    const m = document.getElementById('templateMenu');
+    const c = document.getElementById('templateChevron');
+    m?.classList.add('hidden');
+    c?.classList.remove('rotate-180');
+    htmx.ajax('GET', `/Admin/Shifts?handler=LoadTemplate&template=${t}`, { swap: 'none' });
+}
+function showModal() {
+    const m = document.getElementById('modal-container');
+    if (m && m.innerHTML.trim()) {
+        m.classList.remove('hidden');
+        m.classList.add('show');
+        document.body.classList.add('modal-open');
+    }
+}
+function hideModal() {
+    const m = document.getElementById('modal-container');
+    if (m) {
+        m.classList.add('hidden');
+        m.classList.remove('show');
+        m.innerHTML = '';
+        document.body.classList.remove('modal-open');
+    }
+}
+function showAssignmentsDrawer() {
+    document.getElementById('assignmentsDrawer')?.classList.remove('hidden');
+}
+function hideAssignmentsDrawer() {
+    document.getElementById('assignmentsDrawer')?.classList.add('hidden');
+}
 </script>

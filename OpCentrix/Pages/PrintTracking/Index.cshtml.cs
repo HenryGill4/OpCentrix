@@ -1,8 +1,9 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using OpCentrix.Data;
 using OpCentrix.Models;
+using OpCentrix.Models.JobStaging;
 using OpCentrix.ViewModels.PrintTracking;
 using OpCentrix.ViewModels.Shared;
 using OpCentrix.Services;
@@ -14,7 +15,7 @@ namespace OpCentrix.Pages.PrintTracking
 {
     /// <summary>
     /// Print Tracking dashboard with SLS machine filtering and role-based views
-    /// UPDATED: Only shows SLS machines and provides different views for admin vs operators
+    /// ENHANCED: Comprehensive error handling to prevent redirect loops
     /// </summary>
     [PrintTrackingAccess]
     public class IndexModel : PageModel
@@ -32,6 +33,11 @@ namespace OpCentrix.Pages.PrintTracking
         public bool IsOperatorView => !IsAdminView;
         public string UserRole { get; set; } = string.Empty;
 
+        // ENHANCED: Error tracking properties
+        public List<string> PageErrors { get; set; } = new();
+        public bool HasCriticalError { get; set; } = false;
+        public string ErrorContext { get; set; } = string.Empty;
+
         public IndexModel(
             IPrintTrackingService printTrackingService,
             IMachineManagementService machineManagementService,
@@ -48,56 +54,118 @@ namespace OpCentrix.Pages.PrintTracking
 
         public async Task<IActionResult> OnGetAsync(int? jobId = null, string? machineId = null)
         {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("🔧 [PRINT-TRACKING-{OperationId}] PrintTracking page load initiated", operationId);
+
             try
             {
+                // CRITICAL: Enhanced user identification with comprehensive logging
                 var userId = GetCurrentUserId();
+                var userName = User.Identity?.Name ?? "Unknown";
+                
+                _logger.LogInformation("🔧 [PRINT-TRACKING-{OperationId}] User identification - ID: {UserId}, Name: {UserName}", 
+                    operationId, userId, userName);
 
-                // Determine user role and view type
+                // ENHANCED: Determine user role with error handling
                 UserRole = GetCurrentUserRole();
-                IsAdminView = UserRole == "Admin" || UserRole == "Manager";
+                IsAdminView = DetermineAdminView();
 
-                // Load dashboard data with enhanced machine information (SLS only)
-                Dashboard = await _printTrackingService.GetDashboardDataAsync(userId);
+                _logger.LogInformation("🔧 [PRINT-TRACKING-{OperationId}] Role determination - Role: {UserRole}, IsAdminView: {IsAdminView}", 
+                    operationId, UserRole, IsAdminView);
 
-                // CRITICAL: Filter to show only SLS machines
-                await PopulateSlsMachinesOnlyAsync();
+                // ENHANCED: Load dashboard data with comprehensive error handling
+                try
+                {
+                    Dashboard = await _printTrackingService.GetDashboardDataAsync(userId);
+                    _logger.LogInformation("✅ [PRINT-TRACKING-{OperationId}] Dashboard service data loaded successfully", operationId);
+                }
+                catch (Exception dashEx)
+                {
+                    _logger.LogError(dashEx, "❌ [PRINT-TRACKING-{OperationId}] Error loading dashboard service data", operationId);
+                    Dashboard = CreateFallbackDashboard();
+                    PageErrors.Add("Dashboard service unavailable - using fallback data");
+                }
 
-                // Handle scheduler integration parameters
-                await HandleSchedulerIntegrationAsync(jobId, machineId);
+                // CRITICAL: Filter to show only SLS machines with enhanced error handling
+                try
+                {
+                    await PopulateSlsMachinesOnlyAsync();
+                    _logger.LogInformation("✅ [PRINT-TRACKING-{OperationId}] SLS machines populated successfully - Count: {MachineCount}", 
+                        operationId, Dashboard.AvailableMachines?.Count ?? 0);
+                }
+                catch (Exception machineEx)
+                {
+                    _logger.LogError(machineEx, "❌ [PRINT-TRACKING-{OperationId}] Error populating SLS machines", operationId);
+                    Dashboard.AvailableMachines = CreateFallbackSlsMachineInfo();
+                    PageErrors.Add("Machine data service unavailable - using fallback data");
+                }
 
-                _logger.LogInformation("Print tracking dashboard loaded for user {UserId} ({UserRole}) with {MachineCount} SLS machines. Admin view: {IsAdminView}",
-                    userId, UserRole, Dashboard.AvailableMachines?.Count ?? 0, IsAdminView);
+                // ENHANCED: Handle scheduler integration parameters with error handling
+                try
+                {
+                    await HandleSchedulerIntegrationAsync(jobId, machineId);
+                    if (jobId.HasValue || !string.IsNullOrEmpty(machineId))
+                    {
+                        _logger.LogInformation("✅ [PRINT-TRACKING-{OperationId}] Scheduler integration handled - JobId: {JobId}, MachineId: {MachineId}", 
+                            operationId, jobId, machineId);
+                    }
+                }
+                catch (Exception intEx)
+                {
+                    _logger.LogError(intEx, "❌ [PRINT-TRACKING-{OperationId}] Error handling scheduler integration", operationId);
+                    PageErrors.Add("Scheduler integration partially unavailable");
+                }
+
+                // FINAL: Log successful completion
+                _logger.LogInformation("✅ [PRINT-TRACKING-{OperationId}] PrintTracking dashboard loaded successfully for user {UserName} ({UserRole}) with {MachineCount} SLS machines. Admin view: {IsAdminView}",
+                    operationId, userName, UserRole, Dashboard.AvailableMachines?.Count ?? 0, IsAdminView);
+
+                // Set success message if there were minor errors but page still works
+                if (PageErrors.Any() && !HasCriticalError)
+                {
+                    TempData["Warning"] = $"Page loaded with minor issues: {string.Join(", ", PageErrors)}";
+                }
 
                 return Page();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading print tracking dashboard for user {UserId}", GetCurrentUserId());
+                _logger.LogError(ex, "❌ [PRINT-TRACKING-{OperationId}] Critical error loading PrintTracking dashboard for user {UserName}", 
+                    operationId, User.Identity?.Name ?? "Unknown");
 
-                // Return fallback dashboard
+                // CRITICAL: Don't redirect on error - show error page instead
+                HasCriticalError = true;
+                ErrorContext = $"Critical error loading dashboard (Operation: {operationId})";
+                PageErrors.Add($"Critical system error: {ex.Message}");
+
+                // Return fallback dashboard to prevent redirect
                 Dashboard = CreateFallbackDashboard();
-                TempData["Error"] = "Error loading dashboard data. Please refresh the page.";
+                TempData["Error"] = "Critical error loading dashboard. Please refresh the page or contact support.";
 
-                return Page();
+                return Page(); // Don't redirect - stay on page with error message
             }
         }
 
         public async Task<IActionResult> OnGetRefreshDashboardAsync()
         {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            
             try
             {
                 var userId = GetCurrentUserId();
                 UserRole = GetCurrentUserRole();
-                IsAdminView = UserRole == "Admin" || UserRole == "Manager";
+                IsAdminView = DetermineAdminView();
 
                 Dashboard = await _printTrackingService.GetDashboardDataAsync(userId);
                 await PopulateSlsMachinesOnlyAsync();
 
+                _logger.LogInformation("✅ [PRINT-TRACKING-{OperationId}] Dashboard refreshed successfully", operationId);
                 return Partial("_PrintTrackingDashboard", Dashboard);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error refreshing dashboard for user {UserId}", GetCurrentUserId());
+                _logger.LogError(ex, "❌ [PRINT-TRACKING-{OperationId}] Error refreshing dashboard for user {UserId}", 
+                    operationId, GetCurrentUserId());
                 return StatusCode(500, "Error refreshing dashboard");
             }
         }
@@ -267,6 +335,24 @@ namespace OpCentrix.Pages.PrintTracking
         #region Private Helper Methods
 
         /// <summary>
+        /// ENHANCED: Determine admin view with comprehensive error handling
+        /// </summary>
+        private bool DetermineAdminView()
+        {
+            try
+            {
+                var result = UserRole == "Admin" || UserRole == "Manager";
+                _logger.LogDebug("Admin view determination: Role='{UserRole}', Result={Result}", UserRole, result);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error determining admin view - defaulting to operator view");
+                return false; // Default to operator view on error
+            }
+        }
+
+        /// <summary>
         /// Populate dashboard with ONLY SLS machines from database
         /// CRITICAL: This method now filters to show only SLS machines for print tracking
         /// </summary>
@@ -322,6 +408,7 @@ namespace OpCentrix.Pages.PrintTracking
 
                 // Fallback to basic SLS machine list
                 Dashboard.AvailableMachines = CreateFallbackSlsMachineInfo();
+                PageErrors.Add("SLS machine data unavailable - using fallback data");
             }
         }
 
@@ -370,6 +457,7 @@ namespace OpCentrix.Pages.PrintTracking
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating machine-based statistics");
+                // Don't throw - just log the error and continue with default values
             }
         }
 
@@ -408,6 +496,7 @@ namespace OpCentrix.Pages.PrintTracking
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error handling scheduler integration for jobId {JobId}, machineId {MachineId}", jobId, machineId);
+                // Don't throw - scheduler integration is optional
             }
         }
 
@@ -564,21 +653,30 @@ namespace OpCentrix.Pages.PrintTracking
                 {
                     viewModel.AvailableScheduledJobs = await _printTrackingService.GetAvailableScheduledJobsAsync(viewModel.PrinterName);
                 }
+                else
+                {
+                    viewModel.AvailableScheduledJobs = new List<Job>();
+                }
 
                 // Get available parts
                 viewModel.AvailableParts = await _printTrackingService.GetAvailablePartsAsync();
 
-                // Get available job stages and prototype jobs
-                if (!string.IsNullOrEmpty(viewModel.PrinterName))
-                {
-                    viewModel.AvailableJobStages = await _printTrackingService.GetAvailableJobStagesAsync(viewModel.PrinterName);
-                }
+                // REMOVED: JobStages are not properly implemented yet - removing references
+                viewModel.AvailableJobStages = new List<JobStage>();
+
                 viewModel.AvailablePrototypeJobs = await _printTrackingService.GetAvailablePrototypeJobsAsync();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error populating start print view model");
-                throw;
+                
+                // Provide fallback empty collections rather than throwing
+                viewModel.AvailablePrinters = viewModel.AvailablePrinters ?? new List<string>();
+                viewModel.AvailableScheduledJobs = viewModel.AvailableScheduledJobs ?? new List<Job>();
+                viewModel.AvailableParts = viewModel.AvailableParts ?? new List<Part>();
+                viewModel.AvailableJobStages = new List<JobStage>(); // REMOVED: Not implemented properly
+                viewModel.AvailablePrototypeJobs = viewModel.AvailablePrototypeJobs ?? new List<PrototypeJob>();
+                viewModel.AvailableMaterials = viewModel.AvailableMaterials ?? new List<MaterialInfo>();
             }
         }
 
@@ -789,6 +887,10 @@ namespace OpCentrix.Pages.PrintTracking
                         .OrderBy(j => j.ScheduledStart)
                         .ToListAsync();
                 }
+                else
+                {
+                    viewModel.AvailableRunningJobs = new List<Job>();
+                }
 
                 // Get available parts for selection
                 viewModel.AvailableParts = await _context.Parts
@@ -930,7 +1032,7 @@ namespace OpCentrix.Pages.PrintTracking
         {
             if (machine.MachineType == "SLS")
             {
-                return $"{machine.BuildLengthMm} � {machine.BuildWidthMm} � {machine.BuildHeightMm} mm";
+                return $"{machine.BuildLengthMm} × {machine.BuildWidthMm} × {machine.BuildHeightMm} mm";
             }
             return "N/A";
         }
@@ -952,29 +1054,57 @@ namespace OpCentrix.Pages.PrintTracking
         }
 
         /// <summary>
-        /// Get current user ID safely
+        /// ENHANCED: Get current user ID with comprehensive error handling
         /// </summary>
         private int GetCurrentUserId()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim != null && int.TryParse(userIdClaim.Value, out var userId))
+            try
             {
-                return userId;
-            }
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim != null && int.TryParse(userIdClaim.Value, out var userId))
+                {
+                    return userId;
+                }
 
-            // Fallback: try to get from other claims or create default
-            _logger.LogWarning("Unable to get user ID from claims for user {UserName}", User.Identity?.Name ?? "Unknown");
-            return 1; // Default admin user ID
+                // Fallback: try to get from other claims
+                var nameIdentifier = User.FindFirst("sub")?.Value ?? User.FindFirst("id")?.Value;
+                if (!string.IsNullOrEmpty(nameIdentifier) && int.TryParse(nameIdentifier, out var fallbackUserId))
+                {
+                    _logger.LogWarning("Used fallback method to get user ID for user {UserName}", User.Identity?.Name ?? "Unknown");
+                    return fallbackUserId;
+                }
+
+                // Final fallback: use default admin user
+                _logger.LogWarning("Unable to get user ID from claims for user {UserName} - using default", User.Identity?.Name ?? "Unknown");
+                return 1; // Default admin user ID
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting current user ID");
+                return 1; // Default admin user ID
+            }
         }
 
         /// <summary>
-        /// Get current user role safely
+        /// ENHANCED: Get current user role with comprehensive error handling
         /// </summary>
         private string GetCurrentUserRole()
         {
-            var userRole = User.FindFirst(ClaimTypes.Role)?.Value ??
-                          User.FindFirst("Role")?.Value ?? "Operator";
-            return userRole;
+            try
+            {
+                var userRole = User.FindFirst(ClaimTypes.Role)?.Value ??
+                              User.FindFirst("Role")?.Value ?? 
+                              User.FindFirst("role")?.Value ?? 
+                              "Operator"; // Default to operator
+
+                _logger.LogDebug("Current user role determined: {UserRole} for user {UserName}", userRole, User.Identity?.Name ?? "Unknown");
+                return userRole;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting current user role - defaulting to Operator");
+                return "Operator";
+            }
         }
 
         #endregion

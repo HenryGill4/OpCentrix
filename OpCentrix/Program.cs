@@ -72,6 +72,9 @@ builder.Services.AddRazorPages(options =>
     options.Conventions.AuthorizeFolder("/Admin", "AdminOnly");
     options.Conventions.AuthorizeFolder("/Scheduler", "SchedulerPolicy");
 
+    // Operations Dashboard Authorization
+    options.Conventions.AuthorizeFolder("/Operations", "OperatorAccess");
+
     // B&T MES Route Authorization (NEW)
     options.Conventions.AuthorizeFolder("/BT", "BTAccess");
     options.Conventions.AuthorizeFolder("/Workflows", "WorkflowAccess");
@@ -259,7 +262,7 @@ builder.Services.AddScoped<StageTemplateSeedingService>();
 // Option A: Multi-Stage Workflow Enhancement Service
 builder.Services.AddScoped<ICohortManagementService, CohortManagementService>();
 
-// Phase 3: Automated Stage Progression Service
+// Phase 3: Automated Stage Progression Service - REQUIRED FOR SLS DASHBOARD
 builder.Services.AddScoped<IStageProgressionService, StageProgressionService>();
 
 // Phase 5: Build Time Analytics Service (Machine Learning and Performance Analytics)
@@ -270,6 +273,9 @@ builder.Services.AddScoped<StageDashboardSeedingService>();
 
 // NEW: Core manufacturing data seeding (materials + machines + demo part)
 builder.Services.AddScoped<CoreManufacturingDataSeedingService>();
+
+// NEW: Database Schema Repair Service
+builder.Services.AddScoped<DatabaseSchemaRepairService>();
 
 // Update PrintTrackingService registration to include cohort service and stage progression service
 builder.Services.AddScoped<IPrintTrackingService>(provider =>
@@ -294,13 +300,17 @@ using (var scope = app.Services.CreateScope())
 {
     try
     {
+        // NEW: Run database schema repair first
+        var schemaRepair = scope.ServiceProvider.GetRequiredService<DatabaseSchemaRepairService>();
+        await schemaRepair.EnsureSchemaIntegrityAsync();
+        
         var coreSeeder = scope.ServiceProvider.GetRequiredService<CoreManufacturingDataSeedingService>();
         await coreSeeder.EnsureCoreManufacturingDataAsync();
     }
     catch (Exception ex)
     {
         var log = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        log.LogError(ex, "❌ [CORE-SEED] Failed during startup core data ensure");
+        log.LogError(ex, "❌ [STARTUP] Failed during startup initialization");
     }
 }
 
