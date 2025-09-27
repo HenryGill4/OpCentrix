@@ -1,4 +1,5 @@
 @using OpCentrix.ViewModels.PrintTracking
+@using OpCentrix.Models
 @model PrintTrackingDashboardViewModel
 
 <!-- Enhanced Print Tracking Dashboard with Role-Based Views and SLS Machine Focus -->
@@ -148,13 +149,13 @@
             <div class="flex items-center justify-between mb-4">
                 <div>
                     <h3 class="text-lg leading-6 font-medium text-gray-900">
-                        SLS Machine Status
+                        SLS Machine Status & Schedule
                         @if (Model.AvailableMachines?.Any() == true)
                         {
                             <span class="text-sm text-gray-500 font-normal">(@Model.AvailableMachines.Count machines)</span>
                         }
                     </h3>
-                    <p class="text-sm text-gray-600 mt-1">Selective Laser Sintering printers only</p>
+                    <p class="text-sm text-gray-600 mt-1">Selective Laser Sintering printers with upcoming jobs</p>
                 </div>
                 <div class="flex items-center space-x-3">
                     @if (ViewBag.IsAdminView == true)
@@ -167,37 +168,19 @@
                             </svg>
                             Manage Machines
                         </a>
-                    }
-                    <button data-action="toggle-schedule" 
-                            class="text-sm text-blue-600 hover:text-blue-500 flex items-center">
-                        <span id="schedule-toggle-text">Show Schedule</span>
-                        <svg id="schedule-chevron" class="w-4 h-4 ml-1 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Embedded Schedule View (Hidden by default) -->
-            <div id="schedule-overview" class="hidden mb-6">
-                <div class="border rounded-lg overflow-hidden">
-                    <div hx-get="/PrintTracking?handler=EmbeddedView" 
-                         hx-trigger="revealed, every 5m"
-                         hx-target="this"
-                         hx-swap="innerHTML">
-                        <div class="p-4 text-center text-gray-500">
-                            <svg class="animate-spin h-5 w-5 mx-auto mb-2" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        
+                        <a href="/Scheduler?machineType=SLS" class="text-sm text-blue-600 hover:text-blue-500 flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                             </svg>
-                            Loading SLS schedule...
-                        </div>
-                    </div>
+                            Full Scheduler
+                        </a>
+                    }
                 </div>
             </div>
 
-            <!-- SLS Machine Grid with Role-Based Information -->
-            <div id="schedule-summary">
+            <!-- SLS Machine Grid with Integrated Schedule Information -->
+            <div id="machine-summary">
                 @if (Model.AvailableMachines?.Any() == true)
                 {
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -285,6 +268,90 @@
                                     </div>
                                 }
 
+                                <!-- ENHANCED: Scheduled Jobs Section -->
+                                @{
+                                    var scheduledJobs = Model.ScheduledJobsByMachine?.GetValueOrDefault(machine.MachineId, new List<Job>()) ?? new List<Job>();
+                                    var nextJob = Model.NextJobByMachine?.GetValueOrDefault(machine.MachineId);
+                                    var nextJobTime = Model.NextJobTimeByMachine?.GetValueOrDefault(machine.MachineId);
+                                }
+                                
+                                @if (scheduledJobs.Any())
+                                {
+                                    <div class="mb-3">
+                                        <div class="text-xs font-medium text-gray-700 mb-2 flex items-center">
+                                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                            </svg>
+                                            Upcoming Jobs (@scheduledJobs.Count)
+                                        </div>
+                                        <div class="space-y-1">
+                                            @foreach (var job in scheduledJobs.Take(2)) // Show next 2 jobs
+                                            {
+                                                var isNext = job == nextJob;
+                                                var isRunning = job.Status == "Building" || job.Status == "In Progress";
+                                                var isOverdue = job.ScheduledEnd < DateTime.Now && !isRunning;
+                                                
+                                                <div class="@GetJobCardClasses(isNext, isRunning, isOverdue) px-2 py-1 rounded text-xs">
+                                                    <div class="flex items-center justify-between">
+                                                        <div class="flex-1 min-w-0">
+                                                            <div class="font-medium text-gray-900 truncate flex items-center">
+                                                                @job.PartNumber
+                                                                @if (isNext)
+                                                                {
+                                                                    <span class="ml-1 px-1 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">NEXT</span>
+                                                                }
+                                                                @if (isRunning)
+                                                                {
+                                                                    <span class="ml-1 px-1 py-0.5 bg-green-100 text-green-700 rounded text-xs font-medium">ACTIVE</span>
+                                                                }
+                                                                @if (job.Quantity > 1)
+                                                                {
+                                                                    <span class="ml-1 text-gray-500">(×@job.Quantity)</span>
+                                                                }
+                                                            </div>
+                                                            <div class="text-xs text-gray-500">
+                                                                <span>@GetJobTimeDisplay(job, isRunning)</span>
+                                                                <span class="ml-2">@job.EstimatedHours.ToString("F1")h</span>
+                                                                @if (job.Priority <= 2)
+                                                                {
+                                                                    <span class="ml-1 text-red-600 font-medium">P@job.Priority</span>
+                                                                }
+                                                            </div>
+                                                        </div>
+                                                        @if (isRunning)
+                                                        {
+                                                            <div class="flex-shrink-0 ml-2">
+                                                                <button data-action="complete-print" data-printer="@machine.MachineId" data-job-id="@job.Id"
+                                                                        class="px-2 py-0.5 bg-orange-600 text-white rounded text-xs hover:bg-orange-700 transition-colors duration-200">
+                                                                    Complete
+                                                                </button>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            }
+                                            
+                                            @if (scheduledJobs.Count > 2)
+                                            {
+                                                <div class="text-xs text-center text-gray-500 py-1">
+                                                    +@(scheduledJobs.Count - 2) more jobs
+                                                    <a href="/Scheduler?machine=@machine.MachineId" class="text-blue-600 hover:text-blue-500 ml-1">? View All</a>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                                else if (nextJob == null)
+                                {
+                                    <div class="mb-3 text-xs text-center text-gray-500 py-2 border border-dashed border-gray-200 rounded">
+                                        No upcoming jobs
+                                        <button data-action="schedule-job" data-machine="@machine.MachineId" 
+                                                class="text-blue-600 hover:text-blue-500 ml-1 font-medium bg-transparent border-none p-0 cursor-pointer">
+                                            ? Schedule Job
+                                        </button>
+                                    </div>
+                                }
+
                                 <!-- Maintenance Alert -->
                                 @if (machine.MaintenanceStatus == "Due")
                                 {
@@ -305,8 +372,8 @@
                                     </div>
                                 }
 
-                                <!-- Action Buttons - Role-Based -->
-                                <div class="flex space-x-2">
+                                <!-- Action Buttons - Role-Based with Enhanced Scheduling -->
+                                <div class="flex space-x-1">
                                     @if (machine.IsActive && machine.IsAvailableForScheduling)
                                     {
                                         <button data-action="start-print" data-printer="@machine.MachineId" 
@@ -319,6 +386,13 @@
                                             <button data-action="complete-print" data-printer="@machine.MachineId" 
                                                     class="flex-1 text-xs px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors duration-200">
                                                 @(ViewBag.IsAdminView == true ? "Complete" : "Finish")
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button data-action="schedule-job" data-machine="@machine.MachineId" 
+                                                    class="flex-1 text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors duration-200">
+                                                Schedule
                                             </button>
                                         }
                                     }
@@ -614,6 +688,34 @@
             _ => "bg-green-500"
         };
     }
+
+    private string GetJobCardClasses(bool isNext, bool isRunning, bool isOverdue)
+    {
+        if (isRunning)
+            return "bg-green-50 border-l-2 border-green-400";
+        else if (isOverdue)
+            return "bg-red-50 border-l-2 border-red-400";
+        else if (isNext)
+            return "bg-blue-50 border-l-2 border-blue-400";
+        else
+            return "bg-gray-50 border-l-2 border-gray-200";
+    }
+
+    private string GetJobTimeDisplay(Job job, bool isRunning)
+    {
+        if (isRunning && job.ActualStart.HasValue)
+        {
+            var elapsed = DateTime.Now - job.ActualStart.Value;
+            return $"Running {elapsed.TotalHours:F1}h";
+        }
+        
+        if (job.ScheduledStart.Date == DateTime.Today)
+            return $"Today @job.ScheduledStart:HH:mm";
+        else if (job.ScheduledStart.Date == DateTime.Today.AddDays(1))
+            return $"Tomorrow @job.ScheduledStart:HH:mm";
+        else
+            return $"@job.ScheduledStart:MM/dd HH:mm";
+    }
 }
 
 <script>
@@ -628,44 +730,13 @@
     
     // Initialize dashboard
     window.PrintTracking.init = function() {
-        setupScheduleToggle();
         setupPrintTrackingActions();
         setupAutoRefresh();
         setupSchedulerCommunication();
-        console.log('? [PRINT-TRACKING] Dashboard initialized successfully');
+        console.log('?? [PRINT-TRACKING] Enhanced dashboard with integrated schedule initialized successfully');
     };
     
-    // Schedule toggle functionality
-    function setupScheduleToggle() {
-        const toggleButton = document.querySelector('[data-action="toggle-schedule"]');
-        const scheduleOverview = document.getElementById('schedule-overview');
-        const toggleText = document.getElementById('schedule-toggle-text');
-        const chevron = document.getElementById('schedule-chevron');
-        
-        if (toggleButton && scheduleOverview) {
-            toggleButton.addEventListener('click', function(e) {
-                e.preventDefault();
-                
-                if (scheduleOverview.classList.contains('hidden')) {
-                    scheduleOverview.classList.remove('hidden');
-                    toggleText.textContent = 'Hide Schedule';
-                    chevron.classList.add('rotate-180');
-                    
-                    // Trigger HTMX load if content is empty
-                    const htmxContainer = scheduleOverview.querySelector('[hx-get]');
-                    if (htmxContainer && htmxContainer.innerHTML.trim() === '') {
-                        htmx.trigger(htmxContainer, 'revealed');
-                    }
-                } else {
-                    scheduleOverview.classList.add('hidden');
-                    toggleText.textContent = 'Show Schedule';
-                    chevron.classList.remove('rotate-180');
-                }
-            });
-        }
-    }
-    
-    // Print tracking action buttons
+    // Print tracking action buttons with enhanced job management
     function setupPrintTrackingActions() {
         // Start print buttons
         document.addEventListener('click', function(e) {
@@ -673,7 +744,8 @@
                 e.preventDefault();
                 const button = e.target.matches('[data-action="start-print"]') ? e.target : e.target.closest('[data-action="start-print"]');
                 const printerName = button.getAttribute('data-printer');
-                handleStartPrint(printerName);
+                const jobId = button.getAttribute('data-job-id'); // Optional: specific job to start
+                handleStartPrint(printerName, jobId);
             }
             
             if (e.target.matches('[data-action="complete-print"]') || e.target.closest('[data-action="complete-print"]')) {
@@ -681,7 +753,16 @@
                 const button = e.target.matches('[data-action="complete-print"]') ? e.target : e.target.closest('[data-action="complete-print"]');
                 const printerName = button.getAttribute('data-printer');
                 const buildId = button.getAttribute('data-build-id');
-                handleCompletePrint(printerName, buildId);
+                const jobId = button.getAttribute('data-job-id'); // For completing specific scheduled job
+                handleCompletePrint(printerName, buildId, jobId);
+            }
+            
+            // NEW: Handle job scheduling from machine cards
+            if (e.target.matches('[data-action="schedule-job"]') || e.target.closest('[data-action="schedule-job"]')) {
+                e.preventDefault();
+                const button = e.target.matches('[data-action="schedule-job"]') ? e.target : e.target.closest('[data-action="schedule-job"]');
+                const machineId = button.getAttribute('data-machine');
+                handleScheduleJob(machineId);
             }
         });
     }
@@ -730,9 +811,9 @@
         console.log('?? [SCHEDULER-COMM] Communication setup complete');
     }
     
-    // Handle start print action
-    function handleStartPrint(printerName) {
-        console.log('?? [START-PRINT] Starting print for printer:', printerName);
+    // Handle start print action (enhanced with job ID support)
+    function handleStartPrint(printerName, jobId = null) {
+        console.log('?? [START-PRINT] Starting print for printer:', printerName, 'jobId:', jobId);
         
         if (!printerName) {
             showToast('Error: No printer specified', 'error');
@@ -742,9 +823,13 @@
         try {
             showLoadingIndicator('Loading start print form...');
             
+            const params = new URLSearchParams();
+            params.append('printerName', printerName);
+            if (jobId) params.append('jobId', jobId);
+            
             // Open start print modal
             if (typeof htmx !== 'undefined') {
-                htmx.ajax('GET', `/PrintTracking?handler=StartPrintModal&printerName=${encodeURIComponent(printerName)}`, {
+                htmx.ajax('GET', `/PrintTracking?handler=StartPrintModal&${params.toString()}`, {
                     target: '#modal-container',
                     swap: 'innerHTML'
                 }).then(() => {
@@ -767,12 +852,12 @@
         }
     }
     
-    // Handle complete print action
-    function handleCompletePrint(printerName, buildId) {
-        console.log('?? [COMPLETE-PRINT] Completing print for printer:', printerName, 'buildId:', buildId);
+    // Handle complete print action (enhanced with job ID support)
+    function handleCompletePrint(printerName, buildId = null, jobId = null) {
+        console.log('?? [COMPLETE-PRINT] Completing print for printer:', printerName, 'buildId:', buildId, 'jobId:', jobId);
         
-        if (!printerName && !buildId) {
-            showToast('Error: No printer or build ID specified', 'error');
+        if (!printerName && !buildId && !jobId) {
+            showToast('Error: No printer, build ID, or job ID specified', 'error');
             return;
         }
         
@@ -782,6 +867,7 @@
             const params = new URLSearchParams();
             if (buildId) params.append('buildId', buildId);
             if (printerName) params.append('printerName', printerName);
+            if (jobId) params.append('jobId', jobId);
             
             // Open complete print modal
             if (typeof htmx !== 'undefined') {
@@ -807,193 +893,57 @@
             showToast('Error loading completion form', 'error');
         }
     }
-    
-    // Handle scheduler job updates
-    function handleSchedulerJobUpdate(data) {
-        console.log('?? [SCHEDULER-UPDATE] Received job update:', data);
+
+    // NEW: Handle job scheduling from machine cards
+    function handleScheduleJob(machineId) {
+        console.log('?? [SCHEDULE-JOB] Opening scheduler for machine:', machineId);
         
-        const { jobId, machineId, status, message } = data;
-        
-        if (message) {
-            showToast(message, status === 'Completed' ? 'success' : 'info');
+        if (!machineId) {
+            showToast('Error: No machine specified', 'error');
+            return;
         }
         
-        // Refresh relevant parts of the dashboard
-        setTimeout(() => {
-            refreshDashboard();
-        }, 1000);
-    }
-    
-    // Notification functions for print tracking events
-    window.PrintTracking.notifyScheduler = function(eventType, data) {
-        try {
-            console.log('?? [NOTIFY-SCHEDULER] Sending notification:', eventType, data);
-            
-            // Send to scheduler windows via postMessage
-            const schedulerWindows = window.parent !== window ? [window.parent] : [];
-            
-            // Also try localStorage for cross-tab communication
-            const notification = {
-                type: eventType,
-                timestamp: Date.now(),
-                ...data
-            };
-            
-            localStorage.setItem('scheduleUpdateNotification', JSON.stringify(notification));
-            
-            // Send postMessage to scheduler windows
-            schedulerWindows.forEach(win => {
-                try {
-                    win.postMessage(notification, window.location.origin);
-                } catch (e) {
-                    console.warn('Failed to send message to scheduler window:', e);
+        // Open scheduler in new tab/window with machine pre-selected
+        const schedulerUrl = `/Scheduler?handler=ShowAddModal&machineId=${encodeURIComponent(machineId)}&date=${new Date().toISOString().slice(0, 16)}`;
+        
+        // For admin users, open in modal; for operators, open in new window
+        if (document.body.classList.contains('admin-view')) {
+            try {
+                showLoadingIndicator('Loading scheduler...');
+                
+                if (typeof htmx !== 'undefined') {
+                    htmx.ajax('GET', schedulerUrl, {
+                        target: '#modal-container',
+                        swap: 'innerHTML'
+                    }).then(() => {
+                        showModal();
+                        hideLoadingIndicator();
+                    }).catch((error) => {
+                        hideLoadingIndicator();
+                        console.error('? [SCHEDULE-JOB] Error loading scheduler modal:', error);
+                        
+                        // Fallback to new window
+                        window.open(`/Scheduler?machineType=SLS&machine=${machineId}`, '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes');
+                    });
+                } else {
+                    hideLoadingIndicator();
+                    window.open(`/Scheduler?machineType=SLS&machine=${machineId}`, '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes');
                 }
-            });
-            
-            console.log('? [NOTIFY-SCHEDULER] Notification sent successfully');
-            
-        } catch (error) {
-            console.error('? [NOTIFY-SCHEDULER] Error sending notification:', error);
-        }
-    };
-    
-    // Enhanced toast notification system
-    window.PrintTracking.showToast = function(message, type = 'info') {
-        // Remove existing toasts
-        const existingToasts = document.querySelectorAll('.print-tracking-toast');
-        existingToasts.forEach(toast => toast.remove());
-        
-        const toast = document.createElement('div');
-        toast.className = `print-tracking-toast fixed top-4 right-4 px-6 py-4 rounded-lg shadow-lg z-50 animate-slide-in-right`;
-        
-        const bgColor = type === 'success' ? 'bg-green-600' : 
-                       type === 'error' ? 'bg-red-600' : 
-                       type === 'warning' ? 'bg-yellow-600' : 'bg-blue-600';
-        
-        const icon = type === 'success' ? '?' : 
-                    type === 'error' ? '?' : 
-                    type === 'warning' ? '??' : '??';
-        
-        toast.className += ` ${bgColor} text-white`;
-        
-        toast.innerHTML = `
-            <div class="flex items-center space-x-3">
-                <span class="text-lg">${icon}</span>
-                <span class="font-medium">${message}</span>
-                <button onclick="this.parentElement.parentElement.remove()" class="ml-2 text-white opacity-70 hover:opacity-100">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
-        ```
-        
-        document.body.appendChild(toast);
-        
-        // Auto remove after delay
-        setTimeout(() => {
-            if (toast.parentNode) {
-                toast.remove();
+            } catch (error) {
+                hideLoadingIndicator();
+                console.error('? [SCHEDULE-JOB] Error in handleScheduleJob:', error);
+                window.open(`/Scheduler?machineType=SLS&machine=${machineId}`, '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes');
             }
-        }, type === 'error' ? 8000 : 5000);
-    };
-    
-    // Modal management functions
-    function showModal() {
-        const modalContainer = document.getElementById('modal-container');
-        if (modalContainer) {
-            modalContainer.style.display = 'flex';
-            modalContainer.classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
+        } else {
+            // Operators get new window
+            window.open(`/Scheduler?machineType=SLS&machine=${machineId}`, '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes');
         }
     }
-    
-    function hideModal() {
-        const modalContainer = document.getElementById('modal-container');
-        if (modalContainer) {
-            modalContainer.style.display = 'none';
-            modalContainer.classList.add('hidden');
-            document.body.style.overflow = '';
-            modalContainer.innerHTML = '';
-        }
-    }
-    
-    // Loading indicator functions
-    function showLoadingIndicator(message = 'Loading...') {
-        const indicator = document.getElementById('loading-indicator');
-        if (indicator) {
-            const messageSpan = indicator.querySelector('span');
-            if (messageSpan) messageSpan.textContent = message;
-            indicator.classList.remove('hidden');
-        }
-    }
-    
-    function hideLoadingIndicator() {
-        const indicator = document.getElementById('loading-indicator');
-        if (indicator) {
-            indicator.classList.add('hidden');
-        }
-    }
-    
-    // Dashboard refresh function
-    function refreshDashboard() {
-        console.log('?? [REFRESH] Refreshing print tracking dashboard');
-        
-        if (typeof htmx !== 'undefined') {
-            htmx.ajax('GET', '/PrintTracking?handler=RefreshDashboard', {
-                target: '#dashboard-content',
-                swap: 'innerHTML'
-            }).then(() => {
-                console.log('? [REFRESH] Dashboard refreshed successfully');
-            }).catch((error) => {
-                console.warn('?? [REFRESH] Dashboard refresh failed:', error);
-            });
-        }
-    }
-    
+
     // Expose functions globally for compatibility
     window.showToast = window.PrintTracking.showToast;
     window.handleStartPrint = handleStartPrint;
     window.handleCompletePrint = handleCompletePrint;
+    window.handleScheduleJob = handleScheduleJob; // NEW: Expose job scheduling
     window.refreshDashboard = refreshDashboard;
-    
-    // Admin-specific functions
-    window.openSchedulerIntegrationPanel = function() {
-        console.log('?? [ADMIN] Opening scheduler integration panel');
-        window.open('/Scheduler', '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes');
-    };
-    
-    window.refreshAllData = function() {
-        console.log('?? [ADMIN] Refreshing all data');
-        showLoadingIndicator('Refreshing all data...');
-        refreshDashboard();
-        setTimeout(hideLoadingIndicator, 2000);
-    };
-    
-    // Operator-specific functions
-    window.quickStartPrint = function() {
-        console.log('?? [OPERATOR] Quick start print');
-        // Find the first available SLS machine
-        const availableMachine = document.querySelector('[data-action="start-print"]');
-        if (availableMachine) {
-            const printerName = availableMachine.getAttribute('data-printer');
-            handleStartPrint(printerName);
-        } else {
-            showToast('No SLS machines available for quick start', 'warning');
-        }
-    };
-    
-    window.viewMySchedule = function() {
-        console.log('?? [OPERATOR] View my schedule');
-        window.open('/Scheduler', '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes');
-    };
-    
-    // Initialize when DOM is ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', window.PrintTracking.init);
-    } else {
-        window.PrintTracking.init();
-    }
-    
-})();
 </script>

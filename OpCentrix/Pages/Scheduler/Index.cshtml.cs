@@ -1169,6 +1169,187 @@ namespace OpCentrix.Pages.Scheduler
             var weight = rank - lowIdx;
             return sorted[lowIdx] * (1 - weight) + sorted[highIdx] * weight;
         }
+
+        // NEW: Enhanced embedded view handler for printing dashboard with SLS filtering
+        public async Task<IActionResult> OnGetEmbeddedViewAsync(string? machineFilter = "SLS")
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("🎯 [SCHEDULER-EMBEDDED-{OperationId}] Loading embedded scheduler view with filter: {Filter}", 
+                operationId, machineFilter ?? "all");
+
+            try
+            {
+                // Load all available machines first
+                await LoadAvailableMachinesAsync(operationId);
+
+                // Apply SLS filtering (future-ready for other machine types)
+                var filteredMachines = FilterMachinesByType(machineFilter ?? "SLS");
+                
+                if (!filteredMachines.Any())
+                {
+                    _logger.LogWarning("⚠️ [SCHEDULER-EMBEDDED-{OperationId}] No machines found for filter: {Filter}", 
+                        operationId, machineFilter);
+                }
+
+                // Create embedded view model with filtered data
+                var embeddedViewModel = await CreateEmbeddedSchedulerViewModelAsync(filteredMachines, operationId);
+
+                _logger.LogInformation("✅ [SCHEDULER-EMBEDDED-{OperationId}] Embedded view loaded: {JobCount} jobs, {MachineCount} machines", 
+                    operationId, embeddedViewModel.Jobs.Count, embeddedViewModel.Machines.Count);
+
+                // Return the enhanced embedded scheduler view
+                return Partial("_EmbeddedSchedulerEnhanced", embeddedViewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [SCHEDULER-EMBEDDED-{OperationId}] Error loading embedded scheduler view", operationId);
+                
+                // Return error fallback view
+                var fallbackViewModel = CreateFallbackEmbeddedViewModel();
+                return Partial("_EmbeddedSchedulerEnhanced", fallbackViewModel);
+            }
+        }
+
+        // NEW: Filter machines by type (future-ready for multiple types)
+        private List<Machine> FilterMachinesByType(string machineFilter)
+        {
+            if (string.IsNullOrWhiteSpace(machineFilter) || machineFilter.Equals("all", StringComparison.OrdinalIgnoreCase))
+            {
+                return AvailableMachines;
+            }
+
+            var targetFilter = machineFilter.Trim().ToUpperInvariant();
+            var filteredMachines = new List<Machine>();
+
+            foreach (var machine in AvailableMachines)
+            {
+                var unifiedType = GetUnifiedMachineType(machine);
+                if (unifiedType.Equals(targetFilter, StringComparison.OrdinalIgnoreCase))
+                {
+                    filteredMachines.Add(machine);
+                }
+            }
+
+            return filteredMachines;
+        }
+
+        // NEW: Create enhanced embedded scheduler view model (future-ready for print tracking integration)
+        private async Task<EmbeddedSchedulerViewModel> CreateEmbeddedSchedulerViewModelAsync(
+            List<Machine> filteredMachines, string operationId)
+        {
+            try
+            {
+                var startDate = DateTime.Today;
+                var endDate = startDate.AddDays(3); // 3-day view for embedded scheduler
+
+                // Get jobs for the filtered machines within date range
+                var machineIds = filteredMachines.Select(m => m.MachineId).ToList();
+                var jobs = new List<Job>();
+
+                if (machineIds.Any())
+                {
+                    jobs = await _context.Jobs
+                        .Include(j => j.Part)
+                        .Where(j => machineIds.Contains(j.MachineId) && 
+                                   j.ScheduledStart >= startDate && 
+                                   j.ScheduledStart < endDate)
+                        .OrderBy(j => j.ScheduledStart)
+                        .ThenBy(j => j.Priority)
+                        .Take(100) // Reasonable limit for embedded view
+                        .AsNoTracking()
+                        .ToListAsync();
+                }
+
+                // Create machine colors dictionary from scheduler data
+                var machineColors = filteredMachines.ToDictionary(
+                    m => m.MachineId,
+                    m => string.IsNullOrWhiteSpace(m.ColorHex) ? m.EffectiveColorHex : m.ColorHex!
+                );
+
+                // FUTURE-READY: Add hooks for real-time print status updates
+                var enhancedJobs = await EnrichJobsWithPrintTrackingDataAsync(jobs, operationId);
+
+                var viewModel = new EmbeddedSchedulerViewModel
+                {
+                    Jobs = enhancedJobs,
+                    Machines = machineIds,
+                    StartDate = startDate,
+                    Dates = Enumerable.Range(0, 3).Select(i => startDate.AddDays(i)).ToList(),
+                    MachineColors = machineColors
+                };
+
+                return viewModel;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [SCHEDULER-EMBEDDED-{OperationId}] Error creating embedded view model", operationId);
+                throw;
+            }
+        }
+
+        // FUTURE-READY: Enrich jobs with print tracking data (actual vs scheduled times, completion status)
+        private async Task<List<Job>> EnrichJobsWithPrintTrackingDataAsync(List<Job> jobs, string operationId)
+        {
+            try
+            {
+                if (!jobs.Any()) return jobs;
+
+                var jobIds = jobs.Select(j => j.Id).ToList();
+
+                // Get associated build jobs for print tracking integration
+                var buildJobs = await _context.BuildJobs
+                    .Where(bj => bj.AssociatedScheduledJobId.HasValue && 
+                                jobIds.Contains(bj.AssociatedScheduledJobId.Value))
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                var buildJobLookup = buildJobs.ToDictionary(
+                    bj => bj.AssociatedScheduledJobId!.Value, 
+                    bj => bj
+                );
+
+                // FUTURE: This is where we'll add real-time status updates
+                foreach (var job in jobs)
+                {
+                    if (buildJobLookup.TryGetValue(job.Id, out var buildJob))
+                    {
+                        // Future enhancement: Update job status based on actual print progress
+                        // For now, just ensure status consistency
+                        if (buildJob.Status == "In Progress" && job.Status != "Building")
+                        {
+                            job.Status = "Building";
+                        }
+                        else if (buildJob.Status == "Completed" && job.Status != "Completed")
+                        {
+                            job.Status = "Completed";
+                            job.ActualEnd = buildJob.ActualEndTime;
+                        }
+                    }
+                }
+
+                return jobs;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "⚠️ [SCHEDULER-EMBEDDED-{OperationId}] Error enriching jobs with print tracking data", operationId);
+                // Return original jobs if enrichment fails
+                return jobs;
+            }
+        }
+
+        // NEW: Create fallback embedded view model for error cases
+        private EmbeddedSchedulerViewModel CreateFallbackEmbeddedViewModel()
+        {
+            var startDate = DateTime.Today;
+            return new EmbeddedSchedulerViewModel
+            {
+                Jobs = new List<Job>(),
+                Machines = new List<string>(),
+                StartDate = startDate,
+                Dates = Enumerable.Range(0, 3).Select(i => startDate.AddDays(i)).ToList(),
+                MachineColors = new Dictionary<string, string>()
+            };
+        }
     }
 
     public class CreateJobDto
@@ -1207,5 +1388,14 @@ namespace OpCentrix.Pages.Scheduler
     {
         public string PropertyName { get; set; } = string.Empty;
         public string ErrorMessage { get; set; } = string.Empty;
+    }
+
+    public class EmbeddedSchedulerViewModel
+    {
+        public List<Job> Jobs { get; set; } = new();
+        public List<string> Machines { get; set; } = new();
+        public DateTime StartDate { get; set; } = DateTime.Today;
+        public List<DateTime> Dates { get; set; } = new();
+        public Dictionary<string, string> MachineColors { get; set; } = new();
     }
 }

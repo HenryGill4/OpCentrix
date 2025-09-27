@@ -1,0 +1,431 @@
+@using OpCentrix.ViewModels.Shared
+@using OpCentrix.Models
+@model EmbeddedSchedulerViewModel
+
+@{
+    var jobs = Model.Jobs ?? new List<Job>();
+    var machines = Model.Machines ?? new List<string>();
+    var machineColors = Model.MachineColors ?? new Dictionary<string, string>();
+    var startDate = Model.StartDate;
+}
+
+<!-- Enhanced Embedded Scheduler for Printing Dashboard -->
+<div class="embedded-scheduler-enhanced bg-gray-50 rounded-lg" data-refresh-endpoint="/Scheduler/EmbeddedView" data-last-update="@DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss")">
+    
+    <!-- Header with Summary Stats -->
+    <div class="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100 rounded-t-lg">
+        <div>
+            <h4 class="text-sm font-semibold text-blue-900">Production Schedule</h4>
+            <p class="text-xs text-blue-600 mt-1">Next 3 Days • SLS Machines Only</p>
+        </div>
+        <div class="flex items-center space-x-4">
+            <div class="text-right">
+                <div class="text-xs text-blue-600">
+                    @jobs.Count jobs • @machines.Count machines
+                </div>
+                <div class="text-xs text-blue-500">
+                    @jobs.Count(j => j.Status == "Building" || j.Status == "In Progress") active
+                </div>
+            </div>
+            <a href="/Scheduler?machineType=SLS" class="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center bg-white px-2 py-1 rounded border border-blue-200 hover:border-blue-300 transition-all">
+                Full Scheduler
+                <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                </svg>
+            </a>
+        </div>
+    </div>
+
+    <!-- Machine Schedule Cards -->
+    <div class="p-4">
+        @if (jobs.Any() && machines.Any())
+        {
+            <div class="space-y-3">
+                @foreach (var machine in machines.Take(6))
+                {
+                    var machineJobs = jobs.Where(j => j.MachineId == machine).OrderBy(j => j.ScheduledStart).ToList();
+                    var totalHours = machineJobs.Sum(j => j.EstimatedHours);
+                    var urgentJobs = machineJobs.Count(j => j.Priority <= 2);
+                    var runningJobs = machineJobs.Count(j => j.Status == "Building" || j.Status == "In Progress");
+                    var completedToday = machineJobs.Count(j => j.Status == "Completed" && j.ActualEnd?.Date == DateTime.Today);
+                    var machineColor = machineColors.GetValueOrDefault(machine, "#6366F1");
+                    
+                    <div class="bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-all duration-200 shadow-sm hover:shadow-md" 
+                         data-machine="@machine" 
+                         data-jobs="@machineJobs.Count"
+                         data-running="@runningJobs">
+                        
+                        <!-- Machine Header with Status Indicators -->
+                        <div class="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-gray-25">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-3 h-3 rounded-full flex-shrink-0" style="background-color: @machineColor"></div>
+                                    <div>
+                                        <h5 class="font-semibold text-gray-900">@machine</h5>
+                                        <div class="flex items-center space-x-3 mt-1">
+                                            <span class="text-xs text-gray-500">
+                                                @machineJobs.Count job@(machineJobs.Count != 1 ? "s" : "")
+                                            </span>
+                                            <span class="text-xs text-gray-500">
+                                                @totalHours.ToString("F1")h total
+                                            </span>
+                                            @if (completedToday > 0)
+                                            {
+                                                <span class="text-xs text-green-600 font-medium">
+                                                    @completedToday completed today
+                                                </span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    @if (urgentJobs > 0)
+                                    {
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                            @urgentJobs urgent
+                                        </span>
+                                    }
+                                    @if (runningJobs > 0)
+                                    {
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            <svg class="w-3 h-3 mr-1 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path>
+                                            </svg>
+                                            Running
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Jobs List -->
+                        <div class="p-4">
+                            @if (machineJobs.Any())
+                            {
+                                <div class="space-y-2">
+                                    @foreach (var job in machineJobs.Take(4))
+                                    {
+                                        var isRunning = job.Status == "Building" || job.Status == "In Progress";
+                                        var isCompleted = job.Status == "Completed";
+                                        var isOverdue = job.ScheduledEnd < DateTime.Now && !isRunning && !isCompleted;
+                                        var isUpcoming = job.ScheduledStart <= DateTime.Now.AddHours(4) && job.Status == "Scheduled";
+                                        var rowClasses = GetJobRowClasses(job.Status, isOverdue, isUpcoming);
+                                        
+                                        <div class="@rowClasses rounded-lg p-3 group cursor-pointer transition-all duration-200" 
+                                             data-job-id="@job.Id"
+                                             data-part-number="@job.PartNumber"
+                                             data-status="@job.Status"
+                                             onclick="showJobDetails(@job.Id, '@job.PartNumber', '@job.MachineId')">
+                                            
+                                            <div class="flex items-center justify-between">
+                                                <div class="flex-1 min-w-0">
+                                                    <div class="flex items-center space-x-2">
+                                                        <h6 class="font-medium text-gray-900 truncate">@job.PartNumber</h6>
+                                                        @if (isRunning)
+                                                        {
+                                                            <div class="flex items-center text-green-600">
+                                                                <svg class="w-3 h-3 animate-spin" fill="currentColor" viewBox="0 0 20 20">
+                                                                    <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"></path>
+                                                                </svg>
+                                                                <span class="text-xs ml-1">Active</span>
+                                                            </div>
+                                                        }
+                                                        @if (job.Quantity > 1)
+                                                        {
+                                                            <span class="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                                                                Qty: @job.Quantity
+                                                            </span>
+                                                        }
+                                                    </div>
+                                                    <div class="mt-1 flex items-center space-x-3 text-xs text-gray-500">
+                                                        <span>@GetTimeDisplayText(job, isRunning)</span>
+                                                        <span>@job.EstimatedHours.ToString("F1")h</span>
+                                                        @if (!string.IsNullOrEmpty(job.SlsMaterial))
+                                                        {
+                                                            <span class="text-blue-600">@job.SlsMaterial</span>
+                                                        }
+                                                    </div>
+                                                </div>
+                                                <div class="flex items-center space-x-2 ml-3">
+                                                    <span class="@GetPriorityBadgeClasses(job.Priority) px-2 py-1 rounded-full text-xs font-medium">
+                                                        P@job.Priority
+                                                    </span>
+                                                    @if (isOverdue)
+                                                    {
+                                                        <svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                                                        </svg>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                                
+                                @if (machineJobs.Count > 4)
+                                {
+                                    <div class="mt-3 pt-3 border-t border-gray-100 text-center">
+                                        <a href="/Scheduler?machine=@machine" class="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                                            +@(machineJobs.Count - 4) more jobs ? View in scheduler
+                                        </a>
+                                    </div>
+                                }
+                                
+                                <!-- Future-Ready: Quick Action Buttons for Print Tracking Integration -->
+                                <div class="mt-3 pt-3 border-t border-gray-100 flex space-x-2">
+                                    @if (runningJobs > 0)
+                                    {
+                                        <button type="button" 
+                                                class="flex-1 text-xs px-3 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors duration-200 flex items-center justify-center"
+                                                onclick="completeJob('@machine')"
+                                                data-action="complete-print" 
+                                                data-machine="@machine">
+                                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                            </svg>
+                                            Complete Print
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" 
+                                                class="flex-1 text-xs px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors duration-200 flex items-center justify-center"
+                                                onclick="startJob('@machine')"
+                                                data-action="start-print" 
+                                                data-machine="@machine">
+                                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1M9 16h6M10 5.5L8 8h4l-2-2.5z"></path>
+                                            </svg>
+                                            Start Print
+                                        </button>
+                                    }
+                                    <a href="/Scheduler?handler=ShowAddModal&machineId=@machine&date=@DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm")"
+                                       class="text-xs px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center"
+                                       hx-get="/Scheduler?handler=ShowAddModal&machineId=@machine&date=@DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm")"
+                                       hx-target="#modal-content"
+                                       hx-swap="innerHTML">
+                                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                        </svg>
+                                        Schedule
+                                    </a>
+                                </div>
+                            }
+                            else
+                            {
+                                <!-- No Jobs State -->
+                                <div class="text-center py-6">
+                                    <svg class="mx-auto h-8 w-8 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    <p class="text-xs text-gray-500 mb-3">No scheduled jobs</p>
+                                    <button type="button" 
+                                            class="text-xs px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors duration-200 inline-flex items-center"
+                                            onclick="startJob('@machine')"
+                                            data-action="start-print" 
+                                            data-machine="@machine">
+                                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                        </svg>
+                                        Start New Print
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+                
+                @if (machines.Count > 6)
+                {
+                    <div class="text-center py-3">
+                        <a href="/Scheduler?machineType=SLS" class="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                            +@(machines.Count - 6) more SLS machines ? View all in scheduler
+                        </a>
+                    </div>
+                }
+            </div>
+        }
+        else if (machines.Any())
+        {
+            <!-- No Jobs but Machines Exist -->
+            <div class="text-center py-12 bg-white rounded-lg border border-gray-200">
+                <svg class="mx-auto h-12 w-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                <h3 class="text-sm font-medium text-gray-900 mb-2">No Scheduled Jobs</h3>
+                <p class="text-xs text-gray-500 mb-6">No jobs scheduled for the next 3 days across @machines.Count SLS machines.</p>
+                <a href="/Scheduler?machineType=SLS" 
+                   class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors duration-200">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    Schedule New Job
+                </a>
+            </div>
+        }
+        else
+        {
+            <!-- No Machines Error -->
+            <div class="text-center py-12 bg-white rounded-lg border border-gray-200 border-dashed">
+                <svg class="mx-auto h-12 w-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
+                </svg>
+                <h3 class="text-sm font-medium text-gray-900 mb-2">No SLS Machines Configured</h3>
+                <p class="text-xs text-gray-500 mb-6">Configure SLS machines to view scheduled jobs.</p>
+                <a href="/Admin/Machines" 
+                   class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors duration-200">
+                    Configure Machines
+                </a>
+            </div>
+        }
+    </div>
+
+    <!-- Footer with Quick Stats and Future-Ready Hooks -->
+    <div class="px-4 py-3 bg-gray-50 border-t border-gray-100 rounded-b-lg">
+        <div class="grid grid-cols-4 gap-4 text-center">
+            <div>
+                <div class="text-sm font-semibold text-gray-900" data-metric="total-jobs">@jobs.Count</div>
+                <div class="text-xs text-gray-500">Total Jobs</div>
+            </div>
+            <div>
+                <div class="text-sm font-semibold text-green-600" data-metric="active-jobs">@jobs.Count(j => j.Status == "Building" || j.Status == "In Progress")</div>
+                <div class="text-xs text-gray-500">Active</div>
+            </div>
+            <div>
+                <div class="text-sm font-semibold text-red-600" data-metric="urgent-jobs">@jobs.Count(j => j.Priority <= 2)</div>
+                <div class="text-xs text-gray-500">High Priority</div>
+            </div>
+            <div>
+                <div class="text-sm font-semibold text-gray-600" data-metric="total-hours">@jobs.Sum(j => j.EstimatedHours).ToString("F1")h</div>
+                <div class="text-xs text-gray-500">Total Hours</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    private string GetJobRowClasses(string status, bool isOverdue, bool isUpcoming)
+    {
+        var baseClasses = "border-l-4 hover:bg-gray-50";
+        
+        return status switch
+        {
+            "Building" or "In Progress" => $"{baseClasses} bg-green-50 border-green-400 hover:bg-green-100",
+            "Completed" => $"{baseClasses} bg-gray-50 border-gray-300",
+            _ when isOverdue => $"{baseClasses} bg-red-50 border-red-400 hover:bg-red-100",
+            _ when isUpcoming => $"{baseClasses} bg-yellow-50 border-yellow-400 hover:bg-yellow-100",
+            _ => $"{baseClasses} bg-white border-gray-200"
+        };
+    }
+
+    private string GetPriorityBadgeClasses(int priority)
+    {
+        return priority switch
+        {
+            1 => "bg-red-100 text-red-800",
+            2 => "bg-orange-100 text-orange-800",
+            3 => "bg-yellow-100 text-yellow-800",
+            4 => "bg-blue-100 text-blue-800",
+            5 => "bg-green-100 text-green-800",
+            _ => "bg-gray-100 text-gray-800"
+        };
+    }
+
+    private string GetTimeDisplayText(Job job, bool isRunning)
+    {
+        if (isRunning && job.ActualStart.HasValue)
+        {
+            var elapsed = DateTime.Now - job.ActualStart.Value;
+            return $"Running {elapsed.TotalHours:F1}h / {job.EstimatedHours:F1}h";
+        }
+        
+        if (job.ScheduledStart.Date == DateTime.Today)
+        {
+            return $"Today {job.ScheduledStart:HH:mm} - {job.ScheduledEnd:HH:mm}";
+        }
+        
+        if (job.ScheduledStart.Date == DateTime.Today.AddDays(1))
+        {
+            return $"Tomorrow {job.ScheduledStart:HH:mm} - {job.ScheduledEnd:HH:mm}";
+        }
+        
+        return $"{job.ScheduledStart:MM/dd HH:mm} - {job.ScheduledEnd:HH:mm}";
+    }
+}
+
+<!-- Future-Ready JavaScript for Real-Time Updates and Print Tracking Integration -->
+<script>
+    // Future enhancement: Real-time job status updates
+    function refreshEmbeddedScheduler() {
+        const container = document.querySelector('.embedded-scheduler-enhanced');
+        if (container && window.htmx) {
+            htmx.ajax('GET', '/Scheduler/EmbeddedView', {
+                target: container,
+                swap: 'outerHTML'
+            });
+        }
+    }
+
+    // Print tracking integration functions
+    function startJob(machineId) {
+        console.log('?? [SCHEDULE] Starting print job on machine:', machineId);
+        
+        // Integrate with print tracking system
+        if (!machineId || machineId.trim() === '') {
+            console.error('? [SCHEDULE] No machine ID provided for start job');
+            alert('Error: No machine selected');
+            return;
+        }
+        
+        // Call the print tracking start modal using the correct function
+        console.log('?? [SCHEDULE] Opening start print modal for printer:', machineId);
+        
+        // Use the PrintTracking namespace function that's already loaded
+        if (window.PrintTracking && window.PrintTracking.openStartPrintModal) {
+            window.PrintTracking.openStartPrintModal(machineId);
+            console.log('? [SCHEDULE] Called PrintTracking.openStartPrintModal');
+        } else if (window.openStartPrintModal) {
+            // Fallback to global function
+            window.openStartPrintModal(machineId);
+            console.log('? [SCHEDULE] Called global openStartPrintModal');
+        } else {
+            console.error('? [SCHEDULE] PrintTracking functions not available');
+            alert('Print tracking functions not loaded. Please refresh the page.');
+        }
+    }
+
+    function completeJob(machineId) {
+        console.log('?? [SCHEDULE] Completing print job on machine:', machineId);
+        
+        if (!machineId || machineId.trim() === '') {
+            console.error('? [SCHEDULE] No machine ID provided for complete job');
+            alert('Error: No machine selected');
+            return;
+        }
+        
+        // Call the print tracking complete modal using the correct function
+        console.log('?? [SCHEDULE] Opening complete print modal for printer:', machineId);
+        
+        // Use the PrintTracking namespace function that's already loaded
+        if (window.PrintTracking && window.PrintTracking.openPostPrintModal) {
+            window.PrintTracking.openPostPrintModal(null, machineId);
+            console.log('? [SCHEDULE] Called PrintTracking.openPostPrintModal');
+        } else if (window.openPostPrintModal) {
+            // Fallback to global function
+            window.openPostPrintModal(null, machineId);
+            console.log('? [SCHEDULE] Called global openPostPrintModal');
+        } else {
+            console.error('? [SCHEDULE] PrintTracking functions not available');
+            alert('Print tracking functions not loaded. Please refresh the page.');
+        }
+    }
+
+    function showJobDetails(jobId, partNumber, machineId) {
+        console.log('Showing details for job:', { jobId, partNumber, machineId });
+        // Future: Show job details modal or navigate to detail view
+        // window.showJobDetailsModal && window.showJobDetailsModal(jobId);
+    }
+
+    // Auto-refresh every 2 minutes (future enhancement)
+    // setInterval(refreshEmbeddedScheduler, 120000);
+</script>

@@ -355,702 +355,164 @@ namespace OpCentrix.Pages.PrintTracking
         /// <summary>
         /// Populate dashboard with ONLY SLS machines from database
         /// CRITICAL: This method now filters to show only SLS machines for print tracking
+        /// ENHANCED: Now includes scheduled jobs for each machine
         /// </summary>
         private async Task PopulateSlsMachinesOnlyAsync()
         {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogDebug("🔧 [PRINT-TRACKING-{OperationId}] Loading SLS machines with scheduled jobs", operationId);
+
             try
             {
-                // CRITICAL FILTER: Only get SLS machines for print tracking
-                var slsMachines = await _context.Machines
-                    .Where(m => m.IsActive &&
-                               m.IsAvailableForScheduling &&
-                               m.MachineType.ToUpper() == "SLS") // SLS machines only
+                // Get all machines from machine service (with proper SLS filtering)
+                var allMachines = await _machineManagementService.GetActiveMachinesAsync();
+                
+                // Filter to only SLS machines using the same logic as scheduler
+                var slsMachines = allMachines
+                    .Where(m => GetUnifiedMachineType(m) == "SLS")
                     .OrderBy(m => m.Priority)
-                    .ThenBy(m => m.MachineId)
-                    .ToListAsync();
+                    .ToList();
 
-                if (!slsMachines.Any())
-                {
-                    _logger.LogWarning("No active SLS machines found in database. Creating fallback SLS machines.");
-                    slsMachines = CreateFallbackSlsMachines();
-                }
-
-                // Populate available machines for forms (SLS only)
-                Dashboard.AvailableMachines = slsMachines.Select(m => new OpCentrix.ViewModels.PrintTracking.MachineInfo
+                // Convert Machine models to MachineInfo view models
+                Dashboard.AvailableMachines = slsMachines.Select(m => new MachineInfo
                 {
                     MachineId = m.MachineId,
-                    MachineName = m.MachineName,
-                    MachineType = m.MachineType,
-                    Status = m.Status,
+                    MachineName = m.Name,
+                    MachineType = m.MachineType ?? "SLS",
+                    Status = m.Status ?? "Unknown",
                     IsActive = m.IsActive,
                     IsAvailableForScheduling = m.IsAvailableForScheduling,
                     Priority = m.Priority,
-                    SupportedMaterials = m.SupportedMaterials.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
-                    CurrentMaterial = m.CurrentMaterial,
-                    Location = m.Location,
-                    Department = m.Department,
-                    BuildVolumeInfo = GetBuildVolumeInfo(m),
-                    MaintenanceStatus = GetMaintenanceStatus(m),
-                    UtilizationPercent = Dashboard.UtilizationByMachine.GetValueOrDefault(m.MachineId, 0),
-                    ActiveJobs = Dashboard.ActiveJobsByPrinter.GetValueOrDefault(m.MachineId, 0),
-                    QueuedJobs = Dashboard.QueueDepth.GetValueOrDefault(m.MachineId, 0)
+                    CurrentMaterial = m.CurrentMaterial ?? "",
+                    Location = m.Location ?? "",
+                    MaintenanceStatus = m.RequiresMaintenance ? "Due" : "OK",
+                    LastMaintenanceDate = m.LastMaintenanceDate,
+                    NextMaintenanceDate = m.NextMaintenanceDate
                 }).ToList();
 
-                // Update existing machine-based data with SLS machines only
-                await UpdateMachineBasedStatsAsync(slsMachines);
+                _logger.LogInformation("✅ [PRINT-TRACKING-{OperationId}] Loaded {Count} SLS machines from database", 
+                    operationId, Dashboard.AvailableMachines.Count);
 
-                _logger.LogInformation("Successfully populated {MachineCount} SLS machines from database for {UserRole} user",
-                    slsMachines.Count, UserRole);
+                // ENHANCED: Load scheduled jobs for each SLS machine
+                await LoadScheduledJobsForMachinesAsync(operationId);
+
+                // Update machine-based statistics
+                await UpdateMachineBasedStatsAsync(Dashboard.AvailableMachines);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error populating SLS machine data");
-
-                // Fallback to basic SLS machine list
-                Dashboard.AvailableMachines = CreateFallbackSlsMachineInfo();
-                PageErrors.Add("SLS machine data unavailable - using fallback data");
+                _logger.LogError(ex, "❌ [PRINT-TRACKING-{OperationId}] Critical error loading SLS machines", operationId);
+                
+                // Fallback to prevent crashes
+                Dashboard.AvailableMachines = new List<MachineInfo>();
+                Dashboard.ScheduledJobsByMachine = new Dictionary<string, List<Job>>();
+                Dashboard.NextJobByMachine = new Dictionary<string, Job?>();
+                Dashboard.NextJobTimeByMachine = new Dictionary<string, string>();
             }
         }
 
         /// <summary>
-        /// Update machine-based statistics with actual database machines
+        /// Load scheduled jobs for each SLS machine (next 3 days)
+        /// ENHANCED: Provides job schedule data directly in machine cards
         /// </summary>
-        private async Task UpdateMachineBasedStatsAsync(List<Machine> machines)
-        {
-            try
-            {
-                var today = DateTime.Today;
-                var machineIds = machines.Select(m => m.MachineId).ToList();
-
-                // Update active jobs by printer
-                var activeJobsByMachine = await _context.BuildJobs
-                    .Where(b => b.Status == "In Progress" && machineIds.Contains(b.PrinterName))
-                    .GroupBy(b => b.PrinterName)
-                    .ToDictionaryAsync(g => g.Key, g => g.Count());
-
-                // Update hours today by machine
-                var hoursToday = await _context.BuildJobs
-                    .Where(b => b.ActualStartTime >= today &&
-                               b.Status == "Completed" &&
-                               b.ActualEndTime.HasValue &&
-                               machineIds.Contains(b.PrinterName))
-                    .GroupBy(b => b.PrinterName)
-                    .ToDictionaryAsync(
-                        g => g.Key,
-                        g => g.Sum(b => (b.ActualEndTime!.Value - b.ActualStartTime).TotalHours)
-                    );
-
-                // Update queue depth by machine
-                var queueDepth = await _context.Jobs
-                    .Where(j => j.Status == "Scheduled" && machineIds.Contains(j.MachineId))
-                    .GroupBy(j => j.MachineId)
-                    .ToDictionaryAsync(g => g.Key, g => g.Count());
-
-                // Merge with existing data
-                foreach (var machine in machines)
-                {
-                    Dashboard.ActiveJobsByPrinter[machine.MachineId] = activeJobsByMachine.GetValueOrDefault(machine.MachineId, 0);
-                    Dashboard.HoursToday[machine.MachineId] = hoursToday.GetValueOrDefault(machine.MachineId, 0);
-                    Dashboard.QueueDepth[machine.MachineId] = queueDepth.GetValueOrDefault(machine.MachineId, 0);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating machine-based statistics");
-                // Don't throw - just log the error and continue with default values
-            }
-        }
-
-        /// <summary>
-        /// Handle scheduler integration parameters
-        /// </summary>
-        private async Task HandleSchedulerIntegrationAsync(int? jobId, string? machineId)
-        {
-            try
-            {
-                if (jobId.HasValue)
-                {
-                    ViewData["HighlightJobId"] = jobId.Value;
-                    ViewData["ScrollToJob"] = true;
-
-                    var job = await _context.Jobs
-                        .Include(j => j.Part)
-                        .FirstOrDefaultAsync(j => j.Id == jobId.Value);
-
-                    if (job != null)
-                    {
-                        ViewData["JobContext"] = job;
-                        TempData["Info"] = $"Scheduler job loaded: {job.PartNumber} on {job.MachineId}";
-
-                        _logger.LogInformation("Scheduler integration: Loaded job {JobId} ({PartNumber}) on machine {MachineId}",
-                            jobId.Value, job.PartNumber, job.MachineId);
-                    }
-                }
-
-                if (!string.IsNullOrEmpty(machineId))
-                {
-                    ViewData["HighlightMachineId"] = machineId;
-                    _logger.LogInformation("Scheduler integration: Highlighting machine {MachineId}", machineId);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error handling scheduler integration for jobId {JobId}, machineId {MachineId}", jobId, machineId);
-                // Don't throw - scheduler integration is optional
-            }
-        }
-
-        /// <summary>
-        /// Create embedded scheduler view model (SLS machines only)
-        /// </summary>
-        private async Task<OpCentrix.ViewModels.PrintTracking.EmbeddedSchedulerViewModel> CreateEmbeddedSchedulerViewAsync()
+        private async Task LoadScheduledJobsForMachinesAsync(string operationId)
         {
             try
             {
                 var startDate = DateTime.Today;
-                var endDate = startDate.AddDays(3);
+                var endDate = startDate.AddDays(3); // Next 3 days
+                var machineIds = Dashboard.AvailableMachines.Select(m => m.MachineId).ToList();
 
-                var jobs = await _context.Jobs
-                    .Where(j => j.ScheduledStart >= startDate && j.ScheduledStart < endDate)
-                    .OrderBy(j => j.ScheduledStart)
-                    .Take(50)
-                    .ToListAsync();
-
-                // FILTER: Only SLS machines for embedded scheduler
-                var slsMachines = await _context.Machines
-                    .Where(m => m.IsActive &&
-                               m.IsAvailableForScheduling &&
-                               m.MachineType.ToUpper() == "SLS")
-                    .OrderBy(m => m.Priority)
-                    .Select(m => m.MachineId)
-                    .ToListAsync();
-
-                return new OpCentrix.ViewModels.PrintTracking.EmbeddedSchedulerViewModel
+                if (!machineIds.Any())
                 {
-                    Jobs = jobs,
-                    Machines = slsMachines,
-                    StartDate = startDate,
-                    Dates = Enumerable.Range(0, 3).Select(i => startDate.AddDays(i)).ToList()
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating embedded scheduler view");
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Create start print view model (SLS machines only)
-        /// </summary>
-        private async Task<PrintStartViewModel> CreateStartPrintViewModelAsync(string? printerName, int? jobId)
-        {
-            try
-            {
-                var userId = GetCurrentUserId();
-                var user = await _context.Users.FindAsync(userId);
-
-                var viewModel = new PrintStartViewModel
-                {
-                    PrinterName = printerName ?? "",
-                    ActualStartTime = DateTime.Now,
-                    EstimatedEndTime = DateTime.Now.AddHours(4),
-                    AssociatedScheduledJobId = jobId,
-                    OperatorName = user?.FullName ?? "Unknown",
-                    UserId = userId,
-                    Errors = new List<string>()
-                };
-
-                // Populate available options (SLS machines only)
-                await PopulateStartPrintViewModelAsync(viewModel);
-
-                // Pre-populate from job if specified
-                if (jobId.HasValue)
-                {
-                    await PrePopulateFromJobAsync(viewModel, jobId.Value);
+                    _logger.LogWarning("⚠️ [PRINT-TRACKING-{OperationId}] No machines available for job loading", operationId);
+                    return;
                 }
 
-                return viewModel;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating start print view model");
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Create post print view model (SLS machines only)
-        /// </summary>
-        private async Task<PostPrintViewModel> CreatePostPrintViewModelAsync(int? buildId, string? printerName, int? jobId)
-        {
-            try
-            {
-                var userId = GetCurrentUserId();
-                var user = await _context.Users.FindAsync(userId);
-
-                var viewModel = new PostPrintViewModel
-                {
-                    BuildId = buildId ?? 0,
-                    PrinterName = printerName ?? "",
-                    ActualStartTime = DateTime.Now.AddHours(-4),
-                    ActualEndTime = DateTime.Now,
-                    OperatorActualHours = 4.0m,
-                    OperatorName = user?.FullName ?? "Unknown",
-                    UserId = userId,
-                    Parts = new List<PostPrintPartEntry>
-                    {
-                        new PostPrintPartEntry
-                        {
-                            PartNumber = "",
-                            Quantity = 1,
-                            GoodParts = 1,
-                            IsPrimary = true
-                        }
-                    },
-                    Errors = new List<string>()
-                };
-
-                await PopulatePostPrintViewModelAsync(viewModel);
-
-                // Pre-populate from build if specified
-                if (buildId.HasValue)
-                {
-                    await PrePopulateFromBuildAsync(viewModel, buildId.Value);
-                }
-
-                return viewModel;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating post print view model");
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Populate start print view model with available options (SLS machines only)
-        /// </summary>
-        private async Task PopulateStartPrintViewModelAsync(PrintStartViewModel viewModel)
-        {
-            try
-            {
-                // Get available SLS printers only
-                var slsMachines = await _context.Machines
-                    .Where(m => m.IsActive &&
-                               m.IsAvailableForScheduling &&
-                               m.MachineType.ToUpper() == "SLS")
-                    .OrderBy(m => m.Priority)
-                    .ToListAsync();
-
-                viewModel.AvailablePrinters = slsMachines.Select(m => m.MachineId).ToList();
-
-                // ENHANCED: Get available materials for the selected printer
-                await PopulateMaterialsForPrinterAsync(viewModel);
-
-                // Get available scheduled jobs
-                if (!string.IsNullOrEmpty(viewModel.PrinterName))
-                {
-                    viewModel.AvailableScheduledJobs = await _printTrackingService.GetAvailableScheduledJobsAsync(viewModel.PrinterName);
-                }
-                else
-                {
-                    viewModel.AvailableScheduledJobs = new List<Job>();
-                }
-
-                // Get available parts
-                viewModel.AvailableParts = await _printTrackingService.GetAvailablePartsAsync();
-
-                // REMOVED: JobStages are not properly implemented yet - removing references
-                viewModel.AvailableJobStages = new List<JobStage>();
-
-                viewModel.AvailablePrototypeJobs = await _printTrackingService.GetAvailablePrototypeJobsAsync();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error populating start print view model");
-                
-                // Provide fallback empty collections rather than throwing
-                viewModel.AvailablePrinters = viewModel.AvailablePrinters ?? new List<string>();
-                viewModel.AvailableScheduledJobs = viewModel.AvailableScheduledJobs ?? new List<Job>();
-                viewModel.AvailableParts = viewModel.AvailableParts ?? new List<Part>();
-                viewModel.AvailableJobStages = new List<JobStage>(); // REMOVED: Not implemented properly
-                viewModel.AvailablePrototypeJobs = viewModel.AvailablePrototypeJobs ?? new List<PrototypeJob>();
-                viewModel.AvailableMaterials = viewModel.AvailableMaterials ?? new List<MaterialInfo>();
-            }
-        }
-
-        /// <summary>
-        /// Populate materials available for the selected printer
-        /// </summary>
-        private async Task PopulateMaterialsForPrinterAsync(PrintStartViewModel viewModel)
-        {
-            try
-            {
-                var availableMaterials = new List<MaterialInfo>();
-
-                if (!string.IsNullOrEmpty(viewModel.PrinterName))
-                {
-                    // Get the selected machine and its supported materials
-                    var machine = await _context.Machines
-                        .FirstOrDefaultAsync(m => m.MachineId == viewModel.PrinterName);
-
-                    if (machine != null && !string.IsNullOrEmpty(machine.SupportedMaterials))
-                    {
-                        var supportedMaterialCodes = machine.SupportedMaterials
-                            .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                            .Select(m => m.Trim())
-                            .ToList();
-
-                        // Get materials from database that are supported by this machine
-                        var materials = await _context.Materials
-                            .Where(m => m.IsActive && supportedMaterialCodes.Contains(m.MaterialCode))
-                            .OrderBy(m => m.MaterialType)
-                            .ThenBy(m => m.MaterialCode)
-                            .ToListAsync();
-
-                        availableMaterials = materials.Select(m => new MaterialInfo
-                        {
-                            Id = m.Id,
-                            MaterialCode = m.MaterialCode,
-                            MaterialName = m.MaterialName,
-                            MaterialType = m.MaterialType,
-                            Description = m.Description,
-                            SafetyNotes = m.SafetyNotes,
-                            CostPerGram = m.CostPerGram,
-                            IsCompatibleWithMachine = true,
-                            MaterialTypeColor = m.MaterialTypeColor,
-                            DefaultLayerThicknessMicrons = m.DefaultLayerThicknessMicrons,
-                            DefaultLaserPowerPercent = m.DefaultLaserPowerPercent,
-                            DefaultScanSpeedMmPerSec = m.DefaultScanSpeedMmPerSec
-                        }).ToList();
-
-                        // Set current material if machine has one loaded
-                        if (!string.IsNullOrEmpty(machine.CurrentMaterial))
-                        {
-                            viewModel.SelectedMaterial = machine.CurrentMaterial;
-                        }
-                    }
-                }
-
-                // If no printer-specific materials, get all active materials
-                if (!availableMaterials.Any())
-                {
-                    var allMaterials = await _context.Materials
-                        .Where(m => m.IsActive)
-                        .OrderBy(m => m.MaterialType)
-                        .ThenBy(m => m.MaterialCode)
-                        .ToListAsync();
-
-                    availableMaterials = allMaterials.Select(m => new MaterialInfo
-                    {
-                        Id = m.Id,
-                        MaterialCode = m.MaterialCode,
-                        MaterialName = m.MaterialName,
-                        MaterialType = m.MaterialType,
-                        Description = m.Description,
-                        SafetyNotes = m.SafetyNotes,
-                        CostPerGram = m.CostPerGram,
-                        IsCompatibleWithMachine = string.IsNullOrEmpty(viewModel.PrinterName), // Unknown compatibility if no printer selected
-                        MaterialTypeColor = m.MaterialTypeColor,
-                        DefaultLayerThicknessMicrons = m.DefaultLayerThicknessMicrons,
-                        DefaultLaserPowerPercent = m.DefaultLaserPowerPercent,
-                        DefaultScanSpeedMmPerSec = m.DefaultScanSpeedMmPerSec
-                    }).ToList();
-                }
-
-                viewModel.AvailableMaterials = availableMaterials;
-
-                _logger.LogInformation("Populated {MaterialCount} materials for printer {PrinterName}",
-                    availableMaterials.Count, viewModel.PrinterName ?? "None");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error populating materials for printer {PrinterName}", viewModel.PrinterName);
-
-                // Fallback to empty list
-                viewModel.AvailableMaterials = new List<MaterialInfo>();
-            }
-        }
-
-        /// <summary>
-        /// Pre-populate start print model from job
-        /// </summary>
-        private async Task PrePopulateFromJobAsync(PrintStartViewModel viewModel, int jobId)
-        {
-            try
-            {
-                var job = await _context.Jobs
+                // Load scheduled jobs for all SLS machines
+                var scheduledJobs = await _context.Jobs
                     .Include(j => j.Part)
-                    .FirstOrDefaultAsync(j => j.Id == jobId);
-
-                if (job != null)
-                {
-                    viewModel.PrinterName = job.MachineId;
-                    viewModel.PartId = job.PartId;
-                    viewModel.PartNumber = job.PartNumber;
-                    viewModel.PartDescription = job.Part?.Description ?? "";
-                    viewModel.Material = job.Part?.SlsMaterial ?? "";
-                    viewModel.Quantity = job.Quantity;
-                    viewModel.EstimatedHours = job.EstimatedHours;
-                    viewModel.ScheduledStartTime = job.ScheduledStart;
-                    viewModel.ScheduledEndTime = job.ScheduledEnd;
-
-                    if (job.ScheduledStart < DateTime.Now)
-                    {
-                        var delayMinutes = (int)(DateTime.Now - job.ScheduledStart).TotalMinutes;
-                        if (delayMinutes > 5) // Only consider significant delays
-                        {
-                            // Add delay information to a separate field since IsDelayed and DelayMinutes are computed
-                            viewModel.ScheduledStartTime = job.ScheduledStart;
-                            viewModel.ScheduledEndTime = job.ScheduledEnd;
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error pre-populating from job {JobId}", jobId);
-            }
-        }
-
-        /// <summary>
-        /// Pre-populate post print model from build
-        /// </summary>
-        private async Task PrePopulateFromBuildAsync(PostPrintViewModel viewModel, int buildId)
-        {
-            try
-            {
-                var buildJob = await _context.BuildJobs
-                    .Include(b => b.Part)
-                    .FirstOrDefaultAsync(b => b.BuildId == buildId);
-
-                if (buildJob != null)
-                {
-                    viewModel.PrinterName = buildJob.PrinterName;
-                    viewModel.ActualStartTime = buildJob.ActualStartTime;
-                    viewModel.PartId = buildJob.PartId;
-                    viewModel.PartNumber = buildJob.Part?.PartNumber ?? "";
-                    viewModel.PartDescription = buildJob.Part?.Description ?? "";
-
-                    if (buildJob.OperatorEstimatedHours.HasValue)
-                    {
-                        viewModel.OperatorEstimatedHours = buildJob.OperatorEstimatedHours.Value;
-                    }
-
-                    // Pre-populate parts list if available
-                    if (!string.IsNullOrEmpty(viewModel.PartNumber))
-                    {
-                        viewModel.Parts = new List<PostPrintPartEntry>
-                        {
-                            new PostPrintPartEntry
-                            {
-                                PartNumber = viewModel.PartNumber,
-                                Quantity = buildJob.TotalPartsInBuild > 0 ? buildJob.TotalPartsInBuild : 1,
-                                GoodParts = buildJob.TotalPartsInBuild > 0 ? buildJob.TotalPartsInBuild : 1,
-                                IsPrimary = true,
-                                Description = viewModel.PartDescription
-                            }
-                        };
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error pre-populating from build {BuildId}", buildId);
-            }
-        }
-
-        /// <summary>
-        /// Populate post print view model with available options (SLS machines only)
-        /// </summary>
-        private async Task PopulatePostPrintViewModelAsync(PostPrintViewModel viewModel)
-        {
-            try
-            {
-                // Get available SLS printers only
-                var slsMachines = await _context.Machines
-                    .Where(m => m.IsActive &&
-                               m.IsAvailableForScheduling &&
-                               m.MachineType.ToUpper() == "SLS")
-                    .OrderBy(m => m.Priority)
+                    .Where(j => machineIds.Contains(j.MachineId) && 
+                               j.ScheduledStart >= startDate && 
+                               j.ScheduledStart < endDate &&
+                               (j.Status == "Scheduled" || j.Status == "Building" || j.Status == "In Progress"))
+                    .OrderBy(j => j.ScheduledStart)
+                    .ThenBy(j => j.Priority)
+                    .AsNoTracking()
                     .ToListAsync();
 
-                viewModel.AvailablePrinters = slsMachines.Select(m => m.MachineId).ToList();
+                // Group jobs by machine
+                Dashboard.ScheduledJobsByMachine = scheduledJobs
+                    .GroupBy(j => j.MachineId)
+                    .ToDictionary(g => g.Key, g => g.Take(3).ToList()); // Limit to next 3 jobs per machine
 
-                // Get available running jobs for completion
-                if (!string.IsNullOrEmpty(viewModel.PrinterName))
-                {
-                    viewModel.AvailableRunningJobs = await _context.Jobs
-                        .Where(j => j.MachineId == viewModel.PrinterName &&
-                                   (j.Status == "Running" || j.Status == "In Progress"))
-                        .OrderBy(j => j.ScheduledStart)
-                        .ToListAsync();
-                }
-                else
-                {
-                    viewModel.AvailableRunningJobs = new List<Job>();
-                }
+                // Get next job for each machine
+                Dashboard.NextJobByMachine = Dashboard.AvailableMachines
+                    .ToDictionary(m => m.MachineId, m => 
+                        Dashboard.ScheduledJobsByMachine.GetValueOrDefault(m.MachineId, new List<Job>())
+                            .FirstOrDefault(j => j.ScheduledStart > DateTime.Now));
 
-                // Get available parts for selection
-                viewModel.AvailableParts = await _context.Parts
-                    .Where(p => p.IsActive)
-                    .OrderBy(p => p.PartNumber)
-                    .ToListAsync();
+                // Generate friendly time display for next jobs
+                Dashboard.NextJobTimeByMachine = Dashboard.NextJobByMachine
+                    .Where(kvp => kvp.Value != null)
+                    .ToDictionary(kvp => kvp.Key, kvp => GetFriendlyTimeDisplay(kvp.Value!.ScheduledStart));
+
+                _logger.LogInformation("✅ [PRINT-TRACKING-{OperationId}] Loaded {JobCount} scheduled jobs across {MachineCount} machines", 
+                    operationId, scheduledJobs.Count, Dashboard.ScheduledJobsByMachine.Count);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error populating post print view model");
-
-                // Fallback to empty lists
-                viewModel.AvailablePrinters = new List<string>();
-                viewModel.AvailableRunningJobs = new List<Job>();
-                viewModel.AvailableParts = new List<Part>();
+                _logger.LogError(ex, "❌ [PRINT-TRACKING-{OperationId}] Error loading scheduled jobs for machines", operationId);
+                
+                // Initialize empty collections to prevent UI errors
+                Dashboard.ScheduledJobsByMachine = new Dictionary<string, List<Job>>();
+                Dashboard.NextJobByMachine = new Dictionary<string, Job?>();
+                Dashboard.NextJobTimeByMachine = new Dictionary<string, string>();
             }
         }
 
         /// <summary>
-        /// Create fallback dashboard when errors occur
+        /// Helper: Get unified machine type (same logic as scheduler)
         /// </summary>
-        private PrintTrackingDashboardViewModel CreateFallbackDashboard()
+        private static string GetUnifiedMachineType(Machine m)
         {
-            var userId = GetCurrentUserId();
-            var user = User.Identity?.Name ?? "Unknown";
+            if (m == null) return "Unknown";
+            string raw = (m.MachineType ?? "").Trim();
+            string name = (m.MachineName ?? m.Name ?? "").Trim();
+            string model = (m.MachineModel ?? "").Trim();
+            string all = string.Join(" ", raw, name, model).ToUpperInvariant();
 
-            return new PrintTrackingDashboardViewModel
-            {
-                UserId = userId,
-                OperatorName = user,
-                UserRole = GetCurrentUserRole(),
-                ActiveBuilds = new List<BuildJob>(),
-                RecentCompletedBuilds = new List<BuildJob>(),
-                RecentDelays = new List<DelayLog>(),
-                ActiveJobsByPrinter = new Dictionary<string, int>(),
-                HoursToday = new Dictionary<string, double>(),
-                UtilizationByMachine = new Dictionary<string, double>(),
-                QueueDepth = new Dictionary<string, int>(),
-                MaintenanceAlerts = new List<MaintenanceAlert>(),
-                AvailableMachines = CreateFallbackSlsMachineInfo(),
-                RefreshTime = DateTime.Now
-            };
+            // SLS group (TruPrint + Custom SLS + generic SLS keywords)
+            if (all.Contains("TRUPRINT") || all.Contains("TRU PRINT") || all.Contains("SLS") || all.Contains("SELECTIVE LASER"))
+                return "SLS";
+
+            // CNC group (Haas, Doosan, Mazak, generic CNC)
+            if (all.Contains("CNC") || all.Contains("HAAS") || all.Contains("MAZAK") || all.Contains("DOOSAN"))
+                return "CNC";
+
+            // EDM group
+            if (all.Contains("EDM") || all.Contains("WIRE EDM"))
+                return "EDM";
+
+            return string.IsNullOrWhiteSpace(raw) ? "Other" : raw;
         }
 
         /// <summary>
-        /// Create fallback SLS machines when database is unavailable
-        /// CRITICAL: Only returns SLS machines for print tracking
+        /// Helper: Get friendly time display for scheduled jobs
         /// </summary>
-        private List<Machine> CreateFallbackSlsMachines()
+        private string GetFriendlyTimeDisplay(DateTime scheduledTime)
         {
-            return new List<Machine>
-            {
-                new Machine {
-                    MachineId = "TI1",
-                    MachineName = "TruPrint 3000 #1",
-                    MachineType = "SLS",
-                    Status = "Idle",
-                    IsActive = true,
-                    IsAvailableForScheduling = true,
-                    Priority = 1,
-                    Location = "Print Floor",
-                    Department = "Printing",
-                    CurrentMaterial = "SS316L"
-                },
-                new Machine {
-                    MachineId = "TI2",
-                    MachineName = "TruPrint 3000 #2",
-                    MachineType = "SLS",
-                    Status = "Idle",
-                    IsActive = true,
-                    IsAvailableForScheduling = true,
-                    Priority = 2,
-                    Location = "Print Floor",
-                    Department = "Printing",
-                    CurrentMaterial = "SS316L"
-                },
-                new Machine {
-                    MachineId = "INC",
-                    MachineName = "Inconel Printer",
-                    MachineType = "SLS",
-                    Status = "Idle",
-                    IsActive = true,
-                    IsAvailableForScheduling = true,
-                    Priority = 3,
-                    Location = "Print Floor",
-                    Department = "Printing",
-                    CurrentMaterial = "Inconel 625"
-                }
-            };
-        }
+            var now = DateTime.Now;
+            var diff = scheduledTime - now;
 
-        /// <summary>
-        /// Create fallback SLS machine info
-        /// </summary>
-        private List<OpCentrix.ViewModels.PrintTracking.MachineInfo> CreateFallbackSlsMachineInfo()
-        {
-            return new List<OpCentrix.ViewModels.PrintTracking.MachineInfo>
-            {
-                new OpCentrix.ViewModels.PrintTracking.MachineInfo {
-                    MachineId = "TI1",
-                    MachineName = "TruPrint 3000 #1",
-                    MachineType = "SLS",
-                    Status = "Idle",
-                    IsActive = true,
-                    IsAvailableForScheduling = true,
-                    Priority = 1,
-                    Location = "Print Floor",
-                    Department = "Printing"
-                },
-                new OpCentrix.ViewModels.PrintTracking.MachineInfo {
-                    MachineId = "TI2",
-                    MachineName = "TruPrint 3000 #2",
-                    MachineType = "SLS",
-                    Status = "Idle",
-                    IsActive = true,
-                    IsAvailableForScheduling = true,
-                    Priority = 2,
-                    Location = "Print Floor",
-                    Department = "Printing"
-                },
-                new OpCentrix.ViewModels.PrintTracking.MachineInfo {
-                    MachineId = "INC",
-                    MachineName = "Inconel Printer",
-                    MachineType = "SLS",
-                    Status = "Idle",
-                    IsActive = true,
-                    IsAvailableForScheduling = true,
-                    Priority = 3,
-                    Location = "Print Floor",
-                    Department = "Printing"
-                }
-            };
-        }
-
-        /// <summary>
-        /// Get build volume information for a machine
-        /// </summary>
-        private string GetBuildVolumeInfo(Machine machine)
-        {
-            if (machine.MachineType == "SLS")
-            {
-                return $"{machine.BuildLengthMm} × {machine.BuildWidthMm} × {machine.BuildHeightMm} mm";
-            }
-            return "N/A";
-        }
-
-        /// <summary>
-        /// Get maintenance status for a machine
-        /// </summary>
-        private string GetMaintenanceStatus(Machine machine)
-        {
-            if (machine.RequiresMaintenance)
-            {
-                return "Due";
-            }
-            else if (machine.HoursSinceLastMaintenance > machine.MaintenanceIntervalHours * 0.8)
-            {
-                return "Soon";
-            }
-            return "OK";
+            if (scheduledTime.Date == now.Date)
+                return $"Today {scheduledTime:HH:mm}";
+            else if (scheduledTime.Date == now.Date.AddDays(1))
+                return $"Tomorrow {scheduledTime:HH:mm}";
+            else if (diff.TotalDays <= 7)
+                return $"{scheduledTime:ddd HH:mm}";
+            else
+                return scheduledTime.ToString("MM/dd HH:mm");
         }
 
         /// <summary>
@@ -1104,6 +566,181 @@ namespace OpCentrix.Pages.PrintTracking
             {
                 _logger.LogError(ex, "Error getting current user role - defaulting to Operator");
                 return "Operator";
+            }
+        }
+
+        private PrintTrackingDashboardViewModel CreateFallbackDashboard()
+        {
+            return new PrintTrackingDashboardViewModel
+            {
+                ActiveBuilds = new List<BuildJob>(),
+                RecentCompletedBuilds = new List<BuildJob>(),
+                RecentDelays = new List<DelayLog>(),
+                AvailableMachines = new List<MachineInfo>(),
+                OperatorName = User.Identity?.Name ?? "Unknown",
+                UserId = GetCurrentUserId(),
+                UserRole = "Operator",
+                Errors = new List<string> { "Unable to load dashboard data" }
+            };
+        }
+
+        private List<MachineInfo> CreateFallbackSlsMachineInfo()
+        {
+            // Return a basic set of SLS machines for fallback
+            return new List<MachineInfo>
+            {
+                new MachineInfo
+                {
+                    MachineId = "TI1",
+                    MachineName = "TruPrint 3000 #1",
+                    MachineType = "SLS",
+                    Status = "Unknown",
+                    IsActive = true,
+                    IsAvailableForScheduling = false
+                },
+                new MachineInfo
+                {
+                    MachineId = "TI2", 
+                    MachineName = "TruPrint 3000 #2",
+                    MachineType = "SLS",
+                    Status = "Unknown",
+                    IsActive = true,
+                    IsAvailableForScheduling = false
+                }
+            };
+        }
+
+        private async Task HandleSchedulerIntegrationAsync(int? jobId, string? machineId)
+        {
+            // Handle any scheduler integration parameters
+            if (jobId.HasValue)
+            {
+                ViewData["HighlightJobId"] = jobId.Value;
+            }
+            
+            if (!string.IsNullOrEmpty(machineId))
+            {
+                ViewData["HighlightMachineId"] = machineId;
+            }
+            
+            await Task.CompletedTask;
+        }
+
+        private async Task<OpCentrix.ViewModels.Shared.EmbeddedSchedulerViewModel> CreateEmbeddedSchedulerViewAsync()
+        {
+            // Create a basic embedded scheduler view
+            return new OpCentrix.ViewModels.Shared.EmbeddedSchedulerViewModel
+            {
+                Jobs = new List<Job>(),
+                Machines = new List<string>(),
+                Dates = new List<DateTime>(),
+                StartDate = DateTime.Today
+            };
+        }
+
+        private async Task<PrintStartViewModel> CreateStartPrintViewModelAsync(string? printerName, int? jobId)
+        {
+            var viewModel = new PrintStartViewModel
+            {
+                PrinterName = printerName ?? "",
+                ActualStartTime = DateTime.Now,
+                OperatorName = User.Identity?.Name ?? "Unknown",
+                UserId = GetCurrentUserId(),
+                AvailablePrinters = new List<string> { "TI1", "TI2", "INC" }
+            };
+
+            if (jobId.HasValue)
+            {
+                // Load job details if provided
+                var job = await _context.Jobs.Include(j => j.Part).FirstOrDefaultAsync(j => j.Id == jobId.Value);
+                if (job != null)
+                {
+                    viewModel.AssociatedScheduledJobId = job.Id;
+                    viewModel.PartId = job.PartId;
+                    viewModel.PartNumber = job.PartNumber;
+                    viewModel.Quantity = job.Quantity;
+                    viewModel.EstimatedHours = job.EstimatedHours;
+                }
+            }
+
+            return viewModel;
+        }
+
+        private async Task<PostPrintViewModel> CreatePostPrintViewModelAsync(int? buildId, string? printerName, int? jobId)
+        {
+            var viewModel = new PostPrintViewModel
+            {
+                PrinterName = printerName ?? "",
+                ActualStartTime = DateTime.Now.AddHours(-4), // Default to 4 hours ago
+                ActualEndTime = DateTime.Now,
+                OperatorName = User.Identity?.Name ?? "Unknown",
+                UserId = GetCurrentUserId(),
+                AvailablePrinters = new List<string> { "TI1", "TI2", "INC" },
+                Parts = new List<PostPrintPartEntry>()
+            };
+
+            if (buildId.HasValue)
+            {
+                viewModel.BuildId = buildId.Value;
+                // Load build job details
+                var buildJob = await _context.BuildJobs.Include(b => b.Part).FirstOrDefaultAsync(b => b.BuildId == buildId.Value);
+                if (buildJob != null)
+                {
+                    viewModel.ActualStartTime = buildJob.ActualStartTime;
+                    viewModel.PrinterName = buildJob.PrinterName;
+                    viewModel.OperatorEstimatedHours = buildJob.OperatorEstimatedHours;
+                }
+            }
+
+            return viewModel;
+        }
+
+        private async Task PopulatePostPrintViewModelAsync(PostPrintViewModel model)
+        {
+            // Populate dropdown options
+            model.AvailablePrinters = new List<string> { "TI1", "TI2", "INC" };
+            model.AvailableParts = await _context.Parts.Where(p => p.IsActive).OrderBy(p => p.PartNumber).ToListAsync();
+            
+            // Ensure at least one part entry exists
+            if (!model.Parts.Any())
+            {
+                model.Parts.Add(new PostPrintPartEntry
+                {
+                    PartNumber = "",
+                    Quantity = 1,
+                    GoodParts = 1,
+                    IsPrimary = true
+                });
+            }
+        }
+
+        private async Task UpdateMachineBasedStatsAsync(List<MachineInfo> machines)
+        {
+            // Update machine-based statistics
+            foreach (var machine in machines)
+            {
+                // Calculate active jobs
+                machine.ActiveJobs = await _context.BuildJobs
+                    .CountAsync(b => b.PrinterName == machine.MachineId && b.Status == "In Progress");
+
+                // Calculate queued jobs
+                machine.QueuedJobs = await _context.Jobs
+                    .CountAsync(j => j.MachineId == machine.MachineId && j.Status == "Scheduled");
+
+                // Calculate hours today
+                var today = DateTime.Today;
+                var todayBuilds = await _context.BuildJobs
+                    .Where(b => b.PrinterName == machine.MachineId && 
+                               b.ActualStartTime >= today && 
+                               b.Status == "Completed" && 
+                               b.ActualEndTime.HasValue)
+                    .ToListAsync();
+
+                machine.HoursToday = todayBuilds
+                    .Sum(b => (b.ActualEndTime!.Value - b.ActualStartTime).TotalHours);
+
+                // Set utilization (simplified calculation)
+                machine.UtilizationPercent = machine.HoursToday / 24.0 * 100;
             }
         }
 

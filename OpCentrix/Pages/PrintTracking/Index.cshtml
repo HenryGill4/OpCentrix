@@ -687,19 +687,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (overview && summary && toggleText && chevron) {
                 if (overview.classList.contains('hidden')) {
+                    // Show the schedule overview
                     overview.classList.remove('hidden');
-                    summary.classList.add('hidden');
-                    toggleText.textContent = 'Show Summary';
+                    toggleText.textContent = 'Hide Schedule';
                     chevron.classList.add('rotate-180');
+                    
+                    // Trigger HTMX load if content hasn't been loaded yet
+                    const htmxContainer = overview.querySelector('[hx-get]');
+                    if (htmxContainer && htmxContainer.innerHTML.includes('Loading SLS schedule')) {
+                        htmx.trigger(htmxContainer, 'revealed');
+                        console.log('📅 [SCHEDULE] Triggered HTMX load for embedded scheduler');
+                    }
                 } else {
+                    // Hide the schedule overview
                     overview.classList.add('hidden');
-                    summary.classList.remove('hidden');
-                    toggleText.textContent = 'Show Details';
+                    toggleText.textContent = 'Show Schedule';
                     chevron.classList.remove('rotate-180');
                 }
+                console.log('📅 [SCHEDULE] Schedule toggle completed');
+            } else {
+                console.warn('⚠️ [SCHEDULE] Schedule toggle elements not found');
             }
         } catch (error) {
-            console.error('❌ [DASHBOARD] Error toggling schedule:', error);
+            console.error('❌ [SCHEDULE] Error toggling schedule:', error);
         }
     };
 

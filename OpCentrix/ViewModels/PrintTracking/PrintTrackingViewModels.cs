@@ -693,6 +693,11 @@ namespace OpCentrix.ViewModels.PrintTracking
         // ENHANCEMENT: Dynamic machine data from database
         public List<MachineInfo> AvailableMachines { get; set; } = new();
 
+        // ENHANCED: Scheduled jobs integration for machine cards
+        public Dictionary<string, List<Job>> ScheduledJobsByMachine { get; set; } = new();
+        public Dictionary<string, Job?> NextJobByMachine { get; set; } = new();
+        public Dictionary<string, string> NextJobTimeByMachine { get; set; } = new();
+
         // Current user info
         public string OperatorName { get; set; } = string.Empty;
         public int UserId { get; set; }
