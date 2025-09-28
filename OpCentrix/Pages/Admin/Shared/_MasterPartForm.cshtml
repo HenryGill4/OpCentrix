@@ -1,4 +1,27 @@
-﻿@model OpCentrix.Pages.Admin.PartsModel
+﻿@* 
+FIX SUMMARY (2025-09-28)
+Problem:
+ - Modal form HTML for Master Parts is injected dynamically (fetch/innerHTML) on Parts page.
+ - Original inline <script> (and later external include placed inside the partial) never executed after injection.
+ - Additionally, the Admin area uses _AdminLayout.cshtml (not the site root _Layout.cshtml) so adding the script only to the main layout failed for /Admin/Parts.
+ - Result: No event handlers, no calculated fields, submit logic broke; later server error responses re-rendered a full page where scripts happened to work (looked like a "plain HTML fallback").
+Root Causes:
+ 1. Relying on script tags inside dynamically injected partials (innerHTML) – browsers do not execute them.
+ 2. Script was only globally included in the non-admin layout first.
+ 3. Parallel lightweight initializer code on Parts.cshtml risked divergence.
+Fix Implemented:
+ 1. Extracted all logic into /wwwroot/js/masterPartForm.js.
+ 2. Added global include in BOTH layouts (_Layout.cshtml and _AdminLayout.cshtml) BEFORE dynamic loads occur.
+ 3. Added idempotent guard & MutationObserver in masterPartForm.js to auto-init when #masterPartForm arrives in DOM.
+ 4. Exposed window.initMasterPartForm() for manual re-init if needed.
+ 5. Added verbose debug logging to verify initialization path.
+Best Practice Going Forward:
+ - Never place executable <script> inside dynamically injected HTML fragments; centralize and load once.
+ - Keep single authoritative initializer; avoid duplicating stage logic in page-level scripts.
+ - If future dynamic components are added, dispatch or listen for a custom event (e.g. document.dispatchEvent(new CustomEvent('oc:partial:loaded',{detail:{id:'masterPartForm'}}))) instead of setTimeout.
+ - Remove debug logs for production or gate behind a flag.
+*@
+@model OpCentrix.Pages.Admin.PartsModel
 
 <form method="post" asp-page-handler="@(Model.MasterPart.Id > 0 ? "Update" : "Create")" class="needs-validation" novalidate id="masterPartForm">
     <div class="modal-header bg-gradient-primary text-white">
@@ -12,19 +35,16 @@
     <div class="modal-body" style="max-height: 80vh; overflow-y: auto;">
         @Html.AntiForgeryToken()
         <input type="hidden" asp-for="MasterPart.Id" />
+        <!-- Hidden Stage Estimate (new) -->
+        <input type="hidden" asp-for="MasterPart.StageEstimateSingle" id="StageEstimateSingleHidden" />
         
         <div asp-validation-summary="All" class="alert alert-danger d-none"></div>
         
-        <!-- Navigation Tabs -->
+        <!-- Navigation Tabs (Build Config tab removed) -->
         <ul class="nav nav-pills mb-4" id="masterPartTabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="basic-tab" data-bs-toggle="pill" data-bs-target="#basic" type="button" role="tab">
                     <i class="fas fa-info-circle me-1"></i>Basic Info
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="manufacturing-tab" data-bs-toggle="pill" data-bs-target="#manufacturing" type="button" role="tab">
-                    <i class="fas fa-cogs me-1"></i>Manufacturing
                 </button>
             </li>
             <li class="nav-item" role="presentation">
@@ -33,178 +53,160 @@
                     <span class="badge bg-secondary ms-1" id="selectedStageCount">0</span>
                 </button>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="stacking-tab" data-bs-toggle="pill" data-bs-target="#stacking" type="button" role="tab">
-                    <i class="fas fa-layer-group me-1"></i>Build Config
-                </button>
-            </li>
         </ul>
 
-        <!-- Tab Content -->
         <div class="tab-content" id="masterPartTabContent">
-            
-            <!-- BASIC INFORMATION TAB -->
+            <!-- BASIC TAB -->
             <div class="tab-pane fade show active" id="basic" role="tabpanel" aria-labelledby="basic-tab">
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label asp-for="MasterPart.PartNumber" class="form-label fw-bold">
-                                <i class="fas fa-hashtag me-1 text-primary"></i>Part Number *
-                            </label>
-                            <input asp-for="MasterPart.PartNumber" class="form-control form-control-lg" required 
-                                   placeholder="e.g., MP-12345, 14-5388" 
-                                   pattern="^[A-Z0-9\-]{4,20}$"
-                                   title="Part numbers should be 4-20 characters, letters, numbers and dashes only" />
+                            <label asp-for="MasterPart.PartNumber" class="form-label fw-bold"><i class="fas fa-hashtag me-1 text-primary"></i>Part Number *</label>
+                            <input asp-for="MasterPart.PartNumber" class="form-control form-control-lg" required pattern="^[A-Z0-9\-]{4,20}$" />
                             <span asp-validation-for="MasterPart.PartNumber" class="text-danger"></span>
-                            <div class="form-text">
-                                <i class="fas fa-info-circle me-1"></i>Use your standard part numbering scheme
-                            </div>
                         </div>
                     </div>
-                    
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label asp-for="MasterPart.Name" class="form-label fw-bold">
-                                <i class="fas fa-tag me-1 text-success"></i>Part Name *
-                            </label>
-                            <input asp-for="MasterPart.Name" class="form-control form-control-lg" required 
-                                   placeholder="e.g., Trigger Housing, Receiver Body" 
-                                   maxlength="100" />
-                            <span asp-validation-for="MasterPart.Name" class="text-danger"></span>
-                            <div class="form-text">
-                                <i class="fas fa-info-circle me-1"></i>Descriptive name for operators
-                            </div>
+                            <label asp-for="MasterPart.Name" class="form-label fw-bold"><i class="fas fa-tag me-1 text-success"></i>Part Name *</label>
+                            <input asp-for="MasterPart.Name" class="form-control form-control-lg" required />
                         </div>
                     </div>
-                    
                     <div class="col-12">
                         <div class="mb-3">
-                            <label asp-for="MasterPart.Description" class="form-label fw-bold">
-                                <i class="fas fa-align-left me-1 text-info"></i>Description
-                            </label>
-                            <textarea asp-for="MasterPart.Description" class="form-control" rows="3"
-                                      placeholder="Detailed description including function, specifications, and special requirements..."
-                                      maxlength="500"></textarea>
-                            <span asp-validation-for="MasterPart.Description" class="text-danger"></span>
-                            <div class="form-text">
-                                <i class="fas fa-info-circle me-1"></i>Include material specs, tolerances, and special handling notes
-                            </div>
+                            <label asp-for="MasterPart.Description" class="form-label fw-bold"><i class="fas fa-align-left me-1 text-info"></i>Description</label>
+                            <textarea asp-for="MasterPart.Description" class="form-control" rows="3" maxlength="500"></textarea>
                         </div>
                     </div>
-
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="mb-3">
-                            <label asp-for="MasterPart.Material" class="form-label fw-bold">
-                                <i class="fas fa-flask me-1 text-warning"></i>Material *
-                            </label>
+                            <label asp-for="MasterPart.Material" class="form-label fw-bold"><i class="fas fa-flask me-1 text-warning"></i>Material *</label>
                             <select asp-for="MasterPart.Material" class="form-select form-select-lg" required>
                                 <option value="">Select Material</option>
-                                <option value="Ti-6Al-4V Grade 5">Ti-6Al-4V Grade 5 (Most Common)</option>
-                                <option value="Ti-6Al-4V ELI">Ti-6Al-4V ELI (Extra Low Interstitial)</option>
-                                <option value="Inconel 718">Inconel 718 (High Temp)</option>
+                                <option value="Ti-6Al-4V Grade 5">Ti-6Al-4V Grade 5</option>
+                                <option value="Inconel 718">Inconel 718</option>
                                 <option value="Stainless Steel 316L">Stainless Steel 316L</option>
-                                <option value="Stainless Steel 17-4PH">Stainless Steel 17-4PH</option>
-                                <option value="Aluminum AlSi10Mg">Aluminum AlSi10Mg</option>
-                                <option value="Maraging Steel">Maraging Steel (Tool Steel)</option>
                             </select>
-                            <span asp-validation-for="MasterPart.Material" class="text-danger"></span>
                         </div>
                     </div>
-                    
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="mb-3">
-                            <div class="form-check form-check-lg mt-4">
-                                <input asp-for="MasterPart.IsActive" class="form-check-input form-check-input-lg" type="checkbox" />
-                                <label asp-for="MasterPart.IsActive" class="form-check-label fw-bold">
-                                    <i class="fas fa-toggle-on me-1 text-success"></i>Active (Available for Production)
-                                </label>
+                            <label asp-for="MasterPart.ManufacturingApproach" class="form-label fw-bold"><i class="fas fa-route me-1 text-primary"></i>Approach *</label>
+                            <select asp-for="MasterPart.ManufacturingApproach" class="form-select form-select-lg" id="manufacturingApproachSelect" required>
+                                <option value="">Select Approach</option>
+                                <option value="SLS-Based">SLS-Based</option>
+                                <option value="Hybrid-Approach">Hybrid</option>
+                                <option value="CNC-Based">CNC-Based</option>
+                                <option value="Traditional-Machining">Traditional</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3 d-flex align-items-center h-100">
+                            <div class="form-check mt-4">
+                                <input asp-for="MasterPart.IsActive" class="form-check-input" type="checkbox" />
+                                <label asp-for="MasterPart.IsActive" class="form-check-label fw-bold"><i class="fas fa-toggle-on me-1 text-success"></i>Active</label>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- MANUFACTURING TAB -->
-            <div class="tab-pane fade" id="manufacturing" role="tabpanel" aria-labelledby="manufacturing-tab">
-                <div class="row">
-                    <div class="col-12 mb-3">
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle me-2"></i>
-                            <strong>Manufacturing Approach:</strong> Choose how this part will be produced
-                        </div>
+                <!-- NEW: SLS Build Configuration Card -->
+                <div id="slsBuildConfigCard" class="card mt-3" >
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="fas fa-layer-group me-2 text-primary"></i>SLS Build Configuration</h6>
+                        <span class="badge bg-light text-dark" id="slcComplexityBadge">--</span>
                     </div>
-                    
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label asp-for="MasterPart.ManufacturingApproach" class="form-label fw-bold">
-                                <i class="fas fa-route me-1 text-primary"></i>Manufacturing Approach *
-                            </label>
-                            <select asp-for="MasterPart.ManufacturingApproach" class="form-select form-select-lg" required>
-                                <option value="">Select Approach</option>
-                                <option value="SLS-Based">SLS-Based Manufacturing (Most Parts)</option>
-                                <option value="CNC-Based">CNC-Based Manufacturing (Machined from Stock)</option>
-                                <option value="Hybrid-Approach">Hybrid Approach (SLS + Extensive Machining)</option>
-                                <option value="Traditional-Machining">Traditional Machining Only</option>
-                            </select>
-                            <span asp-validation-for="MasterPart.ManufacturingApproach" class="text-danger"></span>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">
-                                <i class="fas fa-industry me-1 text-secondary"></i>Primary Process
-                            </label>
-                            <div class="form-control-plaintext p-2 bg-light rounded">
-                                <span id="primaryProcessDisplay">Select manufacturing approach first</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6 class="mb-0">
-                                    <i class="fas fa-clock me-2 text-primary"></i>Time Estimates
-                                </h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label asp-for="MasterPart.SingleStackDurationHours" class="form-label">
-                                                <i class="fas fa-stopwatch me-1"></i>Single Build Duration (hours) *
-                                            </label>
-                                            <input asp-for="MasterPart.SingleStackDurationHours" type="number" step="0.5" min="0.5" max="200" 
-                                                   class="form-control" required placeholder="8.0" />
-                                            <span asp-validation-for="MasterPart.SingleStackDurationHours" class="text-danger"></span>
-                                            <div class="form-text">Total time for single build (all stages)</div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4" id="estimatedEndTime" style="display: none;">
-                                        <div class="mb-3">
-                                            <label class="form-label">Estimated Completion</label>
-                                            <div class="form-control-plaintext p-2 bg-light rounded">
-                                                <span id="completionTimeDisplay">--</span>
+                    <div class="card-body">
+                        <!-- Build Modes Table -->
+                        <div class="table-responsive mb-3">
+                            <table class="table table-sm align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width:110px;">Mode</th>
+                                        <th style="width:90px;">Enable</th>
+                                        <th style="width:140px;">Observed Parts/Build</th>
+                                        <th style="width:160px;">Observed Duration (h)</th>
+                                        <th style="width:140px;">Derived Hrs/Part</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Single</strong></td>
+                                        <td><span class="badge bg-success">Always</span></td>
+                                        <td>
+                                            <input type="number" min="1" class="form-control form-control-sm sls-ppb" id="ppbSingle" value="@(Model.MasterPart.PartsPerBuildSingle == 0 ? 1 : Model.MasterPart.PartsPerBuildSingle)" />
+                                        </td>
+                                        <td>
+                                            <input type="number" step="0.1" min="0.1" class="form-control form-control-sm sls-duration" id="durSingle" value="@(Model.MasterPart.SingleStackDurationHours?.ToString("F1") ?? "")" placeholder="e.g. 8.0" />
+                                        </td>
+                                        <td><input type="text" class="form-control form-control-sm" id="hpSingle" readonly /></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Double</strong></td>
+                                        <td>
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input mode-enable" type="checkbox" id="enableDouble" @(Model.MasterPart.EnableDoubleStack ? "checked" : "") />
                                             </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4" id="efficiencyIndicator" style="display: none;">
-                                        <div class="mb-3">
-                                            <label class="form-label">Complexity Level</label>
-                                            <div class="form-control-plaintext p-2 rounded" id="complexityDisplay">
-                                                <span class="badge bg-secondary">--</span>
+                                        </td>
+                                        <td>
+                                            <input type="number" min="1" class="form-control form-control-sm sls-ppb" id="ppbDouble" value="@(Model.MasterPart.PartsPerBuildDouble?.ToString() ?? "")" disabled />
+                                        </td>
+                                        <td>
+                                            <input type="number" step="0.1" min="0.1" class="form-control form-control-sm sls-duration" id="durDouble" value="@(Model.MasterPart.DoubleStackDurationHours?.ToString("F1") ?? "")" disabled />
+                                        </td>
+                                        <td><input type="text" class="form-control form-control-sm" id="hpDouble" readonly /></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Triple</strong></td>
+                                        <td>
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input mode-enable" type="checkbox" id="enableTriple" @(Model.MasterPart.EnableTripleStack ? "checked" : "") />
                                             </div>
-                                        </div>
-                                    </div>
+                                        </td>
+                                        <td>
+                                            <input type="number" min="1" class="form-control form-control-sm sls-ppb" id="ppbTriple" value="@(Model.MasterPart.PartsPerBuildTriple?.ToString() ?? "")" disabled />
+                                        </td>
+                                        <td>
+                                            <input type="number" step="0.1" min="0.1" class="form-control form-control-sm sls-duration" id="durTriple" value="@(Model.MasterPart.TripleStackDurationHours?.ToString("F1") ?? "")" disabled />
+                                        </td>
+                                        <td><input type="text" class="form-control form-control-sm" id="hpTriple" readonly /></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Stage Estimate vs Observed -->
+                        <div class="row g-3 align-items-center">
+                            <div class="col-md-4">
+                                <div class="border rounded p-2 bg-light h-100">
+                                    <div class="small text-muted">Stage Estimated Total (Single)</div>
+                                    <div class="h5 mb-0" id="stageEstimateDisplay">--</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="border rounded p-2 h-100">
+                                    <div class="small text-muted">Observed Single Duration</div>
+                                    <div class="h5 mb-0" id="observedSingleDisplay">--</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="border rounded p-2 h-100" id="diffContainer">
+                                    <div class="small text-muted">Diff (Observed - Est)</div>
+                                    <div class="h5 mb-0"><span id="diffValue">--</span> <span class="badge bg-secondary" id="diffBadge">N/A</span></div>
                                 </div>
                             </div>
                         </div>
+                        <small class="text-muted d-block mt-2">Diff badge colors: ±10% = secondary, >+10% = warning, < -10% = info</small>
                     </div>
+                </div>
+
+                <div class="alert alert-light border d-flex justify-content-between align-items-center mt-3">
+                    <div><i class="fas fa-clock me-1 text-primary"></i><strong>Complexity:</strong> <span id="complexityDisplay" class="badge bg-secondary">--</span></div>
                 </div>
             </div>
 
-            <!-- PRODUCTION STAGES TAB -->
+            <!-- STAGES TAB (unchanged except removed stacking logic references) -->
             <div class="tab-pane fade" id="stages" role="tabpanel" aria-labelledby="stages-tab">
                 <div class="mb-3">
                     <div class="alert alert-warning">
@@ -229,7 +231,7 @@
                                         .Select(s => int.TryParse(s.Trim(), out var id) ? id : 0)
                                         .Where(id => id > 0)
                                         .ToList();
-                                        
+                                
                                 var stageHours = string.IsNullOrEmpty(Model.StageEstimatedHours)
                                     ? new List<double>()
                                     : Model.StageEstimatedHours.Split(',', StringSplitOptions.RemoveEmptyEntries)
@@ -245,6 +247,7 @@
                                         ? stageHours[selectedIndexInIds] 
                                         : (stage.DefaultDurationHours > 0 ? stage.DefaultDurationHours : 1.0);
                                     var executionOrder = selectedIndexInIds >= 0 ? selectedIndexInIds + 1 : 1;
+                                    var isBatch = stage.Name == "SLS Printing" || stage.Name == "EDM Operations"; // Batch stages (total hours entered)
 
                                     var stageIcon = stage.Name switch
                                     {
@@ -270,7 +273,7 @@
                                         _ => "secondary"
                                     };
 
-                                    <div class="card stage-card mb-3 @(isSelected ? "border-primary shadow-sm" : "border-light")" data-stage-id="@stage.Id">
+                                    <div class="card stage-card mb-3 @(isSelected ? "border-primary shadow-sm" : "border-light")" data-stage-id="@stage.Id" data-stage-name="@stage.Name" data-stage-batch="@(isBatch.ToString().ToLower())">
                                         <div class="card-body">
                                             <div class="row align-items-center">
                                                 <!-- Selection Checkbox -->
@@ -293,6 +296,11 @@
                                                         <div>
                                                             <strong class="text-@stageColor">@stage.Name</strong>
                                                             <br><small class="text-muted">@stage.Department</small>
+                                                            @if(!isBatch) {
+                                                                <div><small class="badge bg-outline-secondary text-muted border">Per-Part Stage</small></div>
+                                                            } else {
+                                                                <div><small class="badge bg-outline-primary text-muted border">Batch Stage</small></div>
+                                                            }
                                                         </div>
                                                     </div>
                                                 </div>
@@ -311,16 +319,30 @@
                                                     </div>
                                                 </div>
                                                 
-                                                <!-- Time Estimate Input -->
+                                                <!-- Time / Cycle Input -->
                                                 <div class="col-md-2">
-                                                    <div class="mb-2">
-                                                        <label class="form-label small fw-bold">Est. Hours:</label>
-                                                        <input type="number" step="0.1" min="0.1" max="50" 
-                                                               class="form-control form-control-sm stage-hours"
-                                                               data-stage-id="@stage.Id"
-                                                               value="@estimatedHours.ToString("F1")"
-                                                               @(!isSelected ? "disabled" : "") />
-                                                    </div>
+                                                    @if (isBatch)
+                                                    {
+                                                        <div class="mb-2">
+                                                            <label class="form-label small fw-bold">Est. Hours:</label>
+                                                            <input type="number" step="0.1" min="0.1" max="50" 
+                                                                   class="form-control form-control-sm stage-hours"
+                                                                   data-stage-id="@stage.Id"
+                                                                   value="@estimatedHours.ToString("F1")"
+                                                                   @(isSelected ? "" : "disabled") />
+                                                        </div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="mb-2">
+                                                            <label class="form-label small fw-bold">Cycle (min/part):</label>
+                                                            <input type="number" step="0.1" min="0.5" max="60" 
+                                                                   class="form-control form-control-sm stage-cycle" 
+                                                                   data-stage-id="@stage.Id" value="5" />
+                                                            <input type="hidden" class="stage-hours" data-stage-id="@stage.Id" value="@estimatedHours.ToString("F2")" />
+                                                            <small class="text-muted d-block total-hours-display" data-stage-id="@stage.Id">Total: @estimatedHours.ToString("F2")h</small>
+                                                        </div>
+                                                    }
                                                     <div class="execution-order" style="display: @(isSelected ? "block" : "none");">
                                                         <label class="form-label small text-primary">Order:</label>
                                                         <input type="number" min="1" max="10" 
@@ -452,122 +474,10 @@
                 </div>
             </div>
 
-            <!-- BUILD CONFIGURATION TAB -->
-            <div class="tab-pane fade" id="stacking" role="tabpanel" aria-labelledby="stacking-tab">
-                <div class="row">
-                    <div class="col-12 mb-3">
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle me-2"></i>
-                            <strong>Build Configuration:</strong> Configure how many parts can be built simultaneously
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6 class="mb-0">
-                                    <i class="fas fa-layer-group me-2 text-primary"></i>Stacking Options
-                                </h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="form-check form-check-lg mt-4">
-                                    <input asp-for="MasterPart.AllowStacking" class="form-check-input" type="checkbox" id="allowStackingSwitch" />
-                                    <label asp-for="MasterPart.AllowStacking" class="form-check-label fw-bold">
-                                        <i class="fas fa-layer-group me-1"></i>Enable Build Stacking
-                                    </label>
-                                </div>
-                                
-                                <div id="stackingControls" style="display: none;">
-                                    <div class="mb-3">
-                                        <label asp-for="MasterPart.MaxStackCount" class="form-label">
-                                            <i class="fas fa-sort-numeric-up me-1"></i>Maximum Stack Levels
-                                        </label>
-                                        <select asp-for="MasterPart.MaxStackCount" class="form-select">
-                                            <option value="1">1 Level (No Stacking)</option>
-                                            <option value="2" selected>2 Levels (Double Stack)</option>
-                                            <option value="3">3 Levels (Triple Stack)</option>
-                                            <option value="4">4 Levels (Quad Stack)</option>
-                                            <option value="5">5 Levels (Max Stack)</option>
-                                        </select>
-                                        <div class="form-text">
-                                            <i class="fas fa-info-circle me-1"></i>Higher stacks increase efficiency but may affect quality
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6 class="mb-0">
-                                    <i class="fas fa-clock me-2 text-success"></i>Multi-Stack Timing
-                                </h6>
-                            </div>
-                            <div class="card-body">
-                                <div id="timingControls" style="display: none;">
-                                    <div class="mb-3">
-                                        <label asp-for="MasterPart.DoubleStackDurationHours" class="form-label">
-                                            <i class="fas fa-layer-group me-1"></i>Double Stack Duration (hours)
-                                        </label>
-                                        <input asp-for="MasterPart.DoubleStackDurationHours" type="number" step="0.5" min="0.5" class="form-control" />
-                                        <div class="form-text">Usually 1.2-1.5x single stack time</div>
-                                    </div>
-                                    
-                                    <div class="mb-3">
-                                        <label asp-for="MasterPart.TripleStackDurationHours" class="form-label">
-                                            <i class="fas fa-layer-group me-1"></i>Triple Stack Duration (hours)
-                                        </label>
-                                        <input asp-for="MasterPart.TripleStackDurationHours" type="number" step="0.5" min="0.5" class="form-control" />
-                                        <div class="form-text">Usually 1.5-2.0x single stack time</div>
-                                    </div>
-                                    
-                                    <div class="alert alert-warning small">
-                                        <i class="fas fa-exclamation-triangle me-1"></i>
-                                        <strong>Note:</strong> Higher stacks may require longer cooling times and additional post-processing
-                                    </div>
-                                </div>
-                                
-                                <div id="noStackingMessage">
-                                    <div class="text-center text-muted p-3">
-                                        <i class="fas fa-info-circle fa-2x mb-2"></i>
-                                        <p>Enable stacking to configure multi-level build options</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Build Capacity Calculator -->
-                    <div class="col-12 mt-3">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6 class="mb-0">
-                                    <i class="fas fa-calculator me-2 text-info"></i>Build Capacity Calculator
-                                </h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-3">
-                                        <label class="form-label">Requested Quantity:</label>
-                                        <input type="number" class="form-control" id="requestedQty" value="10" min="1" max="1000" />
-                                    </div>
-                                    <div class="col-md-9">
-                                        <div id="buildOptions" class="mt-2">
-                                            <!-- Build options will be calculated and displayed here -->
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            
         </div>
     </div>
     
-    <!-- MODAL FOOTER -->
     <div class="modal-footer bg-light">
         <div class="d-flex justify-content-between align-items-center w-100">
             <div class="text-muted small">
@@ -587,784 +497,29 @@
     </div>
 </form>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    'use strict';
-    
-    console.log('🔧 [MASTER-PART-FORM] Enhanced form initialization started');
-    
-    // ===================================================================
-    // GLOBAL FORM STATE MANAGEMENT
-    // ===================================================================
-    
-    const formState = {
-        selectedStages: new Map(), // stageId -> {name, hours, order, config}
-        totalHours: 0,
-        totalCost: 0,
-        isValid: false,
-        originalData: null
-    };
-    
-    // ===================================================================
-    // MANUFACTURING APPROACH MANAGEMENT
-    // ===================================================================
-    
-    const manufacturingSelect = document.querySelector('select[name="MasterPart.ManufacturingApproach"]');
-    const primaryProcessDisplay = document.getElementById('primaryProcessDisplay');
-    
-    function updateManufacturingDisplay() {
-        if (!manufacturingSelect || !primaryProcessDisplay) return;
-        
-        const selectedValue = manufacturingSelect.value;
-        const displayText = {
-            'SLS-Based': '🎯 Primary: SLS 3D Printing → Post-Processing',
-            'CNC-Based': '🔧 Primary: CNC Machining from Stock Material', 
-            'Hybrid-Approach': '⚡ Hybrid: SLS + Extensive CNC Machining',
-            'Traditional-Machining': '🏭 Traditional: Conventional Manufacturing'
-        };
-        
-        primaryProcessDisplay.innerHTML = displayText[selectedValue] || 'Select manufacturing approach first';
-        
-        // Auto-suggest stages based on approach
-        if (selectedValue) {
-            autoSuggestStages(selectedValue);
-        }
-    }
-    
-    function autoSuggestStages(approach) {
-        console.log(`💡 [FORM] Auto-suggesting stages for approach: ${approach}`);
-        
-        // Clear current selection
-        document.querySelectorAll('.stage-checkbox').forEach(cb => {
-            cb.checked = false;
-            updateStageCard(cb, false);
-        });
-        
-        const suggestions = {
-            'SLS-Based': ['SLS Printing', 'Heat Treatment', 'CNC Machining', 'Finishing', 'Quality Inspection'],
-            'CNC-Based': ['CNC Machining', 'Finishing', 'Quality Inspection'],
-            'Hybrid-Approach': ['SLS Printing', 'Heat Treatment', 'CNC Machining', 'EDM Operations', 'Assembly', 'Finishing', 'Quality Inspection'],
-            'Traditional-Machining': ['CNC Machining', 'Assembly', 'Finishing', 'Quality Inspection']
-        };
-        
-        const stagesToSelect = suggestions[approach] || [];
-        
-        stagesToSelect.forEach((stageName, index) => {
-            const checkbox = document.querySelector(`.stage-checkbox[data-stage-name="${stageName}"]`);
-            if (checkbox) {
-                checkbox.checked = true;
-                updateStageCard(checkbox, true);
-                
-                // Set execution order
-                const orderInput = checkbox.closest('.stage-card').querySelector('.execution-order-input');
-                if (orderInput) {
-                    orderInput.value = index + 1;
-                }
-            }
-        });
-        
-        updateStageSelection();
-        updateStageCount();
-    }
-    
-    function updateManufacturingApproach() {
-        const selectedValue = this.value;
-        console.log(`🔧 [FORM] Manufacturing approach changed to: ${selectedValue}`);
-        
-        // Update primary process display
-        updateManufacturingDisplay();
-        
-        // Auto-suggest stages based on approach
-        autoSuggestStages(selectedValue);
-    }
-    
-    setTimeout(() => {
-        const manufacturingSelect = document.querySelector('select[name="MasterPart.ManufacturingApproach"]');
-        const primaryProcessDisplay = document.getElementById('primaryProcessDisplay');
-        
-        console.log(`🔧 [FORM] Manufacturing select element:`, manufacturingSelect ? 'Found' : 'Not found');
-        console.log(`🔧 [FORM] Primary process display:`, primaryProcessDisplay ? 'Found' : 'Not found');
-        
-        if (manufacturingSelect) {
-            console.log(`🔧 [FORM] Current manufacturing approach value: "${manufacturingSelect.value}"`);
-            
-            manufacturingSelect.addEventListener('change', function() {
-                console.log(`🔧 [FORM] Manufacturing approach changed to: ${this.value}`);
-                updateManufacturingDisplay();
-            });
-            
-            // Trigger initial display update if there's already a value
-            if (manufacturingSelect.value) {
-                updateManufacturingDisplay();
-            }
-        } else {
-            console.warn('⚠️ [FORM] Manufacturing select element not found after delay');
-        }
-    }, 200);
-    
-    // ===================================================================
-    // STAGE SELECTION MANAGEMENT 
-    // ===================================================================
-    
-    function updateStageCard(checkbox, isSelected) {
-        const card = checkbox.closest('.stage-card');
-        const hoursInput = card.querySelector('.stage-hours');
-        const orderInput = card.querySelector('.execution-order-input');
-        const configSection = card.querySelector('.stage-config');
-        const executionOrderDiv = card.querySelector('.execution-order');
-        
-        if (isSelected) {
-            card.classList.add('border-primary', 'shadow-sm');
-            card.classList.remove('border-light');
-            hoursInput.disabled = false;
-            if (executionOrderDiv) executionOrderDiv.style.display = 'block';
-            if (configSection) configSection.style.display = 'block';
-        } else {
-            card.classList.remove('border-primary', 'shadow-sm');
-            card.classList.add('border-light');
-            hoursInput.disabled = true;
-            if (executionOrderDiv) executionOrderDiv.style.display = 'none';
-            if (configSection) configSection.style.display = 'none';
-        }
-    }
-    
-    function updateStageSelection() {
-        const selectedIds = [];
-        const estimatedHours = [];
-        formState.selectedStages.clear();
-        formState.totalHours = 0;
-        formState.totalCost = 0;
-        
-        // Collect all selected stages
-        document.querySelectorAll('.stage-checkbox:checked').forEach(checkbox => {
-            const card = checkbox.closest('.stage-card');
-            const hoursInput = card.querySelector('.stage-hours');
-            const orderInput = card.querySelector('.execution-order-input');
-            const stageId = parseInt(checkbox.value);
-            const stageName = checkbox.dataset.stageName;
-            const hours = parseFloat(hoursInput.value) || 1.0;
-            const order = parseInt(orderInput?.value) || 1;
-            
-            selectedIds.push(stageId);
-            estimatedHours.push(hours);
-            
-            // Calculate cost (assuming hourly rates)
-            const hourlyRate = getHourlyRateForStage(stageName);
-            const stageCost = hours * hourlyRate;
-            
-            formState.selectedStages.set(stageId, {
-                name: stageName,
-                hours: hours,
-                order: order,
-                cost: stageCost
-            });
-            
-            formState.totalHours += hours;
-            formState.totalCost += stageCost;
-        });
-        
-        // Update hidden form fields
-        document.getElementById('selectedStageIds').value = selectedIds.join(',');
-        document.getElementById('stageEstimatedHours').value = estimatedHours.join(',');
-        
-        updateStageSummary();
-        updateTimeEstimates();
-        validateForm();
-        
-        console.log(`📋 [FORM] Stage selection updated: ${selectedIds.length} stages, ${formState.totalHours.toFixed(1)}h total`);
-    }
-    
-    function getHourlyRateForStage(stageName) {
-        const rates = {
-            'SLS Printing': 125,
-            'Heat Treatment': 85,
-            'CNC Machining': 95,
-            'EDM Operations': 110,
-            'Assembly': 75,
-            'Finishing': 65,
-            'Quality Inspection': 85
-        };
-        return rates[stageName] || 85;
-    }
-    
-    function updateStageSummary() {
-        const summary = document.getElementById('stageSummary');
-        const content = document.getElementById('stageSummaryContent');
-        const totalStages = document.getElementById('totalStages');
-        const totalTime = document.getElementById('totalTime');
-        const totalCost = document.getElementById('totalCost');
-        
-        if (formState.selectedStages.size === 0) {
-            summary.style.display = 'none';
-            return;
-        }
-        
-        summary.style.display = 'block';
-        
-        // Create ordered list of stages
-        const orderedStages = Array.from(formState.selectedStages.entries())
-            .sort((a, b) => a[1].order - b[1].order);
-        
-        let summaryHtml = '<div class="d-flex flex-wrap gap-2">';
-        orderedStages.forEach(([stageId, stage], index) => {
-            const badgeClass = getBadgeClassForStage(stage.name);
-            summaryHtml += `
-                <span class="badge ${badgeClass} d-flex align-items-center">
-                    <span class="me-1">${stage.order}.</span>
-                    <strong>${stage.name}</strong>
-                    <span class="ms-1">(${stage.hours.toFixed(1)}h)</span>
-                </span>
-            `;
-        });
-        summaryHtml += '</div>';
-        
-        content.innerHTML = summaryHtml;
-        totalStages.textContent = formState.selectedStages.size;
-        totalTime.textContent = `${formState.totalHours.toFixed(1)}h`;
-        totalCost.textContent = `$${formState.totalCost.toFixed(0)}`;
-    }
-    
-    function getBadgeClassForStage(stageName) {
-        const classes = {
-            'SLS Printing': 'bg-primary',
-            'Heat Treatment': 'bg-danger',
-            'CNC Machining': 'bg-success',
-            'EDM Operations': 'bg-warning text-dark',
-            'Assembly': 'bg-info',
-            'Finishing': 'bg-secondary',
-            'Quality Inspection': 'bg-dark'
-        };
-        return classes[stageName] || 'bg-secondary';
-    }
-    
-    function updateStageCount() {
-        const count = document.querySelectorAll('.stage-checkbox:checked').length;
-        const badge = document.getElementById('selectedStageCount');
-        if (badge) {
-            badge.textContent = count;
-            badge.className = count > 0 ? 'badge bg-primary ms-1' : 'badge bg-secondary ms-1';
-        }
-    }
-    
-    // ===================================================================
-    // TIME AND COST CALCULATIONS
-    // ===================================================================
-    
-    function updateTimeEstimates() {
-        const singleHoursInput = document.querySelector('input[name="MasterPart.SingleStackDurationHours"]');
-        const completionDisplay = document.getElementById('completionTimeDisplay');
-        const complexityDisplay = document.getElementById('complexityDisplay');
-        const estimatedEndTime = document.getElementById('estimatedEndTime');
-        const efficiencyIndicator = document.getElementById('efficiencyIndicator');
-        
-        if (formState.totalHours > 0 && singleHoursInput) {
-            // Auto-populate single hours if not set
-            if (!singleHoursInput.value || parseFloat(singleHoursInput.value) === 0) {
-                singleHoursInput.value = formState.totalHours.toFixed(1);
-            }
-            
-            // Show time estimates
-            if (completionDisplay) {
-                const startTime = new Date();
-                const endTime = new Date(startTime.getTime() + (formState.totalHours * 60 * 60 * 1000));
-                completionDisplay.textContent = endTime.toLocaleString();
-            }
-            
-            // Show complexity
-            if (complexityDisplay) {
-                let complexity, badgeClass;
-                if (formState.totalHours <= 4) {
-                    complexity = 'Simple';
-                    badgeClass = 'bg-success';
-                } else if (formState.totalHours <= 12) {
-                    complexity = 'Medium';
-                    badgeClass = 'bg-warning text-dark';
-                } else if (formState.totalHours <= 24) {
-                    complexity = 'Complex';
-                    badgeClass = 'bg-danger';
-                } else {
-                    complexity = 'Very Complex';
-                    badgeClass = 'bg-dark';
-                }
-                
-                complexityDisplay.innerHTML = `<span class="badge ${badgeClass}">${complexity} (${formState.totalHours.toFixed(1)}h)</span>`;
-            }
-            
-            if (estimatedEndTime) estimatedEndTime.style.display = 'block';
-            if (efficiencyIndicator) efficiencyIndicator.style.display = 'block';
-        }
-    }
-    
-    // ===================================================================
-    // STACKING CONFIGURATION
-    // ===================================================================
-    
-    function setupStackingControls() {
-        const allowStackingSwitch = document.getElementById('allowStackingSwitch');
-        const stackingControls = document.getElementById('stackingControls');
-        const timingControls = document.getElementById('timingControls');
-        const noStackingMessage = document.getElementById('noStackingMessage');
-        
-        function toggleStacking() {
-            const isEnabled = allowStackingSwitch?.checked || false;
-            
-            if (stackingControls) stackingControls.style.display = isEnabled ? 'block' : 'none';
-            if (timingControls) timingControls.style.display = isEnabled ? 'block' : 'none';
-            if (noStackingMessage) noStackingMessage.style.display = isEnabled ? 'none' : 'block';
-            
-            // Auto-calculate multi-stack times
-            if (isEnabled) {
-                calculateMultiStackTimes();
-            }
-        }
-        
-        if (allowStackingSwitch) {
-            allowStackingSwitch.addEventListener('change', toggleStacking);
-            toggleStacking(); // Initial state
-        }
-    }
-    
-    function calculateMultiStackTimes() {
-        const singleHours = parseFloat(document.querySelector('input[name="MasterPart.SingleStackDurationHours"]')?.value) || 0;
-        const doubleInput = document.querySelector('input[name="MasterPart.DoubleStackDurationHours"]');
-        const tripleInput = document.querySelector('input[name="MasterPart.TripleStackDurationHours"]');
-        
-        if (singleHours > 0) {
-            if (doubleInput && !doubleInput.value) {
-                doubleInput.value = (singleHours * 1.3).toFixed(1); // 30% increase
-            }
-            if (tripleInput && !tripleInput.value) {
-                tripleInput.value = (singleHours * 1.6).toFixed(1); // 60% increase
-            }
-        }
-    }
-    
-    // ===================================================================
-    // BUILD CAPACITY CALCULATOR
-    // ===================================================================
-    
-    function setupBuildCalculator() {
-        const requestedQtyInput = document.getElementById('requestedQty');
-        const buildOptionsDiv = document.getElementById('buildOptions');
-        
-        function calculateBuildOptions() {
-            const qty = parseInt(requestedQtyInput?.value) || 0;
-            const allowStacking = document.getElementById('allowStackingSwitch')?.checked || false;
-            const maxStack = parseInt(document.querySelector('select[name="MasterPart.MaxStackCount"]')?.value) || 1;
-            
-            if (qty <= 0 || !buildOptionsDiv) return;
-            
-            let optionsHtml = '<div class="row">';
-            
-            for (let stackLevel = 1; stackLevel <= (allowStacking ? maxStack : 1); stackLevel++) {
-                const partsPerBuild = stackLevel;
-                const buildsNeeded = Math.ceil(qty / partsPerBuild);
-                const totalParts = buildsNeeded * partsPerBuild;
-                const efficiency = ((qty / totalParts) * 100).toFixed(1);
-                
-                optionsHtml += `
-                    <div class="col-md-4 mb-2">
-                        <div class="border rounded p-2 ${stackLevel === 1 ? 'bg-light' : ''}">
-                            <strong>${stackLevel}x Stack</strong><br>
-                            <small class="text-muted">
-                                ${buildsNeeded} builds × ${partsPerBuild} parts = ${totalParts} total<br>
-                                Efficiency: ${efficiency}% (${qty}/${totalParts})
-                            </small>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            optionsHtml += '</div>';
-            buildOptionsDiv.innerHTML = optionsHtml;
-        }
-        
-        if (requestedQtyInput) {
-            requestedQtyInput.addEventListener('input', calculateBuildOptions);
-            calculateBuildOptions(); // Initial calculation
-        }
-    }
-    
-    // ===================================================================
-    // FORM VALIDATION
-    // ===================================================================
-    
-    function validateForm() {
-        const partNumber = document.querySelector('input[name="MasterPart.PartNumber"]')?.value?.trim();
-        const partName = document.querySelector('input[name="MasterPart.Name"]')?.value?.trim();
-        const material = document.querySelector('select[name="MasterPart.Material"]')?.value;
-        const approach = document.querySelector('select[name="MasterPart.ManufacturingApproach"]')?.value;
-        const singleHours = parseFloat(document.querySelector('input[name="MasterPart.SingleStackDurationHours"]')?.value) || 0;
-        const hasStages = formState.selectedStages.size > 0;
-        
-        formState.isValid = !!(partNumber && partName && material && approach && singleHours > 0 && hasStages);
-        
-        const submitBtn = document.getElementById('submitBtn');
-        if (submitBtn) {
-            submitBtn.disabled = !formState.isValid;
-            submitBtn.className = formState.isValid 
-                ? 'btn btn-primary'
-                : 'btn btn-secondary';
-        }
-        
-        // Show validation feedback
-        updateValidationFeedback();
-        
-        return formState.isValid;
-    }
-    
-    function updateValidationFeedback() {
-        const issues = [];
-        
-        if (!document.querySelector('input[name="MasterPart.PartNumber"]')?.value?.trim()) {
-            issues.push('Part Number is required');
-        }
-        if (!document.querySelector('input[name="MasterPart.Name"]')?.value?.trim()) {
-            issues.push('Part Name is required');
-        }
-        if (!document.querySelector('select[name="MasterPart.Material"]')?.value) {
-            issues.push('Material selection is required');
-        }
-        if (!document.querySelector('select[name="MasterPart.ManufacturingApproach"]')?.value) {
-            issues.push('Manufacturing Approach is required');
-        }
-        if (formState.selectedStages.size === 0) {
-            issues.push('At least one production stage must be selected');
-        }
-        
-        const validationDiv = document.querySelector('[asp-validation-summary="All"]');
-        if (validationDiv) {
-            if (issues.length > 0) {
-                validationDiv.innerHTML = '<ul>' + issues.map(issue => `<li>${issue}</li>`).join('') + '</ul>';
-                validationDiv.classList.remove('d-none');
-            } else {
-                validationDiv.classList.add('d-none');
-            }
-        }
-    }
-    
-    // ===================================================================
-    // EVENT HANDLERS
-    // ===================================================================
-    
-    // Stage checkbox handlers
-    document.querySelectorAll('.stage-checkbox').forEach(checkbox => {
-        console.log(`🔧 [FORM] Adding event listener to stage checkbox: ${checkbox.dataset.stageName}`);
-        checkbox.addEventListener('change', function() {
-            console.log(`📋 [FORM] Stage checkbox changed: ${this.dataset.stageName}, checked: ${this.checked}`);
-            updateStageCard(this, this.checked);
-            updateStageSelection();
-            updateStageCount();
-        });
-    });
-    
-    // Stage hours input handlers
-    document.querySelectorAll('.stage-hours').forEach(input => {
-        input.addEventListener('input', updateStageSelection);
-    });
-    
-    // Execution order handlers
-    document.querySelectorAll('.execution-order-input').forEach(input => {
-        input.addEventListener('input', updateStageSelection);
-    });
-    
-    // Form field validation handlers
-    ['MasterPart.PartNumber', 'MasterPart.Name', 'MasterPart.Material', 'MasterPart.ManufacturingApproach', 'MasterPart.SingleStackDurationHours'].forEach(fieldName => {
-        const field = document.querySelector(`[name="${fieldName}"]`);
-        if (field) {
-            field.addEventListener('change', validateForm);
-            field.addEventListener('input', validateForm);
-        }
-    });
-    
-    // Single hours input handler
-    const singleHoursInput = document.querySelector('input[name="MasterPart.SingleStackDurationHours"]');
-    if (singleHoursInput) {
-        singleHoursInput.addEventListener('input', function() {
-            updateTimeEstimates();
-            calculateMultiStackTimes();
-            validateForm();
-        });
-    }
-    
-    // ===================================================================
-    // FORM SUBMISSION
-    // ===================================================================
-    
-    const form = document.getElementById('masterPartForm');
-    if (form) {
-        form.addEventListener('submit', function(event) {
-            event.preventDefault();
-            
-            console.log('📤 [FORM] Form submission started');
-            
-            if (!validateForm()) {
-                console.warn('⚠️ [FORM] Form validation failed');
-                updateValidationFeedback();
-                return false;
-            }
-            
-            // Show loading state
-            const submitBtn = document.getElementById('submitBtn');
-            const originalBtnText = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
-            submitBtn.disabled = true;
-            
-            // Prepare form data
-            const formData = new FormData(form);
-            
-            // Ensure stage data is properly set
-            const selectedIds = Array.from(formState.selectedStages.keys());
-            const estimatedHours = Array.from(formState.selectedStages.values()).map(s => s.hours);
-            
-            formData.set('SelectedStageIds', selectedIds.join(','));
-            formData.set('StageEstimatedHours', estimatedHours.join(','));
-            
-            console.log(`📋 [FORM] Submitting with ${selectedIds.length} stages:`, {
-                selectedIds: selectedIds.join(','),
-                estimatedHours: estimatedHours.join(','),
-                stageData: Array.from(formState.selectedStages.entries())
-            });
-            
-            // Submit form
-            fetch(form.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json,text/html'
-                }
-            })
-            .then(response => {
-                console.log(`📡 [FORM] Response status: ${response.status}`);
-                
-                const contentType = response.headers.get('content-type');
-                if (contentType && contentType.includes('application/json')) {
-                    return response.json();
-                } else {
-                    return response.text();
-                }
-            })
-            .then(data => {
-                if (typeof data === 'object' && data.success) {
-                    // Success response
-                    console.log('✅ [FORM] Master part saved successfully');
-                    
-                    // Close modal first
-                    const modal = document.getElementById('partModal');
-                    if (modal && typeof bootstrap !== 'undefined') {
-                        const bootstrapModal = bootstrap.Modal.getInstance(modal);
-                        if (bootstrapModal) {
-                            bootstrapModal.hide();
-                        }
-                    }
-                    
-                    // Show success message
-                    if (typeof window.showToast === 'function') {
-                        window.showToast('success', data.message);
-                    } else {
-                        alert(data.message);
-                    }
-                    
-                    // Refresh the page after a short delay
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
-                    
-                } else if (typeof data === 'string') {
-                    // HTML response with validation errors - replace modal content
-                    console.warn('⚠️ [FORM] Validation errors returned');
-                    
-                    // Find the modal content div and replace it
-                    const modalContent = document.querySelector('#partModal .modal-content');
-                    if (modalContent) {
-                        modalContent.innerHTML = data;
-                        // Re-initialize the form after replacing content
-                        setTimeout(() => {
-                            console.log('🔄 [FORM] Form content replaced, re-initializing...');
-                        }, 100);
-                    }
-                    
-                } else {
-                    throw new Error('Unexpected response format');
-                }
-            })
-            .catch(error => {
-                console.error('❌ [FORM] Form submission error:', error);
-                
-                if (window.showToast) {
-                    window.showToast('error', 'An error occurred while saving the master part. Please try again.');
-                } else {
-                    alert('Error saving master part: ' + error.message);
-                }
-            })
-            .finally(() => {
-                // Reset button state
-                submitBtn.innerHTML = originalBtnText;
-                submitBtn.disabled = false;
-            });
-        });
-    }
-    
-    // ===================================================================
-    // INITIALIZATION
-    // ===================================================================
-    
-    // Initialize all components
-    setupStackingControls();
-    setupBuildCalculator();
-    
-    // Initialize stage selection from existing data with delay to ensure DOM is ready
-    setTimeout(() => {
-        console.log(`🔧 [FORM] Initializing existing stage selections...`);
-        
-        if (document.querySelectorAll('.stage-checkbox:checked').length > 0) {
-            console.log(`📋 [FORM] Found ${document.querySelectorAll('.stage-checkbox:checked').length} pre-selected stages`);
-            document.querySelectorAll('.stage-checkbox:checked').forEach(checkbox => {
-                console.log(`📋 [FORM] Initializing pre-selected stage: ${checkbox.dataset.stageName}`);
-                updateStageCard(checkbox, true);
-            });
-        } else {
-            console.log(`📋 [FORM] No pre-selected stages found`);
-        }
-        
-        updateStageSelection(); // Load existing selections
-        updateStageCount();
-        validateForm();
-        
-        console.log(`✅ [FORM] Stage initialization complete`);
-    }, 100);
-    
-    // Auto-focus first input on new parts
-    setTimeout(() => {
-        const firstInput = document.querySelector('input[name="MasterPart.PartNumber"]');
-        if (firstInput && !firstInput.value) {
-            firstInput.focus();
-        }
-    }, 300);
-    
-    console.log('✅ [MASTER-PART-FORM] Enhanced form initialization complete');
-});
-</script>
-
 <style>
-/* Enhanced Form Styles */
-.nav-pills .nav-link {
-    border-radius: 8px;
-    margin-right: 8px;
-    transition: all 0.3s ease;
-}
-
-.nav-pills .nav-link:not(.active):hover {
-    background-color: rgba(13, 110, 253, 0.1);
-    color: #0d6efd;
-}
-
-.stage-card {
-    transition: all 0.3s ease;
-    border-radius: 12px;
-}
-
-.stage-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-.stage-card.border-primary {
-    border-width: 2px !important;
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
-}
-
-.stage-icon i {
-    transition: transform 0.3s ease;
-}
-
-.stage-card:hover .stage-icon i {
-    transform: scale(1.1);
-}
-
-.stage-config {
-    background: rgba(248, 249, 250, 0.8);
-    border-radius: 8px;
-    padding: 12px;
-}
-
-.form-control:focus, .form-select:focus {
-    border-color: #0d6efd;
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
-}
-
-.form-control-lg {
-    border-radius: 8px;
-    font-weight: 500;
-}
-
-.bg-gradient-primary {
-    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
-}
-
-.card {
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-}
-
-.modal-body {
-    scrollbar-width: thin;
-    scrollbar-color: #dee2e6 transparent;
-}
-
-.modal-body::-webkit-scrollbar {
-    width: 8px;
-}
-
-.modal-body::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.modal-body::-webkit-scrollbar-thumb {
-    background-color: #dee2e6;
-    border-radius: 4px;
-}
-
-.modal-body::-webkit-scrollbar-thumb:hover {
-    background-color: #adb5bd;
-}
-
-/* Responsive adjustments */
-@@media (max-width: 768px) {
-    .modal-body {
-        max-height: 70vh;
-    }
-    
-    .nav-pills {
-        flex-wrap: wrap;
-    }
-    
-    .nav-pills .nav-link {
-        margin-bottom: 4px;
-        font-size: 0.875rem;
-    }
-}
-
-/* Loading states */
-#submitBtn:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-}
-
-.form-control:disabled, .form-select:disabled {
-    background-color: #f8f9fa;
-    opacity: 0.7;
-}
-
-/* Animation for stage cards */
-@@keyframes stageSelected {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.02); }
-    100% { transform: scale(1); }
-}
-
-.stage-card.border-primary {
-    animation: stageSelected 0.5s ease-out;
-}
+.nav-pills .nav-link { border-radius: 8px; margin-right: 8px; transition: all 0.3s ease; }
+.nav-pills .nav-link:not(.active):hover { background-color: rgba(13,110,253,0.1); color:#0d6efd; }
+.stage-card { transition: all 0.3s ease; border-radius:12px; }
+.stage-card:hover { transform: translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,0.1); }
+.stage-card.border-primary { border-width:2px!important; box-shadow:0 0 0 0.2rem rgba(13,110,253,0.25); }
+.stage-icon i { transition: transform 0.3s ease; }
+.stage-card:hover .stage-icon i { transform: scale(1.1); }
+.stage-config { background: rgba(248,249,250,0.8); border-radius:8px; padding:12px; }
+.stage-cycle.cycle-readonly { background:#f8f9fa; cursor:not-allowed; opacity:.75; }
+.form-control:focus, .form-select:focus { border-color:#0d6efd; box-shadow:0 0 0 0.2rem rgba(13,110,253,0.25); }
+.form-control-lg { border-radius:8px; font-weight:500; }
+.bg-gradient-primary { background: linear-gradient(135deg,#0d6efd 0%,#0a58ca 100%); }
+.card { border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+.modal-body { scrollbar-width: thin; scrollbar-color:#dee2e6 transparent; }
+.modal-body::-webkit-scrollbar { width:8px; }
+.modal-body::-webkit-scrollbar-thumb { background-color:#dee2e6; border-radius:4px; }
+.modal-body::-webkit-scrollbar-thumb:hover { background-color:#adb5bd; }
+#submitBtn:disabled { opacity:0.7; cursor:not-allowed; }
+.form-control:disabled, .form-select:disabled { background-color:#f8f9fa; opacity:0.7; }
+#slsBuildConfigCard table input[readonly] { background:#f8f9fa; }
+#slsBuildConfigCard .form-control-sm { padding:.25rem .5rem; }
+@@media (max-width:768px){ .modal-body { max-height:70vh; } .nav-pills { flex-wrap:wrap; } .nav-pills .nav-link { margin-bottom:4px; font-size:0.875rem; } }
+@@keyframes stageSelected {0%{transform:scale(1);}50%{transform:scale(1.02);}100%{transform:scale(1);} }
+.stage-card.border-primary { animation: stageSelected 0.5s ease-out; }
 </style>

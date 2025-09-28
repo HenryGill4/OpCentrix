@@ -35,12 +35,25 @@ namespace OpCentrix.Models
         [StringLength(50)]
         public string ManufacturingApproach { get; set; } = "SLS-Based"; // "SLS-Based" or "RawMaterial-Based"
         
-        // SLS stacking configuration
-        public bool AllowStacking { get; set; } = false;
-        public double? SingleStackDurationHours { get; set; }
-        public double? DoubleStackDurationHours { get; set; }
-        public double? TripleStackDurationHours { get; set; }
-        public int? MaxStackCount { get; set; } = 1;
+        // LEGACY stacking configuration (kept for backward compatibility / migration)
+        public bool AllowStacking { get; set; } = false; // legacy flag – to be deprecated
+        public double? SingleStackDurationHours { get; set; } // now treated as OBSERVED single build duration (user entered)
+        public double? DoubleStackDurationHours { get; set; } // observed double
+        public double? TripleStackDurationHours { get; set; } // observed triple
+        public int? MaxStackCount { get; set; } = 1; // legacy
+        
+        // NEW SLS Build Configuration (refactor)
+        // Parts-per-build counts
+        public int PartsPerBuildSingle { get; set; } = 1; // always >=1
+        public int? PartsPerBuildDouble { get; set; }
+        public int? PartsPerBuildTriple { get; set; }
+        
+        // Enable flags for additional modes
+        public bool EnableDoubleStack { get; set; } = false;
+        public bool EnableTripleStack { get; set; } = false;
+        
+        // Stage-based estimate (computed client/server – optional persistence)
+        public double? StageEstimateSingle { get; set; } // computed total hours for single stack from stage definitions
         
         // Required stages (JSON array)
         [Required]
@@ -226,7 +239,7 @@ namespace OpCentrix.Models
         public int? OperatorUserId { get; set; }
         public virtual User? OperatorUser { get; set; }
         
-        // Stage-specific data (JSON for flexibility)
+        // Stage-specific data (JSON)
         [StringLength(5000)]
         public string StageData { get; set; } = "{}";
         
@@ -295,10 +308,6 @@ namespace OpCentrix.Models
         
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
         public DateTime LastModifiedDate { get; set; } = DateTime.UtcNow;
-        
-        // REMOVED: Navigation to stage executions - this relationship doesn't make sense
-        // PartBatch and StageExecution are parallel entities under ProductionBuild
-        // If you need to find related stage executions, do it through ProductionBuildId
     }
 
     /// <summary>

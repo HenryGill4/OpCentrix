@@ -330,11 +330,19 @@ namespace OpCentrix.Pages.Admin
                 existingPart.Description = MasterPart.Description;
                 existingPart.Material = MasterPart.Material;
                 existingPart.ManufacturingApproach = MasterPart.ManufacturingApproach;
+                // legacy stacking fields retained but no longer primary logic
                 existingPart.AllowStacking = MasterPart.AllowStacking;
-                existingPart.SingleStackDurationHours = MasterPart.SingleStackDurationHours;
+                existingPart.SingleStackDurationHours = MasterPart.SingleStackDurationHours; // observed single duration (user entered)
                 existingPart.DoubleStackDurationHours = MasterPart.DoubleStackDurationHours;
                 existingPart.TripleStackDurationHours = MasterPart.TripleStackDurationHours;
                 existingPart.MaxStackCount = MasterPart.MaxStackCount;
+                // NEW SLS Build Configuration fields
+                existingPart.PartsPerBuildSingle = MasterPart.PartsPerBuildSingle == 0 ? 1 : MasterPart.PartsPerBuildSingle;
+                existingPart.PartsPerBuildDouble = MasterPart.EnableDoubleStack ? MasterPart.PartsPerBuildDouble : null;
+                existingPart.PartsPerBuildTriple = MasterPart.EnableTripleStack ? MasterPart.PartsPerBuildTriple : null;
+                existingPart.EnableDoubleStack = MasterPart.EnableDoubleStack;
+                existingPart.EnableTripleStack = MasterPart.EnableTripleStack;
+                existingPart.StageEstimateSingle = MasterPart.StageEstimateSingle; // advisory
                 existingPart.IsActive = MasterPart.IsActive;
                 existingPart.LastModifiedDate = DateTime.UtcNow;
                 existingPart.LastModifiedBy = User.Identity?.Name ?? "System";
@@ -752,8 +760,11 @@ namespace OpCentrix.Pages.Admin
                 Material = "Ti-6Al-4V Grade 5",
                 ManufacturingApproach = "SLS-Based",
                 AllowStacking = false,
-                SingleStackDurationHours = 8.0,
+                SingleStackDurationHours = null, // user will enter observed
                 MaxStackCount = 1,
+                PartsPerBuildSingle = 1,
+                EnableDoubleStack = false,
+                EnableTripleStack = false,
                 RequiredStages = "[]",
                 IsActive = true,
                 CreatedBy = User.Identity?.Name ?? "System",
