@@ -92,6 +92,13 @@ namespace OpCentrix.Data
         public DbSet<StageTemplateStep> StageTemplateSteps { get; set; }
         public DbSet<StageTemplateCategory> StageTemplateCategories { get; set; }
 
+        // NEW: Production Build System
+        public DbSet<MasterPart> MasterParts { get; set; }
+        public DbSet<ProductionBuild> ProductionBuilds { get; set; }
+        public DbSet<StageDefinition> StageDefinitions { get; set; }
+        public DbSet<StageExecution> StageExecutions { get; set; }
+        public DbSet<PartBatch> PartBatches { get; set; }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             if (!optionsBuilder.IsConfigured)
@@ -122,6 +129,9 @@ namespace OpCentrix.Data
 
             // PHASE 6: Configure Stage Template entities
             ConfigureStageTemplateEntities(modelBuilder);
+
+            // NEW: Configure Production Build System entities
+            ConfigureProductionBuildEntities(modelBuilder);
 
             // Note: Other configuration methods temporarily disabled to prevent build errors
             // These can be added back when the respective features are implemented:
@@ -565,7 +575,6 @@ namespace OpCentrix.Data
                 entity.ToTable(t => t.HasCheckConstraint("CK_Assignment_DateRange",
                     "(EffectiveTo IS NULL) OR (EffectiveFrom IS NULL) OR (EffectiveTo >= EffectiveFrom)"));
             });
-
         }
 
         private void ConfigureAdminEntities(ModelBuilder modelBuilder)
@@ -1018,6 +1027,154 @@ namespace OpCentrix.Data
                     .OnDelete(DeleteBehavior.SetNull);
 
                 entity.HasIndex(e => e.AppliedTemplateId);
+            });
+        }
+
+        private void ConfigureProductionBuildEntities(ModelBuilder modelBuilder)
+        {
+            // Configure MasterPart entity
+            modelBuilder.Entity<MasterPart>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.PartNumber).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Description).IsRequired().HasMaxLength(500);
+                entity.Property(e => e.Material).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.ManufacturingApproach).IsRequired().HasMaxLength(50).HasDefaultValue("SLS-Based");
+                entity.Property(e => e.RequiredStages).IsRequired().HasMaxLength(1000).HasDefaultValue("[]");
+                entity.Property(e => e.CreatedBy).IsRequired().HasMaxLength(100).HasDefaultValue("System");
+                entity.Property(e => e.LastModifiedBy).IsRequired().HasMaxLength(100).HasDefaultValue("System");
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
+
+                // Unique constraint on part number
+                entity.HasIndex(e => e.PartNumber).IsUnique();
+                entity.HasIndex(e => e.IsActive);
+                entity.HasIndex(e => e.ManufacturingApproach);
+            });
+
+            // Configure ProductionBuild entity
+            modelBuilder.Entity<ProductionBuild>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.BuildNumber).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.PrinterName).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.MaterialBatch).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.PowderLot).HasMaxLength(100).HasDefaultValue("");
+                entity.Property(e => e.Status).IsRequired().HasMaxLength(50).HasDefaultValue("Planned");
+                entity.Property(e => e.SetupNotes).HasMaxLength(1000);
+                entity.Property(e => e.CompletionNotes).HasMaxLength(1000);
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+
+                // Foreign key relationships
+                entity.HasOne(e => e.MasterPart)
+                    .WithMany(mp => mp.ProductionBuilds)
+                    .HasForeignKey(e => e.MasterPartId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.CreatedByUser)
+                    .WithMany()
+                    .HasForeignKey(e => e.CreatedByUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // Indexes
+                entity.HasIndex(e => e.BuildNumber).IsUnique();
+                entity.HasIndex(e => e.Status);
+                entity.HasIndex(e => e.PrinterName);
+                entity.HasIndex(e => e.CreatedDate);
+                entity.HasIndex(e => e.MasterPartId);
+            });
+
+            // Configure StageDefinition entity
+            modelBuilder.Entity<StageDefinition>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.StageName).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.RequiredMachineType).HasMaxLength(100);
+                entity.Property(e => e.PreferredMachines).HasMaxLength(100);
+                entity.Property(e => e.StageConfiguration).HasMaxLength(2000).HasDefaultValue("{}");
+                entity.Property(e => e.QualityRequirements).HasMaxLength(1000);
+
+                // Foreign key relationship
+                entity.HasOne(e => e.MasterPart)
+                    .WithMany(mp => mp.StageDefinitions)
+                    .HasForeignKey(e => e.MasterPartId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Indexes
+                entity.HasIndex(e => e.MasterPartId);
+                entity.HasIndex(e => e.StageName);
+                entity.HasIndex(e => e.ExecutionOrder);
+                entity.HasIndex(e => e.IsActive);
+                entity.HasIndex(e => new { e.MasterPartId, e.ExecutionOrder });
+            });
+
+            // Configure StageExecution entity
+            modelBuilder.Entity<StageExecution>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.StageName).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Status).IsRequired().HasMaxLength(50).HasDefaultValue("NotStarted");
+                entity.Property(e => e.MachineUsed).HasMaxLength(50);
+                entity.Property(e => e.StageData).HasMaxLength(5000).HasDefaultValue("{}");
+                entity.Property(e => e.OperatorNotes).HasMaxLength(2000);
+                entity.Property(e => e.QualityNotes).HasMaxLength(2000);
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+
+                // Decimal precision for costs
+                entity.Property(e => e.ActualCost).HasPrecision(10, 2);
+                entity.Property(e => e.MaterialCost).HasPrecision(10, 2);
+                entity.Property(e => e.LaborCost).HasPrecision(10, 2);
+
+                // Foreign key relationships
+                entity.HasOne(e => e.ProductionBuild)
+                    .WithMany(pb => pb.StageExecutions)
+                    .HasForeignKey(e => e.ProductionBuildId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.StageDefinition)
+                    .WithMany()
+                    .HasForeignKey(e => e.StageDefinitionId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.OperatorUser)
+                    .WithMany()
+                    .HasForeignKey(e => e.OperatorUserId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                // Indexes
+                entity.HasIndex(e => e.ProductionBuildId);
+                entity.HasIndex(e => e.Status);
+                entity.HasIndex(e => e.StageName);
+                entity.HasIndex(e => e.StartTime);
+                entity.HasIndex(e => e.OperatorUserId);
+                entity.HasIndex(e => new { e.ProductionBuildId, e.ExecutionOrder });
+            });
+
+            // Configure PartBatch entity
+            modelBuilder.Entity<PartBatch>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.BatchNumber).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.CurrentStage).IsRequired().HasMaxLength(50).HasDefaultValue("SLS");
+                entity.Property(e => e.QualityStatus).IsRequired().HasMaxLength(50).HasDefaultValue("Good");
+                entity.Property(e => e.Location).HasMaxLength(100);
+                entity.Property(e => e.Notes).HasMaxLength(1000);
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
+
+                // Foreign key relationship
+                entity.HasOne(e => e.ProductionBuild)
+                    .WithMany(pb => pb.PartBatches)
+                    .HasForeignKey(e => e.ProductionBuildId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Indexes
+                entity.HasIndex(e => e.ProductionBuildId);
+                entity.HasIndex(e => e.BatchNumber);
+                entity.HasIndex(e => e.CurrentStage);
+                entity.HasIndex(e => e.QualityStatus);
+                entity.HasIndex(e => e.CreatedDate);
             });
         }
 

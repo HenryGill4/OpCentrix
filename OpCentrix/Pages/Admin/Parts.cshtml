@@ -1,30 +1,33 @@
 @page
 @model OpCentrix.Pages.Admin.PartsModel
 @{
-    ViewData["Title"] = "Parts Management";
-    ViewData["Description"] = "Manage SLS manufacturing parts and specifications";
+    ViewData["Title"] = "Master Parts Management";
+    ViewData["Description"] = "Manage master parts with dynamic stage definitions";
     Layout = "~/Pages/Admin/Shared/_AdminLayout.cshtml";
 }
 
 <div class="container-fluid">
-    <!-- Simplified Header Section -->
+    <!-- REFACTORED: Header Section -->
     <div class="parts-page-header">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
                 <h1 class="parts-page-title">
-                    <i class="fas fa-cogs text-primary"></i>
-                    Parts Management (@Model.TotalCount)
+                    <i class="fas fa-industry text-primary"></i>
+                    Master Parts Management (@Model.TotalCount)
                 </h1>
-                <p class="parts-page-subtitle">Manufacturing Parts Library</p>
+                <p class="parts-page-subtitle">Production-Ready Master Parts with Stage-Based Manufacturing</p>
             </div>
             <div class="d-flex gap-3">
                 <button type="button" 
                         class="btn btn-primary btn-lg" 
                         onclick="handleAddPartClick()"
                         data-bs-toggle="tooltip" 
-                        title="Add New Part">
-                    <i class="fas fa-plus me-2"></i>Add New Part
+                        title="Add New Master Part">
+                    <i class="fas fa-plus me-2"></i>Add New Master Part
                 </button>
+                <a href="/ProductionBuild/Dashboard" class="btn btn-outline-info">
+                    <i class="fas fa-industry me-2"></i>Production Builds
+                </a>
                 <button type="button" 
                         class="btn btn-outline-secondary" 
                         onclick="window.location.reload()" 
@@ -35,13 +38,13 @@
             </div>
         </div>
 
-        <!-- Statistics Cards -->
+        <!-- REFACTORED: Statistics Cards -->
         <div class="row g-4">
             <div class="col-md-3">
                 <div class="card parts-stats-card active-parts border-0">
                     <div class="card-body text-center">
                         <div class="parts-stats-number text-success">@Model.ActivePartsCount</div>
-                        <div class="parts-stats-label">Active Parts</div>
+                        <div class="parts-stats-label">Active Master Parts</div>
                     </div>
                 </div>
             </div>
@@ -57,7 +60,7 @@
                 <div class="card parts-stats-card top-material border-0">
                     <div class="card-body text-center">
                         <div class="parts-stats-number">@Model.MostUsedMaterial</div>
-                        <div class="parts-stats-label">Top Material</div>
+                        <div class="parts-stats-label">Primary Material</div>
                     </div>
                 </div>
             </div>
@@ -72,7 +75,7 @@
         </div>
     </div>
 
-    <!-- Simplified Filters Section -->
+    <!-- REFACTORED: Filters Section -->
     <div class="card parts-filter-section mb-4">
         <div class="card-header parts-filter-header">
             <h6 class="parts-filter-title">
@@ -107,27 +110,26 @@
                 </div>
                 <div class="col-md-2">
                     <label for="StageFilter" class="form-label">
-                        <i class="fas fa-tasks me-1"></i>Stage
+                        <i class="fas fa-tasks me-1"></i>Required Stage
                     </label>
                     <select asp-for="StageFilter" class="form-select">
                         <option value="">All Stages</option>
-                        <option value="SLS">SLS Printing</option>
-                        <option value="CNC">CNC Machining</option>
-                        <option value="EDM">EDM Operations</option>
-                        <option value="Assembly">Assembly</option>
-                        <option value="Finishing">Finishing</option>
+                        @foreach (var stage in Model.AvailableStages)
+                        {
+                            <option value="@stage.Name" selected="@(Model.StageFilter == stage.Name)">@stage.Name</option>
+                        }
                     </select>
                 </div>
                 <div class="col-md-2">
                     <label for="ComplexityFilter" class="form-label">
-                        <i class="fas fa-chart-bar me-1"></i>Complexity
+                        <i class="fas fa-chart-bar me-1"></i>Approach
                     </label>
                     <select asp-for="ComplexityFilter" class="form-select">
-                        <option value="">All Complexity</option>
-                        <option value="Simple">Simple (?4h)</option>
-                        <option value="Medium">Medium (4-12h)</option>
-                        <option value="Complex">Complex (12-24h)</option>
-                        <option value="Very Complex">Very Complex (>24h)</option>
+                        <option value="">All Approaches</option>
+                        @foreach (var approach in Model.AvailableApproaches)
+                        {
+                            <option value="@approach" selected="@(Model.ComplexityFilter == approach)">@approach</option>
+                        }
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -147,13 +149,13 @@
         </div>
     </div>
 
-    <!-- Simplified Parts Table -->
+    <!-- REFACTORED: Master Parts Table -->
     <div class="card parts-card border-0">
         <div class="card-header bg-white border-bottom">
             <div class="d-flex justify-content-between align-items-center">
                 <h5 class="parts-card-title">
-                    <i class="fas fa-list text-primary"></i>
-                    Parts Library
+                    <i class="fas fa-industry text-primary"></i>
+                    Master Parts Library
                     <span class="badge bg-secondary ms-2">@Model.TotalCount total</span>
                 </h5>
                 <div class="d-flex gap-3 align-items-center">
@@ -173,235 +175,196 @@
             </div>
         </div>
         <div class="card-body p-0">
-            @if (Model.Parts.Any())
+            @if (Model.MasterParts.Any())
             {
                 <div class="table-responsive">
                     <table class="table parts-table table-hover mb-0">
                         <thead class="table-light">
                             <tr>
                                 <th>
-                                    <a href="?SortBy=PartNumber&SortDirection=@Model.GetSortDirection("PartNumber")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&StageFilter=@Model.StageFilter&CategoryFilter=@Model.CategoryFilter&ComplexityFilter=@Model.ComplexityFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
+                                    <a href="?SortBy=PartNumber&SortDirection=@Model.GetSortDirection("PartNumber")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&StageFilter=@Model.StageFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
                                        class="text-decoration-none">
                                         <i class="fas fa-hashtag me-1"></i>
                                         Part Number @Model.GetSortIcon("PartNumber")
                                     </a>
                                 </th>
                                 <th>
-                                    <a href="?SortBy=Name&SortDirection=@Model.GetSortDirection("Name")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&StageFilter=@Model.StageFilter&CategoryFilter=@Model.CategoryFilter&ComplexityFilter=@Model.ComplexityFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
+                                    <a href="?SortBy=Name&SortDirection=@Model.GetSortDirection("Name")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&StageFilter=@Model.StageFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
                                        class="text-decoration-none">
                                         <i class="fas fa-tag me-1"></i>
                                         Name @Model.GetSortIcon("Name")
                                     </a>
                                 </th>
                                 <th>
-                                    <a href="?SortBy=Material&SortDirection=@Model.GetSortDirection("Material")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&StageFilter=@Model.StageFilter&CategoryFilter=@Model.CategoryFilter&ComplexityFilter=@Model.ComplexityFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
+                                    <a href="?SortBy=Material&SortDirection=@Model.GetSortDirection("Material")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&StageFilter=@Model.StageFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
                                        class="text-decoration-none">
                                         <i class="fas fa-flask me-1"></i>
                                         Material @Model.GetSortIcon("Material")
                                     </a>
                                 </th>
                                 <th>
-                                    <i class="fas fa-tasks me-1"></i>
+                                    <i class="fas fa-route me-1"></i>
                                     Manufacturing Stages
                                 </th>
                                 <th>
-                                    <a href="?SortBy=Hours&SortDirection=@Model.GetSortDirection("Hours")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&StageFilter=@Model.StageFilter&CategoryFilter=@Model.CategoryFilter&ComplexityFilter=@Model.ComplexityFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
+                                    <a href="?SortBy=Hours&SortDirection=@Model.GetSortDirection("Hours")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&StageFilter=@Model.StageFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
                                        class="text-decoration-none">
                                         <i class="fas fa-clock me-1"></i>
                                         Duration @Model.GetSortIcon("Hours")
                                     </a>
                                 </th>
                                 <th>
-                                    <i class="fas fa-info-circle me-1"></i>
-                                    Status
+                                    <i class="fas fa-cog me-1"></i>
+                                    Configuration
                                 </th>
                                 <th width="200">
-                                    <i class="fas fa-cog me-1"></i>
+                                    <i class="fas fa-tools me-1"></i>
                                     Actions
                                 </th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var part in Model.Parts)
+                            @foreach (var masterPart in Model.MasterParts)
                             {
-                                <tr class="@(part.HasAdminOverride ? "parts-admin-override" : "")">
+                                var stages = Model.GetPartStages(masterPart.Id);
+                                <tr>
                                     <td>
-                                        <div class="fw-bold text-primary">@part.PartNumber</div>
-                                        @if (!string.IsNullOrEmpty(part.CustomerPartNumber))
+                                        <div class="fw-bold text-primary">@masterPart.PartNumber</div>
+                                        <div class="small text-muted">
+                                            <i class="fas fa-industry me-1"></i>
+                                            @masterPart.ManufacturingApproach
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold">@masterPart.Name</div>
+                                        @if (!string.IsNullOrEmpty(masterPart.Description))
                                         {
                                             <div class="small text-muted">
-                                                <i class="fas fa-external-link-alt me-1"></i>
-                                                Customer: @part.CustomerPartNumber
+                                                @(masterPart.Description.Length > 50 ? masterPart.Description.Substring(0, 50) + "..." : masterPart.Description)
                                             </div>
                                         }
                                     </td>
                                     <td>
-                                        <div class="fw-semibold">@part.Name</div>
-                                        @if (!string.IsNullOrEmpty(part.Description) && part.Description.Length > 40)
-                                        {
-                                            <div class="small text-muted">@(part.Description.Substring(0, 40))...</div>
-                                        }
-                                        else if (!string.IsNullOrEmpty(part.Description))
-                                        {
-                                            <div class="small text-muted">@part.Description</div>
-                                        }
-                                        <!-- PHASE 3: Display Component Type and Compliance Category -->
-                                        <div class="small mt-1">
-                                            @if (part.ComponentType != null)
-                                            {
-                                                <span class="badge badge-sm bg-info me-1">
-                                                    <i class="fas fa-tag me-1"></i>@part.ComponentType.Name
-                                                </span>
-                                            }
-                                            @if (part.ComplianceCategory != null)
-                                            {
-                                                <span class="badge badge-sm @(part.ComplianceCategory.RegulatoryLevel == "Restricted" ? "bg-danger" : "bg-secondary")">
-                                                    <i class="fas fa-shield-alt me-1"></i>@part.ComplianceCategory.Name
-                                                </span>
-                                            }
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="badge parts-badge bg-primary">
+                                        <span class="badge parts-badge bg-info">
                                             <i class="fas fa-atom me-1"></i>
-                                            @part.Material
+                                            @masterPart.Material
                                         </span>
                                     </td>
                                     <td>
-                                        <!-- Simple Stage Indicators using boolean flags -->
+                                        <!-- REFACTORED: Dynamic Stage Indicators from StageDefinitions -->
                                         <div class="d-flex flex-wrap gap-1 mb-1">
-                                            @if (part.RequiresSLSPrinting)
+                                            @foreach (var stage in stages.OrderBy(s => s.ExecutionOrder))
                                             {
-                                                <span class="badge stage-indicator bg-primary" data-bs-toggle="tooltip" title="SLS Printing Required">
-                                                    <i class="fas fa-print me-1"></i>SLS
-                                                </span>
-                                            }
-                                            @if (part.RequiresCNCMachining)
-                                            {
-                                                <span class="badge stage-indicator bg-success" data-bs-toggle="tooltip" title="CNC Machining Required">
-                                                    <i class="fas fa-cogs me-1"></i>CNC
-                                                </span>
-                                            }
-                                            @if (part.RequiresEDMOperations)
-                                            {
-                                                <span class="badge stage-indicator bg-warning text-dark" data-bs-toggle="tooltip" title="EDM Operations Required">
-                                                    <i class="fas fa-bolt me-1"></i>EDM
-                                                </span>
-                                            }
-                                            @if (part.RequiresAssembly)
-                                            {
-                                                <span class="badge stage-indicator bg-info" data-bs-toggle="tooltip" title="Assembly Required">
-                                                    <i class="fas fa-puzzle-piece me-1"></i>Assembly
-                                                </span>
-                                            }
-                                            @if (part.RequiresFinishing)
-                                            {
-                                                <span class="badge stage-indicator bg-secondary" data-bs-toggle="tooltip" title="Finishing Required">
-                                                    <i class="fas fa-brush me-1"></i>Finishing
-                                                </span>
-                                            }
-                                            @if (part.RequiresInspection)
-                                            {
-                                                <span class="badge stage-indicator bg-danger" data-bs-toggle="tooltip" title="Quality Inspection Required">
-                                                    <i class="fas fa-search me-1"></i>QC
+                                                var badgeClass = stage.StageName switch
+                                                {
+                                                    "SLS Printing" or "SLS" => "bg-primary",
+                                                    "CNC Machining" or "CNC" => "bg-success", 
+                                                    "EDM Operations" or "EDM" => "bg-warning text-dark",
+                                                    "Assembly" => "bg-info",
+                                                    "Finishing" => "bg-secondary",
+                                                    "Quality Inspection" or "Quality" => "bg-danger",
+                                                    _ => "bg-secondary"
+                                                };
+                                                
+                                                var icon = stage.StageName switch
+                                                {
+                                                    "SLS Printing" or "SLS" => "fas fa-print",
+                                                    "CNC Machining" or "CNC" => "fas fa-cogs",
+                                                    "EDM Operations" or "EDM" => "fas fa-bolt",
+                                                    "Assembly" => "fas fa-puzzle-piece",
+                                                    "Finishing" => "fas fa-brush",
+                                                    "Quality Inspection" or "Quality" => "fas fa-search",
+                                                    _ => "fas fa-cog"
+                                                };
+                                                
+                                                <span class="badge stage-indicator @badgeClass" 
+                                                      data-bs-toggle="tooltip" 
+                                                      title="@stage.StageName - @stage.EstimatedHoursPerPart.ToString("F1")h">
+                                                    <span class="me-1">@stage.ExecutionOrder.</span>
+                                                    <i class="@icon me-1"></i>
+                                                    @stage.StageName.Replace(" Printing", "").Replace(" Machining", "").Replace(" Operations", "")
                                                 </span>
                                             }
                                         </div>
-                                        @{
-                                            var stageCount = 0;
-                                            if (part.RequiresSLSPrinting) stageCount++;
-                                            if (part.RequiresCNCMachining) stageCount++;
-                                            if (part.RequiresEDMOperations) stageCount++;
-                                            if (part.RequiresAssembly) stageCount++;
-                                            if (part.RequiresFinishing) stageCount++;
-                                            if (part.RequiresInspection) stageCount++;
-                                        }
-                                        @if (stageCount > 0)
+                                        @if (stages.Any())
                                         {
                                             <div class="small text-muted">
                                                 <i class="fas fa-route me-1"></i>
-                                                @stageCount stage@(stageCount == 1 ? "" : "s")
+                                                @stages.Count stage@(stages.Count == 1 ? "" : "s") • @stages.Sum(s => s.EstimatedHoursPerPart).ToString("F1")h total
                                             </div>
                                         }
                                         else
                                         {
-                                            <div class="small text-muted">
-                                                <i class="fas fa-info-circle me-1"></i>
-                                                No stages specified
+                                            <div class="small text-warning">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                                No stages defined
                                             </div>
                                         }
                                     </td>
                                     <td>
-                                        @if (part.HasAdminOverride)
-                                        {
-                                            <div class="fw-bold text-warning">
-                                                <i class="fas fa-user-shield me-1"></i>
-                                                @(part.AdminEstimatedHoursOverride?.ToString("F1") ?? "0.0")h
-                                                <span class="badge bg-warning text-dark ms-1">OVERRIDE</span>
-                                            </div>
-                                            <div class="small text-muted">
-                                                <i class="fas fa-clock me-1"></i>
-                                                Standard: @part.EstimatedHours.ToString("F1")h
-                                            </div>
-                                        }
-                                        else
+                                        @if (masterPart.SingleStackDurationHours.HasValue)
                                         {
                                             <div class="fw-semibold">
                                                 <i class="fas fa-clock me-1"></i>
-                                                @part.EstimatedHours.ToString("F1")h
+                                                @masterPart.SingleStackDurationHours.Value.ToString("F1")h
+                                            </div>
+                                            @if (masterPart.AllowStacking && masterPart.MaxStackCount > 1)
+                                            {
+                                                <div class="small text-success">
+                                                    <i class="fas fa-layer-group me-1"></i>
+                                                    Stackable (Max: @masterPart.MaxStackCount)
+                                                </div>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <div class="text-muted">
+                                                <i class="fas fa-question-circle me-1"></i>
+                                                Not configured
                                             </div>
                                         }
                                     </td>
                                     <td>
                                         <div class="d-flex flex-wrap gap-1">
-                                            <span class="badge parts-badge @Model.GetStatusBadgeClass(part.IsActive)">
-                                                <i class="fas fa-@(part.IsActive ? "check-circle" : "pause-circle") me-1"></i>
-                                                @(part.IsActive ? "Active" : "Inactive")
+                                            <span class="badge parts-badge @Model.GetStatusBadgeClass(masterPart.IsActive)">
+                                                <i class="fas fa-@(masterPart.IsActive ? "check-circle" : "pause-circle") me-1"></i>
+                                                @(masterPart.IsActive ? "Active" : "Inactive")
                                             </span>
-                                            <span class="badge parts-badge @(part.PartClass == "A" ? "bg-danger" : part.PartClass == "B" ? "bg-warning text-dark" : "bg-info")">
-                                                <i class="fas fa-star me-1"></i>
-                                                Class @part.PartClass
-                                            </span>
+                                            @if (masterPart.AllowStacking)
+                                            {
+                                                <span class="badge parts-badge bg-info">
+                                                    <i class="fas fa-layer-group me-1"></i>
+                                                    Stackable
+                                                </span>
+                                            }
                                         </div>
-                                        @if (part.RequiresFDA || part.RequiresAS9100 || part.RequiresNADCAP)
-                                        {
-                                            <div class="mt-1 d-flex flex-wrap gap-1">
-                                                @if (part.RequiresFDA)
-                                                {
-                                                    <span class="badge parts-badge bg-danger">
-                                                        <i class="fas fa-shield-alt me-1"></i>FDA
-                                                    </span>
-                                                }
-                                                @if (part.RequiresAS9100)
-                                                {
-                                                    <span class="badge parts-badge bg-danger">
-                                                        <i class="fas fa-certificate me-1"></i>AS9100
-                                                    </span>
-                                                }
-                                                @if (part.RequiresNADCAP)
-                                                {
-                                                    <span class="badge parts-badge bg-danger">
-                                                        <i class="fas fa-award me-1"></i>NADCAP
-                                                    </span>
-                                                }
-                                            </div>
-                                        }
+                                        <div class="small text-muted mt-1">
+                                            <i class="fas fa-calendar me-1"></i>
+                                            @masterPart.LastModifiedDate.ToString("MM/dd/yyyy")
+                                        </div>
                                     </td>
                                     <td>
                                         <div class="btn-group parts-btn-group btn-group-sm d-flex flex-wrap gap-1" role="group">
                                             <!-- Edit button -->
                                             <button type="button" class="btn btn-sm btn-primary" 
-                                                    onclick="handleEditPartClick(@part.Id)" 
-                                                    data-bs-toggle="tooltip" title="Edit Part">
+                                                    onclick="handleEditPartClick(@masterPart.Id)" 
+                                                    data-bs-toggle="tooltip" title="Edit Master Part">
                                                 <i class="fas fa-edit"></i>
                                             </button>
+                                            
+                                            <!-- Production Build button -->
+                                            <a href="/ProductionBuild/Start?masterPartId=@masterPart.Id" 
+                                               class="btn btn-sm btn-success"
+                                               data-bs-toggle="tooltip" title="Start Production Build">
+                                                <i class="fas fa-play"></i>
+                                            </a>
                                             
                                             <!-- Delete button -->
                                             <button type="button" 
                                                     class="btn btn-sm btn-outline-danger" 
-                                                    onclick="handleDeletePartClick(@part.Id, '@part.PartNumber', '@part.Name')" 
+                                                    onclick="handleDeletePartClick(@masterPart.Id, '@masterPart.PartNumber', '@masterPart.Name')" 
                                                     data-bs-toggle="tooltip" 
-                                                    title="Delete Part">
+                                                    title="Delete Master Part">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </div>
@@ -412,7 +375,7 @@
                     </table>
                 </div>
 
-                <!-- Pagination -->
+                <!-- Pagination (unchanged) -->
                 @if (Model.TotalPages > 1)
                 {
                     <div class="card-footer bg-white border-top">
@@ -423,7 +386,7 @@
                                         @if (Model.PageNumber > 1)
                                         {
                                             <li class="page-item">
-                                                <a class="page-link" href="?PageNumber=@(Model.PageNumber - 1)&SortBy=@Model.SortBy&SortDirection=@Model.SortDirection&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&StageFilter=@Model.StageFilter&CategoryFilter=@Model.CategoryFilter&ComplexityFilter=@Model.ComplexityFilter&ActiveOnly=@Model.ActiveOnly">
+                                                <a class="page-link" href="?PageNumber=@(Model.PageNumber - 1)&SortBy=@Model.SortBy&SortDirection=@Model.SortDirection&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&StageFilter=@Model.StageFilter&ActiveOnly=@Model.ActiveOnly">
                                                     <i class="fas fa-chevron-left me-1"></i>Previous
                                                 </a>
                                             </li>
@@ -432,14 +395,14 @@
                                         @for (int i = Math.Max(1, Model.PageNumber - 2); i <= Math.Min(Model.TotalPages, Model.PageNumber + 2); i++)
                                         {
                                             <li class="page-item @(i == Model.PageNumber ? "active" : "")">
-                                                <a class="page-link" href="?PageNumber=@i&SortBy=@Model.SortBy&SortDirection=@Model.SortDirection&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&StageFilter=@Model.StageFilter&CategoryFilter=@Model.CategoryFilter&ComplexityFilter=@Model.ComplexityFilter&ActiveOnly=@Model.ActiveOnly">@i</a>
+                                                <a class="page-link" href="?PageNumber=@i&SortBy=@Model.SortBy&SortDirection=@Model.SortDirection&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&StageFilter=@Model.StageFilter&ActiveOnly=@Model.ActiveOnly">@i</a>
                                             </li>
                                         }
 
                                         @if (Model.PageNumber < Model.TotalPages)
                                         {
                                             <li class="page-item">
-                                                <a class="page-link" href="?PageNumber=@(Model.PageNumber + 1)&SortBy=@Model.SortBy&SortDirection=@Model.SortDirection&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&StageFilter=@Model.StageFilter&CategoryFilter=@Model.CategoryFilter&ComplexityFilter=@Model.ComplexityFilter&ActiveOnly=@Model.ActiveOnly">
+                                                <a class="page-link" href="?PageNumber=@(Model.PageNumber + 1)&SortBy=@Model.SortBy&SortDirection=@Model.SortDirection&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&StageFilter=@Model.StageFilter&ActiveOnly=@Model.ActiveOnly">
                                                     Next<i class="fas fa-chevron-right ms-1"></i>
                                                 </a>
                                             </li>
@@ -450,7 +413,7 @@
                             <div class="col-md-6 text-end">
                                 <small class="text-muted d-flex align-items-center justify-content-end">
                                     <i class="fas fa-info-circle me-1"></i>
-                                    Showing @((Model.PageNumber - 1) * Model.PageSize + 1) to @Math.Min(Model.PageNumber * Model.PageSize, Model.TotalCount) of @Model.TotalCount parts
+                                    Showing @((Model.PageNumber - 1) * Model.PageSize + 1) to @Math.Min(Model.PageNumber * Model.PageSize, Model.TotalCount) of @Model.TotalCount master parts
                                 </small>
                             </div>
                         </div>
@@ -460,13 +423,13 @@
             else
             {
                 <div class="parts-empty-state">
-                    <i class="fas fa-cogs text-muted fa-3x mb-3"></i>
-                    <h5 class="text-muted">No parts found</h5>
-                    <p class="text-muted">Try adjusting your search criteria or add a new part to get started.</p>
+                    <i class="fas fa-industry text-muted fa-3x mb-3"></i>
+                    <h5 class="text-muted">No master parts found</h5>
+                    <p class="text-muted">Try adjusting your search criteria or add a new master part to get started.</p>
                     <button type="button" 
                             class="btn btn-primary btn-lg" 
                             onclick="handleAddPartClick()">
-                        <i class="fas fa-plus me-2"></i>Add Your First Part
+                        <i class="fas fa-plus me-2"></i>Add Your First Master Part
                     </button>
                 </div>
             }

@@ -287,6 +287,9 @@ builder.Services.AddScoped<IPrintTrackingService>(provider =>
     return new PrintTrackingService(context, logger, cohortService, stageProgressionService);
 });
 
+// NEW: Production Build System Service
+builder.Services.AddScoped<IProductionBuildService, ProductionBuildService>();
+
 // FIXED: Use only the Admin namespace ProductionStageSeederService to resolve ambiguity - COMPLETE FIX
 builder.Services.AddScoped<OpCentrix.Services.Admin.IProductionStageSeederService, OpCentrix.Services.Admin.ProductionStageSeederService>();
 

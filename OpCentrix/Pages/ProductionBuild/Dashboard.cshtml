@@ -1,0 +1,316 @@
+@page
+@model OpCentrix.Pages.ProductionBuild.DashboardModel
+@{
+    ViewData["Title"] = "Production Build Dashboard";
+}
+
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="text-primary mb-1">
+                        <i class="fas fa-industry me-2"></i>Production Build Dashboard
+                    </h2>
+                    <p class="text-muted mb-0">Monitor and manage production builds and stages</p>
+                </div>
+                <div>
+                    <a href="/ProductionBuild/Start" class="btn btn-success">
+                        <i class="fas fa-plus me-2"></i>Start New Build
+                    </a>
+                    <a href="/PrintTracking" class="btn btn-outline-secondary ms-2">
+                        <i class="fas fa-arrow-left me-2"></i>Print Tracking
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(TempData["SuccessMessage"] as string))
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="fas fa-check-circle me-2"></i>
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Dashboard Stats -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i class="fas fa-play-circle fa-2x"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-0">@Model.DashboardData.ActiveBuildsCount</h5>
+                            <small>Active Builds</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i class="fas fa-check-circle fa-2x"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-0">@Model.DashboardData.CompletedToday</h5>
+                            <small>Completed Today</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i class="fas fa-tasks fa-2x"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-0">@Model.DashboardData.ActiveStages</h5>
+                            <small>Active Stages</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i class="fas fa-cubes fa-2x"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-0">@Model.DashboardData.TotalPartsInProgress</h5>
+                            <small>Parts in Progress</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Production Builds -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-list me-2"></i>Active Production Builds
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.DashboardData.ActiveProductionBuilds.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Build Number</th>
+                                        <th>Part</th>
+                                        <th>Printer</th>
+                                        <th>Quantity</th>
+                                        <th>Status</th>
+                                        <th>Current Stage</th>
+                                        <th>Progress</th>
+                                        <th>Started</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var build in Model.DashboardData.ActiveProductionBuilds)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <span class="fw-bold text-primary">@build.BuildNumber</span>
+                                            </td>
+                                            <td>
+                                                <div>
+                                                    <div class="fw-semibold">@build.MasterPartNumber</div>
+                                                    <small class="text-muted">@build.MasterPartName</small>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-secondary">@build.PrinterName</span>
+                                            </td>
+                                            <td>
+                                                <span class="fw-bold">@build.BuildQuantity</span>
+                                                @if (build.StackLevel > 1)
+                                                {
+                                                    <small class="text-info">(@build.StackLevel)x Stack)</small>
+                                                }
+                                            </td>
+                                            <td>
+                                                @switch (build.Status)
+                                                {
+                                                    case "InProgress":
+                                                        <span class="badge bg-primary">In Progress</span>
+                                                        break;
+                                                    case "Completed":
+                                                        <span class="badge bg-success">Completed</span>
+                                                        break;
+                                                    case "OnHold":
+                                                        <span class="badge bg-warning text-dark">On Hold</span>
+                                                        break;
+                                                    default:
+                                                        <span class="badge bg-secondary">@build.Status</span>
+                                                        break;
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (!string.IsNullOrEmpty(build.CurrentStage))
+                                                {
+                                                    <div class="d-flex align-items-center">
+                                                        <i class="fas fa-cog me-1"></i>
+                                                        <span>@build.CurrentStage</span>
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">Not started</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <div class="progress" style="height: 20px;">
+                                                    <div class="progress-bar" role="progressbar" 
+                                                         style="width: @build.OverallProgress%" 
+                                                         aria-valuenow="@build.OverallProgress" 
+                                                         aria-valuemin="0" 
+                                                         aria-valuemax="100">
+                                                        @build.OverallProgress.ToString("F0")%
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <small>@build.ActualStartTime?.ToString("MM/dd HH:mm")</small>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <button type="button" class="btn btn-sm btn-outline-primary" title="View Details">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                    @if (build.Status == "InProgress")
+                                                    {
+                                                        <button type="button" class="btn btn-sm btn-outline-success" title="Advance Stage">
+                                                            <i class="fas fa-forward"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-sm btn-outline-warning" title="Put On Hold">
+                                                            <i class="fas fa-pause"></i>
+                                                        </button>
+                                                    }
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <i class="fas fa-industry fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No Active Production Builds</h5>
+                            <p class="text-muted">Start a new production build to begin tracking</p>
+                            <a href="/ProductionBuild/Start" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>Start First Build
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Completed Builds -->
+    @if (Model.DashboardData.RecentCompletedBuilds.Any())
+    {
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-history me-2"></i>Recently Completed Builds
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Build Number</th>
+                                        <th>Part</th>
+                                        <th>Quantity</th>
+                                        <th>Completed</th>
+                                        <th>Duration</th>
+                                        <th>Quality</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var build in Model.DashboardData.RecentCompletedBuilds)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <span class="fw-bold">@build.BuildNumber</span>
+                                            </td>
+                                            <td>
+                                                <small>@build.MasterPartNumber</small>
+                                            </td>
+                                            <td>
+                                                <span class="text-success">@build.BuildQuantity</span>
+                                            </td>
+                                            <td>
+                                                <small>@build.CompletedDate?.ToString("MM/dd HH:mm")</small>
+                                            </td>
+                                            <td>
+                                                @if (build.ActualStartTime.HasValue && build.ActualEndTime.HasValue)
+                                                {
+                                                    var duration = build.ActualEndTime.Value - build.ActualStartTime.Value;
+                                                    <small>@duration.TotalHours.ToString("F1")h</small>
+                                                }
+                                                else
+                                                {
+                                                    <small class="text-muted">-</small>
+                                                }
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-success">Good</span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        // Auto refresh every 30 seconds
+        setInterval(function() {
+            // Only refresh if not currently editing any forms
+            if (!document.querySelector('.modal.show')) {
+                location.reload();
+            }
+        }, 30000);
+
+        // Add real-time updates and interactions
+        $(document).ready(function() {
+            console.log('Production Build Dashboard loaded with @Model.DashboardData.ActiveBuilds active builds');
+        });
+    </script>
+}

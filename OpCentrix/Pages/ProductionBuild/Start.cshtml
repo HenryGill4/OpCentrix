@@ -1,0 +1,373 @@
+@page
+@model OpCentrix.Pages.ProductionBuild.StartModel
+@{
+    ViewData["Title"] = "Start Production Build";
+}
+
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="text-primary mb-1">
+                        <i class="fas fa-industry me-2"></i>Start Production Build
+                    </h2>
+                    <p class="text-muted mb-0">Create a new production build from master parts</p>
+                </div>
+                <a href="/PrintTracking" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Print Tracking
+                </a>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            @Model.ErrorMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="fas fa-check-circle me-2"></i>
+            @Model.SuccessMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Production Build Form -->
+    <form method="post">
+        <div class="row">
+            <!-- Left Column - Master Part Selection -->
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-cogs me-2"></i>Part & Machine Selection
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Master Part Selection -->
+                        <div class="mb-3">
+                            <label asp-for="MasterPartId" class="form-label">
+                                <i class="fas fa-cube me-1"></i>Master Part *
+                            </label>
+                            <select asp-for="MasterPartId" class="form-select" id="masterPartSelect" required>
+                                <option value="">Select a master part...</option>
+                                @foreach (var part in Model.AvailableMasterParts)
+                                {
+                                    <option value="@part.Id" 
+                                            data-name="@part.Name"
+                                            data-material="@part.Material" 
+                                            data-stages="@part.RequiredStages"
+                                            data-allow-stacking="@part.AllowStacking"
+                                            data-max-stack="@part.MaxStackCount"
+                                            data-estimated-hours="@part.EstimatedHours">
+                                        @part.DisplayText
+                                    </option>
+                                }
+                            </select>
+                            <span asp-validation-for="MasterPartId" class="text-danger"></span>
+                        </div>
+
+                        <!-- Printer Selection -->
+                        <div class="mb-3">
+                            <label asp-for="PrinterName" class="form-label">
+                                <i class="fas fa-print me-1"></i>Printer *
+                            </label>
+                            <select asp-for="PrinterName" class="form-select" required>
+                                <option value="">Select a printer...</option>
+                                @foreach (var printer in Model.AvailablePrinters)
+                                {
+                                    <option value="@printer">@printer</option>
+                                }
+                            </select>
+                            <span asp-validation-for="PrinterName" class="text-danger"></span>
+                        </div>
+
+                        <!-- Auto-populated Part Information -->
+                        <div id="partInfo" class="bg-light p-3 rounded" style="display: none;">
+                            <h6 class="text-primary mb-2">
+                                <i class="fas fa-info-circle me-1"></i>Part Information
+                            </h6>
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <small class="text-muted">Material:</small>
+                                    <div id="partMaterial" class="fw-bold">-</div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <small class="text-muted">Required Stages:</small>
+                                    <div id="partStages" class="fw-bold">-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column - Build Configuration -->
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-sliders-h me-2"></i>Build Configuration
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Build Quantity -->
+                        <div class="mb-3">
+                            <label asp-for="BuildQuantity" class="form-label">
+                                <i class="fas fa-hashtag me-1"></i>Build Quantity *
+                            </label>
+                            <input asp-for="BuildQuantity" class="form-control" type="number" min="1" max="500" required />
+                            <span asp-validation-for="BuildQuantity" class="text-danger"></span>
+                            <div class="form-text">Number of parts to produce in this build</div>
+                        </div>
+
+                        <!-- Stack Level -->
+                        <div class="mb-3" id="stackLevelGroup" style="display: none;">
+                            <label asp-for="StackLevel" class="form-label">
+                                <i class="fas fa-layer-group me-1"></i>Stack Level
+                            </label>
+                            <select asp-for="StackLevel" class="form-select">
+                                <option value="1">1x Stack (Standard)</option>
+                                <option value="2">2x Stack (Double Height)</option>
+                                <option value="3">3x Stack (Triple Height)</option>
+                            </select>
+                            <div class="form-text" id="stackDurationInfo">Duration will be calculated based on stacking level</div>
+                        </div>
+
+                        <!-- Start Time -->
+                        <div class="mb-3">
+                            <label asp-for="ActualStartTime" class="form-label">
+                                <i class="fas fa-clock me-1"></i>Start Time *
+                            </label>
+                            <input asp-for="ActualStartTime" class="form-control" type="datetime-local" required />
+                            <span asp-validation-for="ActualStartTime" class="text-danger"></span>
+                        </div>
+
+                        <!-- Material Information -->
+                        <div class="bg-light p-3 rounded mb-3">
+                            <h6 class="text-success mb-2">
+                                <i class="fas fa-flask me-1"></i>Material Information
+                            </h6>
+                            <div class="row">
+                                <div class="col-12 mb-2">
+                                    <small class="text-muted">Material Batch:</small>
+                                    <div class="fw-bold">@Model.MaterialBatch</div>
+                                </div>
+                                <div class="col-12">
+                                    <small class="text-muted">Powder Lot:</small>
+                                    <div class="fw-bold">@Model.PowderLot</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Row - Powder Management & Notes -->
+        <div class="row mt-4">
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-tint me-2"></i>Powder Management
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-check mb-3">
+                            <input asp-for="AddedPowder" class="form-check-input" type="checkbox" id="addedPowderCheck" />
+                            <label asp-for="AddedPowder" class="form-check-label">
+                                Added powder today
+                            </label>
+                        </div>
+                        
+                        <div id="powderAmountGroup" style="display: none;">
+                            <label asp-for="PowderAmountKg" class="form-label">
+                                <i class="fas fa-weight me-1"></i>Powder Amount (kg)
+                            </label>
+                            <input asp-for="PowderAmountKg" class="form-control" type="number" step="0.1" min="0.1" max="50" />
+                            <span asp-validation-for="PowderAmountKg" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-sticky-note me-2"></i>Setup Notes
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <textarea asp-for="SetupNotes" class="form-control" rows="4" 
+                                  placeholder="Enter any setup notes or special instructions..."></textarea>
+                        <span asp-validation-for="SetupNotes" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Build Summary & Actions -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card border-primary">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-lg-8">
+                                <h5 class="text-primary mb-2">
+                                    <i class="fas fa-chart-line me-2"></i>Build Summary
+                                </h5>
+                                <div id="buildSummary" class="text-muted">
+                                    Select a master part and configure build settings to see summary
+                                </div>
+                            </div>
+                            <div class="col-lg-4 text-lg-end">
+                                <button type="button" class="btn btn-outline-secondary me-2">
+                                    <i class="fas fa-save me-1"></i>Save Draft
+                                </button>
+                                <button type="submit" class="btn btn-success btn-lg">
+                                    <i class="fas fa-play me-2"></i>Start Production Build
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        $(document).ready(function() {
+            // Set default start time to now
+            if (!$('#ActualStartTime').val()) {
+                const now = new Date();
+                now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                $('#ActualStartTime').val(now.toISOString().slice(0, 16));
+            }
+
+            // Handle master part selection
+            $('#masterPartSelect').change(function() {
+                const selectedOption = $(this).find(':selected');
+                if (selectedOption.val()) {
+                    const name = selectedOption.data('name');
+                    const material = selectedOption.data('material');
+                    const stages = selectedOption.data('stages');
+                    const allowStacking = selectedOption.data('allow-stacking');
+                    const maxStack = selectedOption.data('max-stack');
+                    const estimatedHours = selectedOption.data('estimated-hours');
+
+                    // Show part info
+                    $('#partMaterial').text(material);
+                    $('#partStages').text(stages);
+                    $('#partInfo').show();
+
+                    // Handle stacking
+                    if (allowStacking && maxStack > 1) {
+                        $('#stackLevelGroup').show();
+                        // Update stack options based on max stack count
+                        const stackSelect = $('#StackLevel');
+                        stackSelect.empty();
+                        for (let i = 1; i <= maxStack; i++) {
+                            stackSelect.append(`<option value="${i}">${i}x Stack</option>`);
+                        }
+                    } else {
+                        $('#stackLevelGroup').hide();
+                    }
+
+                    updateBuildSummary();
+                } else {
+                    $('#partInfo').hide();
+                    $('#stackLevelGroup').hide();
+                    updateBuildSummary();
+                }
+            });
+
+            // Handle powder checkbox
+            $('#addedPowderCheck').change(function() {
+                if ($(this).is(':checked')) {
+                    $('#powderAmountGroup').show();
+                    $('#PowderAmountKg').attr('required', true);
+                } else {
+                    $('#powderAmountGroup').hide();
+                    $('#PowderAmountKg').removeAttr('required');
+                }
+            });
+
+            // Handle build quantity and stack level changes
+            $('#BuildQuantity, #StackLevel').change(updateBuildSummary);
+
+            function updateBuildSummary() {
+                const masterPartSelect = $('#masterPartSelect');
+                const selectedOption = masterPartSelect.find(':selected');
+                
+                if (!selectedOption.val()) {
+                    $('#buildSummary').html('<span class="text-muted">Select a master part and configure build settings to see summary</span>');
+                    return;
+                }
+
+                const partName = selectedOption.data('name');
+                const estimatedHours = parseFloat(selectedOption.data('estimated-hours')) || 8.0;
+                const buildQuantity = parseInt($('#BuildQuantity').val()) || 1;
+                const stackLevel = parseInt($('#StackLevel').val()) || 1;
+                const printer = $('#PrinterName').val();
+
+                // Calculate effective duration based on stack level
+                let effectiveDuration = estimatedHours;
+                if (stackLevel === 2) {
+                    effectiveDuration = estimatedHours * 1.5; // 50% increase for double stack
+                } else if (stackLevel === 3) {
+                    effectiveDuration = estimatedHours * 2.0; // 100% increase for triple stack
+                }
+
+                const startTime = $('#ActualStartTime').val();
+                let endTimeText = '';
+                if (startTime) {
+                    const start = new Date(startTime);
+                    const end = new Date(start.getTime() + effectiveDuration * 60 * 60 * 1000);
+                    endTimeText = end.toLocaleString();
+                }
+
+                const summaryHtml = `
+                    <div class="row">
+                        <div class="col-sm-3">
+                            <strong>Part:</strong><br>
+                            <span class="text-primary">${partName}</span>
+                        </div>
+                        <div class="col-sm-2">
+                            <strong>Quantity:</strong><br>
+                            <span class="text-success">${buildQuantity} parts</span>
+                        </div>
+                        <div class="col-sm-2">
+                            <strong>Stack Level:</strong><br>
+                            <span class="text-info">${stackLevel}x</span>
+                        </div>
+                        <div class="col-sm-2">
+                            <strong>Duration:</strong><br>
+                            <span class="text-warning">${effectiveDuration.toFixed(1)}h</span>
+                        </div>
+                        <div class="col-sm-3">
+                            <strong>Est. Completion:</strong><br>
+                            <small class="text-muted">${endTimeText}</small>
+                        </div>
+                    </div>
+                `;
+
+                $('#buildSummary').html(summaryHtml);
+            }
+
+            // Initial update
+            updateBuildSummary();
+        });
+    </script>
+}
