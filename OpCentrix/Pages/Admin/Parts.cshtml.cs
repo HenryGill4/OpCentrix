@@ -191,6 +191,15 @@ namespace OpCentrix.Pages.Admin
                 var isAjaxRequest = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
                 _logger.LogInformation("?? [PARTS-{OperationId}] Request type - AJAX: {IsAjax}", operationId, isAjaxRequest);
 
+                // CRITICAL FIX: Extract stage data from form if not bound properly
+                if (string.IsNullOrEmpty(SelectedStageIds) && Request.HasFormContentType)
+                {
+                    SelectedStageIds = Request.Form["SelectedStageIds"].FirstOrDefault() ?? "";
+                    StageEstimatedHours = Request.Form["StageEstimatedHours"].FirstOrDefault() ?? "";
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Stage data extracted from form - SelectedStageIds: '{SelectedStageIds}', StageEstimatedHours: '{StageEstimatedHours}'", 
+                        operationId, SelectedStageIds, StageEstimatedHours);
+                }
+
                 // Validate part number uniqueness
                 var existingPart = await _context.MasterParts.FirstOrDefaultAsync(mp => mp.PartNumber == MasterPart.PartNumber);
                 if (existingPart != null)
@@ -263,6 +272,15 @@ namespace OpCentrix.Pages.Admin
                 // Check if this is an AJAX request
                 var isAjaxRequest = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
                 _logger.LogInformation("?? [PARTS-{OperationId}] Request type - AJAX: {IsAjax}", operationId, isAjaxRequest);
+
+                // CRITICAL FIX: Extract stage data from form if not bound properly
+                if (string.IsNullOrEmpty(SelectedStageIds) && Request.HasFormContentType)
+                {
+                    SelectedStageIds = Request.Form["SelectedStageIds"].FirstOrDefault() ?? "";
+                    StageEstimatedHours = Request.Form["StageEstimatedHours"].FirstOrDefault() ?? "";
+                    _logger.LogWarning("?? [PARTS-{OperationId}] Stage data extracted from form - SelectedStageIds: '{SelectedStageIds}', StageEstimatedHours: '{StageEstimatedHours}'", 
+                        operationId, SelectedStageIds, StageEstimatedHours);
+                }
 
                 if (MasterPart.Id <= 0)
                 {
@@ -720,7 +738,8 @@ namespace OpCentrix.Pages.Admin
 
         public List<StageDefinition> GetPartStages(int masterPartId)
         {
-            return PartStages.ContainsKey(masterPartId) ? PartStages[masterPartId] : new List<StageDefinition>();
+            var stages = PartStages.ContainsKey(masterPartId) ? PartStages[masterPartId] : new List<StageDefinition>();
+            return stages;
         }
 
         private MasterPart CreateDefaultMasterPart()
@@ -740,6 +759,92 @@ namespace OpCentrix.Pages.Admin
                 CreatedBy = User.Identity?.Name ?? "System",
                 LastModifiedBy = User.Identity?.Name ?? "System"
             };
+        }
+
+        public async Task<IActionResult> OnPostFixLegacyPartsAsync()
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("?? [PARTS-{OperationId}] Fixing legacy parts without stages", operationId);
+
+            try
+            {
+                // Find all parts without stages
+                var partsWithoutStages = await _context.MasterParts
+                    .Where(mp => !_context.StageDefinitions.Any(sd => sd.MasterPartId == mp.Id && sd.IsActive))
+                    .ToListAsync();
+
+                _logger.LogInformation("?? [PARTS-{OperationId}] Found {Count} parts without stages", operationId, partsWithoutStages.Count);
+
+                var stagesAdded = 0;
+
+                foreach (var masterPart in partsWithoutStages)
+                {
+                    _logger.LogInformation("?? [PARTS-{OperationId}] Adding default stages to part {PartNumber}", operationId, masterPart.PartNumber);
+
+                    // Default stages based on manufacturing approach
+                    var defaultStages = masterPart.ManufacturingApproach switch
+                    {
+                        "SLS-Based" => new[] { 
+                            ("SLS Printing", 1, 8.0, "SLS", "TI1,TI2,INC"),
+                            ("EDM Operations", 2, 2.0, "EDM", "EDM"),
+                            ("Quality Inspection", 3, 0.5, "Inspection", "") 
+                        },
+                        "CNC-Based" => new[] {
+                            ("CNC Machining", 1, 4.0, "CNC", "CNC1,CNC2,CNC3"),
+                            ("Quality Inspection", 2, 0.5, "Inspection", "")
+                        },
+                        "Hybrid-Approach" => new[] {
+                            ("SLS Printing", 1, 8.0, "SLS", "TI1,TI2,INC"),
+                            ("CNC Machining", 2, 2.0, "CNC", "CNC1,CNC2"),
+                            ("Quality Inspection", 3, 0.5, "Inspection", "")
+                        },
+                        _ => new[] {
+                            ("SLS Printing", 1, 8.0, "SLS", "TI1,TI2,INC"),
+                            ("Quality Inspection", 2, 0.5, "Inspection", "")
+                        }
+                    };
+
+                    foreach (var (stageName, order, hours, machineType, preferredMachines) in defaultStages)
+                    {
+                        var stageDefinition = new StageDefinition
+                        {
+                            MasterPartId = masterPart.Id,
+                            StageName = stageName,
+                            ExecutionOrder = order,
+                            EstimatedHoursPerPart = hours,
+                            RequiredMachineType = machineType,
+                            PreferredMachines = preferredMachines,
+                            StageConfiguration = GetDefaultConfigForStage(stageName),
+                            IsRequired = true,
+                            CanSkip = false,
+                            SetupMinutes = 30,
+                            TeardownMinutes = 15,
+                            IsActive = true
+                        };
+
+                        _context.StageDefinitions.Add(stageDefinition);
+                        stagesAdded++;
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("? [PARTS-{OperationId}] Fixed {PartCount} legacy parts, added {StageCount} stage definitions", 
+                    operationId, partsWithoutStages.Count, stagesAdded);
+
+                return new JsonResult(new { 
+                    success = true, 
+                    message = $"Successfully added default stages to {partsWithoutStages.Count} legacy parts ({stagesAdded} stages total)" 
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "? [PARTS-{OperationId}] Error fixing legacy parts", operationId);
+                return new JsonResult(new { 
+                    success = false, 
+                    message = $"Error fixing legacy parts: {ex.Message}" 
+                });
+            }
         }
     }
 }

@@ -29,6 +29,13 @@
                     <i class="fas fa-industry me-2"></i>Production Builds
                 </a>
                 <button type="button" 
+                        class="btn btn-outline-warning" 
+                        onclick="fixLegacyParts()"
+                        data-bs-toggle="tooltip" 
+                        title="Add default stages to parts that don't have any">
+                    <i class="fas fa-tools me-2"></i>Fix Legacy Parts
+                </button>
+                <button type="button" 
                         class="btn btn-outline-secondary" 
                         onclick="window.location.reload()" 
                         data-bs-toggle="tooltip" 
@@ -484,6 +491,96 @@
         toastsInitialized: false,
         formValidationActive: false
     };
+
+    // ===================================================================
+    // MASTER PART FORM INITIALIZER (LIGHTWEIGHT, RELIABLE)
+    // ===================================================================
+    // Exposed globally so we can call it right after injecting the partial HTML.
+    window.initializeMasterPartForm = function() {
+        const form = document.getElementById('masterPartForm');
+        if (!form) {
+            return; // Modal not loaded yet
+        }
+        if (form.dataset.initialized === 'true') {
+            return; // Prevent double-binding
+        }
+        form.dataset.initialized = 'true';
+        console.log('? [MASTER-PART] Initializing stage selection logic');
+
+        const stageCheckboxes = form.querySelectorAll('.stage-checkbox');
+        const selectedIdsInput = form.querySelector('#selectedStageIds');
+        const hoursInputHidden = form.querySelector('#stageEstimatedHours');
+        const submitBtn = document.getElementById('submitBtn');
+        const countBadge = document.getElementById('selectedStageCount');
+
+        function updateStageCardState(cb) {
+            const card = cb.closest('.stage-card');
+            if (!card) return;
+            const hoursField = card.querySelector('.stage-hours');
+            const execOrderContainer = card.querySelector('.execution-order');
+            if (cb.checked) {
+                card.classList.add('border-primary','shadow-sm');
+                card.classList.remove('border-light');
+                if (hoursField) hoursField.disabled = false;
+                if (execOrderContainer) execOrderContainer.style.display = 'block';
+            } else {
+                card.classList.remove('border-primary','shadow-sm');
+                card.classList.add('border-light');
+                if (hoursField) hoursField.disabled = true;
+                if (execOrderContainer) execOrderContainer.style.display = 'none';
+            }
+        }
+
+        function recalcSelections() {
+            const selectedIds = [];
+            const estimatedHours = [];
+            stageCheckboxes.forEach(cb => {
+                if (cb.checked) {
+                    const card = cb.closest('.stage-card');
+                    const hrsInput = card.querySelector('.stage-hours');
+                    let hrs = parseFloat(hrsInput && hrsInput.value ? hrsInput.value : '1');
+                    if (isNaN(hrs) || hrs <= 0) hrs = 1;
+                    selectedIds.push(cb.value);
+                    estimatedHours.push(hrs.toFixed(1));
+                }
+            });
+            if (selectedIdsInput) selectedIdsInput.value = selectedIds.join(',');
+            if (hoursInputHidden) hoursInputHidden.value = estimatedHours.join(',');
+            if (countBadge) {
+                countBadge.textContent = selectedIds.length;
+                countBadge.className = 'badge ' + (selectedIds.length ? 'bg-primary' : 'bg-secondary') + ' ms-1';
+            }
+            if (submitBtn) {
+                const valid = selectedIds.length > 0; // basic requirement
+                submitBtn.disabled = !valid;
+                submitBtn.classList.toggle('btn-primary', valid);
+                submitBtn.classList.toggle('btn-secondary', !valid);
+            }
+        }
+
+        stageCheckboxes.forEach(cb => {
+            updateStageCardState(cb); // reflect initial state (edit mode)
+            cb.addEventListener('change', () => {
+                updateStageCardState(cb);
+                recalcSelections();
+            });
+        });
+        // Hours change events
+        form.querySelectorAll('.stage-hours').forEach(inp => {
+            inp.addEventListener('input', recalcSelections);
+        });
+        // Execution order changes still just re-pack hours/ids (order used server-side based on selection order in this simple fix)
+        form.querySelectorAll('.execution-order-input').forEach(inp => {
+            inp.addEventListener('input', recalcSelections);
+        });
+        // Final safeguard before submit
+        form.addEventListener('submit', () => {
+            recalcSelections();
+        });
+
+        recalcSelections();
+        console.log('? [MASTER-PART] Stage selection initialized.');
+    };
     
     // ===================================================================
     // ANTIFORGERY TOKEN MANAGEMENT - BULLETPROOF
@@ -569,6 +666,75 @@
         } catch (error) {
             console.error(`? [PARTS-${operationId}] Error in handleDeletePartClick:`, error);
             showToast('error', 'Failed to process delete request. Please try again.');
+        }
+    };
+    
+    window.fixLegacyParts = function() {
+        const operationId = generateOperationId();
+        console.log(`?? [PARTS-${operationId}] Fix legacy parts button clicked`);
+        
+        try {
+            const message = "This will add default manufacturing stages to all parts that don't have any stages assigned.\n\nThis action is safe and will help ensure all parts have proper stage definitions.\n\nContinue?";
+            
+            if (confirm(message)) {
+                console.log(`? [PARTS-${operationId}] Legacy parts fix confirmed`);
+                
+                // Show loading state
+                showToast('info', 'Fixing legacy parts... This may take a moment.');
+                
+                // Get antiforgery token
+                const token = getAntiforgeryToken();
+                const headers = {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
+                };
+                
+                if (token) {
+                    headers['RequestVerificationToken'] = token;
+                }
+                
+                // Create form data
+                const formData = new URLSearchParams();
+                if (token) {
+                    formData.append('__RequestVerificationToken', token);
+                }
+                
+                fetch('/Admin/Parts?handler=FixLegacyParts', {
+                    method: 'POST',
+                    headers: headers,
+                    body: formData,
+                    credentials: 'same-origin'
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Server error: ${response.status} ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        showToast('success', data.message);
+                        console.log(`? [PARTS-${operationId}] Legacy parts fixed successfully`);
+                        
+                        // Reload page after 2 seconds
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    } else {
+                        showToast('error', data.message);
+                        console.error(`? [PARTS-${operationId}] Legacy parts fix failed: ${data.message}`);
+                    }
+                })
+                .catch(error => {
+                    console.error(`? [PARTS-${operationId}] Error fixing legacy parts:`, error);
+                    showToast('error', 'Failed to fix legacy parts. Please try again.');
+                });
+            } else {
+                console.log(`? [PARTS-${operationId}] Legacy parts fix cancelled by user`);
+            }
+        } catch (error) {
+            console.error(`? [PARTS-${operationId}] Error in fixLegacyParts:`, error);
+            showToast('error', 'Failed to process legacy parts fix. Please try again.');
         }
     };
     
@@ -674,12 +840,17 @@
             // Load content into modal
             modalContent.innerHTML = html;
             
-            // Initialize form after loading
+            // Initialize form after loading (critical: stage logic)
             setTimeout(() => {
+                if (window.initializeMasterPartForm) {
+                    window.initializeMasterPartForm();
+                } else {
+                    console.warn('?? [MASTER-PART] initializeMasterPartForm not found');
+                }
                 initializeFormComponents(operationId);
                 setModalFocus();
                 console.log(`? [PARTS-${operationId}] Form initialized successfully`);
-            }, 200);
+            }, 50);
             
         })
         .catch(error => {
@@ -764,8 +935,8 @@
         try {
             if (typeof bootstrap !== 'undefined') {
                 const toastId = `toast-${Date.now()}`;
-                const bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
-                const iconClass = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+                const bgClass = type === 'success' ? 'bg-success' : type === 'info' ? 'bg-info' : (type === 'warning' ? 'bg-warning text-dark' : 'bg-danger');
+                const iconClass = type === 'success' ? 'fa-check-circle' : type === 'info' ? 'fa-info-circle' : (type === 'warning' ? 'fa-exclamation-circle' : 'fa-exclamation-triangle');
                 
                 const toastHtml = `
                     <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true" data-bs-delay="5000">
