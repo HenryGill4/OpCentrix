@@ -13,8 +13,8 @@
 .scheduler-vertical .machine-column-header {position:relative;}
 .scheduler-vertical .machine-color-dot {width:10px;height:10px;border-radius:2px;display:inline-block;}
 .scheduler-vertical .job-block { color:#fff; border-radius:6px; transition:background-color .15s ease, box-shadow .15s ease; background:var(--machine-color,#6366F1); box-shadow:0 4px 10px -2px rgba(0,0,0,.25); }
-/* Override legacy per-machine left border rules (e.g. .machine-cnc1) */
-.scheduler-vertical .machine-column[class*='machine-'] { border-left:0 !important; box-shadow:none; }
+/* Remove any legacy colored left borders attached via machine-* classes (legacy) */
+.scheduler-vertical .scheduler-machine-columns .machine-column { border-left:0 !important; box-shadow:none !important; }
 </style>
 <div class="scheduler-grid-container scheduler-vertical opcentrix-card" data-zoom="@zoom" data-orientation="vertical" data-total-slots="@totalSlots">
     <div class="scheduler-machines-header">
@@ -99,7 +99,7 @@
                         @foreach (var machine in Model.Machines)
                         {
                             var machineJobs = Model.Jobs.Where(j => j.MachineId == machine).OrderBy(j => j.ScheduledStart).ToList();
-                            var cellClasses = new List<string>{"machine-column","scheduler-grid-cell","group","relative","cursor-pointer","border-b","border-r",$"machine-{machine.ToLower()}",machine.ToLower()};
+                            var cellClasses = new List<string>{"machine-column","scheduler-grid-cell","group","relative","cursor-pointer","border-b","border-r"};
                             if (isCurrentTimeSlot) cellClasses.Add("current-time");
                             else if (isWeekend) cellClasses.Add("weekend");
                             else if (isPastWorkHours) cellClasses.Add("off-hours");
@@ -123,7 +123,7 @@
                                     var jobLabel = $"Job: {job.PartNumber} ({job.Status}) - {job.ScheduledStart:MMM dd HH:mm} to {job.ScheduledEnd:MMM dd HH:mm} - Qty: {job.Quantity}";
                                     if (!string.IsNullOrEmpty(job.SlsMaterial)) jobLabel += $" - {job.SlsMaterial}";
                                     var rush = false; try { rush = (bool)(job.GetType().GetProperty("IsRushJob")?.GetValue(job) ?? false); } catch { }
-                                    <div class="absolute job-block machine-@machine.ToLower() status-@job.Status.ToLower().Replace(" ", "-")@(rush?" rush-job":"")" style="left:2px;right:2px;top:@offsetPx.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)px;height:@heightPx.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)px;z-index:200; --machine-color:@color; background:@color" data-color="@color" data-material="@job.SlsMaterial" data-priority="@job.Priority" data-status="@job.Status" onclick="event.stopPropagation(); openJobModalSafely('@machine','@job.ScheduledStart:yyyy-MM-ddTHH:mm',@job.Id)" title="@jobLabel" data-job-id="@job.Id" data-machine-id="@machine" data-job-date="@job.ScheduledStart:yyyy-MM-ddTHH:mm">
+                                    <div class="absolute job-block status-@job.Status.ToLower().Replace(" ", "-")@(rush?" rush-job":"")" style="left:2px;right:2px;top:@offsetPx.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)px;height:@heightPx.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)px;z-index:200; --machine-color:@color; background:@color" data-color="@color" data-material="@job.SlsMaterial" data-priority="@job.Priority" data-status="@job.Status" onclick="event.stopPropagation(); openJobModalSafely('@machine','@job.ScheduledStart:yyyy-MM-ddTHH:mm',@job.Id)" title="@jobLabel" data-job-id="@job.Id" data-machine-id="@machine" data-job-date="@job.ScheduledStart:yyyy-MM-ddTHH:mm">
                                         <div class="job-block-content p-1 text-white text-xs">
                                             <div class="job-block-title truncate">@job.PartNumber</div>
                                             <div class="job-block-subtitle text-[10px] truncate opacity-90">@((!string.IsNullOrEmpty(job.SlsMaterial)? job.SlsMaterial.Length>14? job.SlsMaterial[..14]+"..." : job.SlsMaterial : string.Empty))</div>

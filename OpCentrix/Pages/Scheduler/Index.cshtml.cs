@@ -15,7 +15,6 @@ namespace OpCentrix.Pages.Scheduler
 {
     /// <summary>
     /// Modern scheduler page using best practices and clean architecture
-    /// FIXED: Machine validation and database integration issues resolved
     /// </summary>
     [SchedulerAccess]
     public class IndexModel : PageModel
@@ -25,20 +24,24 @@ namespace OpCentrix.Pages.Scheduler
         private readonly IMachineManagementService _machineService;
         private readonly ITimeSlotService _timeSlotService;
         private readonly ILogger<IndexModel> _logger;
-        private const bool BYPASS_SHIFT_CHECKS = true; // TEMP: hard bypass to stabilize scheduler
+        private readonly IOperatingShiftService _shiftService;
+        // Single authoritative flag (allow end outside shift but still validate start)
+        private const bool BYPASS_SHIFT_CHECKS = false;
 
         public IndexModel(
-            SchedulerContext context, 
-            ISchedulerService schedulerService, 
-            IMachineManagementService machineService, 
-            ITimeSlotService timeSlotService, 
-            ILogger<IndexModel> logger)
+            SchedulerContext context,
+            ISchedulerService schedulerService,
+            IMachineManagementService machineService,
+            ITimeSlotService timeSlotService,
+            ILogger<IndexModel> logger,
+            IOperatingShiftService shiftService)
         {
             _context = context;
             _schedulerService = schedulerService;
             _machineService = machineService;
             _timeSlotService = timeSlotService;
             _logger = logger;
+            _shiftService = shiftService;
         }
 
         // Display properties - Clean separation
@@ -314,6 +317,53 @@ namespace OpCentrix.Pages.Scheduler
                     }
                 }
 
+                // NEW: Auto non-overlapping slot assignment for NEW jobs only
+                if (jobRequest.Id == 0 && !string.IsNullOrWhiteSpace(jobRequest.MachineId))
+                {
+                    double durationHours;
+                    if (jobRequest.PlannedStackDurationHours.HasValue && jobRequest.PlannedStackDurationHours.Value > 0)
+                    {
+                        durationHours = jobRequest.PlannedStackDurationHours.Value;
+                    }
+                    else
+                    {
+                        durationHours = (jobRequest.ScheduledEnd - jobRequest.ScheduledStart).TotalHours;
+                        if (durationHours <= 0.05 || double.IsNaN(durationHours) || double.IsInfinity(durationHours))
+                            durationHours = 8.0; // fallback
+                    }
+                    var desiredStart = jobRequest.ScheduledStart;
+                    var (autoStart, autoEnd) = await FindNextAvailableSlotAsync(jobRequest.MachineId, desiredStart, durationHours, null, operationId);
+
+                    // Shift-align (ensure start inside active operating shift window)
+                    var (shiftStart, shiftEnd) = await AdjustToOperatingShiftsAsync(jobRequest.MachineId, autoStart, durationHours, operationId);
+                    if (shiftStart > autoStart)
+                    {
+                        // After moving into shift window, re-run overlap resolution from that point
+                        (autoStart, autoEnd) = await FindNextAvailableSlotAsync(jobRequest.MachineId, shiftStart, durationHours, null, operationId);
+                        // Re-apply shift alignment if overlap pushed us outside shift
+                        (autoStart, autoEnd) = await AdjustToOperatingShiftsAsync(jobRequest.MachineId, autoStart, durationHours, operationId);
+                    }
+                    else
+                    {
+                        autoStart = shiftStart;
+                        autoEnd = shiftEnd;
+                    }
+
+                    if (autoStart != desiredStart)
+                    {
+                        _logger.LogInformation("🕓 [SCHEDULER-{OperationId}] Adjusted start to avoid overlap & shift bounds. Was {OldStart} now {NewStart}", operationId, desiredStart, autoStart);
+                    }
+                    jobRequest.ScheduledStart = autoStart;
+                    if (jobRequest.PlannedStackDurationHours.HasValue)
+                    {
+                        jobRequest.ScheduledEnd = autoStart.AddHours(jobRequest.PlannedStackDurationHours.Value);
+                    }
+                    else
+                    {
+                        jobRequest.ScheduledEnd = autoEnd;
+                    }
+                }
+
                 var validationResult = await ValidateJobRequestAsync(jobRequest, operationId);
                 if (!validationResult.IsValid)
                 {
@@ -396,6 +446,43 @@ namespace OpCentrix.Pages.Scheduler
                     return Content($@"<script>alert('Error saving job: {ex.Message.Replace("'", "\\'")}');</script>", "text/html");
                 }
             }
+        }
+
+        // NEW: Find next available non-overlapping slot on a machine
+        private async Task<(DateTime start, DateTime end)> FindNextAvailableSlotAsync(string machineId, DateTime desiredStartUtc, double durationHours, int? excludeJobId, string operationId)
+        {
+            if (durationHours <= 0) durationHours = 0.25; // minimum slice
+            // Pull future jobs on this machine (including those currently in progress that extend beyond desired start)
+            var futureJobs = await _context.Jobs
+                .Where(j => j.MachineId == machineId && j.ScheduledEnd > desiredStartUtc && (excludeJobId == null || j.Id != excludeJobId))
+                .OrderBy(j => j.ScheduledStart)
+                .Select(j => new { j.ScheduledStart, j.ScheduledEnd })
+                .AsNoTracking()
+                .ToListAsync();
+
+            var candidateStart = desiredStartUtc;
+            if (candidateStart < DateTime.UtcNow.AddMinutes(-5))
+            {
+                candidateStart = DateTime.UtcNow; // do not schedule far in the past
+            }
+            var candidateEnd = candidateStart.AddHours(durationHours);
+
+            foreach (var job in futureJobs)
+            {
+                // If this job ends before our candidate starts, continue
+                if (job.ScheduledEnd <= candidateStart)
+                    continue;
+                // If this job starts after our candidate ends, we have a free gap and can break
+                if (job.ScheduledStart >= candidateEnd)
+                    break; // gap found
+                // Overlap detected -> move candidateStart to end of this job and recalc end
+                candidateStart = job.ScheduledEnd;
+                candidateEnd = candidateStart.AddHours(durationHours);
+            }
+
+            _logger.LogDebug("🧩 [SCHEDULER-{OperationId}] Slot resolution machine={MachineId} desired={Desired} resolvedStart={Start} resolvedEnd={End} duration={Duration}h (futureJobs={Count})", 
+                operationId, machineId, desiredStartUtc, candidateStart, candidateEnd, durationHours, futureJobs.Count);
+            return (candidateStart, candidateEnd);
         }
 
         public async Task<IActionResult> OnDeleteJobAsync([FromQuery] int id)
@@ -699,38 +786,112 @@ namespace OpCentrix.Pages.Scheduler
             AvailableMasterParts = new List<MasterPart>();
         }
 
-        private async Task<Job> CreateNewJobAsync(string machineId, DateTime startDate, string operationId)
+        /// <summary>
+        /// Create a new job with defaulted start time logic:
+        /// 1. Base = last job end on machine (any status) OR now, whichever is later
+        /// 2. Add 3 hour changeover buffer (operator setup)
+        /// 3. If user clicked future slot that is later, prefer that
+        /// 4. Align forward into an operating shift. If alignment lands inside a shift BEFORE its 3h setup window is satisfied (shiftStart + 3h), push to shiftStart + 3h.
+        /// 5. Round to nearest 15 minutes (floor)
+        /// </summary>
+        private async Task<Job> CreateNewJobAsync(string machineId, DateTime requestedStart, string operationId)
         {
+            const double setupBufferHours = 3.0; // required operator changeover inside a shift
+            const double defaultDurationHours = 8.0;
             try
             {
-                var nextAvailableTime = startDate;
-                if (false)
+                var nowUtc = DateTime.UtcNow;
+
+                // 1 + 2: base candidate from last job + setup buffer
+                var lastJobEnd = await _context.Jobs
+                    .Where(j => j.MachineId == machineId)
+                    .OrderByDescending(j => j.ScheduledEnd)
+                    .Select(j => (DateTime?)j.ScheduledEnd)
+                    .FirstOrDefaultAsync();
+
+                DateTime candidate = (lastJobEnd.HasValue && lastJobEnd.Value > nowUtc) ? lastJobEnd.Value : nowUtc;
+                candidate = candidate.AddHours(setupBufferHours);
+
+                // 3: honor user click if later
+                if (requestedStart > candidate)
+                    candidate = requestedStart;
+
+                if (candidate < nowUtc)
+                    candidate = nowUtc.AddMinutes(5);
+
+                // 4: shift alignment with setup requirement relative to shift start
+                // We will iterate (safety cap) advancing in 15 min increments until inside an acceptable shift window.
+                int guard = 0;
+                while (guard < 96) // up to 24h search
                 {
-                    nextAvailableTime = await _timeSlotService.GetNextAvailableTimeAsync(machineId, startDate, 8.0);
+                    guard++;
+                    bool insideAnyShift = false;
+                    DateTime? shiftStartForCandidate = null;
+                    DateTime? shiftEndForCandidate = null;
+
+                    // Fetch shifts for candidate day and previous day (to catch cross-midnight shifts)
+                    var dayShifts = await _shiftService.GetShiftsForDayAsync(candidate.DayOfWeek, machineId) ?? new List<OperatingShift>();
+                    var prevDayShifts = await _shiftService.GetShiftsForDayAsync(candidate.AddDays(-1).DayOfWeek, machineId) ?? new List<OperatingShift>();
+
+                    IEnumerable<(DateTime start, DateTime end)> materialized = EnumerateShiftWindows(candidate.Date, dayShifts)
+                        .Concat(EnumerateShiftWindows(candidate.AddDays(-1).Date, prevDayShifts));
+
+                    foreach (var (sStart, sEnd) in materialized.OrderBy(w => w.start))
+                    {
+                        // If candidate before this shift window start, jump to its start (still need setup buffer afterwards)
+                        if (candidate < sStart)
+                        {
+                            candidate = sStart; // move to shift start then apply buffer rule below
+                        }
+                        if (candidate >= sStart && candidate < sEnd)
+                        {
+                            insideAnyShift = true;
+                            shiftStartForCandidate = sStart;
+                            shiftEndForCandidate = sEnd;
+                            break;
+                        }
+                    }
+
+                    if (!insideAnyShift)
+                    {
+                        // Advance 15 minutes and continue searching
+                        candidate = candidate.AddMinutes(15);
+                        continue;
+                    }
+
+                    // Enforce setup buffer AFTER shift start
+                    var minOperationalStart = shiftStartForCandidate.Value.AddHours(setupBufferHours);
+                    if (candidate < minOperationalStart)
+                    {
+                        candidate = minOperationalStart;
+                        // If pushing past shift end, we need to move to next shift, so continue loop
+                        if (candidate >= shiftEndForCandidate.Value)
+                        {
+                            continue;
+                        }
+                    }
+
+                    // We are inside a shift and after setup buffer; exit loop
+                    break;
                 }
-                else
-                {
-                    // Simple next-hour rounded fallback
-                    var rounded = new DateTime(startDate.Year, startDate.Month, startDate.Day, startDate.Hour, 0, 0);
-                    if (startDate.Minute > 0 || startDate.Second > 0) rounded = rounded.AddHours(1);
-                    // Clamp after-hours start to 8 AM next business day heuristic
-                    if (rounded.Hour < 6) rounded = rounded.Date.AddHours(8);
-                    nextAvailableTime = rounded;
-                }
+
+                // 5: floor to nearest 15 minutes
+                candidate = new DateTime(candidate.Year, candidate.Month, candidate.Day, candidate.Hour, candidate.Minute - (candidate.Minute % 15), 0, DateTimeKind.Utc);
+
                 return new Job
                 {
                     MachineId = machineId,
-                    ScheduledStart = nextAvailableTime,
-                    ScheduledEnd = nextAvailableTime.AddHours(8),
+                    ScheduledStart = candidate,
+                    ScheduledEnd = candidate.AddHours(defaultDurationHours),
                     CreatedDate = DateTime.UtcNow,
                     LastModifiedDate = DateTime.UtcNow,
                     Status = "Scheduled",
                     Priority = 3,
                     Quantity = 1,
                     PartNumber = "00-0000",
-                    EstimatedHours = 8.0,
+                    EstimatedHours = defaultDurationHours,
                     SlsMaterial = "Ti-6Al-4V Grade 5",
-                    CustomerOrderNumber = "",
+                    CustomerOrderNumber = string.Empty,
                     LaserPowerWatts = 200,
                     ScanSpeedMmPerSec = 1200,
                     LayerThicknessMicrons = 30,
@@ -754,23 +915,36 @@ namespace OpCentrix.Pages.Scheduler
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error creating new job", operationId);
-                var fallbackStart = startDate.Hour < 6 ? startDate.Date.AddHours(8) : startDate;
+                _logger.LogError(ex, "[SCHEDULER-{OperationId}] Failed default start computation (fallback applied)", operationId);
+                var fallback = requestedStart < DateTime.UtcNow ? DateTime.UtcNow.AddHours(1) : requestedStart;
                 return new Job
                 {
                     MachineId = machineId,
-                    ScheduledStart = fallbackStart,
-                    ScheduledEnd = fallbackStart.AddHours(8),
+                    ScheduledStart = fallback,
+                    ScheduledEnd = fallback.AddHours(defaultDurationHours),
                     CreatedDate = DateTime.UtcNow,
                     LastModifiedDate = DateTime.UtcNow,
                     Status = "Scheduled",
                     Priority = 3,
                     Quantity = 1,
                     PartNumber = "00-0000",
-                    EstimatedHours = 8.0,
+                    EstimatedHours = defaultDurationHours,
                     SlsMaterial = "Ti-6Al-4V Grade 5",
-                    CustomerOrderNumber = ""
+                    CustomerOrderNumber = string.Empty
                 };
+            }
+
+            // Local iterator to expand shift definitions into absolute windows
+            IEnumerable<(DateTime start, DateTime end)> EnumerateShiftWindows(DateTime day, IEnumerable<OperatingShift> shifts)
+            {
+                foreach (var sh in shifts)
+                {
+                    var start = day + sh.StartTime;
+                    var end = day + sh.EndTime;
+                    if (sh.EndTime < sh.StartTime) // crosses midnight
+                        end = end.AddDays(1);
+                    yield return (start, end);
+                }
             }
         }
 
@@ -819,8 +993,287 @@ namespace OpCentrix.Pages.Scheduler
                 if (duration.TotalHours > 168) result.AddError(nameof(request.ScheduledEnd), "Job duration cannot exceed 1 week");
                 if (duration.TotalMinutes < 15) result.AddError(nameof(request.ScheduledEnd), "Job duration must be at least 15 minutes");
             }
-            // TEMP skip shift validation
+            // Operating shift validation (machine-aware)
+            if (!BYPASS_SHIFT_CHECKS && string.IsNullOrWhiteSpace(request.MachineId) == false && result.IsValid)
+            {
+                try
+                {
+                    var startOk = await _shiftService.IsTimeWithinOperatingHoursAsync(request.ScheduledStart, request.MachineId);
+                    if (!startOk)
+                        result.AddError(nameof(request.ScheduledStart), "Start time is outside active operating shifts");
+                    // Allow end outside shift: no error, optional future warning handled client-side
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "[SCHEDULER-{OperationId}] Shift validation failed (continuing)", operationId);
+                }
+            }
             return result;
+        }
+
+        // UPDATED: Shift analysis now focuses only on end-of-run alignment (idle before staffed shift) + setup buffer
+        public async Task<IActionResult> OnGetShiftAnalysisAsync(string machineId, DateTime start, double durationHours)
+        {
+            var opId = Guid.NewGuid().ToString("N")[..8];
+            try
+            {
+                if (string.IsNullOrWhiteSpace(machineId) || durationHours <= 0)
+                    return new JsonResult(new { success = false, error = "Machine and positive duration required" });
+
+                var end = start.AddHours(durationHours);
+                var setupWindowStart = start.AddHours(-3);
+                var setupWindowEnd = start; // exclusive
+
+                async Task<double> GetShiftCoveredHoursAsync(DateTime windowStart, DateTime windowEnd)
+                {
+                    double covered = 0;
+                    var cursor = windowStart.Date.AddDays(-1); // include previous day for cross-midnight shifts
+                    var lastDay = windowEnd.Date.AddDays(1);
+                    while (cursor <= lastDay)
+                    {
+                        try
+                        {
+                            var shifts = await _shiftService.GetShiftsForDayAsync(cursor.DayOfWeek, machineId) ?? new List<OperatingShift>();
+                            foreach (var s in shifts)
+                            {
+                                var ws = cursor + s.StartTime;
+                                var crosses = s.EndTime < s.StartTime;
+                                var we = crosses ? cursor.AddDays(1) + s.EndTime : cursor + s.EndTime;
+                                var ovStart = ws > windowStart ? ws : windowStart;
+                                var ovEnd = we < windowEnd ? we : windowEnd;
+                                if (ovEnd > ovStart)
+                                    covered += (ovEnd - ovStart).TotalHours;
+                            }
+                        }
+                        catch { }
+                        cursor = cursor.AddDays(1);
+                    }
+                    return covered;
+                }
+
+                // We still compute setup coverage; runtime coverage kept for potential later metrics but not shown in message
+                var setupCovered = await GetShiftCoveredHoursAsync(setupWindowStart, setupWindowEnd);
+                var setupMissing = Math.Max(0, 3.0 - setupCovered);
+                bool setupSatisfied = setupMissing <= 0.01;
+
+                // Determine end alignment vs next staffed shift
+                double postRunIdleHours = 0;
+                DateTime? nextShiftStart = null;
+                bool endsInsideShift = false;
+
+                DateTime searchCursor = end.Date.AddDays(-1);
+                var searchLimit = end.Date.AddDays(5);
+                while (searchCursor <= searchLimit && nextShiftStart == null)
+                {
+                    List<OperatingShift>? shifts;
+                    try { shifts = await _shiftService.GetShiftsForDayAsync(searchCursor.DayOfWeek, machineId); } catch { shifts = null; }
+                    if (shifts != null)
+                    {
+                        foreach (var s in shifts)
+                        {
+                            var ws = searchCursor + s.StartTime;
+                            var crosses = s.EndTime < s.StartTime;
+                            var we = crosses ? searchCursor.AddDays(1) + s.EndTime : searchCursor + s.EndTime;
+                            if (end >= ws && end < we)
+                            {
+                                endsInsideShift = true;
+                                nextShiftStart = end; // no idle
+                                postRunIdleHours = 0;
+                                break;
+                            }
+                            if (end < ws && nextShiftStart == null)
+                            {
+                                nextShiftStart = ws;
+                                postRunIdleHours = (ws - end).TotalHours;
+                                break;
+                            }
+                        }
+                    }
+                    searchCursor = searchCursor.AddDays(1);
+                }
+                if (nextShiftStart == null)
+                {
+                    nextShiftStart = end; // fail-open
+                    postRunIdleHours = 0;
+                }
+
+                // User-facing concise message (no runtime outside staffed details)
+                string message = endsInsideShift
+                    ? (setupSatisfied ? "Ends during staffed shift – 3h setup satisfied" : $"Ends during staffed shift – setup short {setupMissing:F1}h")
+                    : (setupSatisfied
+                        ? $"Ends {postRunIdleHours:F1}h before next staffed shift (idle window)"
+                        : $"Ends {postRunIdleHours:F1}h before next staffed shift; setup short {setupMissing:F1}h");
+
+                return new JsonResult(new
+                {
+                    success = true,
+                    machineId,
+                    startUtc = start.ToUniversalTime(),
+                    endUtc = end.ToUniversalTime(),
+                    postRunIdleHours = Math.Round(postRunIdleHours, 2),
+                    nextShiftStartUtc = nextShiftStart.Value.ToUniversalTime(),
+                    endsInsideShift,
+                    setupSatisfied,
+                    setupMissingHours = Math.Round(setupMissing, 2),
+                    message
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[SCHEDULER-{OperationId}] Shift analysis failed", opId);
+                return new JsonResult(new { success = false, error = "Shift analysis failed" });
+            }
+        }
+
+        public async Task<IActionResult> OnGetEmbeddedViewAsync(string? machineFilter = "SLS")
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            try
+            {
+                await LoadAvailableMachinesAsync(operationId);
+                var filtered = FilterMachinesByType(machineFilter ?? "SLS");
+                var vm = await CreateEmbeddedSchedulerViewModelAsync(filtered, operationId);
+                return Partial("_EmbeddedSchedulerEnhanced", vm);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [SCHEDULER-EMBEDDED-{OperationId}] Error loading embedded scheduler view", operationId);
+                return Partial("_EmbeddedSchedulerEnhanced", CreateFallbackEmbeddedViewModel());
+            }
+        }
+
+        private List<Machine> FilterMachinesByType(string machineFilter)
+        {
+            if (string.IsNullOrWhiteSpace(machineFilter) || machineFilter.Equals("all", StringComparison.OrdinalIgnoreCase))
+                return AvailableMachines;
+            var target = machineFilter.Trim().ToUpperInvariant();
+            return AvailableMachines.Where(m => GetUnifiedMachineType(m).Equals(target, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+
+        private async Task<EmbeddedSchedulerViewModel> CreateEmbeddedSchedulerViewModelAsync(List<Machine> machines, string operationId)
+        {
+            var startDate = DateTime.Today;
+            var endDate = startDate.AddDays(3);
+            var ids = machines.Select(m => m.MachineId).ToList();
+            var jobs = await _context.Jobs.Include(j => j.Part)
+                .Where(j => ids.Contains(j.MachineId) && j.ScheduledStart >= startDate && j.ScheduledStart < endDate)
+                .OrderBy(j => j.ScheduledStart)
+                .Take(100)
+                .AsNoTracking()
+                .ToListAsync();
+            var vm = new EmbeddedSchedulerViewModel
+            {
+                Machines = ids,
+                Jobs = jobs,
+                StartDate = startDate,
+                Dates = Enumerable.Range(0, 3).Select(i => startDate.AddDays(i)).ToList(),
+                MachineColors = machines.ToDictionary(m => m.MachineId, m => string.IsNullOrWhiteSpace(m.ColorHex) ? m.EffectiveColorHex : m.ColorHex!)
+            };
+            return vm;
+        }
+
+        private EmbeddedSchedulerViewModel CreateFallbackEmbeddedViewModel() => new()
+        {
+            StartDate = DateTime.Today,
+            Dates = Enumerable.Range(0, 3).Select(i => DateTime.Today.AddDays(i)).ToList()
+        };
+
+        // DTOs and helper classes
+        public class CreateJobDto
+        {
+            public int Id { get; set; }
+            public string MachineId { get; set; } = string.Empty;
+            public int PartId { get; set; }
+            public int? MasterPartId { get; set; }
+            public byte? StackLevel { get; set; }
+            public int? PartsPerBuild { get; set; }
+            public double? PlannedStackDurationHours { get; set; }
+            public DateTime ScheduledStart { get; set; } = DateTime.UtcNow.AddHours(1);
+            public DateTime ScheduledEnd { get; set; } = DateTime.UtcNow.AddHours(9);
+            public int Quantity { get; set; } = 1;
+            public int Priority { get; set; } = 3;
+            public string? Status { get; set; }
+            public string? SlsMaterial { get; set; }
+            public double LaserPowerWatts { get; set; } = 200;
+            public double ScanSpeedMmPerSec { get; set; } = 1200;
+            public double LayerThicknessMicrons { get; set; } = 30;
+            public double HatchSpacingMicrons { get; set; } = 120;
+            public double BuildTemperatureCelsius { get; set; } = 180;
+            public double EstimatedPowderUsageKg { get; set; } = 0.5;
+            public string? Notes { get; set; }
+            public string? CustomerOrderNumber { get; set; }
+            public string? Operator { get; set; }
+            public bool IsRushJob { get; set; }
+        }
+        public class EditJobDto : CreateJobDto { }
+        public class JobValidationResult
+        {
+            public List<JobValidationError> Errors { get; } = new();
+            public bool IsValid => Errors.Count == 0;
+            public void AddError(string propertyName, string errorMessage) => Errors.Add(new JobValidationError { PropertyName = propertyName, ErrorMessage = errorMessage });
+        }
+        public class JobValidationError
+        {
+            public string PropertyName { get; set; } = string.Empty;
+            public string ErrorMessage { get; set; } = string.Empty;
+        }
+        public class EmbeddedSchedulerViewModel
+        {
+            public List<Job> Jobs { get; set; } = new();
+            public List<string> Machines { get; set; } = new();
+            public DateTime StartDate { get; set; } = DateTime.Today;
+            public List<DateTime> Dates { get; set; } = new();
+            public Dictionary<string, string> MachineColors { get; set; } = new();
+        }
+        // ===== Added back missing helper methods =====
+        private string AssignColor(string machineId, List<Machine> all)
+        {
+            var palette = new[] {"#6366F1","#0EA5E9","#10B981","#F59E0B","#EC4899","#8B5CF6","#14B8A6","#F97316","#EF4444","#3B82F6","#84CC16","#9333EA","#06B6D4","#F43F5E","#A855F7"};
+            var used = all.Where(m => !string.IsNullOrWhiteSpace(m.ColorHex)).Select(m => m.ColorHex!).ToHashSet();
+            var free = palette.FirstOrDefault(c => !used.Contains(c));
+            if (free != null) return free;
+            var hash = machineId.Aggregate(17, (acc, ch) => acc * 31 + ch);
+            return palette[Math.Abs(hash) % palette.Length];
+        }
+
+        private async Task<(DateTime start, DateTime end)> AdjustToOperatingShiftsAsync(string machineId, DateTime desiredStartUtc, double durationHours, string operationId)
+        {
+            if (durationHours <= 0) durationHours = 0.25;
+            var attempt = desiredStartUtc;
+            for (int dayOffset = 0; dayOffset < 14; dayOffset++)
+            {
+                var day = attempt.Date;
+                try
+                {
+                    var shifts = await _shiftService.GetShiftsForDayAsync(day.DayOfWeek, machineId);
+                    if (shifts == null || shifts.Count == 0)
+                    {
+                        attempt = day.AddDays(1).AddHours(6); // skip to next day 6AM
+                        continue;
+                    }
+                    foreach (var shift in shifts.OrderBy(s => s.StartTime))
+                    {
+                        var windowStart = day + shift.StartTime;
+                        var crosses = shift.EndTime < shift.StartTime;
+                        var windowEnd = crosses ? day.AddDays(1) + shift.EndTime : day + shift.EndTime;
+                        if (attempt < windowStart) attempt = windowStart;
+                        if (attempt >= windowStart && attempt < windowEnd)
+                        {
+                            var end = attempt.AddHours(durationHours);
+                            return (attempt, end);
+                        }
+                    }
+                    // after all shifts, move to next day 6AM
+                    attempt = day.AddDays(1).AddHours(6);
+                }
+                catch
+                {
+                    // Fail-open: return original request
+                    return (desiredStartUtc, desiredStartUtc.AddHours(durationHours));
+                }
+            }
+            _logger.LogWarning("[SCHEDULER-{OperationId}] Could not align start within 14 days of shifts, using desired", operationId);
+            return (desiredStartUtc, desiredStartUtc.AddHours(durationHours));
         }
 
         private async Task<bool> TryResolveLegacyPartAsync(CreateJobDto dto, string operationId)
@@ -832,12 +1285,10 @@ namespace OpCentrix.Pages.Scheduler
                 if (master == null) return false;
                 var pn = master.PartNumber?.Trim();
                 if (string.IsNullOrWhiteSpace(pn)) return false;
-
-                // Attempt direct match on PartNumber first
+                // direct match
                 var legacy = await _context.Parts.AsNoTracking().FirstOrDefaultAsync(p => p.PartNumber == pn);
                 if (legacy == null)
                 {
-                    // Attempt fallback: remove non-digits and match first 6 digits formatted XX-XXXX
                     var digits = new string(pn.Where(char.IsDigit).ToArray());
                     if (digits.Length == 6)
                     {
@@ -852,9 +1303,7 @@ namespace OpCentrix.Pages.Scheduler
                         dto.ScheduledEnd = dto.ScheduledStart.AddHours(dto.PlannedStackDurationHours.Value);
                     return true;
                 }
-
-                // AUTO-CREATE SHADOW LEGACY PART (Phase-out bridge) ---------------------------------
-                _logger.LogInformation("🆕 [SCHEDULER-{OperationId}] Creating shadow legacy Part for master {MasterPartId} ({PartNumber})", operationId, dto.MasterPartId, pn);
+                // Create shadow part
                 var shadow = new Part
                 {
                     PartNumber = pn,
@@ -862,9 +1311,8 @@ namespace OpCentrix.Pages.Scheduler
                     Description = string.IsNullOrWhiteSpace(master.Description) ? master.Name : master.Description,
                     Material = master.Material,
                     SlsMaterial = master.Material,
-                    // Map stacking single duration into EstimatedHours if present
                     EstimatedHours = master.SingleStackDurationHours ?? master.StageEstimateSingle ?? 8.0,
-                    AdminOverrideBy = "System", // required non-empty
+                    AdminOverrideBy = "System",
                     Industry = "General",
                     Application = "MasterPartBridge",
                     CustomerPartNumber = pn,
@@ -894,18 +1342,15 @@ namespace OpCentrix.Pages.Scheduler
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error resolving/creating legacy part from master part {MasterPartId}", operationId, dto.MasterPartId);
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error resolving legacy part from master part {MasterPartId}", operationId, dto.MasterPartId);
                 return false;
             }
         }
 
         private async Task<Job> CreateJobFromDtoAsync(CreateJobDto dto, string operationId)
         {
-            // Final attempt to resolve if still missing
             if (dto.PartId <= 0 && dto.MasterPartId.HasValue)
-            {
                 await TryResolveLegacyPartAsync(dto, operationId);
-            }
             var part = await _context.Parts.FindAsync(dto.PartId) ?? throw new InvalidOperationException("Selected part not found");
             var job = new Job
             {
@@ -913,8 +1358,8 @@ namespace OpCentrix.Pages.Scheduler
                 PartId = dto.PartId,
                 PartNumber = part.PartNumber,
                 ScheduledStart = dto.ScheduledStart,
-                ScheduledEnd = dto.ScheduledEnd,
-                EstimatedHours = (dto.ScheduledEnd - dto.ScheduledStart).TotalHours,
+                ScheduledEnd = dto.PlannedStackDurationHours.HasValue ? dto.ScheduledStart.AddHours(dto.PlannedStackDurationHours.Value) : dto.ScheduledEnd,
+                EstimatedHours = dto.PlannedStackDurationHours ?? (dto.ScheduledEnd - dto.ScheduledStart).TotalHours,
                 Quantity = dto.Quantity,
                 Priority = dto.Priority,
                 Status = dto.Status ?? "Scheduled",
@@ -926,7 +1371,7 @@ namespace OpCentrix.Pages.Scheduler
                 BuildTemperatureCelsius = dto.BuildTemperatureCelsius,
                 EstimatedPowderUsageKg = dto.EstimatedPowderUsageKg,
                 Notes = dto.Notes,
-                CustomerOrderNumber = dto.CustomerOrderNumber ?? "",
+                CustomerOrderNumber = dto.CustomerOrderNumber ?? string.Empty,
                 Operator = dto.Operator,
                 IsRushJob = dto.IsRushJob,
                 ArgonPurityPercent = 99.9,
@@ -951,11 +1396,6 @@ namespace OpCentrix.Pages.Scheduler
                 PartsPerBuild = dto.PartsPerBuild,
                 PlannedStackDurationHours = dto.PlannedStackDurationHours
             };
-            if (dto.PlannedStackDurationHours.HasValue)
-            {
-                job.ScheduledEnd = job.ScheduledStart.AddHours(dto.PlannedStackDurationHours.Value);
-                job.EstimatedHours = dto.PlannedStackDurationHours.Value;
-            }
             _context.Jobs.Add(job);
             await _context.SaveChangesAsync();
             return job;
@@ -964,9 +1404,7 @@ namespace OpCentrix.Pages.Scheduler
         private async Task<Job> UpdateJobFromDtoAsync(CreateJobDto dto, string operationId)
         {
             if (dto.PartId <= 0 && dto.MasterPartId.HasValue)
-            {
                 await TryResolveLegacyPartAsync(dto, operationId);
-            }
             var job = await _context.Jobs.FindAsync(dto.Id) ?? throw new InvalidOperationException("Job not found for update");
             var part = await _context.Parts.FindAsync(dto.PartId) ?? throw new InvalidOperationException("Selected part not found");
             job.MachineId = dto.MachineId;
@@ -994,7 +1432,7 @@ namespace OpCentrix.Pages.Scheduler
             job.BuildTemperatureCelsius = dto.BuildTemperatureCelsius;
             job.EstimatedPowderUsageKg = dto.EstimatedPowderUsageKg;
             job.Notes = dto.Notes;
-            job.CustomerOrderNumber = dto.CustomerOrderNumber ?? "";
+            job.CustomerOrderNumber = dto.CustomerOrderNumber ?? string.Empty;
             job.Operator = dto.Operator;
             job.IsRushJob = dto.IsRushJob;
             if (job.PartId != dto.PartId)
@@ -1037,7 +1475,7 @@ namespace OpCentrix.Pages.Scheduler
                 BuildTemperatureCelsius = dto.BuildTemperatureCelsius,
                 EstimatedPowderUsageKg = dto.EstimatedPowderUsageKg,
                 Notes = dto.Notes,
-                CustomerOrderNumber = dto.CustomerOrderNumber ?? "",
+                CustomerOrderNumber = dto.CustomerOrderNumber ?? string.Empty,
                 Operator = dto.Operator,
                 IsRushJob = dto.IsRushJob,
                 MasterPartId = dto.MasterPartId,
@@ -1071,516 +1509,9 @@ namespace OpCentrix.Pages.Scheduler
 
         private async Task<IActionResult> HandleSchedulerSuccess(string message)
         {
-            // Instead of full page reload, refresh grid & summary via HTMX for instant feedback
             var script = GetGridRefreshScript(message);
             return Content(script, "text/html");
         }
-
-        public async Task<IActionResult> OnGetSuggestNextTimeAsync(string machineId, double durationHours, DateTime? preferredStart = null)
-        {
-            var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogInformation("🕐 [SCHEDULER-{OperationId}] Suggesting next time for {MachineId}, duration {Duration}h",
-                operationId, machineId, durationHours);
-            try
-            {
-                if (string.IsNullOrWhiteSpace(machineId))
-                {
-                    return new JsonResult(new { success = false, error = "Machine ID is required" });
-                }
-                DateTime suggestedStart;
-                if (true)
-                {
-                    // Simple deterministic suggestion for stability
-                    var seed = preferredStart ?? DateTime.UtcNow;
-                    suggestedStart = new DateTime(seed.Year, seed.Month, seed.Day, seed.Hour, 0, 0);
-                    if (seed.Minute > 0 || seed.Second > 0) suggestedStart = suggestedStart.AddHours(1);
-                    if (suggestedStart.Hour < 6) suggestedStart = suggestedStart.Date.AddHours(8);
-                }
-                else
-                {
-                    suggestedStart = await _timeSlotService.GetNextAvailableTimeAsync(machineId, preferredStart ?? DateTime.UtcNow, durationHours);
-                }
-                var suggestedEnd = suggestedStart.AddHours(durationHours);
-                return new JsonResult(new
-                {
-                    success = true,
-                    startTime = suggestedStart.ToString("yyyy-MM-ddTHH:mm"),
-                    endTime = suggestedEnd.ToString("yyyy-MM-ddTHH:mm"),
-                    displayStart = suggestedStart.ToString("MMM dd, yyyy 'at' h:mm tt"),
-                    displayEnd = suggestedEnd.ToString("MMM dd, yyyy 'at' h:mm tt"),
-                    message = $"Next available slot: {suggestedStart:MMM dd 'at' h:mm tt}"
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error suggesting next time", operationId);
-                return new JsonResult(new { success = false, error = "Error finding available time slot" });
-            }
-        }
-
-        public async Task<IActionResult> OnPostUpdateJobDurationAsync(int jobId, double newDurationHours)
-        {
-            var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogInformation("🕐 [SCHEDULER-{OperationId}] Updating job {JobId} duration to {Duration}h",
-                operationId, jobId, newDurationHours);
-            try
-            {
-                var job = await _context.Jobs.Include(j => j.Part).FirstOrDefaultAsync(j => j.Id == jobId);
-                if (job == null)
-                {
-                    return new JsonResult(new { success = false, error = "Job not found" });
-                }
-                var oldDuration = job.EstimatedHours;
-                var newEndTime = job.ScheduledStart.AddHours(newDurationHours);
-                job.EstimatedHours = newDurationHours;
-                job.ScheduledEnd = newEndTime;
-                job.LastModifiedDate = DateTime.UtcNow;
-                job.LastModifiedBy = User.Identity?.Name ?? "System";
-                if (job.Quantity > 0 && job.Part != null)
-                {
-                    var timePerPart = newDurationHours / job.Quantity;
-                    job.Part.EstimatedHours = timePerPart;
-                    job.Part.LastModifiedDate = DateTime.UtcNow;
-                }
-                await _context.SaveChangesAsync();
-                return new JsonResult(new 
-                { 
-                    success = true, 
-                    message = $"Job duration updated from {oldDuration:F1}h to {newDurationHours:F1}h",
-                    oldDuration,
-                    newDuration = newDurationHours,
-                    newEndTime = newEndTime.ToString("yyyy-MM-ddTHH:mm"),
-                    partDurationUpdated = job.Part != null && job.Quantity > 0
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error updating job duration", operationId);
-                return new JsonResult(new { success = false, error = "Error updating job duration" });
-            }
-        }
-
-        private string AssignColor(string machineId, List<Machine> all)
-        {
-            var palette = new[]{"#6366F1","#0EA5E9","#10B981","#F59E0B","#EC4899","#8B5CF6","#14B8A6","#F97316","#EF4444","#3B82F6","#84CC16","#9333EA","#06B6D4","#F43F5E","#A855F7"};
-            var used = all.Where(m=>!string.IsNullOrWhiteSpace(m.ColorHex)).Select(m=>m.ColorHex!).ToHashSet();
-            var free = palette.FirstOrDefault(c=>!used.Contains(c));
-            if(free!=null) return free;
-            var hash = machineId.Aggregate(17,(acc,ch)=>acc*31+ch);
-            return palette[Math.Abs(hash)%palette.Length];
-        }
-
-        // NEW: Variant suggestion endpoint for SLS stacking (single/double/triple)
-        public async Task<IActionResult> OnGetVariantSuggestionsAsync(int partId, string machineId, DateTime? preferredStart = null)
-        {
-            var opId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogInformation("🧠 [SCHEDULER-{OperationId}] Variant suggestions requested for PartId={PartId} on {MachineId}", opId, partId, machineId);
-            try
-            {
-                var part = await _context.Parts.AsNoTracking().FirstOrDefaultAsync(p => p.Id == partId);
-                if (part == null)
-                {
-                    return new JsonResult(new { success = false, error = "Part not found" });
-                }
-
-                // Pull historical builds for this part
-                var pn = part.PartNumber;
-                var builds = await _context.BuildJobs
-                    .Include(b => b.BuildJobParts)
-                    .Where(b => b.Status == "Completed" &&
-                           (b.BuildJobParts.Any(p => p.PartNumber == pn) || b.PartId == part.Id))
-                    .OrderByDescending(b => b.CreatedAt)
-                    .Take(200)
-                    .AsNoTracking()
-                    .ToListAsync();
-
-                var samples = new Dictionary<int, List<double>>(); // stack -> hours
-
-                foreach (var b in builds)
-                {
-                    var qty = b.BuildJobParts?.Where(p => p.PartNumber == pn).Sum(p => (int?)p.Quantity) ?? 0;
-                    if (qty == 0)
-                    {
-                        // Fallback: if the tracked BuildJob is tied directly to this part
-                        if (b.PartId == part.Id)
-                        {
-                            qty = b.TotalPartsInBuild > 0 ? b.TotalPartsInBuild : 1;
-                        }
-                    }
-                    if (qty <= 0) continue;
-
-                    double hours = 0;
-                    if (b.OperatorActualHours.HasValue)
-                        hours = (double)b.OperatorActualHours.Value;
-                    else if (b.ActualEndTime.HasValue)
-                        hours = (b.ActualEndTime.Value - b.ActualStartTime).TotalHours;
-                    else if (b.ScheduledEndTime.HasValue && b.ScheduledStartTime.HasValue)
-                        hours = (b.ScheduledEndTime.Value - b.ScheduledStartTime.Value).TotalHours;
-                    else if (b.OperatorEstimatedHours.HasValue)
-                        hours = (double)b.OperatorEstimatedHours.Value;
-
-                    if (hours <= 0.05) continue;
-
-                    if (!samples.ContainsKey(qty)) samples[qty] = new List<double>();
-                    samples[qty].Add(hours);
-                }
-
-                // Build candidate variants 1/2/3 (optionally 4 if history shows it)
-                var candidateStacks = new HashSet<int>(new[] { 1, 2, 3 });
-                foreach (var k in samples.Keys)
-                {
-                    if (k >= 4) candidateStacks.Add(Math.Min(k, 4)); // bucket 4+ as 4
-                }
-
-                var overheadHours = (part.PreheatingTimeMinutes + part.CoolingTimeMinutes + part.PostProcessingTimeMinutes) / 60.0;
-                var perPartHours = part.HasAdminOverride ? (part.AdminEstimatedHoursOverride ?? part.EstimatedHours) : part.EstimatedHours;
-
-                // heuristic multipliers when no history
-                double StackMultiplier(int s) => s switch { 1 => 1.0, 2 => 1.6, 3 => 2.0, _ => 2.5 };
-
-                var now = preferredStart ?? DateTime.UtcNow;
-                var variants = new List<object>();
-
-                foreach (var s in candidateStacks.OrderBy(x => x))
-                {
-                    List<double> hist;
-                    if (s <= 3)
-                    {
-                        hist = samples.ContainsKey(s) ? samples[s] : new List<double>();
-                    }
-                    else
-                    {
-                        // 4+ bucket: combine all >=4
-                        hist = samples.Where(kv => kv.Key >= 4).SelectMany(kv => kv.Value).ToList();
-                    }
-
-                    double durationMedian;
-                    double durationP80;
-                    int sampleCount = hist.Count;
-
-                    if (sampleCount > 0)
-                    {
-                        durationMedian = Percentile(hist, 0.5);
-                        durationP80 = Percentile(hist, 0.8);
-                    }
-                    else
-                    {
-                        // fallback estimate
-                        durationMedian = overheadHours + perPartHours * StackMultiplier(s);
-                        durationP80 = durationMedian * 1.1;
-                    }
-
-                    DateTime? nextStart = null;
-                    DateTime? nextEnd = null;
-                    try
-                    {
-                        var start = await _timeSlotService.GetNextAvailableTimeAsync(machineId, now, durationMedian);
-                        nextStart = start;
-                        nextEnd = start.AddHours(durationMedian);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "[SCHEDULER-{OperationId}] Time slot lookup failed for variant s={Stack}", opId, s);
-                    }
-
-                    var throughput = s / durationMedian; // parts per hour
-
-                    variants.Add(new
-                    {
-                        stack = s,
-                        label = s switch { 1 => "Single", 2 => "Double", 3 => "Triple", _ => $"{s}x" },
-                        sampleCount,
-                        medianHours = Math.Round(durationMedian, 2),
-                        p80Hours = Math.Round(durationP80, 2),
-                        throughput = Math.Round(throughput, 3),
-                        nextStart = nextStart?.ToString("yyyy-MM-ddTHH:mm"),
-                        nextEnd = nextEnd?.ToString("yyyy-MM-ddTHH:mm")
-                    });
-                }
-
-                // choose recommended: highest throughput; if tie, earliest nextStart
-                var chosen = variants
-                    .Cast<dynamic>()
-                    .OrderByDescending(v => (double)v.throughput)
-                    .ThenBy(v => v.nextStart ?? "9999")
-                    .FirstOrDefault();
-
-                var response = new
-                {
-                    success = true,
-                    partNumber = pn,
-                    variants = variants.Select(v =>
-                    {
-                        dynamic dv = v;
-                        bool isRecommended = chosen != null && dv.stack == chosen.stack && dv.medianHours == chosen.medianHours;
-                        return new
-                        {
-                            dv.stack,
-                            dv.label,
-                            dv.sampleCount,
-                            dv.medianHours,
-                            dv.p80Hours,
-                            dv.throughput,
-                            dv.nextStart,
-                            dv.nextEnd,
-                            recommended = isRecommended
-                        };
-                    }).ToList()
-                };
-
-                return new JsonResult(response);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error generating variant suggestions", opId);
-                return new JsonResult(new { success = false, error = "Error generating suggestions" });
-            }
-        }
-
-        private static double Percentile(List<double> sequence, double percentile)
-        {
-            if (sequence == null || sequence.Count == 0) return 0;
-            var sorted = sequence.OrderBy(x => x).ToList();
-            var n = sorted.Count;
-            if (n == 1) return sorted[0];
-            var rank = percentile * (n - 1);
-            var lowIdx = (int)Math.Floor(rank);
-            var highIdx = (int)Math.Ceiling(rank);
-            if (lowIdx == highIdx) return sorted[lowIdx];
-            var weight = rank - lowIdx;
-            return sorted[lowIdx] * (1 - weight) + sorted[highIdx] * weight;
-        }
-
-        // NEW: Enhanced embedded view handler for printing dashboard with SLS filtering
-        public async Task<IActionResult> OnGetEmbeddedViewAsync(string? machineFilter = "SLS")
-        {
-            var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogInformation("🎯 [SCHEDULER-EMBEDDED-{OperationId}] Loading embedded scheduler view with filter: {Filter}", 
-                operationId, machineFilter ?? "all");
-
-            try
-            {
-                // Load all available machines first
-                await LoadAvailableMachinesAsync(operationId);
-
-                // Apply SLS filtering (future-ready for other machine types)
-                var filteredMachines = FilterMachinesByType(machineFilter ?? "SLS");
-                
-                if (!filteredMachines.Any())
-                {
-                    _logger.LogWarning("⚠️ [SCHEDULER-EMBEDDED-{OperationId}] No machines found for filter: {Filter}", 
-                        operationId, machineFilter);
-                }
-
-                // Create embedded view model with filtered data
-                var embeddedViewModel = await CreateEmbeddedSchedulerViewModelAsync(filteredMachines, operationId);
-
-                _logger.LogInformation("✅ [SCHEDULER-EMBEDDED-{OperationId}] Embedded view loaded: {JobCount} jobs, {MachineCount} machines", 
-                    operationId, embeddedViewModel.Jobs.Count, embeddedViewModel.Machines.Count);
-
-                // Return the enhanced embedded scheduler view
-                return Partial("_EmbeddedSchedulerEnhanced", embeddedViewModel);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ [SCHEDULER-EMBEDDED-{OperationId}] Error loading embedded scheduler view", operationId);
-                
-                // Return error fallback view
-                var fallbackViewModel = CreateFallbackEmbeddedViewModel();
-                return Partial("_EmbeddedSchedulerEnhanced", fallbackViewModel);
-            }
-        }
-
-        // NEW: Filter machines by type (future-ready for multiple types)
-        private List<Machine> FilterMachinesByType(string machineFilter)
-        {
-            if (string.IsNullOrWhiteSpace(machineFilter) || machineFilter.Equals("all", StringComparison.OrdinalIgnoreCase))
-            {
-                return AvailableMachines;
-            }
-
-            var targetFilter = machineFilter.Trim().ToUpperInvariant();
-            var filteredMachines = new List<Machine>();
-
-            foreach (var machine in AvailableMachines)
-            {
-                var unifiedType = GetUnifiedMachineType(machine);
-                if (unifiedType.Equals(targetFilter, StringComparison.OrdinalIgnoreCase))
-                {
-                    filteredMachines.Add(machine);
-                }
-            }
-
-            return filteredMachines;
-        }
-
-        // NEW: Create enhanced embedded scheduler view model (future-ready for print tracking integration)
-        private async Task<EmbeddedSchedulerViewModel> CreateEmbeddedSchedulerViewModelAsync(
-            List<Machine> filteredMachines, string operationId)
-        {
-            try
-            {
-                var startDate = DateTime.Today;
-                var endDate = startDate.AddDays(3); // 3-day view for embedded scheduler
-
-                // Get jobs for the filtered machines within date range
-                var machineIds = filteredMachines.Select(m => m.MachineId).ToList();
-                var jobs = new List<Job>();
-
-                if (machineIds.Any())
-                {
-                    jobs = await _context.Jobs
-                        .Include(j => j.Part)
-                        .Where(j => machineIds.Contains(j.MachineId) && 
-                                   j.ScheduledStart >= startDate && 
-                                   j.ScheduledStart < endDate)
-                        .OrderBy(j => j.ScheduledStart)
-                        .ThenBy(j => j.Priority)
-                        .Take(100) // Reasonable limit for embedded view
-                        .AsNoTracking()
-                        .ToListAsync();
-                }
-
-                // Create machine colors dictionary from scheduler data
-                var machineColors = filteredMachines.ToDictionary(
-                    m => m.MachineId,
-                    m => string.IsNullOrWhiteSpace(m.ColorHex) ? m.EffectiveColorHex : m.ColorHex!
-                );
-
-                // FUTURE-READY: Add hooks for real-time print status updates
-                var enhancedJobs = await EnrichJobsWithPrintTrackingDataAsync(jobs, operationId);
-
-                var viewModel = new EmbeddedSchedulerViewModel
-                {
-                    Jobs = enhancedJobs,
-                    Machines = machineIds,
-                    StartDate = startDate,
-                    Dates = Enumerable.Range(0, 3).Select(i => startDate.AddDays(i)).ToList(),
-                    MachineColors = machineColors
-                };
-
-                return viewModel;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ [SCHEDULER-EMBEDDED-{OperationId}] Error creating embedded view model", operationId);
-                throw;
-            }
-        }
-
-        // FUTURE-READY: Enrich jobs with print tracking data (actual vs scheduled times, completion status)
-        private async Task<List<Job>> EnrichJobsWithPrintTrackingDataAsync(List<Job> jobs, string operationId)
-        {
-            try
-            {
-                if (!jobs.Any()) return jobs;
-
-                var jobIds = jobs.Select(j => j.Id).ToList();
-
-                // Get associated build jobs for print tracking integration
-                var buildJobs = await _context.BuildJobs
-                    .Where(bj => bj.AssociatedScheduledJobId.HasValue && 
-                                jobIds.Contains(bj.AssociatedScheduledJobId.Value))
-                    .AsNoTracking()
-                    .ToListAsync();
-
-                var buildJobLookup = buildJobs.ToDictionary(
-                    bj => bj.AssociatedScheduledJobId!.Value, 
-                    bj => bj
-                );
-
-                // FUTURE: This is where we'll add real-time status updates
-                foreach (var job in jobs)
-                {
-                    if (buildJobLookup.TryGetValue(job.Id, out var buildJob))
-                    {
-                        // Future enhancement: Update job status based on actual print progress
-                        // For now, just ensure status consistency
-                        if (buildJob.Status == "In Progress" && job.Status != "Building")
-                        {
-                            job.Status = "Building";
-                        }
-                        else if (buildJob.Status == "Completed" && job.Status != "Completed")
-                        {
-                            job.Status = "Completed";
-                            job.ActualEnd = buildJob.ActualEndTime;
-                        }
-                    }
-                }
-
-                return jobs;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "⚠️ [SCHEDULER-EMBEDDED-{OperationId}] Error enriching jobs with print tracking data", operationId);
-                return jobs;
-            }
-        }
-
-        // NEW: Create fallback embedded view model for error cases
-        private EmbeddedSchedulerViewModel CreateFallbackEmbeddedViewModel()
-        {
-            var startDate = DateTime.Today;
-            return new EmbeddedSchedulerViewModel
-            {
-                Jobs = new List<Job>(),
-                Machines = new List<string>(),
-                StartDate = startDate,
-                Dates = Enumerable.Range(0, 3).Select(i => startDate.AddDays(i)).ToList(),
-                MachineColors = new Dictionary<string, string>()
-            };
-        }
-    }
-
-    public class CreateJobDto
-    {
-        public int Id { get; set; }
-        public string MachineId { get; set; } = string.Empty;
-        public int PartId { get; set; }
-        // NEW: Master part & stacking fields (Phase 4 refinement)
-        public int? MasterPartId { get; set; }
-        public byte? StackLevel { get; set; }
-        public int? PartsPerBuild { get; set; }
-        public double? PlannedStackDurationHours { get; set; }
-        public DateTime ScheduledStart { get; set; } = DateTime.UtcNow.AddHours(1);
-        public DateTime ScheduledEnd { get; set; } = DateTime.UtcNow.AddHours(9);
-        public int Quantity { get; set; } = 1;
-        public int Priority { get; set; } = 3;
-        public string? Status { get; set; }
-        public string? SlsMaterial { get; set; }
-        public double LaserPowerWatts { get; set; } = 200;
-        public double ScanSpeedMmPerSec { get; set; } = 1200;
-        public double LayerThicknessMicrons { get; set; } = 30;
-        public double HatchSpacingMicrons { get; set; } = 120;
-        public double BuildTemperatureCelsius { get; set; } = 180;
-        public double EstimatedPowderUsageKg { get; set; } = 0.5;
-        public string? Notes { get; set; }
-        public string? CustomerOrderNumber { get; set; }
-        public string? Operator { get; set; }
-        public bool IsRushJob { get; set; }
-    }
-
-    public class EditJobDto : CreateJobDto { }
-
-    public class JobValidationResult
-    {
-        public List<JobValidationError> Errors { get; } = new();
-        public bool IsValid => Errors.Count == 0;
-        public void AddError(string propertyName, string errorMessage) => Errors.Add(new JobValidationError { PropertyName = propertyName, ErrorMessage = errorMessage });
-    }
-
-    public class JobValidationError
-    {
-        public string PropertyName { get; set; } = string.Empty;
-        public string ErrorMessage { get; set; } = string.Empty;
-    }
-
-    public class EmbeddedSchedulerViewModel
-    {
-        public List<Job> Jobs { get; set; } = new();
-        public List<string> Machines { get; set; } = new();
-        public DateTime StartDate { get; set; } = DateTime.Today;
-        public List<DateTime> Dates { get; set; } = new();
-        public Dictionary<string, string> MachineColors { get; set; } = new();
+        // ===== end helper methods =====
     }
 }
