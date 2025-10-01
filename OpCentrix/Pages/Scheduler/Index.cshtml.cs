@@ -46,6 +46,7 @@ namespace OpCentrix.Pages.Scheduler
         public FooterSummaryViewModel Summary { get; set; } = new();
         public List<Machine> AvailableMachines { get; set; } = new();
         public List<Part> AvailableParts { get; set; } = new();
+        public List<MasterPart> AvailableMasterParts { get; set; } = new();
 
         // Form binding - Modern DTO approach
         [BindProperty]
@@ -253,11 +254,13 @@ namespace OpCentrix.Pages.Scheduler
 
                 await LoadAvailableMachinesAsync(operationId);
                 await LoadAvailablePartsAsync(operationId);
+                await LoadAvailableMasterPartsAsync(operationId);
 
                 return Partial("_AddEditJobModal", new AddEditJobViewModel 
                 { 
                     Job = job, 
                     Parts = AvailableParts,
+                    MasterParts = AvailableMasterParts,
                     Machines = AvailableMachines
                 });
             }
@@ -271,16 +274,58 @@ namespace OpCentrix.Pages.Scheduler
         public async Task<IActionResult> OnPostAddOrUpdateJobAsync([FromForm] CreateJobDto jobRequest)
         {
             var operationId = Guid.NewGuid().ToString("N")[..8];
-            _logger.LogInformation("🔧 [SCHEDULER-{OperationId}] Processing job: Id={JobId}, MachineId={MachineId}, PartId={PartId}",
-                operationId, jobRequest.Id, jobRequest.MachineId, jobRequest.PartId);
+            _logger.LogInformation("🔧 [SCHEDULER-{OperationId}] Processing job: Id={JobId}, MachineId={MachineId}, PartId={PartId}, MasterPartId={MasterPartId}",
+                operationId, jobRequest.Id, jobRequest.MachineId, jobRequest.PartId, jobRequest.MasterPartId);
 
+            // DEBUG: Dump incoming raw form values to help diagnose schedule button issues
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                try
+                {
+                    var formSnapshot = new Dictionary<string, string?>();
+                    foreach (var kvp in Request.Form)
+                    {
+                        if (kvp.Key.Equals("__RequestVerificationToken", StringComparison.OrdinalIgnoreCase))
+                            continue; // skip anti-forgery token noise
+                        formSnapshot[kvp.Key] = kvp.Value.ToString();
+                    }
+                    _logger.LogDebug("🧾 [SCHEDULER-{OperationId}] Raw form payload: {Payload}", operationId, System.Text.Json.JsonSerializer.Serialize(formSnapshot));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "⚠️ [SCHEDULER-{OperationId}] Failed to serialize form payload for debug", operationId);
+                }
+            }
+
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             try
             {
                 await LoadAvailableMachinesAsync(operationId);
                 await LoadAvailablePartsAsync(operationId);
+                await LoadAvailableMasterPartsAsync(operationId);
+
+                // Attempt legacy part resolution early if master part selected but PartId not posted
+                if (jobRequest.PartId <= 0 && jobRequest.MasterPartId.HasValue)
+                {
+                    var resolved = await TryResolveLegacyPartAsync(jobRequest, operationId);
+                    if (resolved)
+                    {
+                        _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Resolved legacy PartId {PartId} from MasterPartId {MasterPartId}", operationId, jobRequest.PartId, jobRequest.MasterPartId);
+                    }
+                }
+
                 var validationResult = await ValidateJobRequestAsync(jobRequest, operationId);
                 if (!validationResult.IsValid)
                 {
+                    // DEBUG: Log validation errors clearly
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        foreach (var err in validationResult.Errors)
+                        {
+                            _logger.LogDebug("❌ [SCHEDULER-{OperationId}] Validation error: Field={Field} Message={Message}", operationId, err.PropertyName, err.ErrorMessage);
+                        }
+                    }
+
                     foreach (var error in validationResult.Errors)
                     {
                         ModelState.AddModelError(error.PropertyName, error.ErrorMessage);
@@ -292,6 +337,7 @@ namespace OpCentrix.Pages.Scheduler
                     {
                         Job = errorJob,
                         Parts = AvailableParts,
+                        MasterParts = AvailableMasterParts,
                         Machines = AvailableMachines,
                         Errors = validationResult.Errors.Select(e => e.ErrorMessage).ToList()
                     });
@@ -300,12 +346,17 @@ namespace OpCentrix.Pages.Scheduler
                 Job savedJob;
                 if (jobRequest.Id == 0)
                 {
+                    _logger.LogDebug("🆕 [SCHEDULER-{OperationId}] Creating new job record", operationId);
                     savedJob = await CreateJobFromDtoAsync(jobRequest, operationId);
                 }
                 else
                 {
+                    _logger.LogDebug("✏️ [SCHEDULER-{OperationId}] Updating existing job {JobId}", operationId, jobRequest.Id);
                     savedJob = await UpdateJobFromDtoAsync(jobRequest, operationId);
                 }
+
+                stopwatch.Stop();
+                _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Job persisted (Id={SavedId}) in {Elapsed}ms", operationId, savedJob.Id, stopwatch.ElapsedMilliseconds);
 
                 var successMessage = jobRequest.Id == 0 
                     ? $"Job scheduled successfully for {savedJob.PartNumber}" 
@@ -321,17 +372,20 @@ namespace OpCentrix.Pages.Scheduler
             }
             catch (Exception ex)
             {
+                stopwatch.Stop();
                 var operationIdCopy = operationId;
-                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error processing job", operationIdCopy);
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error processing job after {Elapsed}ms", operationIdCopy, stopwatch.ElapsedMilliseconds);
                 try
                 {
                     await LoadAvailableMachinesAsync(operationIdCopy);
                     await LoadAvailablePartsAsync(operationIdCopy);
+                    await LoadAvailableMasterPartsAsync(operationIdCopy);
                     var errorJob = await ConvertDtoToJobAsync(jobRequest);
                     return Partial("_AddEditJobModal", new AddEditJobViewModel
                     {
                         Job = errorJob,
                         Parts = AvailableParts,
+                        MasterParts = AvailableMasterParts,
                         Machines = AvailableMachines,
                         Errors = new List<string> { $"Error saving job: {ex.Message}" }
                     });
@@ -378,7 +432,7 @@ namespace OpCentrix.Pages.Scheduler
             catch (Exception ex)
             {
                 _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error deleting job: {JobId}", operationId, id);
-                return Content($"<script>window.showErrorNotification && window.showErrorNotification('Error deleting job');</script>", "text/html");
+                return Content("<script>window.showErrorNotification && window.showErrorNotification('Error deleting job');</script>", "text/html");
             }
         }
 
@@ -563,6 +617,23 @@ namespace OpCentrix.Pages.Scheduler
             }
         }
 
+        private async Task LoadAvailableMasterPartsAsync(string operationId)
+        {
+            try
+            {
+                AvailableMasterParts = await _context.MasterParts
+                    .Where(mp => mp.IsActive)
+                    .OrderBy(mp => mp.PartNumber)
+                    .AsNoTracking()
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error loading master parts", operationId);
+                AvailableMasterParts = new List<MasterPart>();
+            }
+        }
+
         private async Task LoadJobsAsync(string operationId)
         {
             try
@@ -625,6 +696,7 @@ namespace OpCentrix.Pages.Scheduler
             Summary = new FooterSummaryViewModel();
             AvailableMachines = new List<Machine>();
             AvailableParts = new List<Part>();
+            AvailableMasterParts = new List<MasterPart>();
         }
 
         private async Task<Job> CreateNewJobAsync(string machineId, DateTime startDate, string operationId)
@@ -705,9 +777,26 @@ namespace OpCentrix.Pages.Scheduler
         private async Task<JobValidationResult> ValidateJobRequestAsync(CreateJobDto request, string operationId)
         {
             var result = new JobValidationResult();
+
+            // Scheduler now operates ONLY with Master Parts. MasterPartId is required.
+            if (!request.MasterPartId.HasValue || request.MasterPartId.Value <= 0)
+            {
+                result.AddError(nameof(request.MasterPartId), "Master part must be selected");
+                return result; // no need to continue if missing
+            }
+
+            // Attempt to resolve legacy part mapping (still required by current Job schema) BEFORE enforcing PartId error.
+            if (request.PartId <= 0)
+            {
+                var resolved = await TryResolveLegacyPartAsync(request, operationId);
+                if (!resolved || request.PartId <= 0)
+                {
+                    result.AddError(nameof(request.PartId), "Selected master part has no legacy part mapping (Part record not found).");
+                }
+            }
+
             if (string.IsNullOrWhiteSpace(request.MachineId)) result.AddError(nameof(request.MachineId), "Machine must be selected");
-            if (request.PartId <= 0) result.AddError(nameof(request.PartId), "Part must be selected");
-            if (request.ScheduledStart >= request.ScheduledEnd) result.AddError(nameof(request.ScheduledEnd), "End time must be after start time");
+            if (request.ScheduledStart >= request.ScheduledEnd && !request.PlannedStackDurationHours.HasValue) result.AddError(nameof(request.ScheduledEnd), "End time must be after start time");
             if (!string.IsNullOrWhiteSpace(request.MachineId))
             {
                 var machine = AvailableMachines.FirstOrDefault(m => m.MachineId == request.MachineId);
@@ -725,32 +814,98 @@ namespace OpCentrix.Pages.Scheduler
                 }
             }
             var duration = request.ScheduledEnd - request.ScheduledStart;
-            if (duration.TotalHours > 168) result.AddError(nameof(request.ScheduledEnd), "Job duration cannot exceed 1 week");
-            if (duration.TotalMinutes < 15) result.AddError(nameof(request.ScheduledEnd), "Job duration must be at least 15 minutes");
-
-            // TEMP: Skip shift validation to prevent DB/loop issues until schema is stabilized
-            if (false)
+            if (!request.PlannedStackDurationHours.HasValue)
             {
-                try
+                if (duration.TotalHours > 168) result.AddError(nameof(request.ScheduledEnd), "Job duration cannot exceed 1 week");
+                if (duration.TotalMinutes < 15) result.AddError(nameof(request.ScheduledEnd), "Job duration must be at least 15 minutes");
+            }
+            // TEMP skip shift validation
+            return result;
+        }
+
+        private async Task<bool> TryResolveLegacyPartAsync(CreateJobDto dto, string operationId)
+        {
+            try
+            {
+                if (!dto.MasterPartId.HasValue) return false;
+                var master = await _context.MasterParts.AsNoTracking().FirstOrDefaultAsync(mp => mp.Id == dto.MasterPartId.Value);
+                if (master == null) return false;
+                var pn = master.PartNumber?.Trim();
+                if (string.IsNullOrWhiteSpace(pn)) return false;
+
+                // Attempt direct match on PartNumber first
+                var legacy = await _context.Parts.AsNoTracking().FirstOrDefaultAsync(p => p.PartNumber == pn);
+                if (legacy == null)
                 {
-                    var shiftService = HttpContext.RequestServices.GetService<IOperatingShiftService>();
-                    if (shiftService != null && !string.IsNullOrWhiteSpace(request.MachineId))
+                    // Attempt fallback: remove non-digits and match first 6 digits formatted XX-XXXX
+                    var digits = new string(pn.Where(char.IsDigit).ToArray());
+                    if (digits.Length == 6)
                     {
-                        var okStart = await shiftService.IsTimeWithinOperatingHoursAsync(request.ScheduledStart, request.MachineId);
-                        var okEnd = await shiftService.IsTimeWithinOperatingHoursAsync(request.ScheduledEnd, request.MachineId);
-                        if (!okStart || !okEnd)
-                        {
-                            result.AddError(nameof(request.ScheduledStart), "Scheduled time is outside operating hours for the selected machine.");
-                        }
+                        var formatted = digits.Substring(0, 2) + "-" + digits.Substring(2);
+                        legacy = await _context.Parts.AsNoTracking().FirstOrDefaultAsync(p => p.PartNumber == formatted);
                     }
                 }
-                catch { }
+                if (legacy != null)
+                {
+                    dto.PartId = legacy.Id;
+                    if (dto.PlannedStackDurationHours.HasValue)
+                        dto.ScheduledEnd = dto.ScheduledStart.AddHours(dto.PlannedStackDurationHours.Value);
+                    return true;
+                }
+
+                // AUTO-CREATE SHADOW LEGACY PART (Phase-out bridge) ---------------------------------
+                _logger.LogInformation("🆕 [SCHEDULER-{OperationId}] Creating shadow legacy Part for master {MasterPartId} ({PartNumber})", operationId, dto.MasterPartId, pn);
+                var shadow = new Part
+                {
+                    PartNumber = pn,
+                    Name = master.Name,
+                    Description = string.IsNullOrWhiteSpace(master.Description) ? master.Name : master.Description,
+                    Material = master.Material,
+                    SlsMaterial = master.Material,
+                    // Map stacking single duration into EstimatedHours if present
+                    EstimatedHours = master.SingleStackDurationHours ?? master.StageEstimateSingle ?? 8.0,
+                    AdminOverrideBy = "System", // required non-empty
+                    Industry = "General",
+                    Application = "MasterPartBridge",
+                    CustomerPartNumber = pn,
+                    PartCategory = "MasterBridge",
+                    PartClass = "B",
+                    Dimensions = string.Empty,
+                    BuildFileTemplate = string.Empty,
+                    CadFilePath = string.Empty,
+                    CadFileVersion = "v1",
+                    CreatedBy = User.Identity?.Name ?? "System",
+                    LastModifiedBy = User.Identity?.Name ?? "System",
+                    WorkflowTemplate = "MasterPart_Auto",
+                    AvgDuration = "8h 0m",
+                    IsLegacyForm = false,
+                    AllowStacking = master.AllowStacking,
+                    SingleStackDurationHours = master.SingleStackDurationHours,
+                    DoubleStackDurationHours = master.DoubleStackDurationHours,
+                    TripleStackDurationHours = master.TripleStackDurationHours
+                };
+                _context.Parts.Add(shadow);
+                await _context.SaveChangesAsync();
+                dto.PartId = shadow.Id;
+                if (dto.PlannedStackDurationHours.HasValue)
+                    dto.ScheduledEnd = dto.ScheduledStart.AddHours(dto.PlannedStackDurationHours.Value);
+                _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Shadow Part created Id={PartId} for MasterPart {MasterPartId}", operationId, shadow.Id, dto.MasterPartId);
+                return true;
             }
-            return result;
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Error resolving/creating legacy part from master part {MasterPartId}", operationId, dto.MasterPartId);
+                return false;
+            }
         }
 
         private async Task<Job> CreateJobFromDtoAsync(CreateJobDto dto, string operationId)
         {
+            // Final attempt to resolve if still missing
+            if (dto.PartId <= 0 && dto.MasterPartId.HasValue)
+            {
+                await TryResolveLegacyPartAsync(dto, operationId);
+            }
             var part = await _context.Parts.FindAsync(dto.PartId) ?? throw new InvalidOperationException("Selected part not found");
             var job = new Job
             {
@@ -790,8 +945,17 @@ namespace OpCentrix.Pages.Scheduler
                 CreatedDate = DateTime.UtcNow,
                 LastModifiedDate = DateTime.UtcNow,
                 CreatedBy = User.Identity?.Name ?? "System",
-                LastModifiedBy = User.Identity?.Name ?? "System"
+                LastModifiedBy = User.Identity?.Name ?? "System",
+                MasterPartId = dto.MasterPartId,
+                StackLevel = dto.StackLevel,
+                PartsPerBuild = dto.PartsPerBuild,
+                PlannedStackDurationHours = dto.PlannedStackDurationHours
             };
+            if (dto.PlannedStackDurationHours.HasValue)
+            {
+                job.ScheduledEnd = job.ScheduledStart.AddHours(dto.PlannedStackDurationHours.Value);
+                job.EstimatedHours = dto.PlannedStackDurationHours.Value;
+            }
             _context.Jobs.Add(job);
             await _context.SaveChangesAsync();
             return job;
@@ -799,14 +963,26 @@ namespace OpCentrix.Pages.Scheduler
 
         private async Task<Job> UpdateJobFromDtoAsync(CreateJobDto dto, string operationId)
         {
+            if (dto.PartId <= 0 && dto.MasterPartId.HasValue)
+            {
+                await TryResolveLegacyPartAsync(dto, operationId);
+            }
             var job = await _context.Jobs.FindAsync(dto.Id) ?? throw new InvalidOperationException("Job not found for update");
             var part = await _context.Parts.FindAsync(dto.PartId) ?? throw new InvalidOperationException("Selected part not found");
             job.MachineId = dto.MachineId;
             job.PartId = dto.PartId;
             job.PartNumber = part.PartNumber;
             job.ScheduledStart = dto.ScheduledStart;
-            job.ScheduledEnd = dto.ScheduledEnd;
-            job.EstimatedHours = (dto.ScheduledEnd - dto.ScheduledStart).TotalHours;
+            if (dto.PlannedStackDurationHours.HasValue)
+            {
+                job.ScheduledEnd = dto.ScheduledStart.AddHours(dto.PlannedStackDurationHours.Value);
+                job.EstimatedHours = dto.PlannedStackDurationHours.Value;
+            }
+            else
+            {
+                job.ScheduledEnd = dto.ScheduledEnd;
+                job.EstimatedHours = (dto.ScheduledEnd - dto.ScheduledStart).TotalHours;
+            }
             job.Quantity = dto.Quantity;
             job.Priority = dto.Priority;
             job.Status = dto.Status ?? job.Status;
@@ -823,11 +999,6 @@ namespace OpCentrix.Pages.Scheduler
             job.IsRushJob = dto.IsRushJob;
             if (job.PartId != dto.PartId)
             {
-                job.ArgonPurityPercent = 99.9;
-                job.OxygenContentPpm = 50;
-                job.RequiresArgonPurge = true;
-                job.RequiresPreheating = true;
-                job.RequiresPowderSieving = true; // fixed property name
                 job.MaterialCostPerKg = part.MaterialCostPerKg;
                 job.LaborCostPerHour = part.StandardLaborCostPerHour;
                 job.MachineOperatingCostPerHour = part.MachineOperatingCostPerHour;
@@ -836,6 +1007,10 @@ namespace OpCentrix.Pages.Scheduler
                 job.CoolingTimeMinutes = part.CoolingTimeMinutes;
                 job.PostProcessingTimeMinutes = part.PostProcessingTimeMinutes;
             }
+            job.MasterPartId = dto.MasterPartId;
+            job.StackLevel = dto.StackLevel;
+            job.PartsPerBuild = dto.PartsPerBuild;
+            job.PlannedStackDurationHours = dto.PlannedStackDurationHours;
             job.LastModifiedDate = DateTime.UtcNow;
             job.LastModifiedBy = User.Identity?.Name ?? "System";
             await _context.SaveChangesAsync();
@@ -864,7 +1039,11 @@ namespace OpCentrix.Pages.Scheduler
                 Notes = dto.Notes,
                 CustomerOrderNumber = dto.CustomerOrderNumber ?? "",
                 Operator = dto.Operator,
-                IsRushJob = dto.IsRushJob
+                IsRushJob = dto.IsRushJob,
+                MasterPartId = dto.MasterPartId,
+                StackLevel = dto.StackLevel,
+                PartsPerBuild = dto.PartsPerBuild,
+                PlannedStackDurationHours = dto.PlannedStackDurationHours
             };
             if (dto.PartId > 0)
             {
@@ -878,11 +1057,13 @@ namespace OpCentrix.Pages.Scheduler
         {
             await LoadAvailableMachinesAsync(operationId);
             await LoadAvailablePartsAsync(operationId);
+            await LoadAvailableMasterPartsAsync(operationId);
             var errorJob = await CreateNewJobAsync(machineId, startDate, operationId);
             return Partial("_AddEditJobModal", new AddEditJobViewModel
             {
                 Job = errorJob,
                 Parts = AvailableParts,
+                MasterParts = AvailableMasterParts,
                 Machines = AvailableMachines,
                 Errors = new List<string> { errorMessage }
             });
@@ -1332,7 +1513,6 @@ namespace OpCentrix.Pages.Scheduler
             catch (Exception ex)
             {
                 _logger.LogError(ex, "⚠️ [SCHEDULER-EMBEDDED-{OperationId}] Error enriching jobs with print tracking data", operationId);
-                // Return original jobs if enrichment fails
                 return jobs;
             }
         }
@@ -1357,6 +1537,11 @@ namespace OpCentrix.Pages.Scheduler
         public int Id { get; set; }
         public string MachineId { get; set; } = string.Empty;
         public int PartId { get; set; }
+        // NEW: Master part & stacking fields (Phase 4 refinement)
+        public int? MasterPartId { get; set; }
+        public byte? StackLevel { get; set; }
+        public int? PartsPerBuild { get; set; }
+        public double? PlannedStackDurationHours { get; set; }
         public DateTime ScheduledStart { get; set; } = DateTime.UtcNow.AddHours(1);
         public DateTime ScheduledEnd { get; set; } = DateTime.UtcNow.AddHours(9);
         public int Quantity { get; set; } = 1;

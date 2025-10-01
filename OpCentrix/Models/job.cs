@@ -77,7 +77,8 @@ namespace OpCentrix.Models
         
         [Required]
         [StringLength(50)]
-        [RegularExpression(@"^\d{2}-\d{4}$", ErrorMessage = "Part number must be in format XX-XXXX (e.g., 14-5396)")]
+        // RELAXED: Support legacy numeric format (##-####) AND new master part formats (alphanumeric + dash) upto 50 chars
+        [RegularExpression(@"^[A-Za-z0-9][A-Za-z0-9\-]{1,49}$", ErrorMessage = "Part number may contain letters, numbers and dashes (2-50 chars)")]
         public string PartNumber { get; set; } = string.Empty;
         
         // Production details
@@ -357,6 +358,36 @@ namespace OpCentrix.Models
 
         #endregion
 
+        #region NEW Phase 1 Stack & Operator Integration Fields
+        
+        public int? MasterPartId { get; set; }
+        
+        public byte? StackLevel { get; set; }
+        
+        public int? PartsPerBuild { get; set; }
+        
+        public double? PlannedStackDurationHours { get; set; }
+        
+        public DateTime? PlannedEndUtc { get; set; }
+        
+        public int? ActualUnitsPlanned { get; set; }
+        
+        public int? PrototypeUnitsPlanned { get; set; }
+        
+        [Column(TypeName = "decimal(8,2)")]
+        public decimal? PowderAddedKg { get; set; }
+        
+        [StringLength(100)]
+        public string? PowderMaterial { get; set; }
+        
+        public int? PredecessorJobId { get; set; }
+        
+        public int? OperatorUserId { get; set; }
+        
+        public DateTime? LastStatusChangeUtc { get; set; }
+
+        #endregion
+
         #region Navigation Properties
 
         /// <summary>
@@ -373,6 +404,12 @@ namespace OpCentrix.Models
         /// Job stages for multi-stage manufacturing - Task 11: Modular Multi-Stage Scheduling
         /// </summary>
         public virtual ICollection<JobStage> JobStages { get; set; } = new List<JobStage>();
+
+        public virtual MasterPart? MasterPart { get; set; }
+
+        public virtual Job? PredecessorJob { get; set; }
+
+        public virtual User? OperatorUser { get; set; }
 
         #endregion
 
@@ -592,8 +629,8 @@ public enum SlsMaterial
     Inconel718,         // Inconel 718
     Inconel625,         // Inconel 625
     Stainless316L,      // 316L Stainless Steel
-    AlSi10Mg,          // AlSi10Mg Aluminum
-    CoCrMo             // Cobalt Chrome
+    AlSi10Mg,           // AlSi10Mg Aluminum
+    CoCrMo              // Cobalt Chrome
 }
 
 public enum JobPriority

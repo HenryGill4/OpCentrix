@@ -117,6 +117,9 @@
     <partial name="_FooterSummary" model="Model.Summary" />
 </div>
 
+<!-- CRITICAL: Modal Container (must exist for HTMX to work) -->
+<div id="modal-container" class="fixed inset-0 z-50 hidden" style="display: none;"></div>
+
 @section Styles {
     <link rel="stylesheet" href="~/css/scheduler.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/scheduler-modal.css" asp-append-version="true" />
@@ -127,9 +130,9 @@
 
 @section Scripts {
     <script src="~/js/scheduler-ui.js" asp-append-version="true"></script>
+    <!-- job-form.js now contains unified stacking + SLS logic (replaces scheduler-addjob-modal.js) -->
     <script src="~/js/job-form.js" asp-append-version="true"></script>
     <script>
-        // Modify button behavior: open Admin/Machines edit for currently hovered/last-clicked machine
         let lastSelectedMachineId = null;
         document.addEventListener('click', function(e){
             const cell = e.target.closest('[data-machine]');

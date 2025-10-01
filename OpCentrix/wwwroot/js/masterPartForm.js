@@ -29,6 +29,18 @@
         const formState = { selectedStages:new Map(), totalHours:0, totalCost:0, isValid:false };
         const batchStages = ['SLS Printing','EDM Operations'];
 
+        // --- helpers for hidden field syncing (stack config + estimates) ---
+        function ensureHidden(name){
+            let el = form.querySelector(`input[name="${name}"]`);
+            if(!el){
+                el = document.createElement('input');
+                el.type='hidden';
+                el.name=name;
+                form.appendChild(el);
+            }
+            return el;
+        }
+
         function applyStageState(card){
             const checkbox = card.querySelector('.stage-checkbox');
             const isSelected = !!checkbox?.checked;
@@ -148,17 +160,7 @@
         document.getElementById('partsPerBuild')?.addEventListener('input', recalcPerPartStages);
         ['MasterPart.PartNumber','MasterPart.Name','MasterPart.Material','MasterPart.ManufacturingApproach'].forEach(n=>{ const f=document.querySelector(`[name="${n}"]`); f?.addEventListener('input', validateForm); f?.addEventListener('change', validateForm); });
 
-        form.addEventListener('submit', e=>{ e.preventDefault(); if(!validateForm()) return; const btn=document.getElementById('submitBtn'); if(!btn) return; const orig=btn.innerHTML; btn.innerHTML='<i class="fas fa-spinner fa-spin me-1"></i>Saving...'; btn.disabled=true; const fd=new FormData(form); const selectedIds=[...formState.selectedStages.keys()]; const est=[...formState.selectedStages.values()].map(s=>s.hours); fd.set('SelectedStageIds',selectedIds.join(',')); fd.set('StageEstimatedHours',est.join(',')); fd.set('MasterPart.SingleStackDurationHours', formState.totalHours.toFixed(2)); fetch(form.action,{method:'POST',body:fd,headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json,text/html'}}).then(r=>{ const ct=r.headers.get('content-type')||''; return ct.includes('application/json')?r.json():r.text(); }).then(data=>{ if(typeof data==='object'&&data.success){ const modal=document.getElementById('partModal'); if(modal&&window.bootstrap){ const m=bootstrap.Modal.getInstance(modal); m?.hide(); } window.showToast?window.showToast('success',data.message):alert(data.message); setTimeout(()=>window.location.reload(),800); } else if(typeof data==='string'){ const modalContent=document.querySelector('#partModal .modal-content'); if(modalContent) modalContent.innerHTML=data; } else throw new Error('Unexpected response'); }).catch(err=>{ console.error(err); window.showToast?window.showToast('error','Error saving master part'):alert(err.message); }).finally(()=>{ btn.innerHTML=orig; btn.disabled=false; }); });
-
-        refreshAllStageStates();
-        recalcPerPartStages();
-        updateStageSelection();
-        updateStageCount();
-        validateForm();
-        if(manufacturingSelect?.value) updateManufacturingDisplay(); else toggleSlsPartsPerBuild();
-        setTimeout(()=>{ const first=document.querySelector('input[name="MasterPart.PartNumber"]'); if(first && !first.value) first.focus(); },300);
-
-        // ==================== NEW SLS BUILD CONFIG LOGIC ====================
+        // ==================== NEW SLS BUILD CONFIG LOGIC (REFactored integration) ====================
         (function(){
             const state = {
                 enabled: { double:false, triple:false },
@@ -167,6 +169,7 @@
                 stageEstimateSingle: 0,
                 approach: document.getElementById('manufacturingApproachSelect')?.value || ''
             };
+            form.__stackState = state; // expose for submit
 
             const card = document.getElementById('slsBuildConfigCard');
             if(!card) { console.log('[MASTER-PART-FORM] SLS build config card not found'); return; }
@@ -203,7 +206,7 @@
                 if(stageEstimateDisplay) stageEstimateDisplay.textContent = total ? total.toFixed(2)+'h':'--';
                 if(stageEstimateHidden) stageEstimateHidden.value = total ? total.toFixed(2) : '';
                 updateDiff();
-                updateComplexity();
+                updateComplexityFromStack();
             }
 
             function updateDerivedHoursPerPart(){
@@ -226,13 +229,26 @@
                 diffBadge.className = 'badge '+cls; diffBadge.textContent = pct.toFixed(1)+'%';
             }
 
-            function updateComplexity(){
+            function updateComplexityFromStack(){
                 const hours = state.durations.single || state.stageEstimateSingle || 0;
                 const badge = document.getElementById('complexityDisplay');
                 if(!badge) return;
                 let label='--', cls='bg-secondary';
                 if(hours>0){ if(hours<=4){label='Simple';cls='bg-success';} else if(hours<=12){label='Medium';cls='bg-warning text-dark';} else if(hours<=24){label='Complex';cls='bg-danger';} else {label='Very Complex';cls='bg-dark';} }
                 badge.className='badge '+cls; badge.textContent=label + (hours?` (${hours.toFixed(1)}h)`:'');
+            }
+
+            function applyStackDurationsToStages(){
+                // Push observed single stack duration into SLS Printing stage hours (if selected)
+                const slsStageCard = [...document.querySelectorAll('.stage-card')].find(c=> c.querySelector('.stage-checkbox')?.dataset.stageName==='SLS Printing');
+                if(slsStageCard){
+                    const hoursInput = slsStageCard.querySelector('.stage-hours');
+                    if(hoursInput && state.durations.single){
+                        hoursInput.value = parseFloat(state.durations.single).toFixed(2);
+                    }
+                }
+                // Future: could scale other per-part stages based on parts per build changes
+                updateStageSelection();
             }
 
             function validate(){
@@ -248,40 +264,82 @@
                 return issues.length===0;
             }
 
-            function syncFormHiddenFields(formData){
-                formData.set('MasterPart.PartsPerBuildSingle', state.parts.single||1);
-                formData.set('MasterPart.EnableDoubleStack', state.enabled.double);
-                formData.set('MasterPart.EnableTripleStack', state.enabled.triple);
-                formData.set('MasterPart.PartsPerBuildDouble', state.enabled.double? (state.parts.double||'') : '');
-                formData.set('MasterPart.PartsPerBuildTriple', state.enabled.triple? (state.parts.triple||'') : '');
-                formData.set('MasterPart.SingleStackDurationHours', state.durations.single||'');
-                formData.set('MasterPart.DoubleStackDurationHours', state.enabled.double? (state.durations.double||'') : '');
-                formData.set('MasterPart.TripleStackDurationHours', state.enabled.triple? (state.durations.triple||'') : '');
-                formData.set('MasterPart.StageEstimateSingle', state.stageEstimateSingle||'');
+            function syncFormHiddenFields(fd){
+                ensureHidden('MasterPart.PartsPerBuildSingle').value = state.parts.single||1;
+                ensureHidden('MasterPart.EnableDoubleStack').value = state.enabled.double;
+                ensureHidden('MasterPart.EnableTripleStack').value = state.enabled.triple;
+                ensureHidden('MasterPart.PartsPerBuildDouble').value = state.enabled.double? (state.parts.double||'') : '';
+                ensureHidden('MasterPart.PartsPerBuildTriple').value = state.enabled.triple? (state.parts.triple||'') : '';
+                ensureHidden('MasterPart.SingleStackDurationHours').value = state.durations.single||'';
+                ensureHidden('MasterPart.DoubleStackDurationHours').value = state.enabled.double? (state.durations.double||'') : '';
+                ensureHidden('MasterPart.TripleStackDurationHours').value = state.enabled.triple? (state.durations.triple||'') : '';
+                ensureHidden('MasterPart.StageEstimateSingle').value = state.stageEstimateSingle||'';
+                if(fd){
+                    fd.set('MasterPart.PartsPerBuildSingle', state.parts.single||1);
+                    fd.set('MasterPart.EnableDoubleStack', state.enabled.double);
+                    fd.set('MasterPart.EnableTripleStack', state.enabled.triple);
+                    fd.set('MasterPart.PartsPerBuildDouble', state.enabled.double? (state.parts.double||'') : '');
+                    fd.set('MasterPart.PartsPerBuildTriple', state.enabled.triple? (state.parts.triple||'') : '');
+                    fd.set('MasterPart.SingleStackDurationHours', state.durations.single||'');
+                    fd.set('MasterPart.DoubleStackDurationHours', state.enabled.double? (state.durations.double||'') : '');
+                    fd.set('MasterPart.TripleStackDurationHours', state.enabled.triple? (state.durations.triple||'') : '');
+                    fd.set('MasterPart.StageEstimateSingle', state.stageEstimateSingle||'');
+                }
             }
+            form.__syncStackHiddenFields = syncFormHiddenFields; // expose
 
             function wire(){
                 if(enableDouble){ enableDouble.addEventListener('change',()=>{ state.enabled.double=enableDouble.checked; if(ppbDouble) ppbDouble.disabled=!state.enabled.double; if(durDouble) durDouble.disabled=!state.enabled.double; updateDerivedHoursPerPart(); validate(); }); state.enabled.double=enableDouble.checked; }
                 if(enableTriple){ enableTriple.addEventListener('change',()=>{ state.enabled.triple=enableTriple.checked; if(ppbTriple) ppbTriple.disabled=!state.enabled.triple; if(durTriple) durTriple.disabled=!state.enabled.triple; updateDerivedHoursPerPart(); validate(); }); state.enabled.triple=enableTriple.checked; }
-                [ppbSingle,ppbDouble,ppbTriple].forEach(el=> el && el.addEventListener('input',()=>{ const id=el.id; const v=parseInt(el.value)||null; if(id==='ppbSingle'){state.parts.single=v||1;} if(id==='ppbDouble'){state.parts.double=v;} if(id==='ppbTriple'){state.parts.triple=v;} updateDerivedHoursPerPart(); recalcStageEstimate(); validate(); }));
-                [durSingle,durDouble,durTriple].forEach(el=> el && el.addEventListener('input',()=>{ const v=parseFloat(el.value)||null; if(el.id==='durSingle'){state.durations.single=v;} if(el.id==='durDouble'){state.durations.double=v;} if(el.id==='durTriple'){state.durations.triple=v;} updateDerivedHoursPerPart(); updateDiff(); updateComplexity(); validate(); }));
+                [ppbSingle,ppbDouble,ppbTriple].forEach(el=> el && el.addEventListener('input',()=>{ const id=el.id; const v=parseInt(el.value)||null; if(id==='ppbSingle'){state.parts.single=v||1; const ppbGlobal=document.getElementById('partsPerBuild'); if(ppbGlobal){ ppbGlobal.value=state.parts.single; recalcPerPartStages(); }} if(id==='ppbDouble'){state.parts.double=v;} if(id==='ppbTriple'){state.parts.triple=v;} updateDerivedHoursPerPart(); recalcStageEstimate(); validate(); }));
+                [durSingle,durDouble,durTriple].forEach(el=> el && el.addEventListener('input',()=>{ const v=parseFloat(el.value)||null; if(el.id==='durSingle'){state.durations.single=v;} if(el.id==='durDouble'){state.durations.double=v;} if(el.id==='durTriple'){state.durations.triple=v;} updateDerivedHoursPerPart(); applyStackDurationsToStages(); updateDiff(); updateComplexityFromStack(); validate(); }));
                 document.getElementById('manufacturingApproachSelect')?.addEventListener('change', e=>{ state.approach=e.target.value; showCardIfNeeded(); validate(); });
                 document.addEventListener('input', e=>{ if(e.target.classList && (e.target.classList.contains('stage-hours')|| e.target.classList.contains('stage-cycle')|| e.target.classList.contains('stage-checkbox'))){ setTimeout(()=>{ recalcStageEstimate(); },150); } });
-                recalcStageEstimate(); updateDiff(); updateComplexity(); updateDerivedHoursPerPart(); showCardIfNeeded();
+                recalcStageEstimate(); updateDiff(); updateComplexityFromStack(); updateDerivedHoursPerPart(); showCardIfNeeded();
             }
 
             state.parts.single = parseInt(ppbSingle?.value)||1;
             state.durations.single = parseFloat(durSingle?.value)||null;
-            if(state.enabled.double){ state.parts.double = parseInt(ppbDouble?.value)||null; state.durations.double = parseFloat(durDouble?.value)||null; }
-            if(state.enabled.triple){ state.parts.triple = parseInt(ppbTriple?.value)||null; state.durations.triple = parseFloat(durTriple?.value)||null; }
+            if(enableDouble?.checked){ state.parts.double = parseInt(ppbDouble?.value)||null; state.durations.double = parseFloat(durDouble?.value)||null; }
+            if(enableTriple?.checked){ state.parts.triple = parseInt(ppbTriple?.value)||null; state.durations.triple = parseFloat(durTriple?.value)||null; }
             wire();
-
-            form.addEventListener('submit', function(ev){
-                const fd = new FormData(form);
-                syncFormHiddenFields(fd);
-                if(!validate()){ ev.preventDefault(); return false; }
-            }, { capture:true });
         })();
+
+        // Main submit handler (MUST be after stack logic so we can sync)
+        form.addEventListener('submit', e=>{
+            e.preventDefault();
+            if(!validateForm()) return;
+            // sync stack hidden fields & values
+            if(form.__syncStackHiddenFields){ form.__syncStackHiddenFields(); }
+            const btn=document.getElementById('submitBtn'); if(!btn) return; const orig=btn.innerHTML; btn.innerHTML='<i class="fas fa-spinner fa-spin me-1"></i>Saving...'; btn.disabled=true;
+            const fd=new FormData(form);
+            // also set stack fields into fd in case server relies on posted values only
+            if(form.__syncStackHiddenFields){ form.__syncStackHiddenFields(fd); }
+            const selectedIds=[...formState.selectedStages.keys()]; const est=[...formState.selectedStages.values()].map(s=>s.hours);
+            fd.set('SelectedStageIds',selectedIds.join(','));
+            fd.set('StageEstimatedHours',est.join(','));
+            // If SLS Printing stage selected and stacking provided use observed single duration for MasterPart.SingleStackDurationHours else fallback to total
+            if(form.__stackState){
+                const singleDur = form.__stackState.durations.single;
+                if(singleDur){ fd.set('MasterPart.SingleStackDurationHours', parseFloat(singleDur).toFixed(2)); }
+            }
+            if(!fd.get('MasterPart.SingleStackDurationHours')){
+                fd.set('MasterPart.SingleStackDurationHours', formState.totalHours.toFixed(2));
+            }
+            fetch(form.action,{method:'POST',body:fd,headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json,text/html'}})
+                .then(r=>{ const ct=r.headers.get('content-type')||''; return ct.includes('application/json')?r.json():r.text(); })
+                .then(data=>{ if(typeof data==='object'&&data.success){ const modal=document.getElementById('partModal'); if(modal&&window.bootstrap){ const m=bootstrap.Modal.getInstance(modal); m?.hide(); } window.showToast?window.showToast('success',data.message):alert(data.message); setTimeout(()=>window.location.reload(),800); } else if(typeof data==='string'){ const modalContent=document.querySelector('#partModal .modal-content'); if(modalContent) modalContent.innerHTML=data; } else throw new Error('Unexpected response'); })
+                .catch(err=>{ console.error(err); window.showToast?window.showToast('error','Error saving master part'):alert(err.message); })
+                .finally(()=>{ btn.innerHTML=orig; btn.disabled=false; });
+        });
+
+        refreshAllStageStates();
+        recalcPerPartStages();
+        updateStageSelection();
+        updateStageCount();
+        validateForm();
+        if(manufacturingSelect?.value) updateManufacturingDisplay(); else toggleSlsPartsPerBuild();
+        setTimeout(()=>{ const first=document.querySelector('input[name="MasterPart.PartNumber"]'); if(first && !first.value) first.focus(); },300);
 
         console.log('? [MASTER-PART-FORM] Init complete');
     }

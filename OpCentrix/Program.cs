@@ -296,6 +296,9 @@ builder.Services.AddScoped<OpCentrix.Services.Admin.IProductionStageSeederServic
 // Register the new StageTemplateService for custom field templates - PLACEHOLDER
 // builder.Services.AddScoped<IStageTemplateService, StageTemplateService>();
 
+// NEW: Runtime scheduler service (Phase 3)
+builder.Services.AddScoped<OpCentrix.Services.Runtime.ISchedulerRuntimeService, OpCentrix.Services.Runtime.SchedulerRuntimeService>();
+
 var app = builder.Build();
 
 // Ensure core manufacturing data (idempotent lightweight seeding)

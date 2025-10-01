@@ -3,75 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace OpCentrix.Models
 {
-    /// <summary>
-    /// Master part definition - the "what we're making"
-    /// Single part number that flows through all stages
-    /// </summary>
-    public class MasterPart
-    {
-        [Key]
-        public int Id { get; set; }
-        
-        [Required]
-        [StringLength(50)]
-        public string PartNumber { get; set; } = string.Empty; // e.g., "PN-12345"
-        
-        [Required]
-        [StringLength(200)]
-        public string Name { get; set; } = string.Empty;
-        
-        [Required]
-        [StringLength(500)]
-        public string Description { get; set; } = string.Empty;
-        
-        [Required]
-        [StringLength(100)]
-        public string Material { get; set; } = "Ti-6Al-4V Grade 5";
-        
-        public bool IsActive { get; set; } = true;
-        
-        // Manufacturing approach
-        [Required]
-        [StringLength(50)]
-        public string ManufacturingApproach { get; set; } = "SLS-Based"; // "SLS-Based" or "RawMaterial-Based"
-        
-        // LEGACY stacking configuration (kept for backward compatibility / migration)
-        public bool AllowStacking { get; set; } = false; // legacy flag – to be deprecated
-        public double? SingleStackDurationHours { get; set; } // now treated as OBSERVED single build duration (user entered)
-        public double? DoubleStackDurationHours { get; set; } // observed double
-        public double? TripleStackDurationHours { get; set; } // observed triple
-        public int? MaxStackCount { get; set; } = 1; // legacy
-        
-        // NEW SLS Build Configuration (refactor)
-        // Parts-per-build counts
-        public int PartsPerBuildSingle { get; set; } = 1; // always >=1
-        public int? PartsPerBuildDouble { get; set; }
-        public int? PartsPerBuildTriple { get; set; }
-        
-        // Enable flags for additional modes
-        public bool EnableDoubleStack { get; set; } = false;
-        public bool EnableTripleStack { get; set; } = false;
-        
-        // Stage-based estimate (computed client/server – optional persistence)
-        public double? StageEstimateSingle { get; set; } // computed total hours for single stack from stage definitions
-        
-        // Required stages (JSON array)
-        [Required]
-        [StringLength(1000)]
-        public string RequiredStages { get; set; } = "[]"; // ["SLS", "EDM", "CNC"]
-        
-        // Audit
-        public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
-        public DateTime LastModifiedDate { get; set; } = DateTime.UtcNow;
-        [StringLength(100)]
-        public string CreatedBy { get; set; } = "System";
-        [StringLength(100)]
-        public string LastModifiedBy { get; set; } = "System";
-        
-        // Navigation
-        public virtual ICollection<ProductionBuild> ProductionBuilds { get; set; } = new List<ProductionBuild>();
-        public virtual ICollection<StageDefinition> StageDefinitions { get; set; } = new List<StageDefinition>();
-    }
+    // Removed duplicate MasterPart class definition. MasterPart now lives exclusively in MasterPart.cs
 
     /// <summary>
     /// Production build - represents a single print job that produces multiple parts

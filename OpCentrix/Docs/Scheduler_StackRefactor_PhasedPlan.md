@@ -4,6 +4,8 @@ Status: Draft
 Last Updated: UTC {{DATE}}
 Owner: Scheduler/Manufacturing Refactor
 
+<!-- NOTE: All newly added embedded modals (Start Job, Progress, Learning Audit) REQUIRE the shared script include `~/js/scheduler-runtime.js` which must be referenced from `_Layout.cshtml` AFTER `site.js`. Each modal will begin with a comment reminder. -->
+
 ## Objective
 Incrementally evolve the existing SLS-focused scheduler (Job + Part) to a stack-aware, operator-driven workflow that supports: 
 - MasterPart & stacking metadata

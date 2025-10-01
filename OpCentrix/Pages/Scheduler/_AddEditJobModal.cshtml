@@ -1,513 +1,208 @@
-@using OpCentrix.Models
+﻿@using OpCentrix.Models
 @model OpCentrix.ViewModels.Scheduler.AddEditJobViewModel
 
-<!-- Enhanced Modal Container with Updated OpCentrix Design System -->
-<div class="modal-backdrop" 
-     style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); z-index: 9999; backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 1rem;">
-    <div class="opcentrix-card" 
-         style="max-width: 72rem; width: 100%; max-height: 95vh; overflow-y: auto; background: white; border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); margin: 0;"
-         onclick="event.stopPropagation()">
-        <form hx-post="/Scheduler?handler=AddOrUpdateJob" 
-              hx-target="#modal-container"
-              hx-swap="innerHTML"
-              hx-on::before-request="if(window.OpCentrixScheduler&&OpCentrixScheduler.showFormLoading) OpCentrixScheduler.showFormLoading()" 
-              hx-on::after-request="if(window.OpCentrixScheduler&&OpCentrixScheduler.handleFormResponse) OpCentrixScheduler.handleFormResponse(event)"
-              hx-on::response-error="if(window.OpCentrixScheduler&&OpCentrixScheduler.handleFormError) OpCentrixScheduler.handleFormError(event)"
-               id="job-form"
-               novalidate>
-            
-            @Html.AntiForgeryToken()
-            
-            <!-- Enhanced Modal Header -->
-            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 2rem 2rem 1rem 2rem; border-bottom: 2px solid #e5e7eb; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);">
-                <div style="display: flex; align-items: center; gap: 1rem;">
-                    <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-                        <svg style="width: 24px; height: 24px; color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
-                        </svg>
-                    </div>
-                    <div>
-                        <h2 style="font-size: 1.75rem; font-weight: 700; color: #1f2937; margin: 0; font-family: system-ui, -apple-system, sans-serif;">
-                            @(Model.Job.Id == 0 ? "Schedule New SLS Job" : $"Edit Job #{Model.Job.Id}")
-                        </h2>
-                        <p style="font-size: 0.875rem; color: #6b7280; margin: 0.25rem 0 0 0;">
-                            Configure production parameters and timing for @(Model.Job.MachineId ?? "selected machine")
-                        </p>
-                    </div>
-                </div>
-                <button type="button" 
-                        onclick="if(window.closeJobModal) window.closeJobModal(); else if(document.getElementById('modal-container')) document.getElementById('modal-container').innerHTML='';" 
-                        style="background: #f3f4f6; border: none; color: #6b7280; padding: 0.75rem; cursor: pointer; border-radius: 8px; transition: all 0.2s ease; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;"
-                        onmouseover="this.style.background='#e5e7eb'; this.style.color='#374151'"
-                        onmouseout="this.style.background='#f3f4f6'; this.style.color='#6b7280'"
-                        aria-label="Close">
-                    <svg style="width: 20px, height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
+<!-- Add/Edit Job Modal (logic embedded in scheduler-ui.js) -->
+<div class="modal-backdrop" style="position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;">
+  <div class="opcentrix-card" style="width:100%;max-width:60rem;max-height:95vh;overflow-y:auto;background:#fff;border-radius:14px;box-shadow:0 25px 40px -10px rgba(0,0,0,.4);" onclick="event.stopPropagation()">
+    <form hx-post="/Scheduler?handler=AddOrUpdateJob" hx-target="#modal-container" hx-swap="innerHTML" id="job-form" novalidate>
+      @Html.AntiForgeryToken()
+      <input type="hidden" name="Id" value="@Model.Job.Id" />
+      <input type="hidden" name="StackLevel" id="hidden-stack-level" value="@(Model.Job.StackLevel?.ToString() ?? "")" />
+      <input type="hidden" name="PartsPerBuild" id="hidden-parts-per-build" value="@(Model.Job.PartsPerBuild?.ToString() ?? "")" />
+      <input type="hidden" name="PlannedStackDurationHours" id="hidden-stack-duration" value="@(Model.Job.PlannedStackDurationHours?.ToString("F2") ?? "")" />
+      <input type="hidden" name="PartId" id="hidden-part-id" value="@Model.Job.PartId" />
+      <input type="hidden" name="SuggestedStackLevel" id="hidden-suggested-stack-level" value="" />
+      <input type="hidden" name="PartNumber" id="hidden-part-number" value="@Model.Job.PartNumber" />
+      
+      <header style="padding:1.25rem 1.75rem;border-bottom:1px solid #e5e7eb;background:linear-gradient(90deg,#f8fafc,#eef2ff);display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <h2 style="margin:0;font-size:1.35rem;font-weight:700;color:#1f2937;">@(Model.Job.Id==0?"Schedule Job":"Edit Job #"+Model.Job.Id)</h2>
+          <p style="margin:.35rem 0 0;font-size:.75rem;color:#64748b;">Master part stacking enabled for SLS jobs</p>
+        </div>
+        <button type="button" onclick="closeJobModal()" style="background:#f1f5f9;border:none;border-radius:8px;padding:.6rem .8rem;cursor:pointer;color:#475569;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">✕</button>
+      </header>
 
-            <!-- Enhanced Error Display -->
-            @if (Model.Errors?.Any() == true)
-            {
-                <div style="margin: 1.5rem 2rem 0 2rem; padding: 1rem; background: linear-gradient(135deg, #fef2f2 0%, #fce8e8 100%); border: 1px solid #fca5a5; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
-                    <div style="display: flex; align-items: center; margin-bottom: 0.75rem;">
-                        <svg style="width: 20px; height: 20px; margin-right: 0.75rem; flex-shrink: 0; color: #dc2626;" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
-                        </svg>
-                        <strong style="font-weight: 600; font-size: 0.875rem; color: #dc2626;">Please correct the following issues:</strong>
-                    </div>
-                    <ul style="margin: 0; padding-left: 1.5rem; list-style-type: disc; font-size: 0.875rem; line-height: 1.5; color: #dc2626;">
-                        @foreach (var error in Model.Errors)
-                        {
-                            <li style="margin-bottom: 0.25rem;">@error</li>
-                        }
-                    </ul>
-                </div>
+      @if(Model.Errors?.Any()==true){
+        <div style="margin:1rem 1.75rem 0;padding:.9rem 1rem;border:1px solid #fecaca;background:#fef2f2;color:#b91c1c;border-radius:8px;font-size:.75rem;">
+          <strong>Validation Issues:</strong>
+          <ul style="margin:.5rem 0 0;padding-left:1.1rem;">
+            @foreach(var e in Model.Errors){<li>@e</li>}
+          </ul>
+        </div>
+      }
+
+      <section style="padding:1.5rem 1.75rem;display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+        <div>
+          <label class="oc-label">Machine *</label>
+          <select name="MachineId" id="machine-select" class="oc-input" required>
+            <option value="">Select machine...</option>
+            @foreach(var m in Model.Machines){
+              <option value="@m.MachineId" selected="@(Model.Job.MachineId==m.MachineId)">@m.MachineId - @m.MachineName</option>
             }
+          </select>
 
-            <!-- Hidden Fields -->
-            <input type="hidden" name="Id" value="@Model.Job.Id" />
-            
-            <!-- Remove the old hidden fields and use clean DTO binding -->
-            <input type="hidden" name="CreatedDate" value="@Model.Job.CreatedDate.ToString("yyyy-MM-ddTHH:mm:ss")" />
-            <input type="hidden" name="LastModifiedDate" value="@Model.Job.LastModifiedDate.ToString("yyyy-MM-ddTHH:mm:ss")" />
-            <input type="hidden" name="CreatedBy" value="@(Model.Job.CreatedBy ?? "")" />
-            <input type="hidden" name="LastModifiedBy" value="@(Model.Job.LastModifiedBy ?? "")" />
-            <input type="hidden" name="EstimatedHours" value="@Model.Job.EstimatedHours.ToString("F2")" id="hidden-estimated-hours" />
-            <input type="hidden" name="DurationHours" value="@Model.Job.DurationHours.ToString("F2")" id="hidden-duration-hours" />
-            <input type="hidden" name="PartNumber" value="@(Model.Job.PartNumber ?? "")" id="hidden-part-number" />
-            
-            <!-- Enhanced Form Content -->
-            <div style="padding: 2rem; background: white;">
-                <!-- Two-Column Layout -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
-                    
-                    <!-- Left Column: Job Details -->
-                    <div class="form-section">
-                        <div class="section-header" style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; padding-bottom: 0.75rem; border-bottom: 2px solid #f3f4f6;">
-                            <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-                                <svg style="width: 16px; height: 16px; color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                                </svg>
-                            </div>
-                            <h3 style="font-size: 1.125rem; font-weight: 600; color: #1f2937; margin: 0;">Job Details</h3>
-                        </div>
-                        
-                        <!-- Machine Selection -->
-                        <div class="form-group" style="margin-bottom: 1.5rem;">
-                            <label for="machine-select" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
-                                Machine <span style="color: #dc2626;">*</span>
-                            </label>
-                            <select name="MachineId" id="machine-select" required onchange="window.OpCentrixScheduler&&OpCentrixScheduler.filterPartsByMachine&&OpCentrixScheduler.filterPartsByMachine();" 
-                                    style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease; background: white;">
-                                <option value="">Select a machine...</option>
-                                @if (Model.Machines?.Any() == true)
-                                {
-                                    @foreach (var machine in Model.Machines)
-                                    {
-                                        <option value="@machine.MachineId" selected="@(Model.Job.MachineId == machine.MachineId)">
-                                            @machine.MachineId - @machine.MachineName (@machine.MachineModel)
-                                        </option>
-                                    }
-                                }
-                                else
-                                {
-                                    <option value="">No machines available</option>
-                                }
-                            </select>
-                            <small style="color: #6b7280; font-size: 0.75rem; margin-top: 0.25rem; display: block;">
-                                @if (Model.Machines?.Any() == true)
-                                {
-                                    <text>@Model.Machines.Count machines available</text>
-                                }
-                                else
-                                {
-                                    <text>Please configure machines in Admin panel</text>
-                                }
-                            </small>
-                        </div>
+          <div style="margin-top:1rem;">
+            <label class="oc-label">Master Part *</label>
+            <select id="masterpart-select" name="MasterPartId" class="oc-input" required>
+              <option value="">Select master part...</option>
+              @foreach(var mp in Model.MasterParts.OrderBy(p=>p.PartNumber)){
+                  var legacyMatch = Model.Parts.FirstOrDefault(p=>p.PartNumber==mp.PartNumber);
+                  var singleHours = mp.SingleStackDurationHours ?? mp.StageEstimateSingle ?? 0;
+                  var isSelected = Model.Job.MasterPartId == mp.Id;
+                  <option value="@mp.Id" 
+                          selected="@isSelected"
+                          data-part-number="@mp.PartNumber" 
+                          data-legacy-id="@(legacyMatch?.Id.ToString() ?? "")" 
+                          data-single-hours="@(singleHours.ToString("F2"))" 
+                          data-double-hours="@(mp.DoubleStackDurationHours?.ToString("F2")??"")" 
+                          data-triple-hours="@(mp.TripleStackDurationHours?.ToString("F2")??"")" 
+                          data-stage-single="@(mp.StageEstimateSingle?.ToString("F2") ?? "")" 
+                          data-allow-stacking="@mp.AllowStacking.ToString().ToLower()" 
+                          data-enable-double="@mp.EnableDoubleStack.ToString().ToLower()" 
+                          data-enable-triple="@mp.EnableTripleStack.ToString().ToLower()" 
+                          data-max-stack="@mp.MaxStackCount" 
+                          data-parts-single="@mp.PartsPerBuildSingle" 
+                          data-parts-double="@(mp.PartsPerBuildDouble?.ToString()??"")" 
+                          data-parts-triple="@(mp.PartsPerBuildTriple?.ToString()??"")">
+                    @mp.PartNumber - @mp.Name
+                  </option>
+              }
+            </select>
+            <small style="font-size:.6rem;color:#64748b;">Scheduler now requires master parts. Legacy part field removed.</small>
+          </div>
 
-                        <!-- Part Selection -->
-                        <div class="form-group" style="margin-bottom: 0.5rem;">
-                            <label for="part-select" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
-                                Part <span style="color: #dc2626;">*</span>
-                            </label>
-                            <select name="PartId" id="part-select" required onchange="window.OpCentrixScheduler&&OpCentrixScheduler.updateJobFromPart&&OpCentrixScheduler.updateJobFromPart();" 
-                                    style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease; background: white;">
-                                <option value="">Select a part...</option>
-                                @foreach (var part in Model.Parts.OrderBy(p => p.PartNumber))
-                                {
-                                    <option value="@part.Id" 
-                                            selected="@(Model.Job.PartId == part.Id)"
-                                            data-part-number="@part.PartNumber"
-                                            data-estimated-hours="@part.GetEffectiveEstimatedHours().ToString("F1")"
-                                            data-has-admin-override="@part.HasAdminOverride.ToString().ToLower()"
-                                            data-standard-hours="@part.EstimatedHours.ToString("F1")"
-                                            data-override-hours="@(part.AdminEstimatedHoursOverride?.ToString("F1") ?? "")"
-                                            data-override-reason="@(part.AdminOverrideReason ?? "")"
-                                            data-sls-material="@part.SlsMaterial"
-                                            data-material-type="@(part.SlsMaterial?.Contains("Ti-6Al-4V") == true ? "Titanium" : part.SlsMaterial?.Contains("Inconel") == true ? "Inconel" : "Other")"
-                                            data-laser-power="@part.RecommendedLaserPower"
-                                            data-scan-speed="@part.RecommendedScanSpeed"
-                                            data-layer-thickness="@part.RecommendedLayerThickness"
-                                            data-hatch-spacing="@part.RecommendedHatchSpacing"
-                                            data-build-temperature="@part.RecommendedBuildTemperature"
-                                            data-argon-purity="@part.RequiredArgonPurity.ToString("F1")"
-                                            data-oxygen-content="@part.MaxOxygenContent"
-                                            data-powder-usage="@part.PowderRequirementKg.ToString("F2")"
-                                            data-preheating-time="@part.PreheatingTimeMinutes"
-                                            data-cooling-time="@part.CoolingTimeMinutes"
-                                            data-post-processing-time="@part.PostProcessingTimeMinutes"
-                                            data-material-cost="@part.MaterialCostPerKg"
-                                            data-labor-cost="@part.StandardLaborCostPerHour"
-                                            data-machine-cost="@part.MachineOperatingCostPerHour"
-                                            data-argon-cost="@part.ArgonCostPerHour"
-                                            data-allow-stacking="@part.AllowStacking.ToString().ToLower()"
-                                            data-single-hours="@(part.SingleStackDurationHours?.ToString("F2") ?? "")"
-                                            data-double-hours="@(part.DoubleStackDurationHours?.ToString("F2") ?? "")"
-                                            data-triple-hours="@(part.TripleStackDurationHours?.ToString("F2") ?? "")">
-                                        @part.PartNumber - @part.Description
-                                        @if (part.HasAdminOverride)
-                                        {
-                                            <text> [Override: @part.EffectiveDurationHours.ToString("F1")h]</text>
-                                        }
-                                    </option>
-                                }
-                            </select>
-                            <small style="color: #6b7280; font-size: 0.75rem; margin-top: 0.25rem; display: block;">
-                                @if (Model.HasParts)
-                                {
-                                    <text>@Model.AvailablePartCount parts available</text>
-                                }
-                                else
-                                {
-                                    <text>No parts available - please create parts first</text>
-                                }
-                            </small>
-                        </div>
-
-                        <!-- Stacking selection (from DB) -->
-                        <div id="stacking-section" style="margin: 0.75rem 0 1.25rem 0; display: none;">
-                            <label style="display:block; font-size: 0.875rem; font-weight:600; color:#374151; margin-bottom:0.5rem;">Stacking</label>
-                            <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
-                                <label class="chip" id="stack-single" role="button" tabindex="0" aria-pressed="false" style="border:1px solid #d1d5db; padding:0.5rem 0.75rem; border-radius:9999px; cursor:pointer;">
-                                    <input type="radio" name="stackOption" value="1" style="display:none" />
-                                    <span>Single (1x)</span>
-                                    <span class="badge" id="badge-single" style="margin-left:0.4rem;">-- h</span>
-                                </label>
-                                <label class="chip" id="stack-double" role="button" tabindex="0" aria-pressed="false" style="border:1px solid #d1d5db; padding:0.5rem 0.75rem; border-radius:9999px; cursor:pointer;">
-                                    <input type="radio" name="stackOption" value="2" style="display:none" />
-                                    <span>Double (2x)</span>
-                                    <span class="badge" id="badge-double" style="margin-left:0.4rem;">-- h</span>
-                                </label>
-                                <label class="chip" id="stack-triple" role="button" tabindex="0" aria-pressed="false" style="border:1px solid #d1d5db; padding:0.5rem 0.75rem; border-radius:9999px; cursor:pointer;">
-                                    <input type="radio" name="stackOption" value="3" style="display:none" />
-                                    <span>Triple (3x)</span>
-                                    <span class="badge" id="badge-triple" style="margin-left:0.4rem;">-- h</span>
-                                </label>
-                            </div>
-                            <small id="stacking-hint" style="display:block; color:#6b7280; font-size:0.75rem; margin-top:0.25rem;">Durations loaded from part configuration</small>
-                        </div>
-
-                        <!-- Quantity and Priority -->
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
-                            <div class="form-group">
-                                <label for="quantity-input" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
-                                    Quantity <span style="color: #dc2626;">*</span>
-                                </label>
-                                <input type="number" name="Quantity" id="quantity-input" value="@Model.Job.Quantity" min="1" max="1000" 
-                                       required onchange="window.OpCentrixScheduler&&OpCentrixScheduler.updateEndTimeFromQuantity&&OpCentrixScheduler.updateEndTimeFromQuantity()" 
-                                       style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease;" />
-                            </div>
-                            
-
-                            <div class="form-group">
-                                <label for="priority-select" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Priority</label>
-                                <select name="Priority" id="priority-select" 
-                                        style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease; background: white;">
-                                    <option value="1" selected="@(Model.Job.Priority == 1)">1 - Critical (Rush)</option>
-                                    <option value="2" selected="@(Model.Job.Priority == 2)">2 - High Priority</option>
-                                    <option value="3" selected="@(Model.Job.Priority == 3)">3 - Normal</option>
-                                    <option value="4" selected="@(Model.Job.Priority == 4)">4 - Low Priority</option>
-                                    <option value="5" selected="@(Model.Job.Priority == 5)">5 - Background</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Enhanced Timing Section -->
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
-                            <div class="form-group">
-                                <label for="start-input" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
-                                    Start Date & Time <span style="color: #dc2626;">*</span>
-                                </label>
-                                <div style="display: flex; gap: 0.5rem;">
-                                    <input type="datetime-local" name="ScheduledStart" id="start-input"
-                                           value="@Model.Job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")" 
-                                           required onchange="window.OpCentrixScheduler&&OpCentrixScheduler.updateEndTimeFromStart&&OpCentrixScheduler.updateEndTimeFromStart()" 
-                                           style="flex: 1; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease;" />
-                                    <button type="button" 
-                                            onclick="window.OpCentrixScheduler&&OpCentrixScheduler.suggestNextAvailableTime&&OpCentrixScheduler.suggestNextAvailableTime()"
-                                            style="padding: 0.75rem; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center;"
-                                            onmouseover="this.style.background='#2563eb'"
-                                            onmouseout="this.style.background='#3b82f6'"
-                                            title="Find next available time slot">
-                                        <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                        </svg>
-                                    </button>
-                                </div>
-                                <small style="color: #6b7280; font-size: 0.75rem; margin-top: 0.25rem; display: block;">Click clock icon for next available time</small>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="end-input" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
-                                    End Date & Time <span style="color: #dc2626;">*</span>
-                                </label>
-                                <input type="datetime-local" name="ScheduledEnd" id="end-input"
-                                       value="@Model.Job.ScheduledEnd.ToString("yyyy-MM-ddTHH:mm")" 
-                                       required onchange="window.OpCentrixScheduler&&OpCentrixScheduler.updateDurationDisplay&&OpCentrixScheduler.updateDurationDisplay(); window.OpCentrixScheduler&&OpCentrixScheduler.checkTimeSlotAvailability&&OpCentrixScheduler.checkTimeSlotAvailability(); window.OpCentrixScheduler&&OpCentrixScheduler.handleDurationChange&&OpCentrixScheduler.handleDurationChange();" 
-                                       style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease;" />
-                                <small style="color: #6b7280; font-size: 0.75rem; margin-top: 0.25rem; display: block;">
-                                    Duration: <span id="duration-display">@((Model.Job.ScheduledEnd - Model.Job.ScheduledStart).TotalHours.ToString("F1")) hours</span>
-                                </small>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Right Column: SLS Parameters -->
-                    <div class="form-section">
-                        <div class="section-header" style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; padding-bottom: 0.75rem; border-bottom: 2px solid #f3f4f6;">
-                            <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-                                <svg style="width: 16px; height: 16px; color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                                </svg>
-                            </div>
-                            <h3 style="font-size: 1.125rem; font-weight: 600; color: #1f2937; margin: 0;">SLS Process Parameters</h3>
-                        </div>
-                        
-                        <!-- Material -->
-                        <div class="form-group" style="margin-bottom: 1.5rem;">
-                            <label for="sls-material" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
-                                Material <span style="color: #dc2626;">*</span>
-                            </label>
-                            <select name="SlsMaterial" id="sls-material" required 
-                                    style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease; background: white;">
-                                <option value="Ti-6Al-4V Grade 5" selected="@(Model.Job.SlsMaterial == "Ti-6Al-4V Grade 5")">Ti-6Al-4V Grade 5 (Aerospace)</option>
-                                <option value="Ti-6Al-4V ELI Grade 23" selected="@(Model.Job.SlsMaterial == "Ti-6Al-4V ELI Grade 23")">Ti-6Al-4V ELI Grade 23 (Medical)</option>
-                                <option value="Inconel 718" selected="@(Model.Job.SlsMaterial == "Inconel 718")">Inconel 718 (High-Temp)</option>
-                                <option value="Inconel 625" selected="@(Model.Job.SlsMaterial == "Inconel 625")">Inconel 625 (Corrosion Resistant)</option>
-                            </select>
-                        </div>
-
-                        <!-- Process Parameters Grid -->
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
-                            <div class="form-group">
-                                <label for="laser-power" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Laser Power (W)</label>
-                                <input type="number" name="LaserPowerWatts" id="laser-power" value="@Model.Job.LaserPowerWatts" min="50" max="400" step="1" 
-                                       style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease;" />
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="scan-speed" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Scan Speed (mm/s)</label>
-                                <input type="number" name="ScanSpeedMmPerSec" id="scan-speed" value="@Model.Job.ScanSpeedMmPerSec" min="100" max="5000" step="10" 
-                                       style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease;" />
-                            </div>
-                        </div>
-
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
-                            <div class="form-group">
-                                <label for="layer-thickness" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Layer Thickness (�m)</label>
-                                <input type="number" name="LayerThicknessMicrons" id="layer-thickness" value="@Model.Job.LayerThicknessMicrons" min="20" max="60" step="5" 
-                                       style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease;" />
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="hatch-spacing" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Hatch Spacing (�m)</label>
-                                <input type="number" name="HatchSpacingMicrons" id="hatch-spacing" value="@Model.Job.HatchSpacingMicrons" min="50" max="200" step="5" 
-                                       style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease;" />
-                            </div>
-                        </div>
-
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
-                            <div class="form-group">
-                                <label for="build-temperature" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Build Temperature (�C)</label>
-                                <input type="number" name="BuildTemperatureCelsius" id="build-temperature" value="@Model.Job.BuildTemperatureCelsius" min="100" max="300" step="5" 
-                                       style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease;" />
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="powder-usage" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Estimated Powder (kg)</label>
-                                <input type="number" name="EstimatedPowderUsageKg" id="powder-usage" value="@Model.Job.EstimatedPowderUsageKg.ToString("F2")" min="0" max="50" step="0.1" 
-                                       style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease;" />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Additional Information Section -->
-                <div style="margin-bottom: 2rem; padding: 1.5rem; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
-                    <h4 style="font-size: 1rem; font-weight: 600; color: #1f2937; margin: 0 0 1rem 0;">Additional Information</h4>
-                    
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-                        <div class="form-group">
-                            <label for="order-number" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Customer Order Number</label>
-                            <input type="text" name="CustomerOrderNumber" id="order-number" value="@Model.Job.CustomerOrderNumber" maxlength="100" 
-                                   placeholder="CO-2024-001" 
-                                   style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease;" />
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="operator-input" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Operator</label>
-                            <input type="text" name="Operator" id="operator-input" value="@Model.Job.Operator" maxlength="100" 
-                                   placeholder="Enter operator name" 
-                                   style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease;" />
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="notes-input" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Special Instructions & Notes</label>
-                        <textarea name="Notes" id="notes-input" rows="3" maxlength="1000" 
-                                  placeholder="Enter any special instructions, quality requirements, or notes for this job..." 
-                                  style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease; resize: vertical; min-height: 80px;">@Model.Job.Notes</textarea>
-                    </div>
-                </div>
+          <div id="stacking-section" style="display:none;margin-top:1rem;border:1px dashed #cbd5e1;border-radius:10px;padding:.75rem .85rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
+              <span style="font-size:.7rem;font-weight:600;color:#334155;letter-spacing:.5px;">STACKING</span>
+              <span id="stack-recommend" style="font-size:.6rem;color:#6366f1;font-weight:600;"></span>
             </div>
-
-            <!-- Enhanced Modal Footer -->
-            <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 2rem 2rem 2rem; border-top: 2px solid #f3f4f6; background: #f9fafb;">
-                <div style="display: flex; align-items: center; gap: 1.5rem;">
-                    <div class="form-group">
-                        <label for="status-select" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Status</label>
-                        <select name="Status" id="status-select" 
-                                style="width: 180px; padding: 0.5rem 0.75rem; border: 2px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; background: white;">
-                            <option value="Scheduled" selected="@(Model.Job.Status == "Scheduled")">Scheduled</option>
-                            <option value="Preheating" selected="@(Model.Job.Status == "Preheating")">Preheating</option>
-                            <option value="Building" selected="@(Model.Job.Status == "Building")">Building</option>
-                            <option value="Cooling" selected="@(Model.Job.Status == "Cooling")">Cooling</option>
-                            <option value="Post-Processing" selected="@(Model.Job.Status == "Post-Processing")">Post-Processing</option>
-                            <option value="QC-Review" selected="@(Model.Job.Status == "QC-Review")">QC Review</option>
-                            <option value="Completed" selected="@(Model.Job.Status == "Completed")">Completed</option>
-                            <option value="On-Hold" selected="@(Model.Job.Status == "On-Hold")">On Hold</option>
-                            <option value="Cancelled" selected="@(Model.Job.Status == "Cancelled")">Cancelled</option>
-                        </select>
-                    </div>
-                    
-                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1.75rem;">
-                        <input type="checkbox" name="IsRushJob" value="true" checked="@Model.Job.IsRushJob" id="rush-job" 
-                               style="width: 16px; height: 16px; border-radius: 4px; border: 2px solid #d1d5db;" />
-                        <label for="rush-job" style="font-size: 0.875rem; color: #374151; font-weight: 500;">Rush Job (Expedited Processing)</label>
-                        <input type="hidden" name="IsRushJob" value="false" />
-                    </div>
-                </div>
-
-                <div style="display: flex; gap: 0.75rem;">
-                    @if (Model.Job.Id > 0)
-                    {
-                        <button type="button"
-                                onclick="window.OpCentrixScheduler&&OpCentrixScheduler.deleteJobWithToken&&OpCentrixScheduler.deleteJobWithToken(@Model.Job.Id)"
-                                style="display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; font-size: 0.875rem; border: none; cursor: pointer; transition: all 0.2s ease; background: #dc2626; color: white; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);"
-                                onmouseover="this.style.background='#b91c1c'"
-                                onmouseout="this.style.background='#dc2626'">
-                            <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                            </svg>
-                            Delete Job
-                        </button>
-                    }
-                    
-                    <button type="button" onclick="if(window.closeJobModal) window.closeJobModal(); else if(document.getElementById('modal-container')) document.getElementById('modal-container').innerHTML='';" 
-                            style="display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; font-size: 0.875rem; cursor: pointer; transition: all 0.2s ease; background: #f3f4f6; color: #374151; border: 2px solid #d1d5db;"
-                            onmouseover="this.style.background='#e5e7eb'"
-                            onmouseout="this.style.background='#f3f4f6'">
-                        Cancel
-                    </button>
-                    
-                    <button type="submit" id="submit-job-btn" 
-                            style="display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; font-size: 0.875rem; border: none; cursor: pointer; transition: all 0.2s ease; background: #3b82f6; color: white; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);"
-                            onmouseover="this.style.background='#2563eb'"
-                            onmouseout="this.style.background='#3b82f6'">
-                        <span id="submit-text">@(Model.Job.Id == 0 ? "Schedule Job" : "Update Job")</span>
-                        <svg id="submit-spinner" style="width: 16px; height: 16px; display: none;" fill="none" viewBox="0 0 24 24">
-                            <circle style="opacity: 0.25;" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path style="opacity: 0.75;" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                    </button>
-                </div>
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+              <button type="button" class="stack-chip" data-level="1">1x <span class="h" data-h="single">--</span></button>
+              <button type="button" class="stack-chip" data-level="2" disabled>2x <span class="h" data-h="double">--</span></button>
+              <button type="button" class="stack-chip" data-level="3" disabled>3x <span class="h" data-h="triple">--</span></button>
             </div>
-        </form>
-    </div>
+            <div id="stack-override-banner" style="display:none;margin-top:.5rem;font-size:.6rem;font-weight:600;color:#b45309;background:#fffbeb;border:1px solid #fcd34d;padding:.35rem .55rem;border-radius:6px;">Override applied – admin changed recommended stack.</div>
+            <small style="display:block;margin-top:.4rem;font-size:.6rem;color:#64748b;">Selecting a stack updates duration and end time automatically.</small>
+            <div id="stack-summary" style="display:none;margin-top:.55rem;font-size:.6rem;font-weight:600;color:#334155;background:#f1f5f9;border:1px solid #e2e8f0;padding:.4rem .55rem;border-radius:6px;">
+              <span>Level: <span id="stack-summary-level">-</span></span>
+              <span style="margin-left:.75rem;">Parts/Build: <span id="stack-summary-ppb">-</span></span>
+              <span style="margin-left:.75rem;">Total Units: <span id="stack-summary-total">-</span></span>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.75rem;margin-top:1rem;">
+            <div>
+              <label class="oc-label">Quantity *</label>
+              <input type="number" name="Quantity" class="oc-input" value="@Model.Job.Quantity" min="1" required />
+            </div>
+            <div>
+              <label class="oc-label">Priority</label>
+              <select name="Priority" class="oc-input">
+                @for(int i=1;i<=5;i++){
+                  <option value="@i" selected="@(Model.Job.Priority==i)">@i</option>
+                }
+              </select>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.75rem;margin-top:1rem;">
+            <div>
+              <label class="oc-label">Start *</label>
+              <input type="datetime-local" name="ScheduledStart" id="start-input" value="@Model.Job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")" class="oc-input" required />
+            </div>
+            <div>
+              <label class="oc-label">End *</label>
+              <input type="datetime-local" name="ScheduledEnd" id="end-input" value="@Model.Job.ScheduledEnd.ToString("yyyy-MM-ddTHH:mm")" class="oc-input" required />
+              <small style="font-size:.6rem;color:#64748b;">Duration: <span id="duration-display">@((Model.Job.ScheduledEnd-Model.Job.ScheduledStart).TotalHours.ToString("F1")) h</span></small>
+            </div>
+          </div>
+
+          <div style="margin-top:1rem;">
+            <label class="oc-label">Notes</label>
+            <textarea name="Notes" rows="3" class="oc-input">@Model.Job.Notes</textarea>
+          </div>
+        </div>
+
+        <div>
+          <div id="sls-params" class="machine-panel" style="display:none;">
+            <h4 class="panel-title">SLS Parameters</h4>
+            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.65rem;">
+              <div><label class="oc-label">Material *</label>
+                <select name="SlsMaterial" class="oc-input">
+                  <option value="Ti-6Al-4V Grade 5" selected="@(Model.Job.SlsMaterial=="Ti-6Al-4V Grade 5")">Ti-6Al-4V Grade 5</option>
+                  <option value="Ti-6Al-4V ELI Grade 23" selected="@(Model.Job.SlsMaterial=="Ti-6Al-4V ELI Grade 23")">Ti-6Al-4V ELI Grade 23</option>
+                  <option value="Inconel 718" selected="@(Model.Job.SlsMaterial=="Inconel 718")">Inconel 718</option>
+                  <option value="Inconel 625" selected="@(Model.Job.SlsMaterial=="Inconel 625")">Inconel 625</option>
+                </select>
+              </div>
+              <div><label class="oc-label">Powder (kg)</label><input type="number" step="0.01" min="0" name="EstimatedPowderUsageKg" class="oc-input" value="@Model.Job.EstimatedPowderUsageKg.ToString("F2")" /></div>
+              <div><label class="oc-label">Laser (W)</label><input type="number" name="LaserPowerWatts" class="oc-input" value="@Model.Job.LaserPowerWatts" min="50" max="400" /></div>
+              <div><label class="oc-label">Scan (mm/s)</label><input type="number" name="ScanSpeedMmPerSec" class="oc-input" value="@Model.Job.ScanSpeedMmPerSec" /></div>
+              <div><label class="oc-label">Layer (µm)</label><input type="number" name="LayerThicknessMicrons" class="oc-input" value="@Model.Job.LayerThicknessMicrons" /></div>
+              <div><label class="oc-label">Hatch (µm)</label><input type="number" name="HatchSpacingMicrons" class="oc-input" value="@Model.Job.HatchSpacingMicrons" /></div>
+              <div><label class="oc-label">Build Temp (°C)</label><input type="number" name="BuildTemperatureCelsius" class="oc-input" value="@Model.Job.BuildTemperatureCelsius" /></div>
+            </div>
+          </div>
+
+          <div id="cnc-params" class="machine-panel" style="display:none;">
+            <h4 class="panel-title">CNC Parameters</h4>
+            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.65rem;">
+              <div><label class="oc-label">Tool Set</label><input type="text" name="Notes" placeholder="Tool list / program" class="oc-input" /></div>
+              <div><label class="oc-label">Program ID</label><input type="text" name="CustomerOrderNumber" placeholder="PRG-###" class="oc-input" /></div>
+              <div style="grid-column:1 / span 2;"><small style="font-size:.6rem;color:#64748b;">CNC specifics placeholder – extend later.</small></div>
+            </div>
+          </div>
+
+          <div style="margin-top:1rem;display:flex;gap:.75rem;align-items:center;">
+            <label style="display:flex;align-items:center;gap:.35rem;font-size:.7rem;font-weight:600;color:#334155;">
+              <input type="checkbox" name="IsRushJob" value="true" checked="@Model.Job.IsRushJob" /> Rush
+            </label>
+            <label style="display:flex;align-items:center;gap:.35rem;font-size:.7rem;font-weight:600;color:#334155;">
+              <input type="checkbox" name="RequiresPreheating" value="true" checked disabled /> Preheat
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <footer style="padding:1rem 1.75rem;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;background:#f8fafc;align-items:center;">
+        <div style="display:flex;flex-direction:column;gap:.35rem;">
+          <div style="font-size:.65rem;color:#64748b;">Stack levels drive duration and resource planning. System recommends optimal level based on shift timing.</div>
+          @if(Model.Job.Id > 0){
+            <div>
+              <button type="button"
+                      class="oc-btn-danger"
+                      hx-post="/Scheduler?handler=DeleteJob&id=@Model.Job.Id"
+                      hx-target="#modal-container"
+                      hx-swap="innerHTML"
+                      hx-confirm="Delete this job permanently? This cannot be undone.">
+                Delete
+              </button>
+            </div>
+          }
+        </div>
+        <div style="display:flex;gap:.75rem;">
+          <button type="button" onclick="closeJobModal()" class="oc-btn-secondary">Cancel</button>
+          <button type="submit" form="job-form" class="oc-btn-primary">@(Model.Job.Id==0?"Schedule":"Update")</button>
+        </div>
+      </footer>
+    </form>
+  </div>
 </div>
 
-<!-- Visual polish: modern, consistent UI styling for the scheduler add job modal -->
 <style>
-    :root{
-        --oc-bg:#ffffff;
-        --oc-muted:#f3f4f6; /* gray-100 */
-        --oc-soft:#f8fafc;  /* slate-50 */
-        --oc-border:#e5e7eb; /* gray-200 */
-        --oc-text:#111827; /* gray-900 */
-        --oc-sub:#6b7280;  /* gray-500 */
-        --oc-primary:#3b82f6; /* blue-500 */
-        --oc-primary-600:#2563eb; /* blue-600 */
-        --oc-success:#10b981; /* emerald-500 */
-        --oc-warning:#f59e0b; /* amber-500 */
-    }
-
-    /* Backdrop and card */
-    .modal-backdrop{ background: radial-gradient(1200px 600px at 20% -10%, rgba(59,130,246,.20), transparent),
-                                      radial-gradient(1000px 500px at 100% 0%, rgba(16,185,129,.18), transparent),
-                                      rgba(17,24,39,.76) !important; }
-    .opcentrix-card{ border:1px solid var(--oc-border) !important; border-radius:16px !important; overflow:hidden; }
-
-    /* Header */
-    .modal-header{ padding: 1.75rem 2rem 1rem 2rem !important; border-bottom:1px solid var(--oc-border) !important;
-        background: linear-gradient(135deg, var(--oc-soft) 0%, #eef2ff 100%) !important; }
-    .modal-header h2{ font-size: 1.8rem; font-weight: 800; color: var(--oc-text); letter-spacing:.2px; }
-    .modal-header p{ color: var(--oc-sub); }
-
-    /* Section header */
-    .section-header{ border-bottom:1px solid var(--oc-border) !important; padding-bottom:.6rem !important; margin-bottom:1rem !important; }
-    .section-header h3{ margin:0; font-size:1.05rem; font-weight:700; color:#0f172a; }
-    .section-header > div:first-child{ box-shadow: 0 6px 18px rgba(16,185,129,.25); }
-
-    /* Inputs */
-    .form-group label{ font-weight:600; color:#1f2937; }
-    .form-group input,
-    .form-group select,
-    .form-group textarea{ border:1.5px solid var(--oc-border) !important; border-radius:10px !important; background:var(--oc-bg) !important; 
-        transition: border-color .2s ease, box-shadow .2s ease; font-size:.9rem; }
-    .form-group input:hover,
-    .form-group select:hover,
-    .form-group textarea:hover{ border-color:#cbd5e1 !important; }
-    .form-group input:focus,
-    .form-group select:focus,
-    .form-group textarea:focus{ outline:none !important; border-color: var(--oc-primary) !important;
-        box-shadow: 0 0 0 4px rgba(59,130,246,.12) !important; }
-
-    /* Stacking chips */
-    #stacking-section{ background: #f8fafc; border: 1px dashed var(--oc-border); border-radius: 12px; padding: .85rem; }
-    .chip{ display:inline-flex; align-items:center; gap:.5rem; border:1.5px solid var(--oc-border); border-radius:9999px; padding:.45rem .75rem; 
-        background:#fff; color:#0f172a; font-weight:600; box-shadow:0 1px 1px rgba(0,0,0,.02); transition: all .15s ease; }
-    .chip:hover{ border-color:#c7d2fe; background:#f8fafc; }
-    .chip-active{ background:#eef2ff !important; border-color:#6366f1 !important; box-shadow:0 3px 10px rgba(99,102,241,.15); }
-    .chip[data-disabled="true"]{ opacity:.5; cursor:not-allowed; }
-    .badge{ display:inline-block; padding:0.15rem .5rem; border-radius:9999px; font-size:.72rem; font-weight:700; color:#1e3a8a; background:#eef2ff; }
-
-    /* Footer */
-    .modal-footer{ border-top:1px solid var(--oc-border) !important; background: #fafafa !important; }
-    #submit-job-btn{ background: var(--oc-primary) !important; }
-    #submit-job-btn:hover{ background: var(--oc-primary-600) !important; }
-    
-    /* Helpers */
-    small{ color: var(--oc-sub) !important; }
+.oc-label{display:block;font-size:.65rem;font-weight:600;color:#334155;margin:0 0 .25rem;letter-spacing:.5px;text-transform:uppercase;}
+.oc-input{width:100%;padding:.55rem .65rem;border:1.5px solid #cbd5e1;border-radius:8px;font-size:.8rem;background:#fff;transition:.15s;border-color:#cbd5e1;}
+.oc-input:focus{outline:none;border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.25);} 
+.stack-chip{background:#f1f5f9;border:1px solid #cbd5e1;border-radius:9999px;padding:.35rem .7rem;font-size:.65rem;font-weight:600;color:#334155;cursor:pointer;display:flex;align-items:center;gap:.35rem;transition:.15s;position:relative;} 
+.stack-chip[disabled]{opacity:.35;cursor:not-allowed;} 
+.stack-chip.active{background:#6366f1;color:#fff;border-color:#6366f1;box-shadow:0 2px 6px -1px rgba(99,102,241,.5);} 
+.stack-chip.recommended:not(.active){border-color:#6366f1;background:#eef2ff;color:#3730a3;} 
+.stack-chip.recommended:not(.active)::after{content:'★';font-size:.55rem;color:#6366f1;position:absolute;top:-4px;right:-4px;background:#fff;border:1px solid #6366f1;border-radius:50%;padding:2px;}
+.panel-title{margin:.25rem 0 .75rem;font-size:.7rem;font-weight:700;color:#334155;letter-spacing:.6px;text-transform:uppercase;} 
+.oc-btn-primary{background:#2563eb;color:#fff;border:none;padding:.55rem 1.1rem;font-size:.75rem;font-weight:600;border-radius:8px;cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,.15);} 
+.oc-btn-primary:hover{background:#1d4ed8;} 
+.oc-btn-secondary{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;padding:.55rem 1.1rem;font-size:.75rem;font-weight:600;border-radius:8px;cursor:pointer;} 
+.oc-btn-secondary:hover{background:#e2e8f0;} 
+.oc-btn-danger{background:#dc2626;color:#fff;border:none;padding:.45rem .9rem;font-size:.7rem;font-weight:600;border-radius:8px;cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,.15);} 
+.oc-btn-danger:hover{background:#b91c1c;} 
 </style>
-
-<script>
-  // Minimal inline bootstrap: rely on external job-form module
-  (function(){
-     // Ensure module loaded; if not, queue bootstrap after load
-     function boot(){ if(window.OpCentrixScheduler && OpCentrixScheduler.bootstrapModal){ OpCentrixScheduler.bootstrapModal(); } }
-     if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot); else boot();
-  })();
-</script>

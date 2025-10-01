@@ -1,14 +1,17 @@
-// OpCentrix Scheduler Job Form JS (externalized)
-// Ensures modal functions work when content is injected via HTMX
+// Unified OpCentrix Scheduler Job Form Logic
 (function(){
   window.OpCentrixScheduler = window.OpCentrixScheduler || {};
+  const LOG = '[JobFormUnified]';
+  let globalObserver = null;
 
-  // Fallback close modal
   if (typeof window.closeJobModal !== 'function') {
-    window.closeJobModal = function(){ const c=document.getElementById('modal-container'); if(c){ c.classList.add('hidden'); c.style.display='none'; c.innerHTML=''; } document.body.style.overflow=''; };
+    window.closeJobModal = function(){
+      const c=document.getElementById('modal-container');
+      if(c){ c.classList.add('hidden'); c.style.display='none'; c.innerHTML=''; }
+      document.body.style.overflow='';
+    };
   }
 
-  // Delete job (POST with antiforgery)
   OpCentrixScheduler.deleteJobWithToken = function(jobId){
     if(!jobId) return;
     if(!confirm('Are you sure you want to delete this job? This action cannot be undone.')) return;
@@ -26,185 +29,48 @@
     }).catch(()=>{ alert('Error deleting job'); });
   };
 
-  // Core handler
-  const Handler = {
-    init(){
-      const form = document.getElementById('job-form');
-      if(!form) return; // nothing to init
-      if(form.dataset.bound === 'true') return; // prevent duplicate init
-      form.dataset.bound = 'true';
-      this.updateDurationDisplay();
-      this.setupEventListeners();
-      const partSelect = document.getElementById('part-select');
-      if (partSelect && partSelect.value) { this.updateJobFromPart(); } else { this.refreshStackingUI(null); }
-    },
-    setupEventListeners(){
-      const partSelect = document.getElementById('part-select');
-      const quantityInput = document.getElementById('quantity-input');
-      const startInput = document.getElementById('start-input');
-      const endInput = document.getElementById('end-input');
-      if (partSelect) partSelect.addEventListener('change', ()=>this.updateJobFromPart());
-      if (quantityInput) quantityInput.addEventListener('change', ()=>this.updateEndTimeFromQuantity());
-      if (startInput) startInput.addEventListener('change', ()=>this.updateEndTimeFromStart());
-      if (endInput) endInput.addEventListener('change', ()=>{ this.updateDurationDisplay(); this.checkTimeSlotAvailability(); this.handleDurationChange(); });
-      document.querySelectorAll('input[name="stackOption"]').forEach(r=> r.addEventListener('change', ()=>this.onStackChange()));
-      this.bindChipClicks();
-    },
-    bindChipClicks(){
-      ['stack-single','stack-double','stack-triple'].forEach(id=>{
-        const chip = document.getElementById(id); if(!chip || chip.dataset.bound==='true') return; chip.dataset.bound='true';
-        const radio = chip.querySelector('input[type="radio"]');
-        const activate = (evt)=>{ if(chip.dataset.disabled==='true'||!radio||radio.disabled) return; if(!radio.checked){ radio.checked=true; radio.dispatchEvent(new Event('change',{bubbles:true})); } else { this.onStackChange(); } };
-        chip.addEventListener('pointerdown', activate);
-        chip.addEventListener('click', activate);
-        chip.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' ') activate(e); });
-      });
-    },
-    onStackChange(){
-      const selected = this.getSelectedStack();
-      if(selected){ const qty=document.getElementById('quantity-input'); if(qty) qty.value=String(selected); }
-      const dur = this.getSelectedStackDuration();
-      if(!isNaN(dur)){ const h=document.getElementById('hidden-estimated-hours'); if(h) h.value=dur.toFixed(2); }
-      this.updateEndTimeFromStart();
-      this.highlightActiveStackChip();
-    },
-    getSelectedStack(){ const r=document.querySelector('input[name="stackOption"]:checked'); return r?parseInt(r.value):null; },
-    getSelectedStackDuration(){
-      const partSelect = document.getElementById('part-select');
-      const opt = partSelect && partSelect.selectedIndex>=0 ? partSelect.options[partSelect.selectedIndex] : null; if(!opt) return NaN;
-      const s=this.getSelectedStack();
-      if(s===1) return parseFloat(opt.getAttribute('data-single-hours'));
-      if(s===2) return parseFloat(opt.getAttribute('data-double-hours'));
-      if(s===3) return parseFloat(opt.getAttribute('data-triple-hours'));
-      return NaN;
-    },
-    refreshStackingUI(selectedOption){
-      const section = document.getElementById('stacking-section'); const partSelect=document.getElementById('part-select');
-      const opt = selectedOption || (partSelect && partSelect.selectedIndex>=0 ? partSelect.options[partSelect.selectedIndex] : null);
-      if(!section || !opt){ if(section) section.style.display='none'; return; }
-      const allow = opt.getAttribute('data-allow-stacking')==='true';
-      const single=parseFloat(opt.getAttribute('data-single-hours'));
-      const dbl=parseFloat(opt.getAttribute('data-double-hours'));
-      const tpl=parseFloat(opt.getAttribute('data-triple-hours'));
-      const setText=(id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=isNaN(val)?'-- h':`${val.toFixed(2)}h`; };
-      const setEnabled=(chipId,radioSel,enabled)=>{ const chip=document.getElementById(chipId); const r=chip?chip.querySelector('input'):null; if(!chip||!r) return; chip.dataset.disabled = enabled?'false':'true'; r.disabled = !enabled; chip.style.opacity = enabled?'1':'0.5'; };
-      if(!allow){ section.style.display='none'; const est=parseFloat(opt.getAttribute('data-estimated-hours')); const h=document.getElementById('hidden-estimated-hours'); if(!isNaN(est)&&h) h.value=est.toFixed(2); this.highlightActiveStackChip(); return; }
-      section.style.display='';
-      setText('badge-single',single); setText('badge-double',dbl); setText('badge-triple',tpl);
-      setEnabled('stack-single','input[value="1"]',!isNaN(single));
-      setEnabled('stack-double','input[value="2"]',!isNaN(dbl));
-      setEnabled('stack-triple','input[value="3"]',!isNaN(tpl));
-      const r1=document.querySelector('input[name="stackOption"][value="1"]');
-      const r2=document.querySelector('input[name="stackOption"][value="2"]');
-      const r3=document.querySelector('input[name="stackOption"][value="3"]');
-      if(!isNaN(tpl) && r3){ r3.checked=true; }
-      else if(!isNaN(dbl) && r2){ r2.checked=true; }
-      else if(!isNaN(single) && r1){ r1.checked=true; }
-      else { section.style.display='none'; }
-      this.onStackChange();
-      this.bindChipClicks();
-      this.autoSelectBestStack().catch(()=>{});
-    },
-    highlightActiveStackChip(){
-      ['stack-single','stack-double','stack-triple'].forEach(id=>{ const el=document.getElementById(id); if(!el) return; const r=el.querySelector('input'); if(r&&r.checked){ el.classList.add('chip-active'); el.setAttribute('aria-pressed','true'); } else { el.classList.remove('chip-active'); el.setAttribute('aria-pressed','false'); }})
-    },
-    updateJobFromPart(){
-      const partSelect=document.getElementById('part-select'); const opt=partSelect?.options[partSelect.selectedIndex]; if(!opt){ this.refreshStackingUI(null); return; }
-      const pn=document.getElementById('hidden-part-number'); if(pn) pn.value = opt.getAttribute('data-part-number')||'';
-      const slsMaterial = opt.getAttribute('data-sls-material'); const materialSelect=document.getElementById('sls-material'); if(materialSelect&&slsMaterial){ materialSelect.value=slsMaterial; }
-      this.updateProcessParameters(opt);
-      this.refreshStackingUI(opt);
-      this.autoSelectBestStack().catch(()=>{});
-    },
-    updateProcessParameters(opt){
-      const setVal=(id,attr,fmt)=>{ const v=opt.getAttribute(attr); const el=document.getElementById(id); if(el&&v){ el.value = fmt? fmt(v): v; }};
-      setVal('laser-power','data-laser-power');
-      setVal('scan-speed','data-scan-speed');
-      setVal('layer-thickness','data-layer-thickness');
-      setVal('hatch-spacing','data-hatch-spacing');
-      setVal('build-temperature','data-build-temperature');
-      setVal('powder-usage','data-powder-usage', (x)=>parseFloat(x).toFixed(2));
-    },
-    filterPartsByMachine(){ /* currently no filter */ },
-    updateEndTimeFromStart(){
-      const start=document.getElementById('start-input'); const end=document.getElementById('end-input'); const hidden=document.getElementById('hidden-estimated-hours'); if(!start||!end) return;
-      const st=new Date(start.value); if(isNaN(st.getTime())) return; let hours=this.getSelectedStackDuration(); if(isNaN(hours)) hours=parseFloat(hidden?.value); if(isNaN(hours)||hours<=0) hours=8;
-      const et=new Date(st.getTime() + hours*3600000); end.value = et.toISOString().slice(0,16); if(hidden) hidden.value=hours.toFixed(2); this.updateDurationDisplay();
-    },
-    updateEndTimeFromQuantity(){
-      const qty=parseInt((document.getElementById('quantity-input')||{}).value||'0'); if(qty>=1&&qty<=3){ const r=document.querySelector(`input[name="stackOption"][value="${qty}"]`); if(r && !r.checked && !r.disabled){ r.checked=true; this.onStackChange(); return; }} this.updateEndTimeFromStart();
-    },
-    updateDurationDisplay(){
-      const s=document.getElementById('start-input'); const e=document.getElementById('end-input'); const d=document.getElementById('duration-display'); if(!s||!e||!d) return;
-      const st=new Date(s.value); const et=new Date(e.value); if(isNaN(st.getTime())||isNaN(et.getTime())) { d.textContent='Invalid dates'; return; }
-      const hours=(et-st)/3600000; const hidden=document.getElementById('hidden-duration-hours'); if(hidden) hidden.value=hours.toFixed(2);
-      d.textContent = hours>=24 ? `${Math.floor(hours/24)}d ${(hours%24).toFixed(1)}h` : `${hours.toFixed(1)} hours`;
-      d.style.color='#374151';
-    },
-    checkTimeSlotAvailability(){ /* server check could be added later */ },
-    handleDurationChange(){},
-    suggestNextAvailableTime(){
-      const machine=document.getElementById('machine-select'); const start=document.getElementById('start-input'); const dur=parseFloat((document.getElementById('hidden-duration-hours')||{}).value)||8.0; if(!machine?.value){ alert('Please select a machine first'); return; }
-      fetch(`/Scheduler?handler=SuggestNextTime&machineId=${encodeURIComponent(machine.value)}&durationHours=${dur}`)
-        .then(r=>r.json()).then(data=>{ if(data?.success && data.startTime){ start.value=data.startTime; const end=document.getElementById('end-input'); if(end&&data.endTime) end.value=data.endTime; this.updateDurationDisplay(); } })
-        .catch(()=>{ const t=new Date(); t.setDate(t.getDate()+1); t.setHours(8,0,0,0); start.value=t.toISOString().slice(0,16); this.updateEndTimeFromStart(); });
-    },
-    showFormLoading(){ const btn=document.getElementById('submit-job-btn'); const txt=document.getElementById('submit-text'); const sp=document.getElementById('submit-spinner'); if(btn) { btn.disabled=true; btn.style.opacity='0.7'; } if(txt) txt.textContent='Saving...'; if(sp) sp.style.display='inline-block'; },
-    hideFormLoading(){ const btn=document.getElementById('submit-job-btn'); const txt=document.getElementById('submit-text'); const sp=document.getElementById('submit-spinner'); if(btn){ btn.disabled=false; btn.style.opacity='1'; } if(txt){ txt.textContent=txt.getAttribute('data-original-text')||txt.textContent; } if(sp) sp.style.display='none'; },
-    handleFormResponse(event){ this.hideFormLoading(); if(event?.detail?.xhr?.status===200){ if(window.closeJobModal) window.closeJobModal(); if(window.showSuccessNotification) window.showSuccessNotification('Job saved successfully!'); setTimeout(()=>window.location.reload(), 600);} },
-    async autoSelectBestStack(){
-      const machine=document.getElementById('machine-select'); const part=document.getElementById('part-select'); const section=document.getElementById('stacking-section'); if(!machine?.value||!part?.value||section?.style.display==='none') return;
-      const opt = part.options[part.selectedIndex];
-      const arr=[ {stack:1,hours:parseFloat(opt.getAttribute('data-single-hours')), r:document.querySelector('input[name="stackOption"][value="1"]')}, {stack:2,hours:parseFloat(opt.getAttribute('data-double-hours')), r:document.querySelector('input[name="stackOption"][value="2"]')}, {stack:3,hours:parseFloat(opt.getAttribute('data-triple-hours')), r:document.querySelector('input[name="stackOption"][value="3"]')} ].filter(x=>!isNaN(x.hours)&&x.r && !x.r.disabled);
-      if(arr.length===0) return;
-      const results = await Promise.all(arr.map(async a=>{ try{ const resp=await fetch(`/Scheduler?handler=SuggestNextTime&machineId=${encodeURIComponent(machine.value)}&durationHours=${a.hours}`); const j=await resp.json(); return {ok:!!j?.success, end:j?.endTime, start:j?.startTime, a}; } catch{ return {ok:false, a}; } }));
-      let best=null; for(const r of results){ if(r.ok && r.end){ const score=Date.parse(r.end); if(!best||score<best.score) best={r,score}; } }
-      if(!best){ arr.sort((x,y)=>x.hours-y.hours); if(!arr[0].r.checked) arr[0].r.checked=true; this.onStackChange(); return; }
-      if(!best.r.a.r.checked) best.r.a.r.checked=true; this.onStackChange(); const hint=document.getElementById('stacking-hint'); if(hint && best.r.start && best.r.end){ const label=best.r.a.stack===1?'Single':best.r.a.stack===2?'Double':'Triple'; hint.textContent=`Auto-selected: ${label} (${best.r.a.hours.toFixed(2)}h) to fit shift window: ${best.r.start} ? ${best.r.end}`; }
-    }
-  };
+  function ensureHidden(form, id, name){
+    let el = form.querySelector(`#${id}`);
+    if(!el){ el=document.createElement('input'); el.type='hidden'; el.id=id; el.name=name||id; form.appendChild(el);} else if(name && el.name!==name){ el.name=name; }
+    return el;
+  }
+  function findJobForm(root){ if(!root) root=document; if(root.tagName==='FORM' && root.id==='job-form') return root; if(root.querySelector){ const f=root.querySelector('#job-form'); if(f) return f;} return document.getElementById('job-form'); }
+  function installGlobalObserver(){ if(globalObserver) return; const container=document.getElementById('modal-container')||document.body; globalObserver=new MutationObserver(muts=>{ muts.forEach(m=> m.addedNodes.forEach(n=>{ if(n.nodeType===1){ const f=findJobForm(n); if(f && f.dataset.ocInit!=='1'){ console.log(LOG,'Observer detected new form, initializing'); OpCentrixScheduler.initializeAddJobModal(f); }}}));}); globalObserver.observe(container,{childList:true,subtree:true}); console.log(LOG,'Global observer installed'); }
 
-  // Namespace mappings
-  OpCentrixScheduler.bootstrapModal = function(){ try { Handler.init(); } catch(e){ console.warn('bootstrapModal failed', e); } };
-  OpCentrixScheduler.updateJobFromPart = ()=>Handler.updateJobFromPart();
-  OpCentrixScheduler.filterPartsByMachine = ()=>Handler.filterPartsByMachine();
-  OpCentrixScheduler.updateEndTimeFromStart = ()=>Handler.updateEndTimeFromStart();
-  OpCentrixScheduler.updateEndTimeFromQuantity = ()=>Handler.updateEndTimeFromQuantity();
-  OpCentrixScheduler.updateDurationDisplay = ()=>Handler.updateDurationDisplay();
-  OpCentrixScheduler.checkTimeSlotAvailability = ()=>Handler.checkTimeSlotAvailability();
-  OpCentrixScheduler.handleDurationChange = ()=>Handler.handleDurationChange();
-  OpCentrixScheduler.suggestNextAvailableTime = ()=>Handler.suggestNextAvailableTime();
-  OpCentrixScheduler.showFormLoading = ()=>Handler.showFormLoading();
-  OpCentrixScheduler.hideFormLoading = ()=>Handler.hideFormLoading();
-  OpCentrixScheduler.handleFormResponse = (e)=>Handler.handleFormResponse(e);
+  class JobFormHandler {
+    constructor(form){ this.form=form; this.state={manualQtyChange:false,hiddenStackLevel:null}; this.elements={}; form.__handlerInstance=this; }
+    initialize(){ this.cacheElements(); this.wireEvents(); this.applyMachineMode(); this.checkPreSelectedMasterPart(); this.rehydrateFromHiddenFields(); this.recommendStackLevel(); this.updateStackSummary(); this.patchSubmit(); }
+    cacheElements(){ const f=this.form; this.elements={ qtyInput:f.querySelector('input[name="Quantity"]'), machineSelect:f.querySelector('#machine-select'), masterPartSelect:f.querySelector('#masterpart-select'), partSelect:null, startInput:f.querySelector('#start-input'), endInput:f.querySelector('#end-input'), durationDisplay:f.querySelector('#duration-display'), stackingSection:f.querySelector('#stacking-section'), stackChips:f.querySelectorAll('.stack-chip'), stackRecommend:f.querySelector('#stack-recommend'), stackSummary:f.querySelector('#stack-summary'), stackOverrideBanner:f.querySelector('#stack-override-banner'), hiddenFields:{ masterPartId:f.querySelector('#hidden-master-part-id'), stackLevel:f.querySelector('#hidden-stack-level'), partsPerBuild:f.querySelector('#hidden-parts-per-build'), stackDuration:f.querySelector('#hidden-stack-duration'), partId:f.querySelector('#hidden-part-id'), partNumber:f.querySelector('#hidden-part-number'), suggestedStackLevel:f.querySelector('#hidden-suggested-stack-level') } }; this.state.hiddenStackLevel=this.elements.hiddenFields.stackLevel?.value||null; }
+    wireEvents(){ const {machineSelect,masterPartSelect,startInput,stackChips,qtyInput}=this.elements; if(machineSelect) machineSelect.addEventListener('change',()=>{ this.applyMachineMode(); this.recommendStackLevel(); }); if(masterPartSelect) masterPartSelect.addEventListener('change',()=>{ this.handleMasterPartChange(); }); if(startInput) startInput.addEventListener('change',()=>{ this.recommendStackLevel(); }); stackChips.forEach(ch=> ch.addEventListener('click',()=> this.selectStack(ch))); if(qtyInput) qtyInput.addEventListener('input',()=>{ this.state.manualQtyChange=true; this.updateStackSummary(); }); }
+    patchSubmit(){ this.form.addEventListener('submit', (e)=>{ try{ this.ensurePartBinding(); }catch(err){ console.warn(LOG,'submit ensure binding failed', err); } const mpSel=this.elements.masterPartSelect; if(!mpSel || !mpSel.value){ e.preventDefault(); alert('Master Part is required.'); return false;} }, {capture:true}); }
+    ensurePartBinding(){ const { masterPartSelect, hiddenFields } = this.elements; if(masterPartSelect && masterPartSelect.value){ const opt=masterPartSelect.options[masterPartSelect.selectedIndex]; if(opt){ const pn=opt.getAttribute('data-part-number')||opt.textContent.trim(); if(hiddenFields.partNumber) hiddenFields.partNumber.value=pn||''; const legacyId=opt.getAttribute('data-legacy-id'); if(hiddenFields.partId){ hiddenFields.partId.value = legacyId && legacyId!=='' ? legacyId : (hiddenFields.partId.value||'0'); } if(hiddenFields.partNumber && hiddenFields.partNumber.value && !/^\d{2}-\d{4}$/.test(hiddenFields.partNumber.value)){ const digits=hiddenFields.partNumber.value.replace(/[^0-9]/g,''); if(digits.length===6) hiddenFields.partNumber.value=digits.substring(0,2)+'-'+digits.substring(2); } } } }
+    checkPreSelectedMasterPart(){ const {masterPartSelect}=this.elements; if(masterPartSelect && masterPartSelect.value) this.handleMasterPartChange(); }
+    rehydrateFromHiddenFields(){ const {hiddenFields}=this.elements; if(hiddenFields.masterPartId?.value){ const {masterPartSelect}=this.elements; if(masterPartSelect){ const opt=masterPartSelect.querySelector(`option[value="${hiddenFields.masterPartId.value}"]`); if(opt){ opt.selected=true; this.handleMasterPartChange(); }}} if(this.state.hiddenStackLevel){ const chip=this.form.querySelector(`.stack-chip[data-level="${this.state.hiddenStackLevel}"]`); if(chip) this.selectStack(chip); } }
+    applyMachineMode(){ const {machineSelect}=this.elements; const id=(machineSelect?.value||'').trim(); const isSLS=/(TI|INC|SLS|TRU|TRUPRINT|PRINT|ADD)/i.test(id); const slsPanel=this.form.querySelector('#sls-params'); const cncPanel=this.form.querySelector('#cnc-params'); if(slsPanel) slsPanel.style.display=isSLS?'block':'none'; if(cncPanel) cncPanel.style.display=(!isSLS && id)?'block':'none'; if(!isSLS) this.hideStacking(); }
+    handleMasterPartChange(){ const { masterPartSelect, hiddenFields }=this.elements; if(!masterPartSelect || !masterPartSelect.value){ this.hideStacking(); return; } const option=masterPartSelect.options[masterPartSelect.selectedIndex]; if(!option) return; const pd=this.extractPartData(option); if(pd.legacyId && hiddenFields.partId) hiddenFields.partId.value=pd.legacyId; if(pd.partNumber && hiddenFields.partNumber) hiddenFields.partNumber.value=pd.partNumber; if(this.shouldShowStacking(pd)) this.showStacking(pd); else this.hideStacking(); this.recommendStackLevel(); this.updateStackSummary(); this.ensurePartBinding(); this.applyMachineMode(); }
+    extractPartData(o){ return { allowStacking:o.getAttribute('data-allow-stacking')==='true', singleHours:parseFloat(o.getAttribute('data-single-hours'))||parseFloat(o.getAttribute('data-stage-single'))||null, doubleHours:parseFloat(o.getAttribute('data-double-hours'))||null, tripleHours:parseFloat(o.getAttribute('data-triple-hours'))||null, enableDouble:o.getAttribute('data-enable-double')==='true', enableTriple:o.getAttribute('data-enable-triple')==='true', partsSingle:parseInt(o.getAttribute('data-parts-single'))||1, partsDouble:parseInt(o.getAttribute('data-parts-double'))||null, partsTriple:parseInt(o.getAttribute('data-parts-triple'))||null, legacyId:o.getAttribute('data-legacy-id'), partNumber:o.getAttribute('data-part-number')||o.textContent.trim() }; }
+    shouldShowStacking(pd){ return pd.allowStacking||pd.singleHours||pd.doubleHours||pd.tripleHours; }
+    showStacking(pd){ const {stackingSection,stackChips}=this.elements; if(stackingSection) stackingSection.style.display='block'; const map={single:pd.singleHours,double:pd.doubleHours,triple:pd.tripleHours}; this.form.querySelectorAll('#stacking-section .h').forEach(span=>{ const key=span.getAttribute('data-h'); const val=map[key]; span.textContent=val?val.toFixed(2)+'h':'--'; }); stackChips.forEach(ch=>{ const lvl=ch.getAttribute('data-level'); if(lvl==='1') ch.removeAttribute('disabled'); else if(lvl==='2') (pd.enableDouble && pd.doubleHours)? ch.removeAttribute('disabled') : ch.setAttribute('disabled','disabled'); else if(lvl==='3') (pd.enableTriple && pd.tripleHours)? ch.removeAttribute('disabled') : ch.setAttribute('disabled','disabled'); }); const existing=this.state.hiddenStackLevel; if(existing){ const existingChip=this.form.querySelector(`.stack-chip[data-level="${existing}"]`); if(existingChip && !existingChip.hasAttribute('disabled')) this.selectStack(existingChip); } else if(pd.singleHours){ const singleChip=this.form.querySelector('.stack-chip[data-level="1"]'); if(singleChip) this.selectStack(singleChip); } }
+    hideStacking(){ const {stackingSection}=this.elements; if(stackingSection) stackingSection.style.display='none'; }
+    selectStack(chip){ if(chip.hasAttribute('disabled')) return; const { stackChips, hiddenFields, startInput, endInput, durationDisplay }=this.elements; stackChips.forEach(c=>c.classList.remove('active')); chip.classList.add('active'); const level=chip.getAttribute('data-level'); if(hiddenFields.stackLevel) hiddenFields.stackLevel.value=level; const hourSpan=chip.querySelector('.h'); if(hourSpan){ const hoursText=hourSpan.textContent.trim(); const hours=parseFloat(hoursText.replace('h','').trim())||null; if(hours && startInput?.value && endInput){ const startDate=new Date(startInput.value); if(!isNaN(startDate.getTime())){ const endDate=new Date(startDate.getTime()+hours*3600*1000); endInput.value=this.toLocalDateTimeValue(endDate); if(durationDisplay) durationDisplay.textContent=hours.toFixed(1)+' h'; if(hiddenFields.stackDuration) hiddenFields.stackDuration.value=hours.toString(); } } } this.updatePartsPerBuild(level); this.syncQuantityIfNeeded(); this.showOverrideBanner(level); this.updateStackSummary(); this.ensurePartBinding(); }
+    updatePartsPerBuild(level){ const { masterPartSelect, hiddenFields }=this.elements; if(!masterPartSelect) return; const opt=masterPartSelect.options[masterPartSelect.selectedIndex]; if(!opt) return; let ppb=null; if(level==='1') ppb=opt.getAttribute('data-parts-single'); else if(level==='2') ppb=opt.getAttribute('data-parts-double'); else if(level==='3') ppb=opt.getAttribute('data-parts-triple'); if(hiddenFields.partsPerBuild) hiddenFields.partsPerBuild.value=(ppb && ppb!=='0')? ppb:''; }
+    syncQuantityIfNeeded(){ if(this.state.manualQtyChange) return; const { qtyInput, masterPartSelect, hiddenFields }=this.elements; if(!qtyInput || !masterPartSelect || !hiddenFields.stackLevel?.value) return; const opt=masterPartSelect.options[masterPartSelect.selectedIndex]; if(!opt) return; const lvl=hiddenFields.stackLevel.value; const attr=lvl==='1'? 'data-parts-single': lvl==='2'? 'data-parts-double':'data-parts-triple'; const partsPerBuild=parseInt(opt.getAttribute(attr))||null; if(partsPerBuild>0) qtyInput.value=partsPerBuild; }
+    showOverrideBanner(level){ const { stackOverrideBanner, hiddenFields }=this.elements; if(!stackOverrideBanner) return; const suggested=hiddenFields.suggestedStackLevel?.value; stackOverrideBanner.style.display=(suggested && suggested!==level)?'block':'none'; }
+    recommendStackLevel(){ this.clearRecommendations(); const { startInput, stackChips, stackRecommend, hiddenFields }=this.elements; if(!startInput?.value) return; const startDate=new Date(startInput.value); if(isNaN(startDate.getTime())) return; const hour=startDate.getHours(); const shiftEnd=new Date(startDate); if(hour>=6 && hour<14) shiftEnd.setHours(14,0,0,0); else if(hour>=14 && hour<22) shiftEnd.setHours(22,0,0,0); else { if(hour>=22){ shiftEnd.setDate(shiftEnd.getDate()+1); shiftEnd.setHours(6,0,0,0);} else shiftEnd.setHours(6,0,0,0);} const remainingHours=(shiftEnd-startDate)/(3600*1000); const variants=Array.from(stackChips).filter(c=>!c.hasAttribute('disabled')).map(ch=>{ const lvl=parseInt(ch.getAttribute('data-level')); const hSp=ch.querySelector('.h'); const txt=hSp? hSp.textContent.trim():''; const hrs=parseFloat(txt.replace('h','').trim())||null; return {chip:ch,level:lvl,hours:hrs};}).filter(v=>v.hours); if(!variants.length) return; const fitting=variants.filter(v=>v.hours<=remainingHours).sort((a,b)=> b.level-a.level || a.hours-b.hours); const rec=fitting.length? fitting[0]: variants.sort((a,b)=> a.hours-b.hours)[0]; if(rec){ rec.chip.classList.add('recommended'); if(stackRecommend) stackRecommend.textContent=`Recommended: ${rec.level}x (shift ${remainingHours.toFixed(1)}h left)`; if(hiddenFields.suggestedStackLevel) hiddenFields.suggestedStackLevel.value=rec.level.toString(); if(!this.form.querySelector('.stack-chip.active')) this.selectStack(rec.chip); } }
+    clearRecommendations(){ const { stackRecommend, hiddenFields, stackChips }=this.elements; if(stackRecommend) stackRecommend.textContent=''; if(hiddenFields.suggestedStackLevel) hiddenFields.suggestedStackLevel.value=''; stackChips.forEach(c=>c.classList.remove('recommended')); }
+    updateStackSummary(){ const { stackSummary, hiddenFields, qtyInput }=this.elements; if(!stackSummary) return; const lvl=hiddenFields.stackLevel?.value; const ppb=hiddenFields.partsPerBuild?.value; const qty=qtyInput? parseInt(qtyInput.value)||0:0; if(lvl && qty>0){ stackSummary.style.display='block'; const lEl=stackSummary.querySelector('#stack-summary-level'); const pEl=stackSummary.querySelector('#stack-summary-ppb'); const tEl=stackSummary.querySelector('#stack-summary-total'); if(lEl) lEl.textContent=lvl+'x'; if(pEl) pEl.textContent=ppb||'-'; if(tEl) tEl.textContent=qty.toString(); } else stackSummary.style.display='none'; }
+    toLocalDateTimeValue(d){ const pad=n=> n<10?'0'+n:n; return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+  }
 
-  // Legacy globals for old inline calls
+  OpCentrixScheduler.initializeAddJobModal = function(root){ try { const form=findJobForm(root); if(!form){ installGlobalObserver(); return; } if(form.dataset.ocInit==='1') return; form.dataset.ocInit='1'; ensureHidden(form,'hidden-part-id','PartId'); ensureHidden(form,'hidden-stack-level','StackLevel'); ensureHidden(form,'hidden-parts-per-build','PartsPerBuild'); ensureHidden(form,'hidden-stack-duration','PlannedStackDurationHours'); ensureHidden(form,'hidden-part-number','PartNumber'); ensureHidden(form,'hidden-suggested-stack-level','SuggestedStackLevel'); const handler=new JobFormHandler(form); handler.initialize(); console.log(LOG,'Initialization complete (submit mode)'); } catch(err){ console.error(LOG,'Initialization error', err); } };
+
   window.deleteJobWithToken = OpCentrixScheduler.deleteJobWithToken;
   window.deleteJob = OpCentrixScheduler.deleteJobWithToken;
-  window.updateJobFromPart = OpCentrixScheduler.updateJobFromPart;
-  window.filterPartsByMachine = OpCentrixScheduler.filterPartsByMachine;
-  window.updateEndTimeFromStart = OpCentrixScheduler.updateEndTimeFromStart;
-  window.updateEndTimeFromQuantity = OpCentrixScheduler.updateEndTimeFromQuantity;
-  window.updateDurationDisplay = OpCentrixScheduler.updateDurationDisplay;
-  window.checkTimeSlotAvailability = OpCentrixScheduler.checkTimeSlotAvailability;
-  window.handleDurationChange = OpCentrixScheduler.handleDurationChange;
-  window.suggestNextAvailableTime = OpCentrixScheduler.suggestNextAvailableTime;
-  window.showFormLoading = OpCentrixScheduler.showFormLoading;
-  window.hideFormLoading = OpCentrixScheduler.hideFormLoading;
-  window.handleFormResponse = OpCentrixScheduler.handleFormResponse;
-  window.handleJobFormResponse = OpCentrixScheduler.handleFormResponse;
-  window.handleJobFormError = function(e){ console.error('[JOB-FORM] HTMX error', e); Handler.hideFormLoading(); if(window.showErrorNotification) window.showErrorNotification('Error saving job. Please try again.'); };
 
-  // Init hooks
-  function tryBootstrapNow(){ if(document.getElementById('job-form')) OpCentrixScheduler.bootstrapModal(); }
+  document.body.addEventListener('htmx:afterSwap', function(e){ if(e.detail && e.detail.target && e.detail.target.id === 'modal-container'){ const form=e.detail.target.querySelector('#job-form'); if(form) OpCentrixScheduler.initializeAddJobModal(form); const mc=document.getElementById('modal-container'); if(mc){ mc.style.display='flex'; mc.classList.remove('hidden'); document.body.style.overflow='hidden'; } } });
+
+  function tryBootstrapNow(){ if(document.getElementById('job-form')) OpCentrixScheduler.initializeAddJobModal(); }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', tryBootstrapNow); else tryBootstrapNow();
-  document.addEventListener('htmx:afterSwap', function(e){
-    const t=e.detail && e.detail.target; if(!t) return;
-    if(t.id==='modal-container' || (t.querySelector && t.querySelector('#job-form'))){ setTimeout(()=>OpCentrixScheduler.bootstrapModal(),0); }
-    if(t.id==='modal-container'){
-      const mc=document.getElementById('modal-container'); if(mc){ mc.style.display='flex'; mc.classList.remove('hidden'); document.body.style.overflow='hidden'; }
-    }
-   });
-
-  console.log('[Job Form] module loaded');
+  installGlobalObserver();
+  console.log(LOG,'Module loaded');
 })();

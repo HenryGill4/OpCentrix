@@ -323,7 +323,7 @@ namespace OpCentrix.Services
                     Material = mp.Material,
                     RequiredStages = GetStagesSummary(mp.RequiredStages),
                     AllowStacking = mp.AllowStacking,
-                    MaxStackCount = mp.MaxStackCount ?? 1,
+                    MaxStackCount = mp.MaxStackCount != 0 ? mp.MaxStackCount : 1, // FIXED: Use ternary instead of null-coalescing
                     EstimatedHours = mp.SingleStackDurationHours ?? 8.0
                 }).ToList();
             }
