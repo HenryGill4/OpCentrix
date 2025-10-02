@@ -96,7 +96,7 @@ namespace OpCentrix.Pages.PrintTracking
                 catch (Exception machineEx)
                 {
                     _logger.LogError(machineEx, "❌ [PRINT-TRACKING-{OperationId}] Error populating SLS machines", operationId);
-                    Dashboard.AvailableMachines = CreateFallbackSlsMachineInfo();
+                    Dashboard.AvailableMachines = CreateFallbackSslMachineInfo();
                     PageErrors.Add("Machine data service unavailable - using fallback data");
                 }
 
@@ -226,6 +226,37 @@ namespace OpCentrix.Pages.PrintTracking
                 var userId = GetCurrentUserId();
                 var buildId = await _printTrackingService.StartPrintJobAsync(model, userId);
 
+                // NEW: If the build wasn't linked to a scheduled job (log shows JobId=null), try to attach earliest scheduled job now
+                if (model.AssociatedScheduledJobId == null && !string.IsNullOrWhiteSpace(model.PrinterName))
+                {
+                    var now = DateTime.Now.AddMinutes(5); // slight look ahead tolerance
+                    var scheduledJob = await _context.Jobs
+                        .Where(j => j.MachineId == model.PrinterName && j.Status == "Scheduled" && j.ScheduledStart <= now)
+                        .OrderBy(j => j.ScheduledStart)
+                        .FirstOrDefaultAsync();
+
+                    if (scheduledJob != null)
+                    {
+                        scheduledJob.Status = "Building";
+                        scheduledJob.ActualStart = model.ActualStartTime;
+                        scheduledJob.LastModifiedDate = DateTime.UtcNow;
+                        scheduledJob.LastModifiedBy = User.Identity?.Name ?? "PrintTracking";
+
+                        // Attach to build job if it exists
+                        var buildJob = await _context.BuildJobs.FirstOrDefaultAsync(b => b.BuildId == buildId);
+                        if (buildJob != null && buildJob.AssociatedScheduledJobId == null)
+                        {
+                            buildJob.AssociatedScheduledJobId = scheduledJob.Id;
+                            if (buildJob.PartId == null && scheduledJob.PartId > 0)
+                            {
+                                buildJob.PartId = scheduledJob.PartId;
+                            }
+                        }
+
+                        await _context.SaveChangesAsync();
+                    }
+                }
+
                 _logger.LogInformation("Print started successfully: BuildId {BuildId}, Printer {PrinterName}, User {UserId}",
                     buildId, model.PrinterName, userId);
 
@@ -252,38 +283,72 @@ namespace OpCentrix.Pages.PrintTracking
                 {
                     var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
                     model.Errors = errors.ToList();
-
-                    // CRITICAL: Log validation errors for debugging
                     _logger.LogWarning("CompletePrint validation failed. Errors: {Errors}", string.Join(", ", errors));
-
-                    // CRITICAL: Log specific field validation errors
                     foreach (var kvp in ModelState)
                     {
                         if (kvp.Value.Errors.Any())
                         {
-                            _logger.LogWarning("Field '{FieldName}' has errors: {FieldErrors}",
-                                kvp.Key, string.Join(", ", kvp.Value.Errors.Select(e => e.ErrorMessage)));
+                            _logger.LogWarning("Field '{FieldName}' has errors: {FieldErrors}", kvp.Key, string.Join(", ", kvp.Value.Errors.Select(e => e.ErrorMessage)));
                         }
                     }
-
                     await PopulatePostPrintViewModelAsync(model);
                     return Partial("_PostPrintModal", model);
                 }
 
                 var userId = GetCurrentUserId();
+
+                // Safety: if BuildId not supplied or resolves to no build, attempt inference
+                if (model.BuildId <= 0)
+                {
+                    BuildJob? inferred = null;
+
+                    // 1) If JobId provided, look for build linked to that job
+                    if (model.JobId.HasValue)
+                    {
+                        inferred = await _context.BuildJobs
+                            .Where(b => b.AssociatedScheduledJobId == model.JobId.Value && b.Status == "In Progress")
+                            .OrderByDescending(b => b.ActualStartTime)
+                            .FirstOrDefaultAsync();
+                    }
+
+                    // 2) If still not found, try by printer (PrinterName) active build
+                    if (inferred == null && !string.IsNullOrWhiteSpace(model.PrinterName))
+                    {
+                        inferred = await _context.BuildJobs
+                            .Where(b => b.PrinterName == model.PrinterName && b.Status == "In Progress")
+                            .OrderByDescending(b => b.ActualStartTime)
+                            .FirstOrDefaultAsync();
+                    }
+
+                    if (inferred != null)
+                    {
+                        model.BuildId = inferred.BuildId;
+                        if (!model.JobId.HasValue && inferred.AssociatedScheduledJobId.HasValue)
+                            model.JobId = inferred.AssociatedScheduledJobId;
+                        _logger.LogInformation("Inferred BuildId {BuildId} (JobId {JobId}) for completion", model.BuildId, model.JobId);
+                    }
+                }
+
+                // Attempt to infer JobId from build linkage if not provided AFTER inference
+                if (!model.JobId.HasValue && model.BuildId > 0)
+                {
+                    var build = await _context.BuildJobs.FirstOrDefaultAsync(b => b.BuildId == model.BuildId);
+                    if (build?.AssociatedScheduledJobId != null)
+                        model.JobId = build.AssociatedScheduledJobId;
+                }
+
                 var success = await _printTrackingService.CompletePrintJobAsync(model, userId);
 
                 if (success)
                 {
                     _logger.LogInformation("Print completed successfully: BuildId {BuildId}, User {UserId}, ActualHours {ActualHours}",
                         model.BuildId, userId, model.OperatorActualHours);
-
                     return new JsonResult(new { success = true, message = "Print completed successfully" });
                 }
                 else
                 {
-                    _logger.LogWarning("CompletePrint failed - Build job not found for BuildId {BuildId}", model.BuildId);
-                    model.Errors = new List<string> { "Error completing print job. Build job not found." };
+                    _logger.LogWarning("CompletePrint failed - Build job not found or not In Progress. BuildId {BuildId}", model.BuildId);
+                    model.Errors = new List<string> { "Error completing print job. Active build job not found." };
                     await PopulatePostPrintViewModelAsync(model);
                     return Partial("_PostPrintModal", model);
                 }
@@ -291,7 +356,6 @@ namespace OpCentrix.Pages.PrintTracking
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error completing print job for buildId {BuildId}. Model: {@Model}", model.BuildId, model);
-
                 model.Errors = new List<string> { "Error completing print job. Please try again." };
                 await PopulatePostPrintViewModelAsync(model);
                 return Partial("_PostPrintModal", model);
@@ -311,6 +375,12 @@ namespace OpCentrix.Pages.PrintTracking
                     return NotFound(new { success = false, error = "Job not found" });
                 }
 
+                // Find an active (or most recent) build associated with this scheduled job
+                var build = await _context.BuildJobs
+                    .Where(b => b.AssociatedScheduledJobId == job.Id)
+                    .OrderByDescending(b => b.ActualStartTime)
+                    .FirstOrDefaultAsync();
+
                 return new JsonResult(new
                 {
                     success = true,
@@ -321,8 +391,9 @@ namespace OpCentrix.Pages.PrintTracking
                     machineId = job.MachineId,
                     material = job.Part?.SlsMaterial ?? "",
                     quantity = job.Quantity,
-                    actualStart = job.ActualStart?.ToString("yyyy-MM-ddTHH:mm"),
-                    buildId = job.Id // Using job ID as build reference
+                    actualStart = (job.ActualStart ?? job.ScheduledStart).ToString("yyyy-MM-ddTHH:mm"),
+                    buildId = build?.BuildId, // ONLY return real build id (null if none)
+                    jobStatus = job.Status
                 });
             }
             catch (Exception ex)
@@ -364,16 +435,12 @@ namespace OpCentrix.Pages.PrintTracking
 
             try
             {
-                // Get all machines from machine service (with proper SLS filtering)
                 var allMachines = await _machineManagementService.GetActiveMachinesAsync();
-                
-                // Filter to only SLS machines using the same logic as scheduler
                 var slsMachines = allMachines
                     .Where(m => GetUnifiedMachineType(m) == "SLS")
                     .OrderBy(m => m.Priority)
                     .ToList();
 
-                // Convert Machine models to MachineInfo view models
                 Dashboard.AvailableMachines = slsMachines.Select(m => new MachineInfo
                 {
                     MachineId = m.MachineId,
@@ -584,7 +651,7 @@ namespace OpCentrix.Pages.PrintTracking
             };
         }
 
-        private List<MachineInfo> CreateFallbackSlsMachineInfo()
+        private List<MachineInfo> CreateFallbackSslMachineInfo()
         {
             // Return a basic set of SLS machines for fallback
             return new List<MachineInfo>
@@ -646,20 +713,103 @@ namespace OpCentrix.Pages.PrintTracking
                 ActualStartTime = DateTime.Now,
                 OperatorName = User.Identity?.Name ?? "Unknown",
                 UserId = GetCurrentUserId(),
-                AvailablePrinters = new List<string> { "TI1", "TI2", "INC" }
+                AvailablePrinters = new List<string> { "TI1", "TI2", "INC" },
+                AddPowder = false // default off
             };
+
+            // Resolve machine (by Id, Name, or MachineName) to get canonical MachineId + material
+            Machine? machine = null;
+            if (!string.IsNullOrWhiteSpace(printerName))
+            {
+                machine = await _context.Machines
+                    .FirstOrDefaultAsync(m => m.MachineId == printerName || m.Name == printerName || m.MachineName == printerName);
+                if (machine != null)
+                {
+                    viewModel.CurrentMachineMaterial = machine.CurrentMaterial;
+                    // Normalize printer name to MachineId for downstream queries
+                    viewModel.PrinterName = machine.MachineId;
+                }
+            }
+
+            Job? job = null;
 
             if (jobId.HasValue)
             {
-                // Load job details if provided
-                var job = await _context.Jobs.Include(j => j.Part).FirstOrDefaultAsync(j => j.Id == jobId.Value);
-                if (job != null)
+                job = await _context.Jobs.Include(j => j.Part).FirstOrDefaultAsync(j => j.Id == jobId.Value);
+            }
+            else if (machine != null)
+            {
+                // Auto-select earliest scheduled (or in-progress but not started) job for this machine
+                var now = DateTime.Now;
+                job = await _context.Jobs
+                    .Include(j => j.Part)
+                    .Where(j => j.MachineId == machine.MachineId && (j.Status == "Scheduled" || j.Status == "In Progress" || j.Status == "Building"))
+                    .OrderBy(j => j.ScheduledStart)
+                    .FirstOrDefaultAsync();
+            }
+
+            if (job != null)
+            {
+                viewModel.AssociatedScheduledJobId = job.Id;
+                viewModel.PartId = job.PartId;
+                viewModel.PartNumber = job.PartNumber;
+                viewModel.Quantity = job.Quantity;
+                viewModel.EstimatedHours = job.EstimatedHours;
+                viewModel.ScheduledStartTime = job.ScheduledStart;
+                viewModel.ScheduledEndTime = job.ScheduledEnd;
+                viewModel.EstimatedEndTime = job.ScheduledEnd;
+
+                // Safe reflection (underlying property types may be byte/short/int)
+                var stackProp = job.GetType().GetProperty("StackLevel");
+                if (stackProp != null)
                 {
-                    viewModel.AssociatedScheduledJobId = job.Id;
-                    viewModel.PartId = job.PartId;
-                    viewModel.PartNumber = job.PartNumber;
-                    viewModel.Quantity = job.Quantity;
-                    viewModel.EstimatedHours = job.EstimatedHours;
+                    var val = stackProp.GetValue(job);
+                    if (val != null)
+                    {
+                        try { viewModel.StackLevel = Convert.ToInt32(val); } catch { }
+                    }
+                }
+                var partsPerBuildProp = job.GetType().GetProperty("PartsPerBuild");
+                if (partsPerBuildProp != null)
+                {
+                    var val = partsPerBuildProp.GetValue(job);
+                    if (val != null)
+                    {
+                        try { viewModel.PartsPerBuild = Convert.ToInt32(val); } catch { }
+                    }
+                }
+
+                if (job.Part != null)
+                {
+                    viewModel.PartDescription = job.Part.Description;
+                    viewModel.Material = job.Part.SlsMaterial;
+                }
+
+                if (viewModel.TotalPartsInBuild <= 1)
+                {
+                    // Prefer PartsPerBuild if present, else job.Quantity
+                    if (viewModel.PartsPerBuild.HasValue && viewModel.PartsPerBuild > 0)
+                        viewModel.TotalPartsInBuild = viewModel.PartsPerBuild.Value;
+                    else if (job.Quantity > 0)
+                        viewModel.TotalPartsInBuild = job.Quantity;
+                }
+            }
+            else
+            {
+                // Fallback: try to infer part from active build job on machine (if any)
+                if (machine != null)
+                {
+                    var activeJob = await _context.BuildJobs.Include(b => b.Part)
+                        .Where(b => b.PrinterName == machine.MachineId && b.Status == "In Progress")
+                        .OrderByDescending(b => b.ActualStartTime)
+                        .FirstOrDefaultAsync();
+                    if (activeJob?.Part != null)
+                    {
+                        viewModel.PartId = activeJob.PartId;
+                        viewModel.PartNumber = activeJob.Part.PartNumber;
+                        viewModel.PartDescription = activeJob.Part.Description;
+                        viewModel.Material = activeJob.Part.SlsMaterial;
+                    }
                 }
             }
 
@@ -670,26 +820,126 @@ namespace OpCentrix.Pages.PrintTracking
         {
             var viewModel = new PostPrintViewModel
             {
-                PrinterName = printerName ?? "",
-                ActualStartTime = DateTime.Now.AddHours(-4), // Default to 4 hours ago
+                PrinterName = printerName ?? string.Empty,
+                ActualStartTime = DateTime.Now.AddHours(-4), // default guess
                 ActualEndTime = DateTime.Now,
                 OperatorName = User.Identity?.Name ?? "Unknown",
                 UserId = GetCurrentUserId(),
-                AvailablePrinters = new List<string> { "TI1", "TI2", "INC" },
+                AvailablePrinters = new List<string>(),
                 Parts = new List<PostPrintPartEntry>()
             };
 
-            if (buildId.HasValue)
+            try
             {
-                viewModel.BuildId = buildId.Value;
-                // Load build job details
-                var buildJob = await _context.BuildJobs.Include(b => b.Part).FirstOrDefaultAsync(b => b.BuildId == buildId.Value);
-                if (buildJob != null)
+                // Active SLS printers list (fallback to defaults if none)
+                var activePrinters = await _context.Machines
+                    .Where(m => m.IsActive && (m.MachineType.Contains("SLS") || m.MachineType.Contains("Print") || m.MachineType == ""))
+                    .OrderBy(m => m.Priority)
+                    .Select(m => m.MachineId)
+                    .Distinct()
+                    .ToListAsync();
+                if (!activePrinters.Any()) activePrinters = new List<string> { "TI1", "TI2", "INC" };
+                viewModel.AvailablePrinters = activePrinters;
+                if (!string.IsNullOrWhiteSpace(printerName) && !viewModel.AvailablePrinters.Contains(printerName))
+                    viewModel.AvailablePrinters.Insert(0, printerName); // ensure selection appears
+
+                // Load list of currently running jobs (Building / In Progress)
+                var runningJobsQry = _context.Jobs
+                    .Include(j => j.Part)
+                    .Where(j => j.Status == "Building" || j.Status == "In Progress");
+                if (!string.IsNullOrWhiteSpace(printerName))
+                    runningJobsQry = runningJobsQry.Where(j => j.MachineId == printerName);
+                viewModel.AvailableRunningJobs = await runningJobsQry
+                    .OrderBy(j => j.MachineId)
+                    .ThenByDescending(j => j.ActualStart)
+                    .Take(30)
+                    .ToListAsync();
+
+                BuildJob? build = null;
+
+                // If a build id was passed explicitly, load it first
+                if (buildId.HasValue)
                 {
-                    viewModel.ActualStartTime = buildJob.ActualStartTime;
-                    viewModel.PrinterName = buildJob.PrinterName;
-                    viewModel.OperatorEstimatedHours = buildJob.OperatorEstimatedHours;
+                    build = await _context.BuildJobs
+                        .Include(b => b.Part)
+                        .FirstOrDefaultAsync(b => b.BuildId == buildId.Value);
                 }
+                // Otherwise try to resolve active build from printer
+                if (build == null && !string.IsNullOrWhiteSpace(printerName))
+                {
+                    build = await _context.BuildJobs
+                        .Include(b => b.Part)
+                        .Where(b => b.PrinterName == printerName && b.Status == "In Progress")
+                        .OrderByDescending(b => b.ActualStartTime)
+                        .FirstOrDefaultAsync();
+                }
+                // Finally use associated job id
+                if (build == null && jobId.HasValue)
+                {
+                    build = await _context.BuildJobs
+                        .Include(b => b.Part)
+                        .FirstOrDefaultAsync(b => b.AssociatedScheduledJobId == jobId.Value && b.Status == "In Progress");
+                }
+
+                if (build != null)
+                {
+                    viewModel.BuildId = build.BuildId;
+                    viewModel.PrinterName = build.PrinterName; // ensure dropdown auto-select
+                    viewModel.ActualStartTime = build.ActualStartTime;
+                    viewModel.OperatorEstimatedHours = build.OperatorEstimatedHours;
+                    viewModel.JobId = build.AssociatedScheduledJobId; // might be null
+
+                    if (build.Part != null)
+                    {
+                        viewModel.PartId = build.PartId;
+                        viewModel.PartNumber = build.Part.PartNumber;
+                        viewModel.PartDescription = build.Part.Description;
+                    }
+                }
+                else if (jobId.HasValue)
+                {
+                    // Populate from scheduled job if build not found (rare edge case)
+                    var job = await _context.Jobs.Include(j => j.Part).FirstOrDefaultAsync(j => j.Id == jobId.Value);
+                    if (job != null)
+                    {
+                        viewModel.JobId = job.Id;
+                        viewModel.PrinterName = string.IsNullOrWhiteSpace(printerName) ? job.MachineId : viewModel.PrinterName;
+                        viewModel.ActualStartTime = job.ActualStart ?? job.ScheduledStart;
+                        if (job.Part != null)
+                        {
+                            viewModel.PartId = job.PartId;
+                            viewModel.PartNumber = job.Part.PartNumber;
+                            viewModel.PartDescription = job.Part.Description;
+                        }
+                        // Estimate missing operator estimated hours
+                        if (!viewModel.OperatorEstimatedHours.HasValue && job.ScheduledEnd > job.ScheduledStart)
+                            viewModel.OperatorEstimatedHours = (decimal)(job.ScheduledEnd - job.ScheduledStart).TotalHours;
+                    }
+                }
+
+                // Seed parts list for UI if we have a primary part
+                if (!string.IsNullOrWhiteSpace(viewModel.PartNumber) && !viewModel.Parts.Any())
+                {
+                    viewModel.Parts.Add(new PostPrintPartEntry
+                    {
+                        PartNumber = viewModel.PartNumber,
+                        Quantity = 1,
+                        GoodParts = 1,
+                        IsPrimary = true,
+                        Description = viewModel.PartDescription
+                    });
+                }
+
+                // Also load available parts (used for adding extra parts in modal)
+                viewModel.AvailableParts = await _context.Parts
+                    .Where(p => p.IsActive)
+                    .OrderBy(p => p.PartNumber)
+                    .Take(200)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error building PostPrintViewModel (buildId={BuildId}, printer={Printer}, jobId={JobId})", buildId, printerName, jobId);
             }
 
             return viewModel;

@@ -103,7 +103,10 @@
                                  title="@job.PartNumber - @job.Status (@job.DurationHours.ToString("F1")h)"
                                  data-job-id="@job.Id"
                                  data-machine-id="@machineId"
-                                 data-job-date="@job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")">
+                                 data-job-date="@job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")"
+                                 data-start="@job.ScheduledStart.ToString("o")"
+                                 data-end="@job.ScheduledEnd.ToString("o")"
+                                 data-actual-start="@(job.ActualStart.HasValue ? job.ActualStart.Value.ToString("o") : "")">
                                 <partial name="_JobBlock" model="job" />
                             </div>
                         }

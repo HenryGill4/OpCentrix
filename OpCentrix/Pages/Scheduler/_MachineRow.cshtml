@@ -207,7 +207,12 @@
                      data-layer="@l"
                      data-cohort-id="@job.BuildCohortId"
                      data-stage="@job.WorkflowStage"
-                     data-stage-order="@job.StageOrder">
+                     data-stage-order="@job.StageOrder"
+                     data-start="@job.ScheduledStart.ToString("o")"
+                     data-end="@job.ScheduledEnd.ToString("o")"
+                     data-actual-start="@(job.ActualStart.HasValue ? job.ActualStart.Value.ToString("o") : "")"
+                     data-status="@job.Status"
+                     data-status-lc="@job.Status.ToLower().Replace(" ", "-")">
                     <partial name="_JobBlock" model="job" />
                 </div>
             }

@@ -10,77 +10,75 @@
         5 => "priority-lowest",
         _ => "priority-normal"
     };
-    
     var rushIndicator = Model.IsRushJob ? "✱" : "";
     var shortPartNumber = Model.PartNumber?.Length > 10 ? Model.PartNumber.Substring(0, 10) + "..." : Model.PartNumber;
     var isScheduled = Model.Status == "Scheduled";
-    var isBuilding = Model.Status == "Building" || Model.Status == "In Progress";
+    var isBuilding = Model.Status == "Building" || Model.Status == "In Progress" || Model.Status == "InProgress";
     var isComplete = Model.Status == "Completed" || Model.Status == "Complete";
     var isDelayed = Model.ActualStart.HasValue && Model.ActualStart > Model.ScheduledStart.AddMinutes(15);
     var timeDisplay = isBuilding && Model.ActualStart.HasValue ? $"Started: {Model.ActualStart:HH:mm}" : $"{Model.ScheduledStart:HH:mm}-{Model.ScheduledEnd:HH:mm}";
-    var slsMachines = new[]{"TI1","TI2","INC","INC1","INC2"};
-    var isSlsJob = slsMachines.Contains(Model.MachineId);
-    var stackLevel = Model.StackLevel.HasValue && Model.StackLevel.Value > 0 ? Model.StackLevel.Value : (byte)1; // default 1x
-    var showStack = Model.StackLevel.HasValue && Model.StackLevel.Value > 1; // only highlight if stacked >1
+    var stackLevel = Model.StackLevel.HasValue && Model.StackLevel.Value > 0 ? Model.StackLevel.Value : (byte)1;
+    var showStack = Model.StackLevel.HasValue && Model.StackLevel.Value > 1;
     var partsPerBuild = Model.PartsPerBuild.HasValue && Model.PartsPerBuild.Value > 0 ? Model.PartsPerBuild.Value : (int?)null;
+
+    double? progressPercent = null; double? estHours = null; double? elapsedHrs = null; double? remainingHrs = null;
+    if (Model.ScheduledEnd > Model.ScheduledStart)
+        estHours = Model.EstimatedHours > 0 ? Model.EstimatedHours : (Model.ScheduledEnd - Model.ScheduledStart).TotalHours;
+    if (isBuilding && Model.ActualStart.HasValue && estHours.HasValue && estHours > 0)
+    {
+        var startUtc = Model.ActualStart.Value.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(Model.ActualStart.Value, DateTimeKind.Utc) : Model.ActualStart.Value.ToUniversalTime();
+        elapsedHrs = (DateTime.UtcNow - startUtc).TotalHours;
+        progressPercent = Math.Min(150, Math.Max(0, (elapsedHrs.Value / estHours.Value) * 100));
+        remainingHrs = Math.Max(0, estHours.Value - elapsedHrs.Value);
+    }
+    string etaDisplay = remainingHrs.HasValue ? (remainingHrs.Value >= 1 ? $"ETA {(int)Math.Floor(remainingHrs.Value)}h {(int)((remainingHrs.Value - Math.Floor(remainingHrs.Value))*60)}m" : $"ETA {(int)Math.Round(remainingHrs.Value*60)}m") : "";
 }
 
-<!-- Inline styles to avoid Razor compilation issues -->
 <style>
+    .job-core{position:relative;width:100%;height:100%;}
     .delayed-job { outline: 2px solid #EF4444 !important; animation: pulse-red 2s infinite; }
     @@keyframes pulse-red { 0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 50% { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0); } }
     .start-chip{ position:absolute; bottom:4px; right:4px; background:#fff; color:#2563eb; font-size:10px; padding:2px 6px; border-radius:9999px; font-weight:600; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.25); opacity:.85; display:flex; align-items:center; gap:2px; transition:.15s; } 
     .start-chip:hover{ opacity:1; transform:translateY(-1px); } 
     .stack-badge{margin-left:4px;display:inline-flex;align-items:center;gap:2px;font-size:10px;font-weight:600;line-height:1;padding:2px 6px;border-radius:12px;background:rgba(255,255,255,.15);backdrop-filter:blur(2px);border:1px solid rgba(255,255,255,.35);} 
     .stack-badge.highlight{background:#1e293b;color:#fff;border-color:#334155;}
+    .job-progress-bar{position:absolute;left:0;bottom:0;height:4px;background:rgba(255,255,255,.25);width:100%;overflow:hidden;border-radius:0 0 4px 4px;}
+    .job-progress-fill{height:100%;background:linear-gradient(90deg,#22c55e,#16a34a);transition:width .6s ease;}
+    .job-progress-fill.behind{background:linear-gradient(90deg,#f59e0b,#d97706);} 
+    .job-progress-fill.overrun{background:linear-gradient(90deg,#dc2626,#b91c1c);} 
+    .building-anim:before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(34,197,94,.15) 0 8px,rgba(16,185,129,.15) 8px 16px);animation: moveStripes 6s linear infinite;mix-blend-mode:overlay;pointer-events:none;}
+    @@keyframes moveStripes {0%{background-position:0 0;}100%{background-position:256px 0;}}
+    .run-badge{position:absolute;top:0;right:0;background:#16a34a;color:#fff;font-size:10px;padding:0 4px;border-bottom-left-radius:4px;font-weight:600;display:flex;align-items:center;gap:2px;animation:pulse-green 1.4s ease-in-out infinite;}
+    @@keyframes pulse-green{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.8);}50%{box-shadow:0 0 0 6px rgba(34,197,94,0);} }
+    .eta-chip{position:absolute;left:4px;bottom:4px;background:rgba(0,0,0,.35);color:#fff;font-size:10px;padding:2px 6px;border-radius:6px;font-weight:600;backdrop-filter:blur(2px);display:flex;gap:4px;align-items:center;}
+    .eta-chip .pct{font-weight:700;}
 </style>
 
-<div class="job-block-wrapper relative group" 
-     data-job-id="@Model.Id"
-     data-machine-id="@Model.MachineId"
-     data-status="@Model.Status"
-     data-machine="@Model.MachineId"
-     data-stack-level="@stackLevel"
-     @(partsPerBuild.HasValue ? $"data-parts-per-build=\"{partsPerBuild.Value}\"" : "")>
-     
-    <!-- Main Job Block -->
-    <div class="job-block-content h-full flex flex-col justify-center p-1 @priorityClass relative overflow-hidden @(isDelayed ? "delayed-job" : "")"
-         style="background:var(--machine-color,#6366F1);color:#fff"
-         title="@Model.PartNumber • Qty @Model.Quantity@(showStack ? $" • {stackLevel}x stack" : "")@(partsPerBuild.HasValue ? $" • {partsPerBuild.Value} parts/build" : "")"
-         onclick="openJobModalSafely('@Model.MachineId', '@Model.ScheduledStart:yyyy-MM-ddTHH:mm', @Model.Id)">
-        
-        <div class="job-block-title font-bold text-xs leading-tight flex items-center flex-wrap gap-0.5">
-            <span>@rushIndicator@shortPartNumber</span>
-            <span class="stack-badge @(showStack?"highlight":"")" aria-label="Stack level and quantity">
-                @stackLevel
-                <span style="opacity:.75;">•</span>
-                @Model.Quantity
-            </span>
-        </div>
-        
-        <div class="job-block-details opacity-90 text-[10px] leading-tight mt-1 flex flex-col gap-0.5">
-            <div>Qty: @Model.Quantity@if(showStack){<text> · Stack @stackLevel</text>}@(partsPerBuild.HasValue && partsPerBuild.Value>0 ? $" · {partsPerBuild.Value} ppb" : "")</div>
-            <div class="opacity-75">@timeDisplay</div>
-        </div>
-        
-        @if (!string.IsNullOrWhiteSpace(Model.SlsMaterial))
-        {
-            <div class="mt-0.5 text-[10px] opacity-75 truncate">@Model.SlsMaterial</div>
-        }
-        
-        @if (isBuilding)
-        {
-            <div class="absolute top-0 right-0 bg-amber-500 text-white text-[10px] px-1 rounded-bl animate-pulse">RUN</div>
-        }
-        else if (isComplete)
-        {
-            <div class="absolute top-0 right-0 bg-green-500 text-white text-[10px] px-1 rounded-bl">DONE</div>
-        }
-        @if(isScheduled)
-        {
-            <div class="start-chip" title="Start Job" onclick="event.stopPropagation(); if(window.OpCentrixRuntime) OpCentrixRuntime.openStartJobModal(@Model.Id);">
-                ▶ Start
-            </div>
-        }
+<div class="job-core @priorityClass @(isDelayed?"delayed-job":"") @(isBuilding?"building-anim":"")" data-has-progress="@(progressPercent.HasValue)" data-job-status="@Model.Status">
+    <div class="job-block-title font-bold text-[11px] leading-tight flex items-center flex-wrap gap-0.5 pr-6">
+        <span>@rushIndicator@shortPartNumber</span>
+        <span class="stack-badge @(showStack?"highlight":"")" aria-label="Stack level and quantity">
+            @stackLevel <span style="opacity:.5;">•</span> @Model.Quantity
+        </span>
     </div>
+    <div class="job-block-details opacity-95 text-[10px] leading-tight mt-0.5 flex flex-col gap-0.5 pr-4">
+        <div>Qty @Model.Quantity@if(showStack){<text> · Stack @stackLevel</text>}@(partsPerBuild.HasValue? $" · {partsPerBuild.Value} ppb":"")</div>
+        <div class="opacity-75">@timeDisplay</div>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Model.SlsMaterial))
+    { <div class="mt-0.5 text-[10px] opacity-70 truncate pr-4">@Model.SlsMaterial</div> }
+    @if (isBuilding){ <div class="run-badge" title="Printing in progress">PRINTING</div> }
+    else if (isComplete){ <div class="absolute top-0 right-0 bg-green-600 text-white text-[10px] px-1 rounded-bl">DONE</div> }
+    @if(isScheduled){ <div class="start-chip" title="Start Job" onclick="event.stopPropagation(); if(window.OpCentrixRuntime) OpCentrixRuntime.openStartJobModal(@Model.Id);">▶ Start</div> }
+    @if(progressPercent.HasValue){
+        var barClass = progressPercent <= 105 ? (progressPercent < 80 ? "" : "behind") : "overrun";
+        <div class="job-progress-bar" aria-label="Progress @progressPercent.Value.ToString("F0")%">
+            <div class="job-progress-fill @barClass" style="width:@Math.Min(100, progressPercent.Value)%"></div>
+        </div>
+        <div class="eta-chip" title="Elapsed/Est / Remaining">
+            <span class="pct">@progressPercent.Value.ToString("F0")%</span>
+            @if(elapsedHrs.HasValue && estHours.HasValue){<span>@Math.Floor(elapsedHrs.Value)h</span>}
+            @if(!string.IsNullOrEmpty(etaDisplay)){<span>@etaDisplay</span>}
+        </div>
+    }
 </div>

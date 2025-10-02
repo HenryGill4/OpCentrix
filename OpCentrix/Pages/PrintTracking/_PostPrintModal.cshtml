@@ -691,7 +691,16 @@
         // Basic job information
         const printerNameSelect = document.getElementById('PrinterName');
         if (printerNameSelect) {
-            printerNameSelect.value = jobData.machineId || '';
+            const machineId = jobData.machineId || '';
+            if (machineId) {
+                // If the machine/printer option is not present add it (to prevent blank selection)
+                let existing = Array.from(printerNameSelect.options).find(o => o.value === machineId);
+                if (!existing) {
+                    const opt = new Option(machineId, machineId, true, true);
+                    printerNameSelect.add(opt, 0); // add at top so it is visible
+                }
+                printerNameSelect.value = machineId;
+            }
         }
         
         // Times
@@ -715,7 +724,7 @@
         const partDescriptionInput = document.querySelector('input[name="PartDescription"]') || PostPrintModal.createHiddenInput('PartDescription');
         partDescriptionInput.value = jobData.partDescription || '';
         
-        // Build ID if available
+        // Build ID if available (only if real build id returned)
         if (jobData.buildId) {
             const buildIdInput = document.querySelector('input[name="BuildId"]') || PostPrintModal.createHiddenInput('BuildId');
             buildIdInput.value = jobData.buildId;
@@ -737,7 +746,7 @@
 
     // Populate parts list from job data
     PostPrintModal.populatePartsFromJob = function(jobData) {
-        // Clear existing parts except the first one
+        // Clear existing parts except the first
         const container = document.getElementById('parts-container');
         
         if (container) {
@@ -919,84 +928,93 @@
         const startInput = document.getElementById('ActualStartTime');
         const endInput = document.getElementById('ActualEndTime');
         const actualHoursInput = document.getElementById('OperatorActualHours');
-        
         if (startInput && endInput && actualHoursInput && startInput.value && endInput.value) {
             const startTime = new Date(startInput.value);
             const endTime = new Date(endInput.value);
             const diffMs = endTime - startTime;
             const diffHours = diffMs / (1000 * 60 * 60);
-            
             if (diffHours > 0) {
-                // CRITICAL FIX: Format decimal properly with dot notation
                 actualHoursInput.value = diffHours.toFixed(2);
-                console.log('?? [POST-PRINT] Calculated time difference:', diffHours.toFixed(2), 'hours');
                 PostPrintModal.updatePerformanceCalculations();
             }
         }
     };
 
-    // Update performance calculations
-    PostPrintModal.updatePerformanceCalculations = function() {
-        // This would calculate variance and update displays
-        console.log('?? [POST-PRINT] Updating performance calculations');
+    PostPrintModal.updatePerformanceCalculations = function(){
+        const actualEl = document.getElementById('OperatorActualHours');
+        const varianceEl = document.getElementById('variancePercent');
+        const descEl = document.getElementById('varianceDescription');
+        const estHidden = document.querySelector('input[name="OperatorEstimatedHours"]');
+        const estVal = estHidden ? parseFloat(estHidden.value) : NaN;
+        const actualVal = actualEl ? parseFloat(actualEl.value) : NaN;
+        if(!isFinite(actualVal) || !isFinite(estVal) || estVal <= 0){
+            if(varianceEl){ varianceEl.textContent = '—'; varianceEl.className = 'text-lg font-semibold text-gray-500'; }
+            if(descEl){ descEl.textContent = 'No estimate available'; }
+            return;
+        }
+        const diff = actualVal - estVal;
+        const pct = (diff / estVal) * 100;
+        const pctDisplay = pct.toFixed(1) + '%';
+        if(varianceEl){
+            let colorClass = 'text-green-600';
+            if (Math.abs(pct) <= 10) colorClass = 'text-green-600';
+            else if (Math.abs(pct) <= 20) colorClass = 'text-yellow-600';
+            else colorClass = 'text-red-600';
+            varianceEl.className = 'text-lg font-semibold ' + colorClass;
+            varianceEl.textContent = pctDisplay;
+        }
+        if(descEl){
+            let desc;
+            if(Math.abs(pct) <= 5) desc = 'Excellent alignment';
+            else if(Math.abs(pct) <= 15) desc = 'Acceptable variance';
+            else if(Math.abs(pct) <= 30) desc = 'Needs review';
+            else desc = 'Significant variance';
+            descEl.textContent = desc;
+        }
     };
 
-    // Handle reason change
-    PostPrintModal.handleReasonChange = function() {
-        console.log('?? [POST-PRINT] Reason changed');
-    };
-
-    // Toggle optional details
-    PostPrintModal.toggleOptionalDetails = function() {
-        const details = document.getElementById('optional-details');
-        const chevron = document.getElementById('optional-chevron');
-        
-        if (details && chevron) {
-            if (details.classList.contains('hidden')) {
-                details.classList.remove('hidden');
-                chevron.classList.add('rotate-180');
+    // NEW: Reason change handler (missing earlier caused TypeError)
+    PostPrintModal.handleReasonChange = function(){
+        const sel = document.getElementById('ReasonForEnd');
+        if(!sel) return;
+        const reason = (sel.value || '').toLowerCase();
+        // Simple contextual highlight: if aborted / rework, emphasize quality notes box
+        const qualityNotes = document.getElementById('QualityNotes');
+        if(qualityNotes){
+            if(reason.includes('abort') || reason.includes('rework')){
+                qualityNotes.classList.add('ring','ring-red-400','ring-opacity-50');
             } else {
-                details.classList.add('hidden');
-                chevron.classList.remove('rotate-180');
+                qualityNotes.classList.remove('ring','ring-red-400','ring-opacity-50');
             }
         }
     };
 
-    // Show job loaded success message
-    PostPrintModal.showJobLoadedMessage = function(partNumber, machineId) {
-        const message = `? Job loaded: ${partNumber} on ${machineId}`;
-        PostPrintModal.showToast(message, 'success');
+    // Auto refresh duration field every 60s while modal open (if end time equals now)
+    PostPrintModal.startDurationTicker = function(){
+        if(PostPrintModal._ticker) clearInterval(PostPrintModal._ticker);
+        PostPrintModal._ticker = setInterval(()=>{
+            const endInput = document.getElementById('ActualEndTime');
+            // If end time is roughly now (within 2 minutes) keep updating; allows operator to open before stopping print
+            if(endInput){
+                const nowIso = new Date();
+                // if end time is in future or within last 2m, set to now
+                const endTime = new Date(endInput.value);
+                if(!endInput.dataset.userLocked || endInput.dataset.userLocked!=='1'){
+                    endInput.value = new Date().toISOString().slice(0,16);
+                }
+            }
+            PostPrintModal.calculateActualTime();
+        },60000);
     };
 
-    // Toast notification fallback
-    PostPrintModal.showToast = function(message, type = 'info') {
-        if (typeof PrintTracking !== 'undefined' && PrintTracking.showToast) {
-            PrintTracking.showToast(message, type);
-        } else {
-            // Simple fallback
-            const colors = {
-                success: 'bg-green-100 border-green-400 text-green-700',
-                error: 'bg-red-100 border-red-400 text-red-700',
-                info: 'bg-blue-100 border-blue-400 text-blue-700'
-            };
-            
-            const notification = document.createElement('div');
-            notification.className = `fixed top-4 right-4 ${colors[type] || colors.info} px-4 py-3 rounded border z-50`;
-            notification.textContent = message;
-            document.body.appendChild(notification);
-            setTimeout(() => notification.remove(), 3000);
-        }
-    };
+    // Mark manual editing to stop auto overwrite of end time
+    const endElInit = document.getElementById('ActualEndTime');
+    if(endElInit){
+        endElInit.addEventListener('input', ()=>{ endElInit.dataset.userLocked='1'; });
+    }
 
-    // CRITICAL FIX: Provide global function aliases for backward compatibility
-    window.loadJobDetails = PostPrintModal.loadJobDetails;
-    window.addPartEntry = PostPrintModal.addPartEntry;
-    window.removePartEntry = PostPrintModal.removePartEntry;
-    window.updatePartQuality = PostPrintModal.updatePartQuality;
-    window.calculateActualTime = PostPrintModal.calculateActualTime;
-    window.updatePerformanceCalculations = PostPrintModal.updatePerformanceCalculations;
-    window.handleReasonChange = PostPrintModal.handleReasonChange;
-    window.toggleOptionalDetails = PostPrintModal.toggleOptionalDetails;
+    // Initial auto-calc + ticker
+    setTimeout(()=>{ PostPrintModal.calculateActualTime(); PostPrintModal.startDurationTicker(); },50);
 
     // CRITICAL: Initialize form submission handling
     setTimeout(() => {

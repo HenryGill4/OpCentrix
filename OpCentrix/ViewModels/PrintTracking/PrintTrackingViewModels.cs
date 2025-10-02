@@ -201,6 +201,22 @@ namespace OpCentrix.ViewModels.PrintTracking
         public bool CanAddMorePrototypes => TotalPartsInBuild < MaxPartsCapacity;
         public bool HasSpaceForPrototypes => BuildPlateUtilization < 90m;
         public bool IsWithinScheduleTolerance => !IsDelayed || DelayMinutes <= 15;
+
+        // NEW: Powder added simple entry (kg) replacing verbose material section
+        [Display(Name = "Powder Added (kg)")]
+        [Range(0, 500, ErrorMessage = "Powder added must be >= 0 and reasonable")]
+        public decimal? PowderAddedKg { get; set; }
+
+        // NEW: Toggle to indicate whether powder is actually being added in this start event
+        [Display(Name = "Add Powder This Start")] 
+        public bool AddPowder { get; set; } = false;
+
+        // NEW: Current machine material auto-filled (read-only in UI)
+        public string? CurrentMachineMaterial { get; set; }
+
+        // NEW: Stack / plate info (auto filled from scheduled job or master part)
+        public int? StackLevel { get; set; }
+        public int? PartsPerBuild { get; set; }
     }
 
     /// <summary>

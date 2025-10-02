@@ -236,5 +236,96 @@
         try{ if(e.target && e.target.id === 'job-form'){ console.error('[SCHED-Debug] htmx:sendError network issue', e.detail); } }catch(ex){ console.warn('[SCHED-Debug] sendError log failed', ex); }
     });
 
+    function enhanceLegacyJobBlocks(){
+        const monthMap = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+        if(!document.getElementById('legacy-progress-css')){
+            const css = document.createElement('style');
+            css.id='legacy-progress-css';
+            css.textContent=`.job-progress-bar{position:absolute;left:0;bottom:0;height:4px;background:rgba(255,255,255,.25);width:100%;overflow:hidden;border-radius:0 0 4px 4px;}
+.job-progress-fill{height:100%;background:linear-gradient(90deg,#22c55e,#16a34a);transition:width .6s ease;}
+.run-badge{position:absolute;top:0;right:0;background:#16a34a;color:#fff;font-size:10px;padding:0 4px;border-bottom-left-radius:4px;font-weight:600;display:flex;align-items:center;gap:2px;animation:pulse-green 1.4s ease-in-out infinite;}
+@keyframes pulse-green{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.8);}50%{box-shadow:0 0 0 6px rgba(34,197,94,0);} }
+.building-anim:before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(34,197,94,.15) 0 8px,rgba(16,185,129,.15) 8px 16px);animation: moveStripes 6s linear infinite;mix-blend-mode:overlay;pointer-events:none;}
+@keyframes moveStripes {0%{background-position:0 0;}100%{background-position=256px 0;}}
+/* Machine status indicator (reuse existing .machine-status element) */
+.scheduler-machine-label{position:relative;}
+.scheduler-machine-label .machine-status{position:absolute;top:8px;right:8px;width:12px;height:12px;border-radius:50%;background:#64748b;border:2px solid #fff;box-shadow:0 0 0 0 rgba(0,0,0,.15);}
+.scheduler-machine-label .machine-status.status-active{background:#16a34a;}
+.scheduler-machine-label .machine-status.status-scheduled{background:#f59e0b;}
+.scheduler-machine-label .machine-status.status-idle{background:#64748b;}
+.scheduler-machine-label .machine-status.pulse{animation:machPulse 2s infinite;}
+@keyframes machPulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.6);}70%{box-shadow:0 0 0 10px rgba(34,197,94,0);}100%{box-shadow:0 0 0 0 rgba(34,197,94,0);} }`;
+            document.head.appendChild(css);
+        }
+        const now = new Date();
+        document.querySelectorAll('.job-block:not([data-legacy-upgraded])').forEach(el=>{
+            el.dataset.legacyUpgraded='1';
+            if(el.querySelector('.job-core')) return; // new partial already handles UI
+            const statusRaw = (el.getAttribute('data-status')||'').toLowerCase();
+            if(!(statusRaw.includes('progress') || statusRaw.includes('building'))) return;
+            let startIso = el.getAttribute('data-actual-start') || el.getAttribute('data-start');
+            let endIso = el.getAttribute('data-end');
+            const title = el.getAttribute('title') || '';
+            if((!startIso || !endIso) && title.includes(' to ')){
+                const regex = /-\s([A-Za-z]{3}) (\d{2}) (\d{2}:\d{2}) to ([A-Za-z]{3}) (\d{2}) (\d{2}:\d{2})\s-/;
+                const m = title.match(regex);
+                if(m){
+                    const year = now.getFullYear();
+                    const sm = monthMap[m[1].toLowerCase()];
+                    const em = monthMap[m[4].toLowerCase()];
+                    if(sm!=null && em!=null){
+                        startIso = new Date(year, sm, parseInt(m[2]), parseInt(m[3].split(':')[0]), parseInt(m[3].split(':')[1]),0).toISOString();
+                        endIso = new Date(year, em, parseInt(m[5]), parseInt(m[6].split(':')[0]), parseInt(m[6].split(':')[1]),0).toISOString();
+                    }
+                }
+            }
+            if(!startIso){
+                const onclick = el.getAttribute('onclick')||'';
+                const om = onclick.match(/openJobModalSafely\('[^']*','([^']+)'/);
+                if(om){ startIso = new Date(om[1]).toISOString(); }
+            }
+            if(startIso && !el.getAttribute('data-start')) el.setAttribute('data-start', startIso);
+            if(endIso && !el.getAttribute('data-end')) el.setAttribute('data-end', endIso);
+            if(!startIso || !endIso) return;
+            const start = new Date(startIso); const end = new Date(endIso);
+            if(isNaN(start)||isNaN(end)|| end <= start) return;
+            let pct = (Date.now() - start.getTime()) / (end.getTime() - start.getTime()) * 100;
+            pct = Math.max(0, Math.min(150, pct));
+            if(!el.querySelector('.job-progress-bar')){
+                const bar=document.createElement('div'); bar.className='job-progress-bar';
+                const fill=document.createElement('div'); fill.className='job-progress-fill'; bar.appendChild(fill); el.appendChild(bar);
+            }
+            const fill = el.querySelector('.job-progress-fill'); if(fill) fill.style.width = Math.min(100, pct) + '%';
+            if(!el.querySelector('.run-badge')){ const badge=document.createElement('div'); badge.className='run-badge'; badge.textContent='PRINTING'; el.appendChild(badge);}            
+            el.classList.add('building-anim');
+        });
+    }
+
+    function updateMachineStatusDots(){
+        const labels = document.querySelectorAll('.scheduler-machine-label');
+        labels.forEach(label=>{
+            const machineId = label.getAttribute('data-machine');
+            if(!machineId) return;
+            const indicator = label.querySelector('.machine-status');
+            if(!indicator) return; // respect existing markup only
+            const jobs = document.querySelectorAll(`.job-block[data-machine='${machineId}'], .job-block[data-machine-id='${machineId}']`);
+            let status='idle';
+            jobs.forEach(j=>{
+                const s=(j.getAttribute('data-status')||'').toLowerCase();
+                if(s.includes('progress') || s.includes('building')) status='active';
+                else if(status!=='active' && s.includes('scheduled')) status='scheduled';
+            });
+            indicator.classList.remove('status-active','status-scheduled','status-idle','pulse');
+            indicator.classList.add('status-'+status);
+            if(status==='active') indicator.classList.add('pulse');
+            indicator.title = status==='active'? 'Machine Active' : status==='scheduled'? 'Jobs Scheduled' : 'Idle';
+        });
+    }
+
+    setInterval(updateMachineStatusDots, 20000);
+    document.addEventListener('scheduler:jobsHydrated', ()=>{enhanceLegacyJobBlocks(); updateMachineStatusDots();});
+    enhanceLegacyJobBlocks();
+    updateMachineStatusDots();
+
     console.log('[Scheduler UI] Loaded build (modal form logic delegated)');
 })();

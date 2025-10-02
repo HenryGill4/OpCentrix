@@ -668,6 +668,8 @@ namespace OpCentrix.Pages.Scheduler
                 job.ActualStart = DateTime.UtcNow;
                 job.LastModifiedDate = DateTime.UtcNow;
                 job.LastModifiedBy = User.Identity?.Name ?? "System";
+                // Flag for UI broadcast / client polling
+                TempData["PrintStartedJobId"] = job.Id;
                 await _context.SaveChangesAsync();
                 try
                 {

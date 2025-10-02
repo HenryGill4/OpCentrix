@@ -4,7 +4,7 @@ using OpCentrix.Models.JobStaging;
 
 namespace OpCentrix.Data
 {
-    public class SchedulerContext : DbContext
+    public partial class SchedulerContext : DbContext
     {
         public SchedulerContext(DbContextOptions<SchedulerContext> options)
             : base(options)
@@ -98,6 +98,7 @@ namespace OpCentrix.Data
         public DbSet<StageDefinition> StageDefinitions { get; set; }
         public DbSet<StageExecution> StageExecutions { get; set; }
         public DbSet<PartBatch> PartBatches { get; set; }
+        public DbSet<ScheduleAdjustment> ScheduleAdjustments { get; set; } = null!; // NEW
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
