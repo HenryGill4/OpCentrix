@@ -142,16 +142,17 @@
     <script src="~/js/scheduler-ui.js" asp-append-version="true"></script>
     <script src="~/js/job-form.js" asp-append-version="true"></script>
     <script>
-      // Overlay helpers (global)
+      // Overlay helpers (global) - removed job-form submission overlay to only show after successful save refresh
       (function(){
         const overlay=document.getElementById('loading-indicator');
         const textEl=document.getElementById('loading-indicator-text');
         window.showSchedulerOverlay=function(msg){ if(!overlay) return; if(textEl) textEl.textContent=msg||'Working...'; overlay.classList.add('active'); overlay.setAttribute('aria-busy','true'); };
         window.hideSchedulerOverlay=function(){ if(!overlay) return; overlay.classList.remove('active'); overlay.setAttribute('aria-busy','false'); };
         if(window.htmx){
-          // Show overlay for job form create/update submissions
-            document.body.addEventListener('htmx:beforeRequest', e=>{ if(e.target && e.target.id==='job-form'){ showSchedulerOverlay('Saving job...'); }});
-            ['htmx:afterRequest','htmx:responseError','htmx:sendError','htmx:timeout'].forEach(ev=> document.body.addEventListener(ev, ()=> hideSchedulerOverlay()));
+            // Lightweight form feedback instead of fullscreen overlay
+            document.body.addEventListener('htmx:beforeRequest', e=>{ if(e.target && e.target.id==='job-form'){ const btn=e.target.querySelector('button[type="submit"]'); if(btn){ btn.disabled=true; btn.dataset.orig=btn.innerHTML; btn.innerHTML='<span class=\'spinner-border spinner-border-sm\'></span> Saving'; } }});
+            document.body.addEventListener('htmx:afterRequest', e=>{ if(e.target && e.target.id==='job-form'){ const btn=e.target.querySelector('button[type="submit"]'); if(btn && btn.dataset.orig){ btn.disabled=false; btn.innerHTML=btn.dataset.orig; } }});
+            ['htmx:responseError','htmx:sendError','htmx:timeout'].forEach(ev=> document.body.addEventListener(ev, e=>{ if(e.target && e.target.id==='job-form'){ const btn=e.target.querySelector('button[type="submit"]'); if(btn && btn.dataset.orig){ btn.disabled=false; btn.innerHTML=btn.dataset.orig; } }}));
         }
       })();
     </script>

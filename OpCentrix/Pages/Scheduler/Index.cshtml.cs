@@ -581,26 +581,34 @@ namespace OpCentrix.Pages.Scheduler
 
         private string GetGridRefreshScript(string message)
         {
-            // Temporary visual bandaid: show loading overlay to mask color flicker while grid refreshes
+            // Updated: Use unified overlay helpers so it appears as soon as modal closes
+            // and hides ONLY after both grid + summary partials finish rendering.
             return $@"<script>(function(){{
                 const overlay = document.getElementById('loading-indicator');
                 const modal = document.getElementById('modal-container');
+                // Close modal immediately
                 if(modal){{ modal.style.display='none'; modal.classList.add('hidden'); modal.innerHTML=''; }}
                 document.body.style.overflow='';
-                if(window.showSuccessNotification){{window.showSuccessNotification('{message}');}}
+                // Toast / notification
+                if(window.showSuccessNotification){{ window.showSuccessNotification('{message}'); }}
+                // Show overlay using new API (falls back if helper missing)
+                if(window.showSchedulerOverlay){{ window.showSchedulerOverlay('Refreshing schedule...'); }}
+                else if(overlay){{ overlay.classList.add('active'); overlay.removeAttribute('hidden'); }}
                 const qs = window.location.search;
                 const refresh = () => {{
-
-                    if(!window.htmx){{ window.location.reload(); return; }}
-                    const gridReq = htmx.ajax('GET','/Scheduler?handler=RefreshGrid'+(qs?qs.replace('?','&'):''),{{target:'#scheduler-main-content',swap:'innerHTML'}});
-                    const summaryReq = htmx.ajax('GET','/Scheduler?handler=RefreshSummary'+(qs?qs.replace('?','&'):''),{{target:'#footer-summary',swap:'innerHTML'}});
-                    Promise.all([gridReq, summaryReq]).then(()=>{{
-                        if(overlay) overlay.classList.add('hidden');
-                    }}).catch(()=>{{ if(overlay) overlay.classList.add('hidden'); }});
+                    if(!window.htmx){{
+                        // Full reload fallback
+                        window.location.reload();
+                        return;
+                    }}
+                    const gridReq = htmx.ajax('GET','/Scheduler?handler=RefreshGrid'+(qs?qs.replace('?','&'):'') ,{{ target:'#scheduler-main-content', swap:'innerHTML' }});
+                    const summaryReq = htmx.ajax('GET','/Scheduler?handler=RefreshSummary'+(qs?qs.replace('?','&'):'') ,{{ target:'#footer-summary', swap:'innerHTML' }});
+                    Promise.all([gridReq, summaryReq])
+                        .then(()=>{{ if(window.hideSchedulerOverlay) window.hideSchedulerOverlay(); else if(overlay) overlay.classList.remove('active'); }})
+                        .catch(()=>{{ if(window.hideSchedulerOverlay) window.hideSchedulerOverlay(); else if(overlay) overlay.classList.remove('active'); }});
                 }};
-                if(overlay) overlay.classList.remove('hidden');
-                // Small delay to hide white glitch before content arrives (BANDAID - replace with smoother incremental rendering later)
-                setTimeout(refresh, 350);
+                // Small delay to mitigate layout flash before content swap
+                setTimeout(refresh, 150);
             }})();</script>";
         }
 
@@ -1475,13 +1483,13 @@ namespace OpCentrix.Pages.Scheduler
                 RequiresPreheating = true,
                 RequiresPowderSieving = true,
                 DensityPercentage = 99.5,
-                MaterialCostPerKg = part.MaterialCostPerKg,
-                LaborCostPerHour = part.StandardLaborCostPerHour,
-                MachineOperatingCostPerHour = part.MachineOperatingCostPerHour,
-                ArgonCostPerHour = part.ArgonCostPerHour,
-                PreheatingTimeMinutes = part.PreheatingTimeMinutes,
-                CoolingTimeMinutes = part.CoolingTimeMinutes,
-                PostProcessingTimeMinutes = part.PostProcessingTimeMinutes,
+                MaterialCostPerKg = 450.00m,
+                LaborCostPerHour = 85.00m,
+                MachineOperatingCostPerHour = 125.00m,
+                ArgonCostPerHour = 15.00m,
+                PreheatingTimeMinutes = 60,
+                CoolingTimeMinutes = 240,
+                PostProcessingTimeMinutes = 45,
                 CreatedDate = DateTime.UtcNow,
                 LastModifiedDate = DateTime.UtcNow,
                 CreatedBy = User.Identity?.Name ?? "System",
