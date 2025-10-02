@@ -192,21 +192,21 @@
                                     <a href="?SortBy=PartNumber&SortDirection=@Model.GetSortDirection("PartNumber")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&StageFilter=@Model.StageFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
                                        class="text-decoration-none">
                                         <i class="fas fa-hashtag me-1"></i>
-                                        Part Number @Model.GetSortIcon("PartNumber")
+                                        Part Number @Html.Raw(Model.GetSortIcon("PartNumber"))
                                     </a>
                                 </th>
                                 <th>
                                     <a href="?SortBy=Name&SortDirection=@Model.GetSortDirection("Name")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&StageFilter=@Model.StageFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
                                        class="text-decoration-none">
                                         <i class="fas fa-tag me-1"></i>
-                                        Name @Model.GetSortIcon("Name")
+                                        Name @Html.Raw(Model.GetSortIcon("Name"))
                                     </a>
                                 </th>
                                 <th>
                                     <a href="?SortBy=Material&SortDirection=@Model.GetSortDirection("Material")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&StageFilter=@Model.StageFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
                                        class="text-decoration-none">
                                         <i class="fas fa-flask me-1"></i>
-                                        Material @Model.GetSortIcon("Material")
+                                        Material @Html.Raw(Model.GetSortIcon("Material"))
                                     </a>
                                 </th>
                                 <th>
@@ -216,8 +216,8 @@
                                 <th>
                                     <a href="?SortBy=Hours&SortDirection=@Model.GetSortDirection("Hours")&SearchTerm=@Model.SearchTerm&MaterialFilter=@Model.MaterialFilter&StageFilter=@Model.StageFilter&ActiveOnly=@Model.ActiveOnly&PageNumber=@Model.PageNumber" 
                                        class="text-decoration-none">
-                                        <i class="fas fa-clock me-1"></i>
-                                        Duration @Model.GetSortIcon("Hours")
+                                        <i class="fas fa-layer-group me-1"></i>
+                                        Stacking @Html.Raw(Model.GetSortIcon("Hours"))
                                     </a>
                                 </th>
                                 <th>
@@ -309,19 +309,52 @@
                                         }
                                     </td>
                                     <td>
-                                        @if (masterPart.SingleStackDurationHours.HasValue)
+                                        <!-- NEW STACKING INDICATOR (replaces legacy duration field) -->
+                                        @{
+                                            double? singleDur = masterPart.GetStackDuration(1);
+                                            double? doubleDur = masterPart.GetStackDuration(2);
+                                            double? tripleDur = masterPart.GetStackDuration(3);
+                                            int? ppb1 = masterPart.GetPartsPerBuild(1);
+                                            int? ppb2 = masterPart.GetPartsPerBuild(2);
+                                            int? ppb3 = masterPart.GetPartsPerBuild(3);
+                                        }
+                                        @if (singleDur.HasValue)
                                         {
-                                            <div class="fw-semibold">
-                                                <i class="fas fa-clock me-1"></i>
-                                                @masterPart.SingleStackDurationHours.Value.ToString("F1")h
+                                            <div class="d-flex flex-wrap gap-1 align-items-center mb-1">
+                                                <span class="badge stack-badge bg-primary" data-bs-toggle="tooltip" title="Single Stack • Duration @singleDur.Value.ToString("F1")h • Parts/Build @ppb1">
+                                                    <i class="fas fa-cube me-1"></i>1x @singleDur.Value.ToString("F1")h • @ppb1
+                                                </span>
+                                                @if (doubleDur.HasValue && ppb2.HasValue)
+                                                {
+                                                    <span class="badge stack-badge bg-success" data-bs-toggle="tooltip" title="Double Stack • Duration @doubleDur.Value.ToString("F1")h • Parts/Build @ppb2">
+                                                        <i class="fas fa-layer-group me-1"></i>2x @doubleDur.Value.ToString("F1")h • @ppb2
+                                                    </span>
+                                                }
+                                                @if (tripleDur.HasValue && ppb3.HasValue)
+                                                {
+                                                    <span class="badge stack-badge bg-warning text-dark" data-bs-toggle="tooltip" title="Triple Stack • Duration @tripleDur.Value.ToString("F1")h • Parts/Build @ppb3">
+                                                        <i class="fas fa-layer-group me-1"></i>3x @tripleDur.Value.ToString("F1")h • @ppb3
+                                                    </span>
+                                                }
                                             </div>
-                                            @if (masterPart.AllowStacking && masterPart.MaxStackCount > 1)
-                                            {
-                                                <div class="small text-success">
-                                                    <i class="fas fa-layer-group me-1"></i>
-                                                    Stackable (Max: @masterPart.MaxStackCount)
-                                                </div>
-                                            }
+                                            <div class="small text-muted">
+                                                <i class="fas fa-calculator me-1"></i>
+                                                @if (ppb1.HasValue && singleDur.HasValue)
+                                                {
+                                                    var pph1 = ppb1.Value / singleDur.Value;
+                                                    <text>1x @pph1.ToString("F2") parts/hr</text>;
+                                                }
+                                                @if (ppb2.HasValue && doubleDur.HasValue)
+                                                {
+                                                    var pph2 = ppb2.Value / doubleDur.Value;
+                                                    <text> • 2x @pph2.ToString("F2")</text>;
+                                                }
+                                                @if (ppb3.HasValue && tripleDur.HasValue)
+                                                {
+                                                    var pph3 = ppb3.Value / tripleDur.Value;
+                                                    <text> • 3x @pph3.ToString("F2")</text>;
+                                                }
+                                            </div>
                                         }
                                         else
                                         {
@@ -1199,7 +1232,11 @@
         align-items: center;
         white-space: nowrap;
     }
-
+    .stack-badge {
+        font-size: 0.70rem;
+        font-weight: 600;
+        letter-spacing: .25px;
+    }
     .parts-admin-override {
         background-color: rgba(255, 193, 7, 0.1);
         border-left: 3px solid #ffc107;

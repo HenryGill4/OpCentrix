@@ -43,6 +43,8 @@
                     j.style.removeProperty('border-left');
                 }
             });
+            // Hook: allow external batch selection script to re-bind
+            document.dispatchEvent(new CustomEvent('scheduler:jobsHydrated'));
         } catch(e){ console.warn('hydrateSchedulerColors error', e); }
     }
     window.hydrateSchedulerColors = hydrateSchedulerColors;
@@ -78,6 +80,8 @@
                 console.log('[SCHED] Modal request suppressed (in flight)');
                 return false;
             }
+            // If selection mode active (flag added by batch selection script), ignore open
+            if(window.__schedulerSelectMode){ return false; }
             console.log('[SCHED] openJobModal called:', {machineId, date, jobId});
             if(!machineId || !date) throw new Error('machineId/date required');
             ensureModalContainer();
@@ -166,9 +170,9 @@
             if(c.dataset.ocClickBound==='1') return;
             c.dataset.ocClickBound='1';
             c.addEventListener('click', ()=>{
+                if(window.__schedulerSelectMode) return; // suppress open in selection mode
                 const machineId = c.getAttribute('data-machine');
                 const slotTime = c.getAttribute('data-slot-time');
-                console.log('[SCHED] Grid cell clicked:', {machineId, slotTime});
                 if(machineId && slotTime) window.openJobModalSafely(machineId, slotTime);
             });
         });

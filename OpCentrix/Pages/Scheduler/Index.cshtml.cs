@@ -548,6 +548,45 @@ namespace OpCentrix.Pages.Scheduler
             }})();</script>";
         }
 
+        // ================== NEW: Batch delete handler ==================
+        public async Task<IActionResult> OnPostDeleteJobsAsync(string jobIds)
+        {
+            var operationId = Guid.NewGuid().ToString("N")[..8];
+            _logger.LogInformation("🗑️ [SCHEDULER-{OperationId}] Batch delete request: {Ids}", operationId, jobIds);
+            if (string.IsNullOrWhiteSpace(jobIds))
+            {
+                return Content("<script>window.showErrorNotification && window.showErrorNotification('No jobs selected');</script>", "text/html");
+            }
+            try
+            {
+                var ids = jobIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => int.TryParse(s, out var v) ? v : 0)
+                    .Where(v => v > 0)
+                    .Distinct()
+                    .ToList();
+                if (ids.Count == 0)
+                {
+                    return Content("<script>window.showErrorNotification && window.showErrorNotification('No valid job ids');</script>", "text/html");
+                }
+                var jobs = await _context.Jobs.Where(j => ids.Contains(j.Id)).ToListAsync();
+                if (jobs.Count == 0)
+                {
+                    return Content("<script>window.showErrorNotification && window.showErrorNotification('Jobs not found');</script>", "text/html");
+                }
+                _context.Jobs.RemoveRange(jobs);
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Deleted {Count} jobs (ids: {Ids})", operationId, jobs.Count, string.Join(',', jobs.Select(j=>j.Id)));
+                var script = GetGridRefreshScript($"Deleted {jobs.Count} job(s)");
+                return Content(script, "text/html");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ [SCHEDULER-{OperationId}] Batch delete failed", operationId);
+                return Content("<script>window.showErrorNotification && window.showErrorNotification('Batch delete failed');</script>", "text/html");
+            }
+        }
+        // ================== END NEW ==================
+
         public async Task<IActionResult> OnPostStartPrintJobAsync(int jobId)
         {
             var operationId = Guid.NewGuid().ToString("N")[..8];

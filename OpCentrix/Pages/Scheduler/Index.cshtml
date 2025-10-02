@@ -16,26 +16,36 @@
     var zoom = zoomLevels[zoomIndex];
 
     var orientationParam = Request.Query["orientation"].FirstOrDefault();
-    string currentOrientation;
-    if (!string.IsNullOrEmpty(orientationParam) && (orientationParam == "horizontal" || orientationParam == "vertical"))
-    {
-        currentOrientation = orientationParam;
-    }
-    else
-    {
-        currentOrientation = "horizontal";
-    }
+    string currentOrientation = (!string.IsNullOrEmpty(orientationParam) && (orientationParam == "horizontal" || orientationParam == "vertical")) ? orientationParam : "horizontal";
     var isVertical = currentOrientation == "vertical";
-
     var viewModel = Model.ViewModel;
 }
 
-<!-- Enhanced Header with Controls -->
-<div class="opcentrix-card p-6 mb-6">
+<!-- Hidden anti-forgery token source for JS batch operations -->
+<form id="__afTokenSource" style="display:none;">@Html.AntiForgeryToken()</form>
+
+<!-- Lightweight non-blocking overlay -->
+<div id="loading-indicator" aria-live="polite" aria-busy="false">
+  <div class="li-box">
+    <div class="li-spinner"></div>
+    <div id="loading-indicator-text" class="li-text">Working...</div>
+  </div>
+</div>
+<style>
+  #loading-indicator{position:fixed;top:.75rem;left:50%;transform:translateX(-50%);z-index:10000;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .18s ease,visibility .18s ease;}
+  #loading-indicator.active{opacity:1;visibility:visible;}
+  #loading-indicator .li-box{display:flex;align-items:center;gap:.6rem;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:.55rem .85rem;box-shadow:0 4px 14px -2px rgba(0,0,0,.15);font-size:.7rem;font-weight:600;color:#334155;}
+  .li-spinner{width:1.15rem;height:1.15rem;border:3px solid #e2e8f0;border-top-color:#6366f1;border-radius:50%;animation:ocspin 1s linear infinite;}
+  @@keyframes ocspin{to{transform:rotate(360deg)}}
+</style>
+
+<!-- HTMX script sink (where server returns <script> for refresh) -->
+<div id="htmx-script-sink" style="display:none;"></div>
+
+<!-- Enhanced Header with Controls (sticky) -->
+<div id="scheduler-header-card" class="opcentrix-card p-6 mb-2 scheduler-sticky-header">
     <div class="scheduler-header-wrapper">
-        <!-- Controls Wrapper -->
         <div class="scheduler-controls">
-            <!-- Navigation Controls -->
             <div class="control-group">
                 <button onclick="navigatePeriod(-1)" class="icon-btn" title="Previous period">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
@@ -45,8 +55,6 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                 </button>
             </div>
-
-            <!-- Zoom Controls -->
             <div class="control-group">
                 <span class="group-label">Zoom</span>
                 <button id="zoomOut" @(zoomIndex <= 0 ? "disabled" : "") onclick="changeZoom(-1)" class="icon-btn" title="Zoom out">
@@ -57,8 +65,6 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                 </button>
             </div>
-
-            <!-- Orientation Toggle -->
             <div class="control-group orientation-group">
                 <span class="group-label">Layout</span>
                 <button class="toggle-btn @(isVertical?"":"active")" onclick="toggleOrientation('horizontal')" title="Horizontal layout">
@@ -68,8 +74,6 @@
                     <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 4v16M12 4v16M18 4v16"/></svg>V
                 </button>
             </div>
-
-            <!-- Machine Type Filter (Scrollable Chips) -->
             <div class="control-group filter-group">
                 <span class="group-label">Type</span>
                 <div class="chip-scroll" title="Filter by machine type">
@@ -80,15 +84,11 @@
                     }
                 </div>
             </div>
-
-            <!-- Status Summary -->
             <div class="control-group summary-group">
                 <span class="group-label">Status</span>
                 <span class="mini-pill bg-green-100 text-green-700">@viewModel.Jobs.Count jobs</span>
                 <span class="mini-pill bg-blue-100 text-blue-700">@viewModel.Machines.Count machines</span>
             </div>
-
-            <!-- Schedule-side machine management buttons -->
             <div class="control-group">
                 <a href="/Admin/Machines?showCreate=1" class="primary-btn" title="Add machine">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
@@ -100,25 +100,20 @@
     </div>
 </div>
 
-<!-- Main Scheduler Content -->
+<!-- Batch Selection Toolbar (sticky below header) -->
+<div id="batch-toolbar" class="opcentrix-card px-4 py-2 mb-4 flex items-center gap-3 text-xs scheduler-sticky-sub" style="display:flex;align-items:center;">
+    <button type="button" id="toggle-select-mode" class="secondary-btn" style="padding:.4rem .7rem;font-size:.65rem;">Select Jobs</button>
+    <div id="selection-stats" style="font-size:.65rem;color:#334155;display:none;"><span id="selected-count">0</span> selected</div>
+    <button type="button" id="delete-selected" class="oc-btn-danger" style="display:none;padding:.45rem .7rem;font-size:.65rem;" disabled>Delete Selected</button>
+    <button type="button" id="clear-selection" class="secondary-btn" style="display:none;padding:.4rem .7rem;font-size:.65rem;">Clear</button>
+</div>
+
 <div id="scheduler-main-content" class="@(isVertical ? "scheduler-vertical" : "scheduler-horizontal")">
-    @if (isVertical)
-    {
-        <partial name="_SchedulerVertical" model="viewModel" />
-    }
-    else
-    {
-        <partial name="_SchedulerHorizontal" model="viewModel" />
-    }
+    @if (isVertical) { <partial name="_SchedulerVertical" model="viewModel" /> } else { <partial name="_SchedulerHorizontal" model="viewModel" /> }
 </div>
 
-<!-- Footer Summary -->
-<div class="mt-6" id="footer-summary">
-    <partial name="_FooterSummary" model="Model.Summary" />
-</div>
-
-<!-- CRITICAL: Modal Container (must exist for HTMX to work) -->
-<div id="modal-container" class="fixed inset-0 z-50 hidden" style="display: none;"></div>
+<div class="mt-6" id="footer-summary"><partial name="_FooterSummary" model="Model.Summary" /></div>
+<div id="modal-container" class="fixed inset-0 z-50 hidden" style="display:none;"></div>
 
 @section Styles {
     <link rel="stylesheet" href="~/css/scheduler.css" asp-append-version="true" />
@@ -126,24 +121,107 @@
     <link rel="stylesheet" href="~/css/stage-cohort-enhancements.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/responsive-master.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/scheduler-header.css" asp-append-version="true" />
+    <style>
+        .scheduler-sticky-header{position:sticky;top:0;z-index:50;background:#fff;box-shadow:0 2px 4px -2px rgba(0,0,0,.08);} 
+        .scheduler-sticky-sub{position:sticky;top:calc(var(--scheduler-header-height,72px));z-index:50;background:#fff;box-shadow:0 1px 3px -2px rgba(0,0,0,.06);} 
+        .job-block.select-mode{cursor:pointer;outline:2px solid transparent;outline-offset:0;position:relative;} 
+        .job-block.select-mode:hover{outline-color:#6366f1;} 
+        .job-block.selected{outline-color:#dc2626!important;box-shadow:0 0 0 3px rgba(220,38,38,.35);}  
+        .job-block .select-check{position:absolute;top:2px;left:2px;background:rgba(0,0,0,.55);color:#fff;font-size:.55rem;padding:2px 4px;border-radius:4px;display:none;} 
+        .job-block.select-mode .select-check{display:block;} 
+        .job-block.selected .select-check{background:#dc2626;} 
+        .scheduler-horizontal-container .scheduler-machine-header,
+        .scheduler-horizontal-container .scheduler-time-header{position:sticky;top:calc(var(--scheduler-header-height,72px) + var(--scheduler-subbar-height,48px));z-index:60;background:#fff;} 
+    </style>
 }
 
 @section Scripts {
     <script src="~/js/scheduler-ui.js" asp-append-version="true"></script>
-    <!-- job-form.js now contains unified stacking + SLS logic (replaces scheduler-addjob-modal.js) -->
     <script src="~/js/job-form.js" asp-append-version="true"></script>
     <script>
-        let lastSelectedMachineId = null;
-        document.addEventListener('click', function(e){
-            const cell = e.target.closest('[data-machine]');
-            if(cell){ lastSelectedMachineId = cell.getAttribute('data-machine'); }
-        });
-        function openModifySelectedMachine(){
-            if(!lastSelectedMachineId){
-                alert('Click on a machine row or column first to select a machine.');
-                return;
-            }
-            window.location.href = '/Admin/Machines?editMachine=' + encodeURIComponent(lastSelectedMachineId);
+      // Overlay helpers (global)
+      (function(){
+        const overlay=document.getElementById('loading-indicator');
+        const textEl=document.getElementById('loading-indicator-text');
+        window.showSchedulerOverlay=function(msg){ if(!overlay) return; if(textEl) textEl.textContent=msg||'Working...'; overlay.classList.add('active'); overlay.setAttribute('aria-busy','true'); };
+        window.hideSchedulerOverlay=function(){ if(!overlay) return; overlay.classList.remove('active'); overlay.setAttribute('aria-busy','false'); };
+        if(window.htmx){
+          document.body.addEventListener('htmx:beforeRequest', e=>{ if(e.target && (e.target.id==='job-form')) showSchedulerOverlay('Saving job...'); });
+          ['htmx:afterRequest','htmx:responseError','htmx:sendError','htmx:timeout'].forEach(ev=> document.body.addEventListener(ev, ()=> hideSchedulerOverlay()));
         }
+      })();
+    </script>
+    <script>
+        (function(){
+            function setHeights(){
+                const header = document.getElementById('scheduler-header-card');
+                const sub = document.getElementById('batch-toolbar');
+                if(header){ document.documentElement.style.setProperty('--scheduler-header-height', header.offsetHeight + 'px'); }
+                if(sub){ document.documentElement.style.setProperty('--scheduler-subbar-height', sub.offsetHeight + 'px'); }
+            }
+            window.addEventListener('load', setHeights); window.addEventListener('resize', setHeights);
+        })();
+    </script>
+    <script>
+        // Batch selection + refresh
+        (function(){
+            const btnToggle=document.getElementById('toggle-select-mode');
+            const btnDelete=document.getElementById('delete-selected');
+            const btnClear=document.getElementById('clear-selection');
+            const stats=document.getElementById('selection-stats');
+            const countSpan=document.getElementById('selected-count');
+            let selectMode=localStorage.getItem('schedulerSelectMode')==='1';
+            const selected=new Set();
+            let pendingRefresh=0;
+
+            function persist(){localStorage.setItem('schedulerSelectMode',selectMode?'1':'0');}
+            function updateUI(){
+                document.querySelectorAll('.job-block').forEach(j=>{
+                    if(selectMode){
+                        j.classList.add('select-mode');
+                        if(!j.querySelector('.select-check')){ const b=document.createElement('span'); b.className='select-check'; b.textContent='\u2713'; j.prepend(b);}    
+                    } else { j.classList.remove('select-mode','selected'); const sc=j.querySelector('.select-check'); if(sc) sc.remove(); }
+                });
+                stats.style.display=selectMode?'inline-flex':'none';
+                btnDelete.style.display=selectMode?'inline-flex':'none';
+                btnClear.style.display=selectMode?'inline-flex':'none';
+                btnDelete.disabled=selected.size===0;
+                countSpan.textContent=selected.size;
+                btnToggle.textContent=selectMode?'Exit Select':'Select Jobs';
+                window.__schedulerSelectMode=selectMode;
+            }
+            function attachJobClick(){
+                document.querySelectorAll('.job-block').forEach(j=>{
+                    if(j.dataset.batchBound==='1') return; j.dataset.batchBound='1';
+                    j.addEventListener('click',e=>{ if(!selectMode) return; e.stopPropagation(); const id=j.getAttribute('data-job-id'); if(!id) return; if(selected.has(id)){selected.delete(id); j.classList.remove('selected');} else {selected.add(id); j.classList.add('selected');} countSpan.textContent=selected.size; btnDelete.disabled=selected.size===0; }, true);
+                });
+            }
+            function refreshScheduler(){
+                if(!window.htmx){ window.location.reload(); return; }
+                const qs=window.location.search; pendingRefresh=2; showSchedulerOverlay('Refreshing schedule...');
+                htmx.ajax('GET','/Scheduler?handler=RefreshGrid'+(qs?qs.replace('?','&'):''),{target:'#scheduler-main-content',swap:'innerHTML'});
+                htmx.ajax('GET','/Scheduler?handler=RefreshSummary'+(qs?qs.replace('?','&'):''),{target:'#footer-summary',swap:'innerHTML'});
+            }
+            function resetAfterDelete(){ selected.clear(); selectMode=false; persist(); updateUI(); }
+
+            document.addEventListener('htmx:afterSwap', e=>{
+                const id = e.detail && e.detail.target ? e.detail.target.id : '';
+                if(id==='scheduler-main-content'){ attachJobClick(); if(selectMode) updateUI(); }
+                if(id==='scheduler-main-content' || id==='footer-summary'){ if(pendingRefresh>0){ pendingRefresh--; if(pendingRefresh===0){ hideSchedulerOverlay(); resetAfterDelete(); } } }
+                if(id==='htmx-script-sink' && pendingRefresh===0){ setTimeout(refreshScheduler,40); }
+            });
+
+            btnToggle.addEventListener('click',()=>{ selectMode=!selectMode; if(!selectMode) selected.clear(); attachJobClick(); updateUI(); persist(); });
+            btnClear.addEventListener('click',()=>{ selected.clear(); document.querySelectorAll('.job-block.selected').forEach(j=>j.classList.remove('selected')); updateUI(); });
+            btnDelete.addEventListener('click',()=>{
+                if(selected.size===0) return; if(!confirm('Delete '+selected.size+' selected job(s)? This cannot be undone.')) return;
+                const ids=[...selected].join(','); const tokenEl=document.querySelector('#__afTokenSource input[name="__RequestVerificationToken"]'); const token=tokenEl?tokenEl.value:'';
+                showSchedulerOverlay('Deleting '+selected.size+' job(s)...');
+                if(window.htmx){ htmx.ajax('POST','/Scheduler?handler=DeleteJobs',{target:'#htmx-script-sink',swap:'innerHTML',values:{jobIds:ids},headers:{'RequestVerificationToken':token}}); }
+                else { fetch('/Scheduler?handler=DeleteJobs',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','RequestVerificationToken':token},body:'jobIds='+encodeURIComponent(ids)}).then(r=>r.text()).then(html=>{document.getElementById('htmx-script-sink').innerHTML=html; refreshScheduler();}).catch(()=>{ hideSchedulerOverlay(); alert('Delete failed');}); }
+            });
+
+            attachJobClick(); updateUI();
+        })();
     </script>
 }

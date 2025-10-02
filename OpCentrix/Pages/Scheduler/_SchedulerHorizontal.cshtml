@@ -12,6 +12,9 @@
     /* Unified coloring (legacy per machine classes removed) */
     .scheduler-horizontal-container .job-block { color:#fff; border-radius:6px; background:var(--machine-color,#6366F1); box-shadow:0 4px 14px -2px rgba(0,0,0,.12); }
     .scheduler-horizontal-container .scheduler-grid-cell .job-block { background:var(--machine-color,#6366F1); }
+    /* Ensure header cells appear above job blocks when sticky */
+    .scheduler-horizontal-container .scheduler-time-header{z-index:60;}
+    .scheduler-horizontal-container .scheduler-machine-header{z-index:61;}
 </style>
 <script>
 // Fallback: ensure openJobModalSafely exists before any inline onclick calls
@@ -179,4 +182,4 @@ if(typeof window.openJobModalSafely !== 'function'){
     const c=b.getAttribute('data-color'); if(c){ b.style.setProperty('--machine-color', c); }
   });
 })();
-</script></script>
+</script>

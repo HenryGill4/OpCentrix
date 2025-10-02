@@ -734,9 +734,11 @@ namespace OpCentrix.Pages.Admin
         {
             if (SortBy?.ToLower() == column.ToLower())
             {
-                return SortDirection?.ToLower() == "desc" ? "?" : "?";
+                return SortDirection?.ToLower() == "desc" 
+                    ? "<i class='fas fa-sort-down'></i>" 
+                    : "<i class='fas fa-sort-up'></i>";
             }
-            return "?";
+            return "<i class='fas fa-sort'></i>";
         }
 
         public string GetStatusBadgeClass(bool isActive)
