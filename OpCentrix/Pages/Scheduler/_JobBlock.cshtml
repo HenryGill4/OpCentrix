@@ -1,4 +1,4 @@
-@model OpCentrix.Models.Job
+﻿@model OpCentrix.Models.Job
 
 @{
     var priorityClass = Model.Priority switch
@@ -11,7 +11,7 @@
         _ => "priority-normal"
     };
     
-    var rushIndicator = Model.IsRushJob ? "?" : "";
+    var rushIndicator = Model.IsRushJob ? "✱" : "";
     var shortPartNumber = Model.PartNumber?.Length > 10 ? Model.PartNumber.Substring(0, 10) + "..." : Model.PartNumber;
     var isScheduled = Model.Status == "Scheduled";
     var isBuilding = Model.Status == "Building" || Model.Status == "In Progress";
@@ -20,79 +20,66 @@
     var timeDisplay = isBuilding && Model.ActualStart.HasValue ? $"Started: {Model.ActualStart:HH:mm}" : $"{Model.ScheduledStart:HH:mm}-{Model.ScheduledEnd:HH:mm}";
     var slsMachines = new[]{"TI1","TI2","INC","INC1","INC2"};
     var isSlsJob = slsMachines.Contains(Model.MachineId);
+    var stackLevel = Model.StackLevel.HasValue && Model.StackLevel.Value > 0 ? Model.StackLevel.Value : (byte)1; // default 1x
+    var showStack = Model.StackLevel.HasValue && Model.StackLevel.Value > 1; // only highlight if stacked >1
+    var partsPerBuild = Model.PartsPerBuild.HasValue && Model.PartsPerBuild.Value > 0 ? Model.PartsPerBuild.Value : (int?)null;
 }
 
 <!-- Inline styles to avoid Razor compilation issues -->
 <style>
-    .delayed-job {
-        outline: 2px solid #EF4444 !important;
-        animation: pulse-red 2s infinite;
-    }
-    
-    @@keyframes pulse-red {
-        0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-        50% { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0); }
-    }
-    .start-chip{
-        position: absolute;
-        bottom: 4px;
-        right: 4px;
-        background: #fff;
-        color: #2563eb;
-        font-size: 10px;
-        padding: 2px 6px;
-        border-radius: 9999px;
-        font-weight: 600;
-        cursor: pointer;
-        box-shadow: 0 1px 3px rgba(0,0,0,.25);
-        opacity: .85;
-        display: flex;
-        align-items: center;
-        gap: 2px;
-        transition: .15s;
-    } 
-    .start-chip:hover{
-        opacity: 1;
-        transform: translateY(-1px);
-    } 
+    .delayed-job { outline: 2px solid #EF4444 !important; animation: pulse-red 2s infinite; }
+    @@keyframes pulse-red { 0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 50% { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0); } }
+    .start-chip{ position:absolute; bottom:4px; right:4px; background:#fff; color:#2563eb; font-size:10px; padding:2px 6px; border-radius:9999px; font-weight:600; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.25); opacity:.85; display:flex; align-items:center; gap:2px; transition:.15s; } 
+    .start-chip:hover{ opacity:1; transform:translateY(-1px); } 
+    .stack-badge{margin-left:4px;display:inline-flex;align-items:center;gap:2px;font-size:10px;font-weight:600;line-height:1;padding:2px 6px;border-radius:12px;background:rgba(255,255,255,.15);backdrop-filter:blur(2px);border:1px solid rgba(255,255,255,.35);} 
+    .stack-badge.highlight{background:#1e293b;color:#fff;border-color:#334155;}
 </style>
 
 <div class="job-block-wrapper relative group" 
      data-job-id="@Model.Id"
      data-machine-id="@Model.MachineId"
      data-status="@Model.Status"
-     data-machine="@Model.MachineId">
+     data-machine="@Model.MachineId"
+     data-stack-level="@stackLevel"
+     @(partsPerBuild.HasValue ? $"data-parts-per-build=\"{partsPerBuild.Value}\"" : "")>
      
     <!-- Main Job Block -->
     <div class="job-block-content h-full flex flex-col justify-center p-1 @priorityClass relative overflow-hidden @(isDelayed ? "delayed-job" : "")"
          style="background:var(--machine-color,#6366F1);color:#fff"
+         title="@Model.PartNumber • Qty @Model.Quantity@(showStack ? $" • {stackLevel}x stack" : "")@(partsPerBuild.HasValue ? $" • {partsPerBuild.Value} parts/build" : "")"
          onclick="openJobModalSafely('@Model.MachineId', '@Model.ScheduledStart:yyyy-MM-ddTHH:mm', @Model.Id)">
         
-        <div class="job-block-title font-bold text-xs leading-tight">
-            @rushIndicator@shortPartNumber
+        <div class="job-block-title font-bold text-xs leading-tight flex items-center flex-wrap gap-0.5">
+            <span>@rushIndicator@shortPartNumber</span>
+            <span class="stack-badge @(showStack?"highlight":"")" aria-label="Stack level and quantity">
+                @stackLevel
+                <span style="opacity:.75;">•</span>
+                @Model.Quantity
+            </span>
         </div>
         
-        <div class="job-block-details opacity-90 text-xs leading-tight mt-1">
-            <div>Qty: @Model.Quantity</div>
+        <div class="job-block-details opacity-90 text-[10px] leading-tight mt-1 flex flex-col gap-0.5">
+            <div>Qty: @Model.Quantity@if(showStack){<text> · Stack @stackLevel</text>}@(partsPerBuild.HasValue && partsPerBuild.Value>0 ? $" · {partsPerBuild.Value} ppb" : "")</div>
             <div class="opacity-75">@timeDisplay</div>
         </div>
         
+        @if (!string.IsNullOrWhiteSpace(Model.SlsMaterial))
+        {
+            <div class="mt-0.5 text-[10px] opacity-75 truncate">@Model.SlsMaterial</div>
+        }
+        
         @if (isBuilding)
         {
-            <div class="absolute top-0 right-0 bg-amber-500 text-white text-[10px] px-1 rounded-bl animate-pulse">
-                RUN
-            </div>
+            <div class="absolute top-0 right-0 bg-amber-500 text-white text-[10px] px-1 rounded-bl animate-pulse">RUN</div>
         }
         else if (isComplete)
         {
-            <div class="absolute top-0 right-0 bg-green-500 text-white text-[10px] px-1 rounded-bl">
-                DONE
-            </div>
+            <div class="absolute top-0 right-0 bg-green-500 text-white text-[10px] px-1 rounded-bl">DONE</div>
         }
         @if(isScheduled)
         {
             <div class="start-chip" title="Start Job" onclick="event.stopPropagation(); if(window.OpCentrixRuntime) OpCentrixRuntime.openStartJobModal(@Model.Id);">
-                ? Start
+                ▶ Start
             </div>
         }
     </div>

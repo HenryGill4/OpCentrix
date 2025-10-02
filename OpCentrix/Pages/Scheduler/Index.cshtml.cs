@@ -280,7 +280,6 @@ namespace OpCentrix.Pages.Scheduler
             _logger.LogInformation("🔧 [SCHEDULER-{OperationId}] Processing job: Id={JobId}, MachineId={MachineId}, PartId={PartId}, MasterPartId={MasterPartId}",
                 operationId, jobRequest.Id, jobRequest.MachineId, jobRequest.PartId, jobRequest.MasterPartId);
 
-            // DEBUG: Dump incoming raw form values to help diagnose schedule button issues
             if (_logger.IsEnabled(LogLevel.Debug))
             {
                 try
@@ -289,7 +288,7 @@ namespace OpCentrix.Pages.Scheduler
                     foreach (var kvp in Request.Form)
                     {
                         if (kvp.Key.Equals("__RequestVerificationToken", StringComparison.OrdinalIgnoreCase))
-                            continue; // skip anti-forgery token noise
+                            continue;
                         formSnapshot[kvp.Key] = kvp.Value.ToString();
                     }
                     _logger.LogDebug("🧾 [SCHEDULER-{OperationId}] Raw form payload: {Payload}", operationId, System.Text.Json.JsonSerializer.Serialize(formSnapshot));
@@ -307,7 +306,9 @@ namespace OpCentrix.Pages.Scheduler
                 await LoadAvailablePartsAsync(operationId);
                 await LoadAvailableMasterPartsAsync(operationId);
 
-                // Attempt legacy part resolution early if master part selected but PartId not posted
+                // Hydrate stacking-related fields (StackLevel, PartsPerBuild, PlannedStackDurationHours) from MasterPart if missing or incomplete
+                await HydrateStackFieldsAsync(jobRequest, operationId);
+
                 if (jobRequest.PartId <= 0 && jobRequest.MasterPartId.HasValue)
                 {
                     var resolved = await TryResolveLegacyPartAsync(jobRequest, operationId);
@@ -334,13 +335,10 @@ namespace OpCentrix.Pages.Scheduler
                     var desiredStart = jobRequest.ScheduledStart;
                     var (autoStart, autoEnd) = await FindNextAvailableSlotAsync(jobRequest.MachineId, desiredStart, durationHours, null, operationId);
 
-                    // Shift-align (ensure start inside active operating shift window)
                     var (shiftStart, shiftEnd) = await AdjustToOperatingShiftsAsync(jobRequest.MachineId, autoStart, durationHours, operationId);
                     if (shiftStart > autoStart)
                     {
-                        // After moving into shift window, re-run overlap resolution from that point
                         (autoStart, autoEnd) = await FindNextAvailableSlotAsync(jobRequest.MachineId, shiftStart, durationHours, null, operationId);
-                        // Re-apply shift alignment if overlap pushed us outside shift
                         (autoStart, autoEnd) = await AdjustToOperatingShiftsAsync(jobRequest.MachineId, autoStart, durationHours, operationId);
                     }
                     else
@@ -367,7 +365,6 @@ namespace OpCentrix.Pages.Scheduler
                 var validationResult = await ValidateJobRequestAsync(jobRequest, operationId);
                 if (!validationResult.IsValid)
                 {
-                    // DEBUG: Log validation errors clearly
                     if (_logger.IsEnabled(LogLevel.Debug))
                     {
                         foreach (var err in validationResult.Errors)
@@ -380,7 +377,7 @@ namespace OpCentrix.Pages.Scheduler
                     {
                         ModelState.AddModelError(error.PropertyName, error.ErrorMessage);
                     }
-                    _logger.LogWarning("⚠️ [SCHEDULER-{OperationId}] Validation failed: {ErrorCount} errors", 
+                    _logger.LogWarning("⚠️ [SCHEDULER-{OperationId}] Validation failed: {ErrorCount} errors",
                         operationId, validationResult.Errors.Count);
                     var errorJob = await ConvertDtoToJobAsync(jobRequest);
                     return Partial("_AddEditJobModal", new AddEditJobViewModel
@@ -408,8 +405,8 @@ namespace OpCentrix.Pages.Scheduler
                 stopwatch.Stop();
                 _logger.LogInformation("✅ [SCHEDULER-{OperationId}] Job persisted (Id={SavedId}) in {Elapsed}ms", operationId, savedJob.Id, stopwatch.ElapsedMilliseconds);
 
-                var successMessage = jobRequest.Id == 0 
-                    ? $"Job scheduled successfully for {savedJob.PartNumber}" 
+                var successMessage = jobRequest.Id == 0
+                    ? $"Job scheduled successfully for {savedJob.PartNumber}"
                     : $"Job updated successfully for {savedJob.PartNumber}";
 
                 if (Request.Headers.ContainsKey("HX-Request"))
@@ -445,6 +442,65 @@ namespace OpCentrix.Pages.Scheduler
                     _logger.LogError(innerEx, "❌ [SCHEDULER-{OperationId}] Critical error in error handling", operationIdCopy);
                     return Content($@"<script>alert('Error saving job: {ex.Message.Replace("'", "\\'")}');</script>", "text/html");
                 }
+            }
+        }
+
+        // Hydrate stack related fields from MasterPart if missing/incomplete
+        private async Task HydrateStackFieldsAsync(CreateJobDto dto, string operationId)
+        {
+            try
+            {
+                if (!dto.MasterPartId.HasValue || dto.MasterPartId.Value <= 0)
+                    return;
+
+                // Use already loaded list where possible to avoid extra query
+                MasterPart? mp = AvailableMasterParts.FirstOrDefault(m => m.Id == dto.MasterPartId.Value);
+                if (mp == null)
+                {
+                    mp = await _context.MasterParts.AsNoTracking().FirstOrDefaultAsync(m => m.Id == dto.MasterPartId.Value);
+                }
+                if (mp == null) return;
+
+                // Determine effective stack level
+                if (!dto.StackLevel.HasValue || dto.StackLevel.Value < 1)
+                {
+                    // If quantity posted, recommend; else default 1
+                    dto.StackLevel = (byte)mp.GetRecommendedStackLevel(dto.Quantity > 0 ? dto.Quantity : mp.PartsPerBuildSingle);
+                }
+
+                // Parts per build
+                if (!dto.PartsPerBuild.HasValue || dto.PartsPerBuild.Value <= 0)
+                {
+                    var ppb = mp.GetPartsPerBuild(dto.StackLevel.Value);
+                    if (ppb.HasValue && ppb.Value > 0)
+                        dto.PartsPerBuild = ppb.Value;
+                }
+
+                // If quantity not specified (or <=0) fall back to parts per build
+                if (dto.Quantity <= 0 && dto.PartsPerBuild.HasValue)
+                {
+                    dto.Quantity = dto.PartsPerBuild.Value;
+                }
+
+                // Duration hours
+                if (!dto.PlannedStackDurationHours.HasValue || dto.PlannedStackDurationHours.Value <= 0)
+                {
+                    var dur = mp.GetStackDuration(dto.StackLevel.Value);
+                    if (dur.HasValue && dur.Value > 0)
+                        dto.PlannedStackDurationHours = Math.Round(dur.Value, 2);
+                }
+
+                // Adjust ScheduledEnd if we now have a stack-based duration
+                if (dto.PlannedStackDurationHours.HasValue && dto.PlannedStackDurationHours.Value > 0)
+                {
+                    dto.ScheduledEnd = dto.ScheduledStart.AddHours(dto.PlannedStackDurationHours.Value);
+                }
+
+                _logger.LogDebug("🧪 [SCHEDULER-{OperationId}] Hydrated stack fields -> StackLevel={StackLevel}, PartsPerBuild={PPB}, PlannedDuration={Dur}h", operationId, dto.StackLevel, dto.PartsPerBuild, dto.PlannedStackDurationHours);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "⚠️ [SCHEDULER-{OperationId}] HydrateStackFieldsAsync failed", operationId);
             }
         }
 

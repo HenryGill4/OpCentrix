@@ -9,15 +9,13 @@
     string GetColor(string m)=> Model.MachineColors != null && Model.MachineColors.TryGetValue(m, out var c) ? c : "#6366F1";
 }
 <style>
-    /* Unified coloring (legacy per machine classes removed) */
     .scheduler-horizontal-container .job-block { color:#fff; border-radius:6px; background:var(--machine-color,#6366F1); box-shadow:0 4px 14px -2px rgba(0,0,0,.12); }
     .scheduler-horizontal-container .scheduler-grid-cell .job-block { background:var(--machine-color,#6366F1); }
-    /* Ensure header cells appear above job blocks when sticky */
     .scheduler-horizontal-container .scheduler-time-header{z-index:60;}
     .scheduler-horizontal-container .scheduler-machine-header{z-index:61;}
+    .job-qty-line{font-size:.6rem;opacity:.9;display:flex;align-items:center;gap:.35rem;margin-top:2px;}
 </style>
 <script>
-// Fallback: ensure openJobModalSafely exists before any inline onclick calls
 if(typeof window.openJobModalSafely !== 'function'){
   window.openJobModalSafely = function(machineId, date, jobId){
     try {
@@ -30,7 +28,7 @@ if(typeof window.openJobModalSafely !== 'function'){
           const mc=document.getElementById('modal-container'); if(mc){ mc.style.display='flex'; mc.classList.remove('hidden'); document.body.style.overflow='hidden'; }
         });
       }
-      window.location.href = url; // hard fallback
+      window.location.href = url;
     } catch(err){ console.error('openJobModalSafely fallback error', err); }
     return false;
   };
@@ -57,36 +55,14 @@ if(typeof window.openJobModalSafely !== 'function'){
                 var headerClasses = new List<string> { "scheduler-time-header" };
                 string timeDisplay = string.Empty;
                 if (isFirstSlot)
-                {
-                    headerClasses.Add("date-header");
-                    if (isToday) { headerClasses.Add("today"); }
-                }
+                { headerClasses.Add("date-header"); if (isToday) { headerClasses.Add("today"); } }
                 else if (isHourBoundary)
-                {
-                    headerClasses.Add("hour-header");
-                    var hour = slotTime.Hours;
-                    var displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
-                    var period = hour >= 12 ? "PM" : "AM";
-                    timeDisplay = $"{displayHour}{period}";
-                }
+                { headerClasses.Add("hour-header"); var hour = slotTime.Hours; var displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour); var period = hour >= 12 ? "PM" : "AM"; timeDisplay = $"{displayHour}{period}"; }
                 else if (isHalfHour)
-                {
-                    headerClasses.Add("half-hour-header");
-                    timeDisplay = ":30";
-                }
-                else
-                {
-                    headerClasses.Add("quarter-hour-header");
-                    timeDisplay = ":" + slotTime.Minutes.ToString("00");
-                }
+                { headerClasses.Add("half-hour-header"); timeDisplay = ":30"; }
+                else { headerClasses.Add("quarter-hour-header"); timeDisplay = ":" + slotTime.Minutes.ToString("00"); }
                 <div class="@string.Join(" ", headerClasses)" data-date="@date.ToString("yyyy-MM-dd")" data-slot="@s">
-                    @if (isFirstSlot)
-                    {
-                        <div class="date-day">@dayOfWeek</div>
-                        <div class="date-number">@dayNumber</div>
-                        @if (isToday) { <div class="date-today">TODAY</div>; }
-                    }
-                    else { <div class="time-display">@timeDisplay</div>; }
+                    @if (isFirstSlot){<div class="date-day">@dayOfWeek</div><div class="date-number">@dayNumber</div>@if (isToday){<div class="date-today">TODAY</div>;}} else { <div class="time-display">@timeDisplay</div>; }
                 </div>
             }
         }
@@ -99,14 +75,8 @@ if(typeof window.openJobModalSafely !== 'function'){
             var totalHours = machineJobs.Sum(j => j.DurationHours);
             var utilizationPercent = (totalHours / 24.0 * 100).ToString("F0");
             <div class="scheduler-machine-label" style="min-height:@(rowHeight)px; --machine-color:@color" data-machine="@machine" data-color="@color">
-                <div class="machine-name flex items-center space-x-2">
-                    <span class="inline-block w-2.5 h-2.5 rounded-sm" style="background:@color"></span>
-                    <span>@machine</span>
-                </div>
-                <div class="machine-stats">
-                    <div class="job-count">@jobCount job@(jobCount==1?"":"s") · @totalHours.ToString("F1")h</div>
-                    <div class="utilization">@utilizationPercent% utilization</div>
-                </div>
+                <div class="machine-name flex items-center space-x-2"><span class="inline-block w-2.5 h-2.5 rounded-sm" style="background:@color"></span><span>@machine</span></div>
+                <div class="machine-stats"><div class="job-count">@jobCount job@(jobCount==1?"":"s") · @totalHours.ToString("F1")h</div><div class="utilization">@utilizationPercent% utilization</div></div>
                 @{ var hasActive = machineJobs.Any(j => j.Status == "Building" || j.Status == "Running"); }
                 <div class="machine-status @(hasActive ? "status-active" : "status-idle")"></div>
             </div>
@@ -147,21 +117,22 @@ if(typeof window.openJobModalSafely !== 'function'){
                                 jobLabel += $" - Duration: {job.DurationHours:F1}h";
                                 if(job.Priority>0) jobLabel += $" - Priority P{job.Priority}";
                                 var rush = false; try { rush = (bool)(job.GetType().GetProperty("IsRushJob")?.GetValue(job) ?? false); } catch { }
-                                <div class="job-block status-@job.Status.ToLower().Replace(" ", "-")@(rush ? " rush-job" : string.Empty)" style="left:@leftPct; width:@widthPct; --machine-color:@color;" data-color="@color" data-material="@job.SlsMaterial" data-priority="@job.Priority" data-status="@job.Status" data-machine="@machine" onclick="event.stopPropagation(); openJobModalSafely('@machine','@job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")',@job.Id)" title="@jobLabel" aria-label="@jobLabel" data-job-id="@job.Id">
+                                var stackLevel = job.StackLevel.HasValue && job.StackLevel.Value>0 ? job.StackLevel.Value : (byte)1;
+                                var stackMulti = stackLevel>1;
+                                <div class="job-block status-@job.Status.ToLower().Replace(" ", "-")@(rush ? " rush-job" : string.Empty)" style="left:@leftPct; width:@widthPct; --machine-color:@color;" data-color="@color" data-material="@job.SlsMaterial" data-priority="@job.Priority" data-status="@job.Status" data-machine="@machine" data-stack-level="@stackLevel" data-parts-per-build="@(job.PartsPerBuild?.ToString() ?? "")" onclick="event.stopPropagation(); openJobModalSafely('@machine','@job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")',@job.Id)" title="@jobLabel" aria-label="@jobLabel" data-job-id="@job.Id">
                                     <div class="job-badges">
                                         @if (job.Priority <= 2) { <span class="priority-badge p@job.Priority" title="Priority P@job.Priority">P@job.Priority</span>; }
-                                        @if (rush) { <span class="rush-badge" title="Rush Job">?</span>; }
+                                        @if (rush) { <span class="rush-badge" title="Rush Job">⚡</span>; }
                                     </div>
                                     <div class="job-title">@job.PartNumber</div>
                                     @if (rowHeight > 50)
                                     {
                                         <div class="job-details">@job.Status · @job.DurationHours.ToString("F1")h</div>
+                                        <div class="job-qty-line">Qty @job.Quantity@if(stackMulti){<span>• Stack @stackLevel x</span>}</div>
                                         @if (!string.IsNullOrEmpty(job.SlsMaterial)) { <div class="job-material">@job.SlsMaterial</div>; }
                                     }
                                     @if (job.Status == "Building" || job.Status == "Running")
-                                    {
-                                        <div class="job-progress"><div class="progress-bar"></div></div>
-                                    }
+                                    { <div class="job-progress"><div class="progress-bar"></div></div> }
                                 </div>
                             }
                         }
@@ -176,10 +147,7 @@ if(typeof window.openJobModalSafely !== 'function'){
     </div>
 </div>
 <script>
-// Hydrate color variable backgrounds (legacy class-based styling removed)
 (function(){
-  document.querySelectorAll('.scheduler-horizontal-container .job-block[data-color]').forEach(b=>{
-    const c=b.getAttribute('data-color'); if(c){ b.style.setProperty('--machine-color', c); }
-  });
+  document.querySelectorAll('.scheduler-horizontal-container .job-block[data-color]').forEach(b=>{const c=b.getAttribute('data-color'); if(c){ b.style.setProperty('--machine-color', c); }});
 })();
 </script>

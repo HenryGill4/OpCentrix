@@ -15,6 +15,7 @@
 .scheduler-vertical .job-block { color:#fff; border-radius:6px; transition:background-color .15s ease, box-shadow .15s ease; background:var(--machine-color,#6366F1); box-shadow:0 4px 10px -2px rgba(0,0,0,.25); }
 /* Remove any legacy colored left borders attached via machine-* classes (legacy) */
 .scheduler-vertical .scheduler-machine-columns .machine-column { border-left:0 !important; box-shadow:none !important; }
+.job-meta-line{font-size:.55rem;opacity:.9;margin-top:2px;display:flex;flex-wrap:wrap;gap:4px;}
 </style>
 <div class="scheduler-grid-container scheduler-vertical opcentrix-card" data-zoom="@zoom" data-orientation="vertical" data-total-slots="@totalSlots">
     <div class="scheduler-machines-header">
@@ -122,12 +123,17 @@
                                     var heightPx = Math.Max(24, Math.Min(totalPx, maxVisiblePx));
                                     var jobLabel = $"Job: {job.PartNumber} ({job.Status}) - {job.ScheduledStart:MMM dd HH:mm} to {job.ScheduledEnd:MMM dd HH:mm} - Qty: {job.Quantity}";
                                     if (!string.IsNullOrEmpty(job.SlsMaterial)) jobLabel += $" - {job.SlsMaterial}";
+                                    jobLabel += $" - Duration: {job.DurationHours:F1}h";
+                                    if(job.Priority>0) jobLabel += $" - Priority P{job.Priority}";
                                     var rush = false; try { rush = (bool)(job.GetType().GetProperty("IsRushJob")?.GetValue(job) ?? false); } catch { }
-                                    <div class="absolute job-block status-@job.Status.ToLower().Replace(" ", "-")@(rush?" rush-job":"")" style="left:2px;right:2px;top:@offsetPx.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)px;height:@heightPx.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)px;z-index:200; --machine-color:@color; background:@color" data-color="@color" data-material="@job.SlsMaterial" data-priority="@job.Priority" data-status="@job.Status" onclick="event.stopPropagation(); openJobModalSafely('@machine','@job.ScheduledStart:yyyy-MM-ddTHH:mm',@job.Id)" title="@jobLabel" data-job-id="@job.Id" data-machine-id="@machine" data-job-date="@job.ScheduledStart:yyyy-MM-ddTHH:mm">
-                                        <div class="job-block-content p-1 text-white text-xs">
+                                    var stackLevel = job.StackLevel.HasValue && job.StackLevel.Value>0 ? job.StackLevel.Value : (byte)1;
+                                    var stackMulti = stackLevel>1;
+                                    <div class="absolute job-block status-@job.Status.ToLower().Replace(" ", "-")@(rush?" rush-job":"")" style="left:2px;right:2px;top:@offsetPx.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)px;height:@heightPx.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)px;z-index:200; --machine-color:@color; background:@color" data-color="@color" data-material="@job.SlsMaterial" data-priority="@job.Priority" data-status="@job.Status" data-stack-level="@stackLevel" data-parts-per-build="@(job.PartsPerBuild?.ToString() ?? "")" onclick="event.stopPropagation(); openJobModalSafely('@machine','@job.ScheduledStart:yyyy-MM-ddTHH:mm',@job.Id)" title="@jobLabel" data-job-id="@job.Id" data-machine-id="@machine" data-job-date="@job.ScheduledStart:yyyy-MM-ddTHH:mm">
+                                        <div class="job-block-content p-1 text-white text-[10px]">
                                             <div class="job-block-title truncate">@job.PartNumber</div>
+                                            <div class="job-meta-line">@job.DurationHours.ToString("F1")h · @job.Status@if(stackMulti){<span>· Stack @stackLevel x</span>}</div>
                                             <div class="job-block-subtitle text-[10px] truncate opacity-90">@((!string.IsNullOrEmpty(job.SlsMaterial)? job.SlsMaterial.Length>14? job.SlsMaterial[..14]+"..." : job.SlsMaterial : string.Empty))</div>
-                                            <div class="job-block-meta text-[10px] flex justify-between"><span>@job.DurationHours.ToString("F1")h</span><span>@job.Status</span></div>
+                                            <div class="job-meta-line">Qty @job.Quantity</div>
                                         </div>
                                     </div>
                                 }
@@ -147,4 +153,4 @@
         }
     </div>
 </div>
-<script>(function(){document.querySelectorAll('.scheduler-vertical .job-block[data-color]').forEach(b=>{const c=b.getAttribute('data-color'); if(c){b.style.setProperty('--machine-color',c); b.style.background=c;}});})();</script>
+<script>(function(){document.querySelectorAll('.scheduler-vertical .job-block[data-color]').forEach(b=>{const c=b.getAttribute('data-color'); if(c){b.style.setProperty('--machine-color',c); b.style.background=c;}});})();</script><script>(function(){document.querySelectorAll('.scheduler-vertical .job-block[data-color]').forEach(b=>{const c=b.getAttribute('data-color'); if(c){b.style.setProperty('--machine-color',c); b.style.background=c;}});})();</script>

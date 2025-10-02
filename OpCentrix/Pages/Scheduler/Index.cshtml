@@ -18,28 +18,31 @@
     var orientationParam = Request.Query["orientation"].FirstOrDefault();
     string currentOrientation = (!string.IsNullOrEmpty(orientationParam) && (orientationParam == "horizontal" || orientationParam == "vertical")) ? orientationParam : "horizontal";
     var isVertical = currentOrientation == "vertical";
+
     var viewModel = Model.ViewModel;
 }
 
 <!-- Hidden anti-forgery token source for JS batch operations -->
 <form id="__afTokenSource" style="display:none;">@Html.AntiForgeryToken()</form>
 
-<!-- Lightweight non-blocking overlay -->
-<div id="loading-indicator" aria-live="polite" aria-busy="false">
-  <div class="li-box">
-    <div class="li-spinner"></div>
-    <div id="loading-indicator-text" class="li-text">Working...</div>
+<!-- Unified FULL-SCREEN loading overlay (centered) -->
+<div id="loading-indicator" aria-live="polite" aria-busy="false" class="oc-overlay">
+  <div class="oc-overlay-box">
+    <div class="oc-overlay-spinner"></div>
+    <div id="loading-indicator-text" class="oc-overlay-text">Working...</div>
   </div>
 </div>
 <style>
-  #loading-indicator{position:fixed;top:.75rem;left:50%;transform:translateX(-50%);z-index:10000;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .18s ease,visibility .18s ease;}
-  #loading-indicator.active{opacity:1;visibility:visible;}
-  #loading-indicator .li-box{display:flex;align-items:center;gap:.6rem;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:.55rem .85rem;box-shadow:0 4px 14px -2px rgba(0,0,0,.15);font-size:.7rem;font-weight:600;color:#334155;}
-  .li-spinner{width:1.15rem;height:1.15rem;border:3px solid #e2e8f0;border-top-color:#6366f1;border-radius:50%;animation:ocspin 1s linear infinite;}
-  @@keyframes ocspin{to{transform:rotate(360deg)}}
+  /* Full-screen centered overlay */
+  #loading-indicator.oc-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.82);backdrop-filter:blur(2px);z-index:10000;opacity:0;visibility:hidden;transition:opacity .18s ease,visibility .18s ease;}
+  #loading-indicator.oc-overlay.active{opacity:1;visibility:visible;}
+  .oc-overlay-box{display:flex;flex-direction:column;align-items:center;gap:.9rem;padding:1.75rem 2.1rem;border-radius:20px;background:#fff;box-shadow:0 10px 35px -5px rgba(0,0,0,.22),0 2px 8px -2px rgba(0,0,0,.1);min-width:210px;}
+  .oc-overlay-spinner{width:2.9rem;height:2.9rem;border:4px solid #e2e8f0;border-top-color:#6366f1;border-radius:50%;animation:ocspin 1s linear infinite;}
+  .oc-overlay-text{font-size:.8rem;font-weight:600;letter-spacing:.5px;color:#334155;text-align:center;}
+  @@keyframes ocspin{to{transform:rotate(360deg);}}
 </style>
 
-<!-- HTMX script sink (where server returns <script> for refresh) -->
+<!-- HTMX script sink (server may return <script>) -->
 <div id="htmx-script-sink" style="display:none;"></div>
 
 <!-- Enhanced Header with Controls (sticky) -->
@@ -100,7 +103,7 @@
     </div>
 </div>
 
-<!-- Batch Selection Toolbar (sticky below header) -->
+<!-- Batch Selection Toolbar -->
 <div id="batch-toolbar" class="opcentrix-card px-4 py-2 mb-4 flex items-center gap-3 text-xs scheduler-sticky-sub" style="display:flex;align-items:center;">
     <button type="button" id="toggle-select-mode" class="secondary-btn" style="padding:.4rem .7rem;font-size:.65rem;">Select Jobs</button>
     <div id="selection-stats" style="font-size:.65rem;color:#334155;display:none;"><span id="selected-count">0</span> selected</div>
@@ -146,8 +149,9 @@
         window.showSchedulerOverlay=function(msg){ if(!overlay) return; if(textEl) textEl.textContent=msg||'Working...'; overlay.classList.add('active'); overlay.setAttribute('aria-busy','true'); };
         window.hideSchedulerOverlay=function(){ if(!overlay) return; overlay.classList.remove('active'); overlay.setAttribute('aria-busy','false'); };
         if(window.htmx){
-          document.body.addEventListener('htmx:beforeRequest', e=>{ if(e.target && (e.target.id==='job-form')) showSchedulerOverlay('Saving job...'); });
-          ['htmx:afterRequest','htmx:responseError','htmx:sendError','htmx:timeout'].forEach(ev=> document.body.addEventListener(ev, ()=> hideSchedulerOverlay()));
+          // Show overlay for job form create/update submissions
+            document.body.addEventListener('htmx:beforeRequest', e=>{ if(e.target && e.target.id==='job-form'){ showSchedulerOverlay('Saving job...'); }});
+            ['htmx:afterRequest','htmx:responseError','htmx:sendError','htmx:timeout'].forEach(ev=> document.body.addEventListener(ev, ()=> hideSchedulerOverlay()));
         }
       })();
     </script>
@@ -163,7 +167,9 @@
         })();
     </script>
     <script>
-        // Batch selection + refresh
+        let lastSelectedMachineId = null; document.addEventListener('click', function(e){ const cell = e.target.closest('[data-machine]'); if(cell){ lastSelectedMachineId = cell.getAttribute('data-machine'); }});
+        function openModifySelectedMachine(){ if(!lastSelectedMachineId){ alert('Click on a machine row or column first to select a machine.'); return; } window.location.href = '/Admin/Machines?editMachine=' + encodeURIComponent(lastSelectedMachineId); }
+        // Batch selection + refresh + overlay for delete
         (function(){
             const btnToggle=document.getElementById('toggle-select-mode');
             const btnDelete=document.getElementById('delete-selected');
@@ -174,7 +180,7 @@
             const selected=new Set();
             let pendingRefresh=0;
 
-            function persist(){localStorage.setItem('schedulerSelectMode',selectMode?'1':'0');}
+            function persist(){ localStorage.setItem('schedulerSelectMode', selectMode?'1':'0'); }
             function updateUI(){
                 document.querySelectorAll('.job-block').forEach(j=>{
                     if(selectMode){
@@ -193,7 +199,7 @@
             function attachJobClick(){
                 document.querySelectorAll('.job-block').forEach(j=>{
                     if(j.dataset.batchBound==='1') return; j.dataset.batchBound='1';
-                    j.addEventListener('click',e=>{ if(!selectMode) return; e.stopPropagation(); const id=j.getAttribute('data-job-id'); if(!id) return; if(selected.has(id)){selected.delete(id); j.classList.remove('selected');} else {selected.add(id); j.classList.add('selected');} countSpan.textContent=selected.size; btnDelete.disabled=selected.size===0; }, true);
+                    j.addEventListener('click', e=>{ if(!selectMode) return; e.stopPropagation(); const id=j.getAttribute('data-job-id'); if(!id) return; if(selected.has(id)){ selected.delete(id); j.classList.remove('selected'); } else { selected.add(id); j.classList.add('selected'); } countSpan.textContent=selected.size; btnDelete.disabled=selected.size===0; }, true);
                 });
             }
             function refreshScheduler(){
@@ -218,7 +224,9 @@
                 const ids=[...selected].join(','); const tokenEl=document.querySelector('#__afTokenSource input[name="__RequestVerificationToken"]'); const token=tokenEl?tokenEl.value:'';
                 showSchedulerOverlay('Deleting '+selected.size+' job(s)...');
                 if(window.htmx){ htmx.ajax('POST','/Scheduler?handler=DeleteJobs',{target:'#htmx-script-sink',swap:'innerHTML',values:{jobIds:ids},headers:{'RequestVerificationToken':token}}); }
-                else { fetch('/Scheduler?handler=DeleteJobs',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','RequestVerificationToken':token},body:'jobIds='+encodeURIComponent(ids)}).then(r=>r.text()).then(html=>{document.getElementById('htmx-script-sink').innerHTML=html; refreshScheduler();}).catch(()=>{ hideSchedulerOverlay(); alert('Delete failed');}); }
+                else { fetch('/Scheduler?handler=DeleteJobs',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','RequestVerificationToken':token},body:'jobIds='+encodeURIComponent(ids)})
+                    .then(r=>r.text()).then(html=>{ document.getElementById('htmx-script-sink').innerHTML=html; refreshScheduler(); })
+                    .catch(()=>{ hideSchedulerOverlay(); alert('Delete failed'); }); }
             });
 
             attachJobClick(); updateUI();
