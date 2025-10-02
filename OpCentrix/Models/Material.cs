@@ -98,6 +98,12 @@ public class Material
     [StringLength(1000)]
     public string SafetyNotes { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Quantity on hand (in kilograms) - new inventory tracking field
+    /// </summary>
+    [Range(0, 100000)]
+    public decimal QuantityOnHandKg { get; set; } = 0m;
+
     #region Audit Fields
     public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
     public DateTime LastModifiedDate { get; set; } = DateTime.UtcNow;
@@ -189,7 +195,8 @@ public class Material
                 DefaultLaserPowerPercent = 85,
                 DefaultScanSpeedMmPerSec = 1200,
                 CompatibleMachineTypes = "SLS",
-                SafetyNotes = "Handle with care. May cause respiratory irritation if inhaled."
+                SafetyNotes = "Handle with care. May cause respiratory irritation if inhaled.",
+                QuantityOnHandKg = 0m
             },
             new()
             {
@@ -204,7 +211,8 @@ public class Material
                 DefaultLaserPowerPercent = 80,
                 DefaultScanSpeedMmPerSec = 1100,
                 CompatibleMachineTypes = "SLS",
-                SafetyNotes = "Medical grade material. Handle with care."
+                SafetyNotes = "Medical grade material. Handle with care.",
+                QuantityOnHandKg = 0m
             },
             new()
             {
@@ -219,7 +227,8 @@ public class Material
                 DefaultLaserPowerPercent = 90,
                 DefaultScanSpeedMmPerSec = 1000,
                 CompatibleMachineTypes = "SLS",
-                SafetyNotes = "High-temperature alloy. Use appropriate safety equipment."
+                SafetyNotes = "High-temperature alloy. Use appropriate safety equipment.",
+                QuantityOnHandKg = 0m
             },
             new()
             {
@@ -234,7 +243,8 @@ public class Material
                 DefaultLaserPowerPercent = 75,
                 DefaultScanSpeedMmPerSec = 1500,
                 CompatibleMachineTypes = "SLS",
-                SafetyNotes = "General purpose stainless steel. Standard safety precautions apply."
+                SafetyNotes = "General purpose stainless steel. Standard safety precautions apply.",
+                QuantityOnHandKg = 0m
             },
             new()
             {
@@ -249,7 +259,8 @@ public class Material
                 DefaultLaserPowerPercent = 70,
                 DefaultScanSpeedMmPerSec = 1800,
                 CompatibleMachineTypes = "SLS",
-                SafetyNotes = "Aluminum powder - fire hazard. Keep away from ignition sources."
+                SafetyNotes = "Aluminum powder - fire hazard. Keep away from ignition sources.",
+                QuantityOnHandKg = 0m
             }
         };
     }

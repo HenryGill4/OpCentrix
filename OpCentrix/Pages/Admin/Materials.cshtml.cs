@@ -25,6 +25,7 @@ public class MaterialsModel : PageModel
     public int TotalMaterials { get; set; }
     public int ActiveMaterials { get; set; }
     public decimal AverageCostPerGram { get; set; }
+    public decimal TotalPowderOnHandKg { get; set; }
 
     // Search and filter properties
     public string SearchTerm { get; set; } = string.Empty;
@@ -89,7 +90,8 @@ public class MaterialsModel : PageModel
                 DefaultLaserPowerPercent = CreateMaterialRequest.DefaultLaserPowerPercent,
                 DefaultScanSpeedMmPerSec = CreateMaterialRequest.DefaultScanSpeedMmPerSec,
                 CompatibleMachineTypes = CreateMaterialRequest.CompatibleMachineTypes?.Trim() ?? "SLS",
-                SafetyNotes = CreateMaterialRequest.SafetyNotes?.Trim() ?? ""
+                SafetyNotes = CreateMaterialRequest.SafetyNotes?.Trim() ?? "",
+                QuantityOnHandKg = CreateMaterialRequest.QuantityOnHandKg
             };
 
             var createdMaterial = await _materialService.CreateMaterialAsync(material, User.Identity?.Name ?? "Admin");
@@ -144,7 +146,8 @@ public class MaterialsModel : PageModel
                 DefaultLaserPowerPercent = CreateMaterialRequest.DefaultLaserPowerPercent,
                 DefaultScanSpeedMmPerSec = CreateMaterialRequest.DefaultScanSpeedMmPerSec,
                 CompatibleMachineTypes = CreateMaterialRequest.CompatibleMachineTypes?.Trim() ?? "SLS",
-                SafetyNotes = CreateMaterialRequest.SafetyNotes?.Trim() ?? ""
+                SafetyNotes = CreateMaterialRequest.SafetyNotes?.Trim() ?? "",
+                QuantityOnHandKg = CreateMaterialRequest.QuantityOnHandKg
             };
 
             var updatedMaterial = await _materialService.UpdateMaterialAsync(material, User.Identity?.Name ?? "Admin");
@@ -283,6 +286,9 @@ public class MaterialsModel : PageModel
             "costpergram" => SortDirection == "desc"
                 ? filteredMaterials.OrderByDescending(m => m.CostPerGram)
                 : filteredMaterials.OrderBy(m => m.CostPerGram),
+            "quantityonhandkg" => SortDirection == "desc"
+                ? filteredMaterials.OrderByDescending(m => m.QuantityOnHandKg)
+                : filteredMaterials.OrderBy(m => m.QuantityOnHandKg),
             _ => filteredMaterials.OrderBy(m => m.MaterialCode)
         };
 
@@ -297,6 +303,7 @@ public class MaterialsModel : PageModel
         TotalMaterials = allMaterials.Count;
         ActiveMaterials = allMaterials.Count(m => m.IsActive);
         AverageCostPerGram = allMaterials.Any() ? allMaterials.Average(m => m.CostPerGram) : 0;
+        TotalPowderOnHandKg = allMaterials.Sum(m => m.QuantityOnHandKg);
 
         MaterialTypeStatistics = allMaterials
             .GroupBy(m => m.MaterialType)
@@ -339,5 +346,6 @@ public class CreateMaterialRequest
     public double DefaultScanSpeedMmPerSec { get; set; } = 1200;
     public string CompatibleMachineTypes { get; set; } = "SLS";
     public string SafetyNotes { get; set; } = string.Empty;
+    public decimal QuantityOnHandKg { get; set; } = 0m;
 }
 #endregion

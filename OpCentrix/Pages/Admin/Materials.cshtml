@@ -22,7 +22,7 @@
     </div>
 
     <!-- Statistics Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
             <div class="flex items-center">
                 <div class="flex-1">
@@ -60,6 +60,15 @@
                     <p class="text-2xl font-bold text-gray-900">$@Model.AverageCostPerGram.ToString("F2")</p>
                 </div>
                 <div class="text-amber-500 text-3xl">💰</div>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-indigo-500">
+            <div class="flex items-center">
+                <div class="flex-1">
+                    <h3 class="text-sm font-medium text-gray-500">Total Powder (kg)</h3>
+                    <p class="text-2xl font-bold text-gray-900">@Model.TotalPowderOnHandKg.ToString("F1")</p>
+                </div>
+                <div class="text-indigo-500 text-3xl">⚖️</div>
             </div>
         </div>
     </div>
@@ -168,6 +177,12 @@
                                 </a>
                             </th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <a href="?searchTerm=@Model.SearchTerm&typeFilter=@Model.TypeFilter&statusFilter=@Model.StatusFilter&sortBy=QuantityOnHandKg&sortDirection=@Model.GetNextSortDirection("QuantityOnHandKg")" 
+                                   class="flex items-center hover:text-gray-700">
+                                    Qty (kg) @Model.GetSortIcon("QuantityOnHandKg")
+                                </a>
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Status
                             </th>
                             <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -203,13 +218,19 @@
                                     <div class="text-sm text-gray-500">per gram</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm font-medium @(material.QuantityOnHandKg <= 2 ? "text-red-600" : material.QuantityOnHandKg <=5 ? "text-amber-600" : "text-gray-900")">
+                                        @material.QuantityOnHandKg.ToString("F2")
+                                    </div>
+                                    <div class="text-xs text-gray-500">kg</div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium @(material.IsActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")">
                                         @(material.IsActive ? "Active" : "Inactive")
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <div class="flex items-center justify-end space-x-2">
-                                        <button onclick="editMaterial(@material.Id, '@material.MaterialCode', '@material.MaterialName', '@material.MaterialType', '@Html.Raw(material.Description.Replace("'", "\\'"))', @material.Density, @material.MeltingPointC, @(material.IsActive ? "true" : "false"), @material.CostPerGram, @material.DefaultLayerThicknessMicrons, @material.DefaultLaserPowerPercent, @material.DefaultScanSpeedMmPerSec, '@Html.Raw(material.CompatibleMachineTypes.Replace("'", "\\'"))', '@Html.Raw(material.SafetyNotes.Replace("'", "\\'"))')" 
+                                        <button onclick="editMaterial(@material.Id, '@material.MaterialCode', '@material.MaterialName', '@material.MaterialType', '@Html.Raw(material.Description.Replace("'", "\\'"))', @material.Density, @material.MeltingPointC, @(material.IsActive ? "true" : "false"), @material.CostPerGram, @material.DefaultLayerThicknessMicrons, @material.DefaultLaserPowerPercent, @material.DefaultScanSpeedMmPerSec, '@Html.Raw(material.CompatibleMachineTypes.Replace("'", "\\'"))', '@Html.Raw(material.SafetyNotes.Replace("'", "\\'"))', @material.QuantityOnHandKg)" 
                                                 class="text-blue-600 hover:text-blue-900" title="Edit Material">
                                             ✏️
                                         </button>
@@ -300,6 +321,11 @@
                             <label class="block text-sm font-medium text-gray-700">Description</label>
                             <textarea name="CreateMaterialRequest.Description" id="description" maxlength="1000" rows="3" 
                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Quantity On Hand (kg)</label>
+                            <input type="number" step="0.01" min="0" name="CreateMaterialRequest.QuantityOnHandKg" id="quantityOnHandKg" value="0" 
+                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
                         </div>
                     </div>
 
@@ -414,7 +440,7 @@
             document.getElementById('materialModal').classList.remove('hidden');
         }
 
-        function editMaterial(id, materialCode, materialName, materialType, description, density, meltingPointC, isActive, costPerGram, defaultLayerThicknessMicrons, defaultLaserPowerPercent, defaultScanSpeedMmPerSec, compatibleMachineTypes, safetyNotes) {
+        function editMaterial(id, materialCode, materialName, materialType, description, density, meltingPointC, isActive, costPerGram, defaultLayerThicknessMicrons, defaultLaserPowerPercent, defaultScanSpeedMmPerSec, compatibleMachineTypes, safetyNotes, quantityOnHandKg) {
             isEditMode = true;
             document.getElementById('materialModalTitle').textContent = 'Edit Material';
             document.getElementById('materialSubmitBtn').textContent = 'Update Material';
@@ -435,6 +461,7 @@
             document.getElementById('defaultScanSpeedMmPerSec').value = defaultScanSpeedMmPerSec;
             document.getElementById('compatibleMachineTypes').value = compatibleMachineTypes;
             document.getElementById('safetyNotes').value = safetyNotes;
+            document.getElementById('quantityOnHandKg').value = quantityOnHandKg;
             
             document.getElementById('materialModal').classList.remove('hidden');
         }
@@ -457,6 +484,7 @@
             document.getElementById('defaultScanSpeedMmPerSec').value = '1200';
             document.getElementById('compatibleMachineTypes').value = 'SLS';
             document.getElementById('safetyNotes').value = '';
+            document.getElementById('quantityOnHandKg').value = '0';
         }
 
         // Close modals when clicking outside

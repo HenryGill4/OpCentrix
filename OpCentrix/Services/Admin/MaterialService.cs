@@ -22,6 +22,7 @@ public interface IMaterialService
     Task SeedDefaultMaterialsAsync();
     Task<List<string>> GetMaterialTypesAsync();
     Task<List<string>> GetMaterialCodesAsync();
+    Task<(bool Success, decimal NewQuantity)> AdjustMaterialQuantityAsync(string materialCode, decimal deltaKg, string modifiedBy);
 }
 
 public class MaterialService : IMaterialService
@@ -196,6 +197,7 @@ public class MaterialService : IMaterialService
             existingMaterial.MaterialProperties = material.MaterialProperties;
             existingMaterial.CompatibleMachineTypes = material.CompatibleMachineTypes;
             existingMaterial.SafetyNotes = material.SafetyNotes;
+            existingMaterial.QuantityOnHandKg = material.QuantityOnHandKg; // include new inventory field
             existingMaterial.LastModifiedBy = modifiedBy;
             existingMaterial.LastModifiedDate = DateTime.UtcNow;
 
@@ -208,6 +210,35 @@ public class MaterialService : IMaterialService
         {
             _logger.LogError(ex, "Error updating material {MaterialCode}", material.MaterialCode);
             throw;
+        }
+    }
+
+    public async Task<(bool Success, decimal NewQuantity)> AdjustMaterialQuantityAsync(string materialCode, decimal deltaKg, string modifiedBy)
+    {
+        try
+        {
+            var material = await GetMaterialByCodeAsync(materialCode);
+            if (material == null)
+            {
+                return (false, 0m);
+            }
+
+            var newQty = material.QuantityOnHandKg + deltaKg; // delta can be negative
+            if (newQty < 0)
+            {
+                newQty = 0; // do not allow negative inventory
+            }
+            material.QuantityOnHandKg = newQty;
+            material.LastModifiedBy = modifiedBy;
+            material.LastModifiedDate = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Adjusted material {MaterialCode} by {Delta}kg. New qty {Qty}kg", materialCode, deltaKg, newQty);
+            return (true, newQty);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error adjusting quantity for material {MaterialCode}", materialCode);
+            return (false, 0m);
         }
     }
 

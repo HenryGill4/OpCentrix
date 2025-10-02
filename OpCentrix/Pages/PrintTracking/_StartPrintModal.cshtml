@@ -9,7 +9,7 @@
             <div class="flex items-center justify-between pb-4 border-b">
                 <div>
                     <h3 class="text-lg font-semibold text-gray-900">Start Print Job</h3>
-                    <p class="text-sm text-gray-600 mt-1">Enhanced with time estimation and prototype addition</p>
+                    <p class="text-sm text-gray-600 mt-1">Provide core job details and material usage</p>
                 </div>
                 <button onclick="closeModalSafely()" class="text-gray-400 hover:text-gray-600">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -82,24 +82,20 @@
                     </div>
                 </div>
 
-                <!-- ENHANCED: Material Selection and Verification Section -->
+                <!-- SIMPLE MATERIAL USAGE INPUT -->
                 <div class="bg-gradient-to-r from-orange-50 to-red-50 p-6 rounded-lg border">
                     <h4 class="text-lg font-semibold text-orange-800 mb-4 flex items-center">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
-                        Material Verification
+                        Powder Usage
                         <span class="ml-2 text-sm font-normal text-red-600">(Required)</span>
                     </h4>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <!-- Material Selection -->
-                        <div>
-                            <label for="SelectedMaterial" class="block text-sm font-medium text-gray-700 mb-2">
-                                Material Being Used <span class="text-red-500">*</span>
-                            </label>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="md:col-span-2">
+                            <label for="SelectedMaterial" class="block text-sm font-medium text-gray-700 mb-2">Material <span class="text-red-500">*</span></label>
                             <select name="SelectedMaterial" id="SelectedMaterial" required 
-                                    onchange="updateMaterialInfo()"
                                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">
                                 <option value="">Select Material</option>
                                 @if (Model.AvailableMaterials?.Any() == true)
@@ -109,14 +105,7 @@
                                         <optgroup label="@materialType.Key">
                                             @foreach (var material in materialType.OrderBy(m => m.MaterialCode))
                                             {
-                                                <option value="@material.MaterialCode" 
-                                                        data-material-type="@material.MaterialType"
-                                                        data-safety-notes="@material.SafetyNotes"
-                                                        data-cost="@material.CostPerGram.ToString("F3")"
-                                                        data-compatible="@material.IsCompatibleWithMachine.ToString().ToLower()"
-                                                        selected="@(Model.SelectedMaterial == material.MaterialCode)">
-                                                    @material.DisplayName
-                                                </option>
+                                                <option value="@material.MaterialCode" selected="@(Model.SelectedMaterial == material.MaterialCode)">@material.DisplayName</option>
                                             }
                                         </optgroup>
                                     }
@@ -126,91 +115,32 @@
                                     <option value="">No materials available</option>
                                 }
                             </select>
-                            <p class="mt-1 text-xs text-gray-600">Select the material currently loaded in the printer</p>
+                            <p class="mt-1 text-xs text-gray-600">Select the material used for this build.</p>
                         </div>
-
-                        <!-- Material Batch/Lot Number -->
                         <div>
-                            <label for="MaterialBatchNumber" class="block text-sm font-medium text-gray-700 mb-2">
-                                Material Batch/Lot Number
-                            </label>
-                            <input type="text" 
-                                   name="MaterialBatchNumber" 
-                                   id="MaterialBatchNumber" 
-                                   value="@Model.MaterialBatchNumber"
-                                   maxlength="100"
-                                   placeholder="e.g., TI64-2024-001"
-                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">
-                            <p class="mt-1 text-xs text-gray-600">For traceability and quality control</p>
+                            <label for="PowderAddedKg" class="block text-sm font-medium text-gray-700 mb-2">Powder Added (kg) <span class="text-red-500">*</span></label>
+                            <input type="number" step="0.01" min="0" name="PowderAddedKg" id="PowderAddedKg" required placeholder="0.00" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500" />
+                            <p class="mt-1 text-xs text-gray-600">Quantity loaded into machine for this build.</p>
                         </div>
                     </div>
 
-                    <!-- Material Information Display -->
-                    <div id="materialInfoDisplay" class="mt-4 p-4 bg-white rounded-lg border hidden">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                            <div>
-                                <span class="text-gray-600">Type:</span>
-                                <span class="font-semibold ml-1" id="materialTypeDisplay">-</span>
-                            </div>
-                            <div>
-                                <span class="text-gray-600">Cost:</span>
-                                <span class="font-semibold ml-1" id="materialCostDisplay">-</span>
-                            </div>
-                            <div>
-                                <span class="text-gray-600">Compatible:</span>
-                                <span class="font-semibold ml-1" id="materialCompatibleDisplay">-</span>
-                            </div>
+                    <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label for="MaterialBatchNumber" class="block text-sm font-medium text-gray-700 mb-2">Batch / Lot Number</label>
+                            <input type="text" name="MaterialBatchNumber" id="MaterialBatchNumber" value="@Model.MaterialBatchNumber" maxlength="100" placeholder="e.g., LOT-2025-01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">
                         </div>
-                        <div id="materialSafetyNotes" class="mt-3 p-3 bg-yellow-50 border-l-4 border-yellow-400 hidden">
-                            <div class="flex">
-                                <div class="flex-shrink-0">
-                                    <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
-                                    </svg>
-                                </div>
-                                <div class="ml-3">
-                                    <p class="text-sm text-yellow-700">
-                                        <strong>Safety Notes:</strong> <span id="safetyNotesText"></span>
-                                    </p>
-                                </div>
-                            </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Current Qty On Hand (kg)</label>
+                            <div id="CurrentQtyOnHand" class="mt-1 p-2 bg-white rounded border border-orange-200 text-sm text-orange-800">Will update after save</div>
                         </div>
-                    </div>
-
-                    <!-- Material Verification Checkbox -->
-                    <div class="mt-4 flex items-start">
-                        <div class="flex items-center h-5">
-                            <input type="checkbox" 
-                                   name="MaterialVerified" 
-                                   id="MaterialVerified" 
-                                   value="true"
-                                   required
-                                   class="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded">
-                            <input type="hidden" name="MaterialVerified" value="false" />
+                        <div>
+                            <label for="MaterialVerificationNotes" class="block text-sm font-medium text-gray-700 mb-2">Material Notes (Optional)</label>
+                            <input type="text" name="MaterialVerificationNotes" id="MaterialVerificationNotes" maxlength="500" placeholder="Condition / observations" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500" />
                         </div>
-                        <div class="ml-3 text-sm">
-                            <label for="MaterialVerified" class="font-medium text-gray-700">
-                                I verify that the material selected above matches the material currently loaded in the printer <span class="text-red-500">*</span>
-                            </label>
-                            <p class="text-gray-500">This verification is required for quality control and traceability</p>
-                        </div>
-                    </div>
-
-                    <!-- Material Verification Notes -->
-                    <div class="mt-4">
-                        <label for="MaterialVerificationNotes" class="block text-sm font-medium text-gray-700 mb-2">
-                            Material Verification Notes (Optional)
-                        </label>
-                        <textarea name="MaterialVerificationNotes" 
-                                  id="MaterialVerificationNotes" 
-                                  rows="2" 
-                                  maxlength="500"
-                                  placeholder="Any notes about the material condition, packaging, or verification process..."
-                                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">@Model.MaterialVerificationNotes</textarea>
                     </div>
                 </div>
 
-                <!-- PHASE 4: Enhanced Time Estimation Section -->
+                <!-- Build Time Estimation -->
                 <div class="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-lg border">
                     <h4 class="text-lg font-semibold text-green-800 mb-4 flex items-center">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -218,192 +148,22 @@
                         </svg>
                         Build Time Estimation
                     </h4>
-                    
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <!-- Estimated End Time -->
                         <div>
-                            <label for="EstimatedEndTime" class="block text-sm font-medium text-gray-700 mb-2">
-                                Estimated End Time <span class="text-red-500">*</span>
-                            </label>
-                            <input type="datetime-local" 
-                                   name="EstimatedEndTime" 
-                                   id="EstimatedEndTime" 
-                                   value="@Model.EstimatedEndTime.ToString("yyyy-MM-ddTHH:mm")" 
-                                   required
-                                   onchange="updateCalculatedDuration()"
-                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500">
-                            <p class="mt-1 text-xs text-gray-500">When do you expect the build to complete?</p>
+                            <label for="EstimatedEndTime" class="block text-sm font-medium text-gray-700 mb-2">Estimated End Time <span class="text-red-500">*</span></label>
+                            <input type="datetime-local" name="EstimatedEndTime" id="EstimatedEndTime" value="@Model.EstimatedEndTime.ToString("yyyy-MM-ddTHH:mm")" required onchange="updateCalculatedDuration()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500">
                         </div>
-
-                        <!-- Calculated Duration -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Calculated Duration
-                            </label>
-                            <div id="calculatedDuration" class="mt-1 block w-full p-3 bg-green-50 rounded-md border-green-200 border">
-                                <span class="text-lg font-semibold text-green-700" id="durationHours">@Model.OperatorEstimatedHours.ToString("F2")h</span>
-                            </div>
-                            <p class="mt-1 text-xs text-gray-500">Automatically calculated from start and end times</p>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Calculated Duration</label>
+                            <div id="calculatedDuration" class="mt-1 block w-full p-3 bg-green-50 rounded-md border-green-200 border"><span class="text-lg font-semibold text-green-700" id="durationHours">@Model.OperatorEstimatedHours.ToString("F2")h</span></div>
                         </div>
-
-                        <!-- System Estimate (if available) -->
                         @if (Model.SystemEstimatedHours.HasValue)
                         {
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    System Estimate (hours)
-                                </label>
-                                <div class="mt-1 block w-full p-3 bg-blue-50 rounded-md border-blue-200 border">
-                                    <span class="text-lg font-semibold text-blue-700">@Model.SystemEstimatedHours?.ToString("F2")</span>
-                                </div>
-                                <p class="mt-1 text-xs text-blue-600">Based on historical data</p>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">System Estimate (hours)</label>
+                                <div class="mt-1 block w-full p-3 bg-blue-50 rounded-md border-blue-200 border"><span class="text-lg font-semibold text-blue-700">@Model.SystemEstimatedHours?.ToString("F2")</span></div>
                             </div>
                         }
-                    </div>
-
-                    <!-- Historical Build Data (if available) -->
-                    @if (Model.IsRepeatedBuild)
-                    {
-                        <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                            <h5 class="text-sm font-semibold text-yellow-800 mb-2 flex items-center">
-                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"></path>
-                                </svg>
-                                Repeated Build Detected
-                            </h5>
-                            <div class="grid grid-cols-3 gap-4 text-sm">
-                                <div>
-                                    <span class="text-yellow-700">Times Built:</span>
-                                    <span class="font-semibold ml-1">@Model.TimesPreviouslyBuilt</span>
-                                </div>
-                                @if (Model.LastBuildTime.HasValue)
-                                {
-                                    <div>
-                                        <span class="text-yellow-700">Last Time:</span>
-                                        <span class="font-semibold ml-1">@Model.LastBuildTime?.ToString("F2")h</span>
-                                    </div>
-                                }
-                                @if (Model.AverageBuildTime.HasValue)
-                                {
-                                    <div>
-                                        <span class="text-yellow-700">Average:</span>
-                                        <span class="font-semibold ml-1">@Model.AverageBuildTime?.ToString("F2")h</span>
-                                    </div>
-                                }
-                            </div>
-                        </div>
-                    }
-
-                    <!-- Build File Information -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                        <div>
-                            <label for="BuildFileName" class="block text-sm font-medium text-gray-700 mb-2">
-                                Build File Name (.build)
-                            </label>
-                            <input type="text" 
-                                   name="BuildFileName" 
-                                   id="BuildFileName" 
-                                   value="@Model.BuildFileName"
-                                   placeholder="e.g., 30x_Suppressor_Standard.build"
-                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                        </div>
-
-                        <div>
-                            <label for="SupportComplexity" class="block text-sm font-medium text-gray-700 mb-2">
-                                Support Complexity
-                            </label>
-                            <select name="SupportComplexity" id="SupportComplexity" 
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                                @foreach (var complexity in Model.SupportComplexityOptions)
-                                {
-                                    <option value="@complexity" selected="@(complexity == Model.SupportComplexity)">@complexity</option>
-                                }
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Build Complexity Factors -->
-                    <div class="mt-4">
-    <label class="block text-sm font-medium text-gray-700 mb-2">
-        Factors That May Affect Build Time
-    </label>
-    <div class="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
-        @foreach (var factor in Model.AvailableTimeFactors)
-        {
-            <label class="flex items-center">
-                <input type="checkbox" 
-                       name="TimeFactors" 
-                       value="@factor" 
-                       class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
-                <span class="ml-2 text-sm text-gray-700">@factor</span>
-            </label>
-        }
-    </div>
-</div>
-                </div>
-
-                <!-- PHASE 4: Prototype Addition Section -->
-                <div class="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-lg border" id="prototypeSection">
-                    <div class="flex items-center justify-between mb-4">
-                        <h4 class="text-lg font-semibold text-purple-800 flex items-center">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                            </svg>
-                            Add Prototypes to Build
-                        </h4>
-                        <label class="flex items-center">
-                            <input type="checkbox" 
-                                   name="AddPrototypes" 
-                                   id="AddPrototypes"
-                                   value="true"
-                                   onchange="togglePrototypeAddition()"
-                                   class="rounded border-gray-300 text-purple-600 shadow-sm focus:border-purple-300 focus:ring focus:ring-purple-200 focus:ring-opacity-50">
-                            <span class="ml-2 text-sm font-medium text-purple-700">Add prototypes to this build</span>
-                        </label>
-                    </div>
-
-                    <div id="prototypeDetails" class="hidden">
-                        <!-- Build Capacity Information -->
-                        <div class="bg-white p-4 rounded-lg border mb-4">
-                            <div class="grid grid-cols-3 gap-4 text-sm">
-                                <div>
-                                    <span class="text-gray-600">Current Parts:</span>
-                                    <span class="font-semibold ml-1" id="currentPartsCount">@Model.TotalPartsInBuild</span>
-                                </div>
-                                <div>
-                                    <span class="text-gray-600">Build Plate:</span>
-                                    <span class="font-semibold ml-1" id="plateUtilization">@Model.BuildPlateUtilization.ToString("F1")%</span>
-                                </div>
-                                <div>
-                                    <span class="text-gray-600">Max Capacity:</span>
-                                    <span class="font-semibold ml-1">@Model.MaxPartsCapacity</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Prototype Addition List -->
-                        <div id="prototypeList">
-                            <!-- Initial prototype entry will be added via JavaScript when needed -->
-                        </div>
-
-                        <div class="flex justify-between items-center mt-4">
-                            <button type="button" 
-                                    onclick="addPrototypeEntry()"
-                                    class="px-4 py-2 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 flex items-center"
-                                    id="addPrototypeBtn">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                                </svg>
-                                Add Prototype
-                            </button>
-                            
-                            <div class="text-sm text-purple-600" id="capacityWarning" style="display: none;">
-                                <svg class="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
-                                </svg>
-                                Build plate capacity exceeded
-                            </div>
-                        </div>
                     </div>
                 </div>
 
@@ -411,50 +171,27 @@
                 @if (Model.AvailableScheduledJobs.Any())
                 {
                     <div>
-                        <label for="AssociatedScheduledJobId" class="block text-sm font-medium text-gray-700 mb-2">
-                            Link to Scheduled Job (Optional)
-                        </label>
-                        <select name="AssociatedScheduledJobId" id="AssociatedScheduledJobId" 
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                onchange="loadScheduledJobDetails()">
+                        <label for="AssociatedScheduledJobId" class="block text-sm font-medium text-gray-700 mb-2">Link to Scheduled Job (Optional)</label>
+                        <select name="AssociatedScheduledJobId" id="AssociatedScheduledJobId" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" onchange="loadScheduledJobDetails()">
                             <option value="">No scheduled job</option>
                             @foreach (var job in Model.AvailableScheduledJobs)
                             {
-                                <option value="@job.Id" selected="@(job.Id == Model.AssociatedScheduledJobId)">
-                                    @job.PartNumber - @job.ScheduledStart.ToString("MM/dd HH:mm") to @job.ScheduledEnd.ToString("HH:mm")
-                                </option>
+                                <option value="@job.Id" selected="@(job.Id == Model.AssociatedScheduledJobId)">@job.PartNumber - @job.ScheduledStart.ToString("MM/dd HH:mm") to @job.ScheduledEnd.ToString("HH:mm")</option>
                             }
                         </select>
-                        <p class="mt-1 text-xs text-gray-500">Select if this print corresponds to a scheduled job</p>
                     </div>
                 }
 
                 <!-- Setup Notes -->
                 <div>
-                    <label for="SetupNotes" class="block text-sm font-medium text-gray-700 mb-2">
-                        Setup Notes (Optional)
-                    </label>
-                    <textarea name="SetupNotes" 
-                              id="SetupNotes" 
-                              rows="3" 
-                              placeholder="Any special setup requirements, material changes, or operator notes..."
-                              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">@Model.SetupNotes</textarea>
+                    <label for="SetupNotes" class="block text-sm font-medium text-gray-700 mb-2">Setup Notes (Optional)</label>
+                    <textarea name="SetupNotes" id="SetupNotes" rows="3" placeholder="Any special setup requirements, material changes, or operator notes..." class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">@Model.SetupNotes</textarea>
                 </div>
 
                 <!-- Form Actions -->
                 <div class="flex justify-end space-x-3 pt-6 border-t">
-                    <button type="button" 
-                            onclick="closeModalSafely()" 
-                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
-                        Cancel
-                    </button>
-                    <button type="submit" 
-                            class="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-                        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                        </svg>
-                        Start Print
-                    </button>
+                    <button type="button" onclick="closeModalSafely()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button>
+                    <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">Start Print</button>
                 </div>
             </form>
         </div>
@@ -462,602 +199,7 @@
 </div>
 
 <script>
-    // CRITICAL FIX: Enhanced modal close function with multiple fallback methods
-    function closeModalSafely() {
-        console.log('?? [MODAL] closeModalSafely called - trying multiple methods');
-        
-        try {
-            // Method 1: Try PrintTracking namespace
-            if (typeof window.PrintTracking !== 'undefined' && typeof window.PrintTracking.closeModal === 'function') {
-                console.log('? [MODAL] Using PrintTracking.closeModal');
-                window.PrintTracking.closeModal();
-                return true;
-            }
-            
-            // Method 2: Try global closeModal
-            if (typeof window.closeModal === 'function') {
-                console.log('? [MODAL] Using window.closeModal');
-                window.closeModal();
-                return true;
-            }
-            
-            // Method 3: Try scheduler closeJobModal
-            if (typeof window.closeJobModal === 'function') {
-                console.log('? [MODAL] Using window.closeJobModal');
-                window.closeJobModal();
-                return true;
-            }
-            
-            // Method 4: Direct DOM manipulation fallback
-            console.log('?? [MODAL] Using fallback DOM manipulation');
-            const modal = document.getElementById('start-print-modal');
-            if (modal) {
-                modal.style.display = 'none';
-            }
-            
-            const modalContainer = document.getElementById('modal-container');
-            if (modalContainer) {
-                modalContainer.style.display = 'none';
-                modalContainer.classList.add('hidden');
-                modalContainer.innerHTML = '';
-            }
-            
-            // Method 5: Try parent window communication
-            if (window.parent && window.parent !== window) {
-                window.parent.postMessage({ action: 'closeModal' }, '*');
-            }
-            
-            // Method 6: Try window.opener communication
-            if (window.opener && window.opener !== window) {
-                try {
-                    if (typeof window.opener.closeJobModal === 'function') {
-                        window.opener.closeJobModal();
-                    }
-                } catch (e) {
-                    console.log('Cannot access opener:', e);
-                }
-            }
-            
-            // Reset body overflow
-            document.body.style.overflow = '';
-            
-            console.log('? [MODAL] Modal closed using fallback methods');
-            return true;
-            
-        } catch (error) {
-            console.error('? [MODAL] Error closing modal:', error);
-            
-            // Last resort: reload the page
-            if (window.opener && window.opener !== window) {
-                window.close();
-            } else {
-                window.location.href = '/PrintTracking';
-            }
-            return false;
-        }
-    }
-
-    // Backward compatibility - expose closeModal as alias
-    window.closeModal = closeModalSafely;
-
-    // PHASE 4: Enhanced JavaScript for operator interface
-    let prototypeEntryCount = 0; // Start at 0 since no default entries
-    let maxPartsCapacity = @Model.MaxPartsCapacity;
-    let currentBuildCapacity = @Model.TotalPartsInBuild;
-
-    // Enhanced form submission handling
-    document.body.addEventListener('htmx:beforeRequest', function(event) {
-        if (event.detail.requestConfig.path.includes('StartPrint')) {
-            console.log('?? [FORM] Starting print form submission');
-            
-            // Clean up prototype fields if not adding prototypes
-            const addPrototypes = document.getElementById('AddPrototypes')?.checked;
-            if (!addPrototypes) {
-                // Remove all prototype input fields to prevent validation errors
-                const prototypeInputs = document.querySelectorAll('input[name*="PrototypeAdditions"], select[name*="PrototypeAdditions"]');
-                prototypeInputs.forEach(input => input.remove());
-                console.log('?? [FORM] Cleaned up prototype fields');
-            }
-        }
-    });
-
-    // CRITICAL FIX: Enhanced form submission response handling
-    document.body.addEventListener('htmx:afterRequest', function(event) {
-        if (event.detail.requestConfig.path.includes('StartPrint')) {
-            console.log('?? [FORM] Received response:', event.detail.xhr.status);
-            
-            try {
-                const contentType = event.detail.xhr.getResponseHeader('Content-Type') || '';
-                
-                if (contentType.includes('application/json')) {
-                    // Success response - handle JSON
-                    const response = JSON.parse(event.detail.xhr.responseText);
-                    
-                    if (response.success) {
-                        console.log('? [FORM] Print started successfully');
-                        
-                        // Close modal first
-                        closeModalSafely();
-                        
-                        // Enhanced success message with operator estimate info
-                        let message = `Print started successfully! Build ID: ${response.buildId}`;
-                        if (response.operatorEstimateHours) {
-                            const endTime = new Date(Date.now() + (response.operatorEstimateHours * 60 * 60 * 1000));
-                            message += `\nEstimated Duration: ${response.operatorEstimateHours}h`;
-                            message += `\nExpected Completion: ${endTime.toLocaleString()}`;
-                        }
-                        
-                        if (response.scheduleUpdated) {
-                            message += `\n?? Schedule updated with your time estimate`;
-                        }
-                        
-                        // Try multiple notification methods
-                        if (typeof window.PrintTracking !== 'undefined' && typeof window.PrintTracking.showToast === 'function') {
-                            window.PrintTracking.showToast(message, 'success');
-                        } else if (typeof window.showSuccessNotification === 'function') {
-                            window.showSuccessNotification(message);
-                        } else {
-                            alert(message);
-                        }
-                        
-                        // Refresh dashboard
-                        if (typeof window.PrintTracking !== 'undefined' && typeof window.PrintTracking.refreshDashboard === 'function') {
-                            setTimeout(() => {
-                                window.PrintTracking.refreshDashboard();
-                            }, 500);
-                        }
-                        
-                        // ENHANCED: Notify scheduler if schedule was updated
-                        if (response.refreshSchedulerNeeded && response.scheduleUpdated) {
-                            notifySchedulerOfUpdate(response);
-                        }
-                    } else {
-                        console.error('? [FORM] Print start failed:', response.message);
-                        const errorMessage = response.message || 'Error starting print';
-                        
-                        if (typeof window.PrintTracking !== 'undefined' && typeof window.PrintTracking.showToast === 'function') {
-                            window.PrintTracking.showToast(errorMessage, 'error');
-                        } else if (typeof window.showErrorNotification === 'function') {
-                            window.showErrorNotification(errorMessage);
-                        } else {
-                            alert(errorMessage);
-                        }
-                    }
-                } else if (contentType.includes('text/html')) {
-                    // HTML response means form validation errors
-                    console.log('?? [FORM] Received HTML response - likely validation errors');
-                    
-                    // Don't close the modal, let user see the errors
-                    // The form content should be updated by HTMX automatically
-                }
-            } catch (error) {
-                console.error('? [FORM] Error processing response:', error);
-                
-                if (typeof window.PrintTracking !== 'undefined' && typeof window.PrintTracking.showToast === 'function') {
-                    window.PrintTracking.showToast('Error processing response', 'error');
-                } else {
-                    alert('Error processing response');
-                }
-            }
-        }
-    });
-
-    // Enhanced scheduler notification function
-    function notifySchedulerOfUpdate(response) {
-        console.log('?? [NOTIFICATION] Notifying scheduler of update:', response);
-        
-        try {
-            // Method 1: Direct window communication if same tab
-            if (window.opener && window.opener.location.pathname.includes('/Scheduler')) {
-                window.opener.postMessage({
-                    type: 'scheduleUpdated',
-                    jobId: response.schedulerJobId,
-                    machineId: response.machineId,
-                    newEstimate: response.operatorEstimateHours,
-                    buildId: response.buildId
-                }, window.location.origin);
-                console.log('? [NOTIFICATION] Sent message to opener window');
-            }
-            
-            // Method 2: localStorage for cross-tab communication
-            localStorage.setItem('scheduleUpdateNotification', JSON.stringify({
-                timestamp: Date.now(),
-                type: 'printStarted',
-                jobId: response.schedulerJobId,
-                machineId: response.machineId,
-                operatorEstimate: response.operatorEstimateHours,
-                buildId: response.buildId
-            }));
-            console.log('? [NOTIFICATION] Saved notification to localStorage');
-            
-            // Method 3: Try to find scheduler in parent frames
-            let frame = window.parent;
-            let attempts = 0;
-            while (frame && frame !== window && attempts < 5) {
-                try {
-                    if (frame.location.pathname.includes('/Scheduler') && typeof frame.SchedulerApp !== 'undefined') {
-                        frame.SchedulerApp.handleScheduleUpdate({
-                            type: 'scheduleUpdated',
-                            jobId: response.schedulerJobId,
-                            machineId: response.machineId,
-                            operatorEstimate: response.operatorEstimateHours,
-                            buildId: response.buildId
-                        });
-                        console.log('? [NOTIFICATION] Notified scheduler in parent frame');
-                        break;
-                    }
-                } catch (e) {
-                    // Cross-origin access denied, continue
-                }
-                frame = frame.parent;
-                attempts++;
-            }
-            
-        } catch (e) {
-            console.log('?? [NOTIFICATION] Could not notify scheduler:', e);
-        }
-    }
-
-    // Update calculated duration based on start and end times
-    function updateCalculatedDuration() {
-        const startTime = new Date(document.getElementById('ActualStartTime')?.value);
-        const endTime = new Date(document.getElementById('EstimatedEndTime')?.value);
-        
-        if (startTime && endTime && endTime > startTime) {
-            const durationMs = endTime.getTime() - startTime.getTime();
-            const durationHours = durationMs / (1000 * 60 * 60);
-            
-            const durationElement = document.getElementById('durationHours');
-            if (durationElement) {
-                durationElement.textContent = durationHours.toFixed(2) + 'h';
-            }
-            
-            // Update the color based on reasonableness
-            const durationDiv = document.getElementById('calculatedDuration');
-            if (durationDiv && durationElement) {
-                if (durationHours < 0.5) {
-                    durationDiv.className = 'mt-1 block w-full p-3 bg-red-50 rounded-md border-red-200 border';
-                    durationElement.className = 'text-lg font-semibold text-red-700';
-                } else if (durationHours > 48) {
-                    durationDiv.className = 'mt-1 block w-full p-3 bg-yellow-50 rounded-md border-yellow-200 border';
-                    durationElement.className = 'text-lg font-semibold text-yellow-700';
-                } else {
-                    durationDiv.className = 'mt-1 block w-full p-3 bg-green-50 rounded-md border-green-200 border';
-                    durationElement.className = 'text-lg font-semibold text-green-700';
-                }
-            }
-        } else {
-            const durationElement = document.getElementById('durationHours');
-            const durationDiv = document.getElementById('calculatedDuration');
-            if (durationElement && durationDiv) {
-                durationElement.textContent = '--h';
-                durationDiv.className = 'mt-1 block w-full p-3 bg-gray-50 rounded-md border-gray-200 border';
-                durationElement.className = 'text-lg font-semibold text-gray-700';
-            }
-        }
-    }
-
-    // Update expected completion time based on operator estimate (legacy function for compatibility)
-    function updateExpectedCompletion() {
-        updateCalculatedDuration();
-    }
-
-    // ENHANCED: Material information update function
-    function updateMaterialInfo() {
-        const materialSelect = document.getElementById('SelectedMaterial');
-        const selectedOption = materialSelect.options[materialSelect.selectedIndex];
-        const infoDisplay = document.getElementById('materialInfoDisplay');
-        const safetyNotesDiv = document.getElementById('materialSafetyNotes');
-        
-        if (materialSelect.value && selectedOption) {
-            // Get material data from option attributes
-            const materialType = selectedOption.getAttribute('data-material-type') || '-';
-            const cost = selectedOption.getAttribute('data-cost') || '-';
-            const compatible = selectedOption.getAttribute('data-compatible') === 'true';
-            const safetyNotes = selectedOption.getAttribute('data-safety-notes') || '';
-            
-            // Update display elements
-            document.getElementById('materialTypeDisplay').textContent = materialType;
-            document.getElementById('materialCostDisplay').textContent = cost ? `$${cost}/g` : '-';
-            document.getElementById('materialCompatibleDisplay').innerHTML = compatible 
-                ? '<span class="text-green-600">✓ Yes</span>' 
-                : '<span class="text-red-600">✗ No</span>';
-            
-            // Show material info
-            infoDisplay.classList.remove('hidden');
-            
-            // Handle safety notes
-            if (safetyNotes.trim()) {
-                document.getElementById('safetyNotesText').textContent = safetyNotes;
-                safetyNotesDiv.classList.remove('hidden');
-            } else {
-                safetyNotesDiv.classList.add('hidden');
-            }
-            
-            // Warn about incompatible materials
-            if (!compatible) {
-                materialSelect.style.borderColor = '#EF4444';
-                materialSelect.style.backgroundColor = '#FEF2F2';
-            } else {
-                materialSelect.style.borderColor = '';
-                materialSelect.style.backgroundColor = '';
-            }
-        } else {
-            // Hide material info when no selection
-            infoDisplay.classList.add('hidden');
-            safetyNotesDiv.classList.add('hidden');
-            materialSelect.style.borderColor = '';
-            materialSelect.style.backgroundColor = '';
-        }
-    }
-
-    // Enhanced DOM ready handling
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('?? [MODAL] Start Print Modal DOM ready');
-        
-        // Add event listener to start time input
-        const startTimeInput = document.getElementById('ActualStartTime');
-        if (startTimeInput) {
-            startTimeInput.addEventListener('change', updateCalculatedDuration);
-        }
-        
-        // Focus on printer dropdown when modal opens
-        setTimeout(() => {
-            const printerSelect = document.getElementById('PrinterName');
-            if (printerSelect) {
-                printerSelect.focus();
-            }
-        }, 100);
-        
-        // Update calculated duration on load
-        updateCalculatedDuration();
-        
-        // Update build capacity on load
-        updateBuildCapacity();
-        
-        console.log('? [MODAL] Start Print Modal initialized successfully');
-    });
-
-    // Load scheduled job details if selected
-    function loadScheduledJobDetails() {
-        const select = document.getElementById('AssociatedScheduledJobId');
-        const jobId = select?.value;
-        
-        if (jobId) {
-            console.log('Loading details for scheduled job:', jobId);
-            
-            try {
-                const selectedOption = select.options[select.selectedIndex];
-                if (selectedOption && selectedOption.text) {
-                    console.log('Selected job details:', selectedOption.text);
-                }
-            } catch (error) {
-                console.warn('Error loading scheduled job details:', error);
-            }
-        }
-    }
-
-    // Toggle prototype addition section
-    function togglePrototypeAddition() {
-        const checkbox = document.getElementById('AddPrototypes');
-        const details = document.getElementById('prototypeDetails');
-        
-        if (checkbox && details) {
-            if (checkbox.checked) {
-                details.classList.remove('hidden');
-                // Add first prototype entry if none exist
-                if (prototypeEntryCount === 0) {
-                    addPrototypeEntry();
-                }
-            } else {
-                details.classList.add('hidden');
-                // Clear all prototype entries
-                const prototypeList = document.getElementById('prototypeList');
-                if (prototypeList) {
-                    prototypeList.innerHTML = '';
-                }
-                prototypeEntryCount = 0;
-            }
-            updateBuildCapacity();
-        }
-    }
-
-    // Add new prototype entry
-    function addPrototypeEntry() {
-        if (prototypeEntryCount >= 10) {
-            const message = 'Maximum 10 prototypes can be added per build';
-            if (typeof window.PrintTracking !== 'undefined' && typeof window.PrintTracking.showToast === 'function') {
-                window.PrintTracking.showToast(message, 'error');
-            } else {
-                alert(message);
-            }
-            return;
-        }
-
-        const prototypeList = document.getElementById('prototypeList');
-        if (!prototypeList) return;
-        
-        const newEntry = document.createElement('div');
-        newEntry.className = 'prototype-entry bg-white p-4 rounded-lg border mb-3';
-        newEntry.innerHTML = `
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Part Number <span class="text-red-500">*</span></label>
-                    <input type="text" 
-                           name="PrototypeAdditions[${prototypeEntryCount}].PartNumber" 
-                           placeholder="e.g., PRO-00${prototypeEntryCount + 1}"
-                           required
-                           class="block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
-                    <input type="number" 
-                           name="PrototypeAdditions[${prototypeEntryCount}].Quantity" 
-                           min="1" 
-                           max="50" 
-                           value="1"
-                           onchange="updateBuildCapacity()"
-                           class="block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                    <select name="PrototypeAdditions[${prototypeEntryCount}].Priority" 
-                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500">
-                        <option value="Low">Low</option>
-                        <option value="Normal" selected>Normal</option>
-                        <option value="High">High</option>
-                        <option value="Urgent">Urgent</option>
-                    </select>
-                </div>
-                <div class="flex items-end">
-                    <button type="button" 
-                            onclick="removePrototypeEntry(this)"
-                            class="w-full px-3 py-2 text-sm bg-red-100 text-red-700 rounded-md hover:bg-red-200">
-                        Remove
-                    </button>
-                </div>
-            </div>
-            <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Requested By</label>
-                    <input type="text" 
-                           name="PrototypeAdditions[${prototypeEntryCount}].RequestedBy" 
-                           placeholder="Engineer name"
-                           class="block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                    <input type="text" 
-                           name="PrototypeAdditions[${prototypeEntryCount}].Notes" 
-                           placeholder="Special requirements"
-                           class="block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500">
-                </div>
-            </div>
-        `;
-        
-        prototypeList.appendChild(newEntry);
-        prototypeEntryCount++;
-        updateBuildCapacity();
-    }
-
-    // Remove prototype entry
-    function removePrototypeEntry(button) {
-        const entry = button.closest('.prototype-entry');
-        if (entry) {
-            entry.remove();
-            
-            // Re-index remaining entries
-            const entries = document.querySelectorAll('.prototype-entry');
-            entries.forEach((entry, index) => {
-                const inputs = entry.querySelectorAll('input, select');
-                inputs.forEach(input => {
-                    const name = input.getAttribute('name');
-                    if (name && name.includes('PrototypeAdditions')) {
-                        const newName = name.replace(/\[\d+\]/, `[${index}]`);
-                        input.setAttribute('name', newName);
-                    }
-                });
-            });
-            prototypeEntryCount = entries.length;
-            updateBuildCapacity();
-        }
-    }
-
-    // Update build capacity calculations
-    function updateBuildCapacity() {
-        const quantities = document.querySelectorAll('input[name*="PrototypeAdditions"][name*="Quantity"]');
-        let totalPrototypeParts = 0;
-        
-        quantities.forEach(input => {
-            totalPrototypeParts += parseInt(input.value) || 0;
-        });
-        
-        const totalParts = currentBuildCapacity + totalPrototypeParts;
-        const utilization = (totalParts / maxPartsCapacity) * 100;
-        
-        const currentPartsCountEl = document.getElementById('currentPartsCount');
-        const plateUtilizationEl = document.getElementById('plateUtilization');
-        
-        if (currentPartsCountEl) {
-            currentPartsCountEl.textContent = totalParts;
-        }
-        
-        if (plateUtilizationEl) {
-            plateUtilizationEl.textContent = utilization.toFixed(1) + '%';
-        }
-        
-        const warning = document.getElementById('capacityWarning');
-        const addBtn = document.getElementById('addPrototypeBtn');
-        
-        if (utilization > 90) {
-            if (warning) warning.style.display = 'block';
-            if (addBtn) {
-                addBtn.disabled = true;
-                addBtn.classList.add('opacity-50', 'cursor-not-allowed');
-            }
-        } else {
-            if (warning) warning.style.display = 'none';
-            if (addBtn) {
-                addBtn.disabled = false;
-                addBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-            }
-        }
-    }
-
-    // Handle ESC key
-    document.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape') {
-            closeModalSafely();
-        }
-    });
-
-    console.log('? [MODAL] Start Print Modal script loaded successfully');
-
-    // Update material information display based on selection
-    function updateMaterialInfo() {
-        const materialSelect = document.getElementById('SelectedMaterial');
-        const selectedOption = materialSelect.options[materialSelect.selectedIndex];
-        
-        const typeDisplay = document.getElementById('materialTypeDisplay');
-        const costDisplay = document.getElementById('materialCostDisplay');
-        const compatibleDisplay = document.getElementById('materialCompatibleDisplay');
-        const safetyNotesDiv = document.getElementById('materialSafetyNotes');
-        const safetyNotesText = document.getElementById('safetyNotesText');
-        
-        if (selectedOption) {
-            // Update static displays
-            typeDisplay.textContent = selectedOption.getAttribute('data-material-type') || '-';
-            costDisplay.textContent = '$' + (parseFloat(selectedOption.getAttribute('data-cost')) || 0).toFixed(3) + ' per g';
-            compatibleDisplay.textContent = (selectedOption.getAttribute('data-compatible') === 'true') ? 'Yes' : 'No';
-            
-            // Update safety notes
-            const safetyNotes = selectedOption.getAttribute('data-safety-notes') || '';
-            if (safetyNotes) {
-                safetyNotesText.textContent = safetyNotes;
-                safetyNotesDiv.classList.remove('hidden');
-            } else {
-                safetyNotesDiv.classList.add('hidden');
-            }
-            
-            // Enable material verification checkbox
-            const materialVerifiedCheckbox = document.getElementById('MaterialVerified');
-            if (materialVerifiedCheckbox) {
-                materialVerifiedCheckbox.disabled = false; 
-            }
-        } else {
-            // Clear displays
-            typeDisplay.textContent = '-';
-            costDisplay.textContent = '-';
-            compatibleDisplay.textContent = '-';
-            safetyNotesText.textContent = '';
-            safetyNotesDiv.classList.add('hidden');
-            
-            // Disable material verification checkbox
-            const materialVerifiedCheckbox = document.getElementById('MaterialVerified');
-            if (materialVerifiedCheckbox) {
-                materialVerifiedCheckbox.disabled = true;
-                materialVerifiedCheckbox.checked = false;
-            }
-        }
-    }
+    function closeModalSafely(){ if(typeof window.closeJobModal==='function'){window.closeJobModal();} const modal=document.getElementById('start-print-modal'); if(modal) modal.remove(); }
+    function updateCalculatedDuration(){ const s=new Date(document.getElementById('ActualStartTime').value); const e=new Date(document.getElementById('EstimatedEndTime').value); if(e>s){ const h=(e-s)/3600000; document.getElementById('durationHours').textContent=h.toFixed(2)+'h'; }}
+    document.addEventListener('DOMContentLoaded',()=>{updateCalculatedDuration();});
 </script>
