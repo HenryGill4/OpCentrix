@@ -33,6 +33,9 @@
     .hidden-day{visibility:hidden;opacity:0;pointer-events:none;}
     .machine-jobs-overlay{position:relative; grid-column:2 / span var(--overlay-slot-count); height:var(--row-height); margin-top:calc(var(--row-height) * -1); pointer-events:none;}
     .machine-jobs-overlay .job-block{position:absolute; top:2px; bottom:2px; left:0; width:1px; z-index:20; pointer-events:auto;}
+    /* Prevent flicker of un-sized jobs: hide until first sizing pass */
+    .scheduler-horizontal-container.initializing .machine-jobs-overlay .job-block{opacity:0;}
+    .scheduler-horizontal-container.ready .machine-jobs-overlay .job-block{opacity:1;transition:opacity .18s ease-in;}
 </style>
 <script>
 if(typeof window.openJobModalSafely !== 'function'){
@@ -43,7 +46,7 @@ if(typeof window.openJobModalSafely !== 'function'){
     catch(err){ console.error('openJobModalSafely fallback error', err); } return false; };
 }
 </script>
-<div class="scheduler-horizontal-container" data-zoom="@zoom" data-orientation="horizontal" data-total-slots="@totalSlots" data-anchor="@anchorDate.ToString("yyyy-MM-dd")" data-visible-offset-slots="@visibleOffsetSlots">
+<div class="scheduler-horizontal-container initializing" data-zoom="@zoom" data-orientation="horizontal" data-total-slots="@totalSlots" data-anchor="@anchorDate.ToString("yyyy-MM-dd")" data-visible-offset-slots="@visibleOffsetSlots">
     <div class="scheduler-main-grid" style="display:grid; grid-template-columns: 200px repeat(@totalSlots, var(--slot-width)); min-width:fit-content;">
         <div class="scheduler-machine-header">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path></svg>
@@ -173,9 +176,19 @@ if(typeof window.openJobModalSafely !== 'function'){
 </div>
 <script>
 (function(){
+  const container=document.querySelector('.scheduler-horizontal-container');
+  // Show overlay immediately for this render cycle
+  function showOverlay(msg){ if(window.showSchedulerOverlay){ window.showSchedulerOverlay(msg||'Rendering schedule...'); } else { const ov=document.getElementById('loading-indicator'); if(ov){ if(msg){ const t=ov.querySelector('#loading-indicator-text'); if(t) t.textContent=msg; } ov.classList.add('active'); } } }
+  function hideOverlay(){ if(window.hideSchedulerOverlay){ window.hideSchedulerOverlay(); } else { const ov=document.getElementById('loading-indicator'); if(ov) ov.classList.remove('active'); } }
+  showOverlay();
   document.querySelectorAll('.scheduler-horizontal-container .job-block[data-color]').forEach(b=>{const c=b.getAttribute('data-color'); if(c){ b.style.setProperty('--machine-color', c); }});
   function parseSlotWidth(){ let v=getComputedStyle(document.documentElement).getPropertyValue('--slot-width').trim(); if(!v) return 0; if(v.endsWith('px')) v=v.slice(0,-2); const num=parseFloat(v); return isNaN(num)?0:num; }
-  function sizeJobs(){ const slotWidth=parseSlotWidth(); if(slotWidth<=0) return; document.querySelectorAll('.scheduler-horizontal-container .job-block[data-left-slots][data-width-slots]').forEach(el=>{ const ls=parseFloat(el.getAttribute('data-left-slots'))||0; const ws=parseFloat(el.getAttribute('data-width-slots'))||0.25; el.style.left=(ls*slotWidth)+'px'; el.style.width=(ws*slotWidth)+'px'; }); }
-  window.addEventListener('load', sizeJobs); window.addEventListener('resize', sizeJobs); document.addEventListener('scheduler:zoomChanged', sizeJobs); document.addEventListener('htmx:afterSwap', e=>{ if(e.target && e.target.closest('.scheduler-horizontal-container')) sizeJobs(); });
+  let initialDone=false; let rafId=null;
+  function sizeJobs(){ const slotWidth=parseSlotWidth(); if(slotWidth<=0){ return; } document.querySelectorAll('.scheduler-horizontal-container .job-block[data-left-slots][data-width-slots]').forEach(el=>{ const ls=parseFloat(el.getAttribute('data-left-slots'))||0; const ws=parseFloat(el.getAttribute('data-width-slots'))||0.25; el.style.left=(ls*slotWidth)+'px'; el.style.width=(ws*slotWidth)+'px'; });
+    if(!initialDone){ initialDone=true; if(container){ container.classList.remove('initializing'); container.classList.add('ready'); }
+      // Use double RAF to ensure layout flush before hiding
+      rafId=requestAnimationFrame(()=>requestAnimationFrame(()=>hideOverlay())); }
+  }
+  window.addEventListener('load', sizeJobs); window.addEventListener('resize', sizeJobs); document.addEventListener('scheduler:zoomChanged', sizeJobs); document.addEventListener('htmx:afterSwap', e=>{ if(e.target && e.target.closest('.scheduler-horizontal-container')){ initialDone=false; if(container){ container.classList.add('initializing'); container.classList.remove('ready'); } showOverlay('Updating schedule...'); requestAnimationFrame(sizeJobs); }});
 })();
 </script>
