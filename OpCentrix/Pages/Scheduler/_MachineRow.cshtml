@@ -169,7 +169,7 @@
             var jobsInLayer = jobLayers[l];
             foreach (var job in jobsInLayer)
             {
-                // Enhanced position calculation with better accuracy
+                // Enhanced position calculation with better accuracy using slot absolute sizes
                 var leftPosition = job.CalculateGridPosition(start, Model.SlotMinutes);
                 var widthSlots = job.CalculateGridWidth(Model.SlotMinutes);
                 
@@ -178,12 +178,13 @@
                 var maxWidthSlots = totalSlots - leftPosition;
                 widthSlots = Math.Max(minWidthSlots, Math.Min(widthSlots, maxWidthSlots));
                 
-                var leftPct = Math.Max(0, Math.Min(99, (100.0 * leftPosition / totalSlots))).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + "%";
-                var widthPct = Math.Max(1, Math.Min(100, (100.0 * widthSlots / totalSlots))).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + "%";
+                // Convert to calc() expressions instead of percentage
+                var leftCalc = $"calc({(leftPosition).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)} * var(--slot-width))";
+                var widthCalc = $"calc({(widthSlots).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)} * var(--slot-width))";
                 
                 // Enhanced layer positioning (adjusted for cohort summary bar)
                 var layerPadding = 4;
-                var baseTop = cohortSummary.Any() ? 0 : 0; // Cohort bar already handled by container positioning
+                var baseTop = cohortSummary.Any() ? 0 : 0; // Already offset by container when cohorts exist
                 var top = baseTop + layerPadding + l * (layerHeight + 2);
                 var height = Math.Max(24, layerHeight - 2); // Minimum 24px height
                 var topPx = $"{top}px";
@@ -199,7 +200,7 @@
                 var stageClass = !string.IsNullOrEmpty(job.WorkflowStage) ? $"stage-{job.WorkflowStage.ToLower()}" : "";
                 
                 <div class="absolute pointer-events-auto transition-all duration-200 hover:z-30 hover:scale-105 cursor-pointer rounded-lg shadow-sm hover:shadow-lg job-block @cohortClass @stageClass"
-                     style="left:@leftPct; width:@widthPct; top:@topPx; height:@heightPx; min-width:40px;"
+                     style="left:@leftCalc; width:@widthCalc; top:@topPx; height:@heightPx; min-width:40px;"
                      onclick="openJobModal('@Model.MachineId', '@job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")', @job.Id)"
                      title="@jobLabel" 
                      aria-label="@jobLabel"

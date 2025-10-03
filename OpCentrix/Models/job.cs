@@ -497,10 +497,24 @@ namespace OpCentrix.Models
             return Math.Max(0, totalMinutes / slotMinutes);
         }
 
-        // Helper method to calculate width in grid
+        // Helper method to calculate width in grid (legacy simple width)
         public double CalculateGridWidth(int slotMinutes)
         {
             return Math.Max(0.5, DurationMinutes / (double)slotMinutes);
+        }
+
+        /// <summary>
+        /// New absolute width calculation that derives the span using precise offsets from the grid start, preventing cumulative rounding
+        /// and width drift when the visible day window changes. Guarantees a minimum visual span.
+        /// </summary>
+        public double CalculateGridWidthAbsolute(DateTime gridStartDate, int slotMinutes)
+        {
+            if (slotMinutes <= 0) return 0.5;
+            var startOffset = (ScheduledStart - gridStartDate.Date).TotalMinutes / slotMinutes;
+            var endOffset = (ScheduledEnd - gridStartDate.Date).TotalMinutes / slotMinutes;
+            var width = endOffset - startOffset;
+            if (double.IsNaN(width) || width <= 0) width = 0.5; // fallback minimum
+            return Math.Max(0.25, width); // allow slightly smaller minimum for tighter jobs
         }
 
         // Helper method to get status color based on SLS workflow

@@ -1,48 +1,59 @@
 ﻿@using OpCentrix.ViewModels.Scheduler
+@using System.Globalization
 @model SchedulerPageViewModel
 @{
     var slotsPerDay = Model.SlotsPerDay;
     var slotMinutes = Model.SlotMinutes;
+    var visibleDates = Model.Dates;
+    var hiddenAnchorDays = 1; // keep 1 hidden column for partial leading jobs
+    // Persistent anchor = earliest job start date (if no jobs fallback to first visible)
+    var earliestJobDate = Model.Jobs.Any() ? Model.Jobs.Min(j => j.ScheduledStart).Date : (visibleDates.FirstOrDefault().Date);
+    var anchorDate = earliestJobDate.AddDays(-hiddenAnchorDays);
+    var visibleStart = visibleDates.FirstOrDefault().Date;
+    // Slots offset from anchor to start of visible window
+    var visibleOffsetSlots = (int)Math.Floor((visibleStart - anchorDate).TotalMinutes / slotMinutes);
+    var hiddenSlots = hiddenAnchorDays * slotsPerDay;
+
+    // Date columns we actually render: hidden anchor day(s) + current visible dates ONLY (no huge gap)
+    var allDates = new List<DateTime>();
+    for (int h = hiddenAnchorDays; h > 0; h--) allDates.Add(visibleStart.AddDays(-h)); // hidden days directly preceding visible start
+    allDates.AddRange(visibleDates);
+
+    var totalSlots = allDates.Count * slotsPerDay; // grid slot count actually rendered
     var slotTimes = Enumerable.Range(0, slotsPerDay).Select(i => TimeSpan.FromMinutes(i * slotMinutes)).ToList();
-    var totalSlots = Model.Dates.Count * slotsPerDay;
     var zoom = Context.Request.Query["zoom"].FirstOrDefault() ?? "week";
     string GetColor(string m)=> Model.MachineColors != null && Model.MachineColors.TryGetValue(m, out var c) ? c : "#6366F1";
 }
 <style>
     .scheduler-horizontal-container .job-block { color:#fff; border-radius:6px; background:var(--machine-color,#6366F1); box-shadow:0 4px 14px -2px rgba(0,0,0,.12); }
-    .scheduler-horizontal-container .scheduler-grid-cell .job-block { background:var(--machine-color,#6366F1); }
-    .scheduler-horizontal-container .scheduler-time-header{z-index:60;}
-    .scheduler-horizontal-container .scheduler-machine-header{z-index:61;}
+    .scheduler-horizontal-container .scheduler-time-header{z-index:60;background:#fff;}
+    .scheduler-horizontal-container .scheduler-machine-header{z-index:61;background:#fff;}
     .job-qty-line{font-size:.6rem;opacity:.9;display:flex;align-items:center;gap:.35rem;margin-top:2px;}
+    .scheduler-horizontal-container .scheduler-grid-cell{position:relative;overflow:visible;}
+    .hidden-day{visibility:hidden;opacity:0;pointer-events:none;}
+    .machine-jobs-overlay{position:relative; grid-column:2 / span var(--overlay-slot-count); height:var(--row-height); margin-top:calc(var(--row-height) * -1); pointer-events:none;}
+    .machine-jobs-overlay .job-block{position:absolute; top:2px; bottom:2px; left:0; width:1px; z-index:20; pointer-events:auto;}
 </style>
 <script>
 if(typeof window.openJobModalSafely !== 'function'){
   window.openJobModalSafely = function(machineId, date, jobId){
-    try {
-      if(typeof window.openJobModal === 'function') return window.openJobModal(machineId,date,jobId);
-      const params = new URLSearchParams({ handler:'ShowAddModal', machineId: machineId||'', date: date||'' });
-      if(jobId) params.append('id', jobId);
-      const url = '/Scheduler?' + params.toString();
-      if(typeof htmx !== 'undefined'){
-        return htmx.ajax('GET', url, { target:'#modal-container', swap:'innerHTML' }).then(()=>{
-          const mc=document.getElementById('modal-container'); if(mc){ mc.style.display='flex'; mc.classList.remove('hidden'); document.body.style.overflow='hidden'; }
-        });
-      }
-      window.location.href = url;
-    } catch(err){ console.error('openJobModalSafely fallback error', err); }
-    return false;
-  };
+    try { if(typeof window.openJobModal === 'function') return window.openJobModal(machineId,date,jobId);
+      const params = new URLSearchParams({ handler:'ShowAddModal', machineId: machineId||'', date: date||'' }); if(jobId) params.append('id', jobId);
+      const url = '/Scheduler?' + params.toString(); if(typeof htmx !== 'undefined'){ return htmx.ajax('GET', url, { target:'#modal-container', swap:'innerHTML' }).then(()=>{ const mc=document.getElementById('modal-container'); if(mc){ mc.style.display='flex'; mc.classList.remove('hidden'); document.body.style.overflow='hidden'; }});} window.location.href = url; }
+    catch(err){ console.error('openJobModalSafely fallback error', err); } return false; };
 }
 </script>
-<div class="scheduler-horizontal-container" data-zoom="@zoom" data-orientation="horizontal" data-total-slots="@totalSlots">
+<div class="scheduler-horizontal-container" data-zoom="@zoom" data-orientation="horizontal" data-total-slots="@totalSlots" data-anchor="@anchorDate.ToString("yyyy-MM-dd")" data-visible-offset-slots="@visibleOffsetSlots">
     <div class="scheduler-main-grid" style="display:grid; grid-template-columns: 200px repeat(@totalSlots, var(--slot-width)); min-width:fit-content;">
         <div class="scheduler-machine-header">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path></svg>
             <span>Resources</span>
         </div>
-        @for (int d = 0; d < Model.Dates.Count; d++)
+        @* Time / date headers *@
+        @for (int d = 0; d < allDates.Count; d++)
         {
-            var date = Model.Dates[d];
+            var date = allDates[d];
+            var isHidden = d < hiddenAnchorDays;
             var isToday = date.Date == DateTime.Today;
             var dayOfWeek = date.ToString("ddd");
             var dayNumber = date.Day.ToString();
@@ -53,6 +64,7 @@ if(typeof window.openJobModalSafely !== 'function'){
                 var isHourBoundary = slotTime.Minutes == 0;
                 var isHalfHour = slotTime.Minutes == 30;
                 var headerClasses = new List<string> { "scheduler-time-header" };
+                if(isHidden) headerClasses.Add("hidden-day");
                 string timeDisplay = string.Empty;
                 if (isFirstSlot)
                 { headerClasses.Add("date-header"); if (isToday) { headerClasses.Add("today"); } }
@@ -62,10 +74,14 @@ if(typeof window.openJobModalSafely !== 'function'){
                 { headerClasses.Add("half-hour-header"); timeDisplay = ":30"; }
                 else { headerClasses.Add("quarter-hour-header"); timeDisplay = ":" + slotTime.Minutes.ToString("00"); }
                 <div class="@string.Join(" ", headerClasses)" data-date="@date.ToString("yyyy-MM-dd")" data-slot="@s">
-                    @if (isFirstSlot){<div class="date-day">@dayOfWeek</div><div class="date-number">@dayNumber</div>@if (isToday){<div class="date-today">TODAY</div>;}} else { <div class="time-display">@timeDisplay</div>; }
+                    @if (!isHidden)
+                    {
+                        if (isFirstSlot){<div class="date-day">@dayOfWeek</div><div class="date-number">@dayNumber</div>@if (isToday){<div class="date-today">TODAY</div>;}} else { <div class="time-display">@timeDisplay</div>; }
+                    }
                 </div>
             }
         }
+        @* Machine rows *@
         @foreach (var machine in Model.Machines)
         {
             var color = GetColor(machine);
@@ -80,74 +96,86 @@ if(typeof window.openJobModalSafely !== 'function'){
                 @{ var hasActive = machineJobs.Any(j => j.Status == "Building" || j.Status == "Running"); }
                 <div class="machine-status @(hasActive ? "status-active" : "status-idle")"></div>
             </div>
-            @for (int d = 0; d < Model.Dates.Count; d++)
+            @* Slot cells *@
+            @for (int d = 0; d < allDates.Count; d++)
             {
-                var day = Model.Dates[d];
+                var date = allDates[d];
+                var isHiddenDay = d < hiddenAnchorDays;
                 for (int s = 0; s < slotsPerDay; s++)
                 {
                     var slotTime = slotTimes[s];
-                    var slotDateTime = day.Add(slotTime);
-                    var isToday = day.Date == DateTime.Today;
-                    var isCurrentTimeSlot = isToday && slotTime <= DateTime.Now.TimeOfDay && slotTime.Add(TimeSpan.FromMinutes(slotMinutes)) > DateTime.Now.TimeOfDay;
-                    var isWeekend = day.DayOfWeek == DayOfWeek.Saturday || day.DayOfWeek == DayOfWeek.Sunday;
+                    var slotDateTime = date.Add(slotTime);
+                    var isToday = !isHiddenDay && date.Date == DateTime.Today;
+                    var isCurrentTimeSlot = !isHiddenDay && isToday && slotTime <= DateTime.Now.TimeOfDay && slotTime.Add(TimeSpan.FromMinutes(slotMinutes)) > DateTime.Now.TimeOfDay;
+                    var isWeekend = !isHiddenDay && (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday);
                     var isPastWorkHours = slotTime < TimeSpan.FromHours(6) || slotTime >= TimeSpan.FromHours(18);
                     var isHourBoundary = slotTime.Minutes == 0;
                     var cellClasses = new List<string>{"scheduler-grid-cell","group"};
+                    if(isHiddenDay) cellClasses.Add("hidden-day");
                     if (isCurrentTimeSlot) cellClasses.Add("current-time");
-                    if (isWeekend) cellClasses.Add("weekend");
-                    if (isPastWorkHours) cellClasses.Add("off-hours");
+                    if (!isHiddenDay && isWeekend) cellClasses.Add("weekend");
+                    if (!isHiddenDay && isPastWorkHours) cellClasses.Add("off-hours");
                     if (isHourBoundary) cellClasses.Add("hour-boundary");
-                    var slotJobs = machineJobs.Where(job => job.ScheduledStart < slotDateTime.AddMinutes(slotMinutes) && job.ScheduledEnd > slotDateTime).ToList();
-                    if (slotJobs.Any()) cellClasses.Add("has-jobs");
-                    var addTooltip = $"Click to add job at {slotDateTime:MMM dd, yyyy h:mm tt}";
-                    <div class="@string.Join(" ", cellClasses)" style="min-height:@(rowHeight)px" onclick="openJobModalSafely('@machine','@slotDateTime.ToString("yyyy-MM-ddTHH:mm")')" title="@addTooltip" data-slot-time="@slotDateTime.ToString("yyyy-MM-ddTHH:mm")" data-machine="@machine">
-                        @foreach (var job in slotJobs)
+                    var addTooltip = isHiddenDay ? string.Empty : $"Click to add job at {slotDateTime:MMM dd, yyyy h:mm tt}";
+                    <div class="@string.Join(" ", cellClasses)" style="min-height:@(rowHeight)px" @(!isHiddenDay ? $"onclick=\"openJobModalSafely('{machine}','{slotDateTime:yyyy-MM-ddTHH:mm}')\"" : string.Empty) title="@addTooltip" data-slot-time="@slotDateTime.ToString("yyyy-MM-ddTHH:mm")" data-machine="@machine">
+                        @if (!isHiddenDay)
                         {
-                            var startDate = Model.Dates.Count > 0 ? Model.Dates[0].Date : DateTime.Today;
-                            var leftPosition = job.CalculateGridPosition(startDate, slotMinutes);
-                            var widthSlots = job.CalculateGridWidth(slotMinutes);
-                            var jobStartSlot = (int)Math.Floor(job.CalculateGridPosition(startDate, slotMinutes));
-                            var currentSlot = d * slotsPerDay + s;
-                            if (jobStartSlot == currentSlot)
-                            {
-                                var leftPct = (100.0 * (leftPosition - currentSlot)).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + "%";
-                                var widthPct = (100.0 * widthSlots).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + "%";
-                                var jobLabel = $"Job: {job.PartNumber} ({job.Status}) - {job.ScheduledStart:MMM dd HH:mm} to {job.ScheduledEnd:MMM dd HH:mm} - Qty: {job.Quantity}";
-                                if(!string.IsNullOrEmpty(job.SlsMaterial)) jobLabel += $" - {job.SlsMaterial}";
-                                jobLabel += $" - Duration: {job.DurationHours:F1}h";
-                                if(job.Priority>0) jobLabel += $" - Priority P{job.Priority}";
-                                var rush = false; try { rush = (bool)(job.GetType().GetProperty("IsRushJob")?.GetValue(job) ?? false); } catch { }
-                                var stackLevel = job.StackLevel.HasValue && job.StackLevel.Value>0 ? job.StackLevel.Value : (byte)1;
-                                var stackMulti = stackLevel>1;
-                                <div class="job-block status-@job.Status.ToLower().Replace(" ", "-")@(rush ? " rush-job" : string.Empty)" style="left:@leftPct; width:@widthPct; --machine-color:@color;" data-color="@color" data-material="@job.SlsMaterial" data-priority="@job.Priority" data-status="@job.Status" data-machine="@machine" data-stack-level="@stackLevel" data-parts-per-build="@(job.PartsPerBuild?.ToString() ?? "")" onclick="event.stopPropagation(); openJobModalSafely('@machine','@job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")',@job.Id)" title="@jobLabel" aria-label="@jobLabel" data-job-id="@job.Id">
-                                    <div class="job-badges">
-                                        @if (job.Priority <= 2) { <span class="priority-badge p@job.Priority" title="Priority P@job.Priority">P@job.Priority</span>; }
-                                        @if (rush) { <span class="rush-badge" title="Rush Job">⚡</span>; }
-                                    </div>
-                                    <div class="job-title">@job.PartNumber</div>
-                                    @if (rowHeight > 50)
-                                    {
-                                        <div class="job-details">@job.Status · @job.DurationHours.ToString("F1")h</div>
-                                        <div class="job-qty-line">Qty @job.Quantity@if(stackMulti){<span>• Stack @stackLevel x</span>}</div>
-                                        @if (!string.IsNullOrEmpty(job.SlsMaterial)) { <div class="job-material">@job.SlsMaterial</div>; }
-                                    }
-                                    @if (job.Status == "Building" || job.Status == "Running")
-                                    { <div class="job-progress"><div class="progress-bar"></div></div> }
-                                </div>
-                            }
+                            <div class="add-job-btn" onclick="event.stopPropagation(); openJobModalSafely('@machine','@slotDateTime.ToString("yyyy-MM-ddTHH:mm")')" title="@addTooltip" aria-label="Add job at @slotDateTime.ToString("MMM dd h:mm tt")">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+                            </div>
+                            if (isCurrentTimeSlot) { <div class="current-time-dot"></div>; }
                         }
-                        <div class="add-job-btn" onclick="event.stopPropagation(); openJobModalSafely('@machine','@slotDateTime.ToString("yyyy-MM-ddTHH:mm")')" title="@addTooltip" aria-label="Add job at @slotDateTime.ToString("MMM dd h:mm tt")">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
-                        </div>
-                        @if (isCurrentTimeSlot) { <div class="current-time-dot"></div>; }
                     </div>
                 }
             }
+            @* Overlay job container spanning all slot columns *@
+            <div class="machine-jobs-overlay" style="--overlay-slot-count:@totalSlots; --row-height:@(rowHeight)px; grid-column:2 / span @totalSlots;">
+                @foreach (var job in machineJobs)
+                {
+                    // Absolute position from persistent anchor
+                    var absoluteLeftSlots = job.CalculateGridPosition(anchorDate, slotMinutes);
+                    var widthSlotsRaw = job.CalculateGridWidthAbsolute(anchorDate, slotMinutes);
+                    // Translate into current visible window coordinate space
+                    var displayLeftSlots = absoluteLeftSlots - visibleOffsetSlots + hiddenSlots;
+                    // Skip if job entirely left of window
+                    if (displayLeftSlots + widthSlotsRaw < 0) { continue; }
+                    // Trim left overflow
+                    double trimmedLeftSlots = displayLeftSlots;
+                    double trimmedWidthSlots = widthSlotsRaw;
+                    if (trimmedLeftSlots < 0){ trimmedWidthSlots += trimmedLeftSlots; trimmedLeftSlots = 0; }
+                    if (trimmedWidthSlots < 0.25) trimmedWidthSlots = 0.25;
+                    var jobLabel = $"Job: {job.PartNumber} ({job.Status}) - {job.ScheduledStart:MMM dd HH:mm} to {job.ScheduledEnd:MMM dd HH:mm} - Qty: {job.Quantity}";
+                    if(!string.IsNullOrEmpty(job.SlsMaterial)) jobLabel += $" - {job.SlsMaterial}";
+                    jobLabel += $" - Duration: {job.DurationHours:F1}h";
+                    if(job.Priority>0) jobLabel += $" - Priority P{job.Priority}";
+                    var rush = false; try { rush = (bool)(job.GetType().GetProperty("IsRushJob")?.GetValue(job) ?? false); } catch { }
+                    var stackLevel = job.StackLevel.HasValue && job.StackLevel.Value>0 ? job.StackLevel.Value : (byte)1;
+                    var stackMulti = stackLevel>1;
+                    <div class="job-block status-@job.Status.ToLower().Replace(" ", "-")@(rush?" rush-job":"")" style="--machine-color:@color;" data-left-slots="@trimmedLeftSlots.ToString("0.###", CultureInfo.InvariantCulture)" data-width-slots="@trimmedWidthSlots.ToString("0.###", CultureInfo.InvariantCulture)" data-color="@color" data-material="@job.SlsMaterial" data-priority="@job.Priority" data-status="@job.Status" data-machine="@machine" data-stack-level="@stackLevel" data-parts-per-build="@(job.PartsPerBuild?.ToString() ?? "")" onclick="event.stopPropagation(); openJobModalSafely('@machine','@job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")',@job.Id)" title="@jobLabel" aria-label="@jobLabel" data-job-id="@job.Id">
+                        <div class="job-badges">
+                            @if (job.Priority <= 2) { <span class="priority-badge p@job.Priority" title="Priority P@job.Priority">P@job.Priority</span>; }
+                            @if (rush) { <span class="rush-badge" title="Rush Job">⚡</span>; }
+                        </div>
+                        <div class="job-title">@job.PartNumber</div>
+                        @if (rowHeight > 50)
+                        {
+                            <div class="job-details">@job.Status · @job.DurationHours.ToString("F1")h</div>
+                            <div class="job-qty-line">Qty @job.Quantity@if(stackMulti){<span>• Stack @stackLevel x</span>}</div>
+                            @if (!string.IsNullOrEmpty(job.SlsMaterial)) { <div class="job-material">@job.SlsMaterial</div>; }
+                        }
+                        @if (job.Status == "Building" || job.Status == "Running")
+                        { <div class="job-progress"><div class="progress-bar"></div></div> }
+                    </div>
+                }
+            </div>
         }
     </div>
 </div>
 <script>
 (function(){
   document.querySelectorAll('.scheduler-horizontal-container .job-block[data-color]').forEach(b=>{const c=b.getAttribute('data-color'); if(c){ b.style.setProperty('--machine-color', c); }});
+  function parseSlotWidth(){ let v=getComputedStyle(document.documentElement).getPropertyValue('--slot-width').trim(); if(!v) return 0; if(v.endsWith('px')) v=v.slice(0,-2); const num=parseFloat(v); return isNaN(num)?0:num; }
+  function sizeJobs(){ const slotWidth=parseSlotWidth(); if(slotWidth<=0) return; document.querySelectorAll('.scheduler-horizontal-container .job-block[data-left-slots][data-width-slots]').forEach(el=>{ const ls=parseFloat(el.getAttribute('data-left-slots'))||0; const ws=parseFloat(el.getAttribute('data-width-slots'))||0.25; el.style.left=(ls*slotWidth)+'px'; el.style.width=(ws*slotWidth)+'px'; }); }
+  window.addEventListener('load', sizeJobs); window.addEventListener('resize', sizeJobs); document.addEventListener('scheduler:zoomChanged', sizeJobs); document.addEventListener('htmx:afterSwap', e=>{ if(e.target && e.target.closest('.scheduler-horizontal-container')) sizeJobs(); });
 })();
 </script>

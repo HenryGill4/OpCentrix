@@ -83,7 +83,7 @@
                     
                     @foreach (var job in slotJobs)
                     {
-                        // Calculate job position and size within the slot
+                        // Calculate job position and size within the slot (slot-based -> absolute calc)
                         var startDate = dates.Count > 0 ? dates[0].Date : DateTime.Today;
                         var leftPosition = job.CalculateGridPosition(startDate, slotMinutes);
                         var widthSlots = job.CalculateGridWidth(slotMinutes);
@@ -94,11 +94,13 @@
                         
                         @if (jobStartSlot == currentSlot)
                         {
-                            var leftPct = (100.0 * (leftPosition - currentSlot)).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + "%";
-                            var widthPct = (100.0 * widthSlots).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + "%";
+                            var leftSlots = leftPosition - currentSlot; // offset inside cell
+                            if (leftSlots < 0) leftSlots = 0;
+                            var leftCalc = $"calc({leftSlots.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)} * var(--slot-width))";
+                            var widthCalc = $"calc({widthSlots.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)} * var(--slot-width))";
                             
                             <div class="absolute top-2 bottom-2 job-block machine-@machineId.ToLower() @machineId.ToLower() status-@job.Status.ToLower().Replace(" ", "-")"
-                                 style="left:@leftPct; width:@widthPct; min-width:40px; z-index:200;"
+                                 style="left:@leftCalc; width:@widthCalc; min-width:40px; z-index:200;"
                                  onclick="event.stopPropagation(); openJobModal('@machineId', '@job.ScheduledStart.ToString("yyyy-MM-ddTHH:mm")', @job.Id)"
                                  title="@job.PartNumber - @job.Status (@job.DurationHours.ToString("F1")h)"
                                  data-job-id="@job.Id"
