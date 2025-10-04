@@ -43,7 +43,6 @@
                     j.style.removeProperty('border-left');
                 }
             });
-            // Hook: allow external batch selection script to re-bind
             document.dispatchEvent(new CustomEvent('scheduler:jobsHydrated'));
         } catch(e){ console.warn('hydrateSchedulerColors error', e); }
     }
@@ -61,7 +60,6 @@
         return mc;
     }
 
-    // Guard to prevent a full document swap into a partial target
     document.body.addEventListener('htmx:beforeSwap', function(e){
         try {
             if(!e.detail) return;
@@ -212,7 +210,9 @@
                     console.warn('[SCHED] OpCentrixScheduler.initializeAddJobModal not available yet');
                 }
             } else {
-                console.log('[SCHED] Swap contained no job form (likely success script), skipping re-init');
+                // Success scenario (create/update) -> force full refresh so sizing logic runs cleanly
+                console.log('[SCHED] Modal success detected – reloading page for clean sizing');
+                window.location.reload();
             }
         }
     });

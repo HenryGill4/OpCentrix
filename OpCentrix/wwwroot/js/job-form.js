@@ -63,7 +63,7 @@
     if(!token){ alert('Security token not found. Refresh and try again.'); return; }
     if(typeof htmx==='undefined'){ alert('HTMX not loaded'); return; }
     htmx.ajax('POST', `/Scheduler?handler=DeleteJob&id=${jobId}`, { headers:{ 'RequestVerificationToken': token, 'X-Requested-With': 'XMLHttpRequest' }, values:{ '__RequestVerificationToken': token, id: jobId }, target:'#modal-container', swap:'innerHTML' })
-      .then(()=>{ if(window.closeJobModal) window.closeJobModal(); if(window.showSuccessNotification) window.showSuccessNotification('Job deleted successfully!'); setTimeout(()=>window.location.reload(), 500); })
+      .then(()=>{ if(window.closeJobModal) window.closeJobModal(); if(window.showSuccessNotification) window.showSuccessNotification('Job deleted successfully!'); try{ localStorage.removeItem('schedulerSelectMode'); }catch{} setTimeout(()=>window.location.reload(), 400); })
       .catch(()=>{ alert('Error deleting job'); });
   };
 

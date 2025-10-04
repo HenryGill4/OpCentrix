@@ -2,6 +2,7 @@
  * REDESIGNED: Professional day zoom display with proper time hierarchy
  * FIXED: All styling moved from embedded styles to proper CSS
  * FIXED: Z-index hierarchy to prevent job block hover overlap issues
+ * ENHANCED: Custom classes replace Bootstrap and improved mobile styling
  */
 
 :root {
@@ -46,9 +47,495 @@
     --machine-inc: #10b981;
     --machine-cnc1: #8b5cf6;
     --machine-edm: #06b6d4;
+    /* Mobile breakpoints */
+    --mobile-sm: 480px;
+    --mobile-md: 768px;
+    --tablet: 1024px;
 }
 
-/* PROFESSIONAL: iOS-Style Container */
+/* ==============================================
+   CUSTOM PRINTER INFO DISPLAY CLASSES
+   ============================================== */
+
+/* Replace Bootstrap .p-5 with custom machine info classes */
+.machine-info-container {
+    padding: 1.5rem;
+    background: rgba(255, 255, 255, 0.98);
+    border-radius: 1rem;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.machine-info-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--machine-color, #3b82f6), rgba(255, 255, 255, 0));
+    opacity: 0.8;
+}
+
+.machine-info-container:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.machine-info-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.machine-color-indicator {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 0.25rem;
+    background: var(--machine-color, #3b82f6);
+    flex-shrink: 0;
+}
+
+.machine-name {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #1f2937;
+    line-height: 1.3;
+}
+
+.machine-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.machine-stat-item {
+    text-align: center;
+    padding: 0.75rem;
+    background: #f8fafc;
+    border-radius: 0.5rem;
+    border: 1px solid #e2e8f0;
+}
+
+.machine-stat-value {
+    display: block;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1f2937;
+    line-height: 1;
+}
+
+.machine-stat-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 0.25rem;
+}
+
+.machine-status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.machine-status-indicator.status-active {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.machine-status-indicator.status-idle {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.machine-status-indicator.status-error {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.machine-status-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: currentColor;
+    animation: pulse 2s infinite;
+}
+
+/* ==============================================
+   ENHANCED MOBILE RESPONSIVE STYLING
+   ============================================== */
+
+/* Mobile-first approach for scheduler */
+.scheduler-mobile-optimized {
+    padding: 0.5rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile scheduler header improvements */
+.scheduler-header-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.scheduler-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.control-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background: #f8fafc;
+    border-radius: 0.75rem;
+    border: 1px solid #e2e8f0;
+    flex-shrink: 0;
+}
+
+.group-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-right: 0.25rem;
+}
+
+/* Enhanced button styling for mobile */
+.icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.5rem;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    color: #6b7280;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.icon-btn:hover:not(:disabled) {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+    color: #374151;
+    transform: translateY(-1px);
+}
+
+.icon-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.text-btn {
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    background: #3b82f6;
+    color: #ffffff;
+    border: 1px solid #3b82f6;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.text-btn:hover:not(:disabled) {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+    transform: translateY(-1px);
+}
+
+.text-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.toggle-btn {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    color: #6b7280;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.toggle-btn.active {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: #ffffff;
+}
+
+.toggle-btn:hover:not(:disabled) {
+    border-color: #9ca3af;
+    transform: translateY(-1px);
+}
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.375rem 0.75rem;
+    border-radius: 1rem;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    color: #6b7280;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.chip:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+    color: #374151;
+    text-decoration: none;
+}
+
+.chip-active {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: #ffffff;
+}
+
+.chip-scroll {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding: 0.25rem;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.chip-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.mini-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.primary-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    background: #3b82f6;
+    color: #ffffff;
+    border: none;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.primary-btn:hover:not(:disabled) {
+    background: #1d4ed8;
+    color: #ffffff;
+    text-decoration: none;
+    transform: translateY(-1px);
+}
+
+.primary-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.secondary-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    background: #ffffff;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.secondary-btn:hover:not(:disabled) {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+    color: #374151;
+    text-decoration: none;
+    transform: translateY(-1px);
+}
+
+.secondary-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ==============================================
+   MOBILE BREAKPOINT OPTIMIZATIONS
+   ============================================== */
+
+/* Small mobile devices (up to 480px) */
+@media (max-width: 480px) {
+    .machine-info-container {
+        padding: 1rem;
+        border-radius: 0.75rem;
+    }
+
+    .machine-stats {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
+
+    .machine-stat-item {
+        padding: 0.5rem;
+    }
+
+    .machine-stat-value {
+        font-size: 1rem;
+    }
+
+    .machine-stat-label {
+        font-size: 0.6875rem;
+    }
+
+    .scheduler-controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+
+    .control-group {
+        justify-content: center;
+        padding: 0.75rem 0.5rem;
+    }
+
+    .icon-btn {
+        width: 2.25rem;
+        height: 2.25rem;
+    }
+
+    .chip-scroll {
+        justify-content: center;
+    }
+
+    :root {
+        --machine-label-width: 120px;
+        --slot-width-2month: 30px;
+        --slot-width-month: 35px;
+        --slot-width-week: 40px;
+        --slot-width-day: 50px;
+        --slot-width-12h: 60px;
+        --slot-width-6h: 50px;
+        --slot-width-4h: 45px;
+        --slot-width-2h: 40px;
+        --slot-width-1h: 35px;
+        --slot-width-30min: 30px;
+        --slot-width-15min: 25px;
+    }
+}
+
+/* Medium mobile devices (481px to 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+    .machine-info-container {
+        padding: 1.25rem;
+    }
+
+    .machine-stats {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .scheduler-controls {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+
+    .control-group {
+        flex: 0 1 auto;
+    }
+
+    :root {
+        --machine-label-width: 160px;
+        --slot-width-2month: 40px;
+        --slot-width-month: 50px;
+        --slot-width-week: 60px;
+        --slot-width-day: 80px;
+        --slot-width-12h: 100px;
+        --slot-width-6h: 80px;
+        --slot-width-4h: 70px;
+        --slot-width-2h: 60px;
+        --slot-width-1h: 50px;
+        --slot-width-30min: 40px;
+        --slot-width-15min: 35px;
+    }
+}
+
+/* Tablets (769px to 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .machine-info-container {
+        padding: 1.5rem;
+    }
+
+    .machine-stats {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    :root {
+        --slot-width-2month: 50px;
+        --slot-width-month: 60px;
+        --slot-width-week: 80px;
+        --slot-width-day: 100px;
+        --slot-width-12h: 120px;
+        --slot-width-6h: 100px;
+        --slot-width-4h: 80px;
+        --slot-width-2h: 70px;
+        --slot-width-1h: 60px;
+        --slot-width-30min: 50px;
+        --slot-width-15min: 40px;
+    }
+}
+
+/* ==============================================
+   PROFESSIONAL IOS-STYLE CONTAINER
+   ============================================== */
+
 .scheduler-horizontal-container {
     position: relative;
     width: 100%;
@@ -555,157 +1042,6 @@
     color: #fff; /* improved contrast */
 }
 
-/* Ensure material-specific backgrounds do not override machine colors */
-/*.job-block[data-material*="Ti-6Al-4V"],
-.job-block[data-material*="Inconel"],
-.job-block[data-material*="Ti-6Al-4V Grade"],
-.job-block[data-material*="Titanium"],
-.job-block[data-material*="INC"],
-.job-block[data-material*="INCONEL"] {
-    background: unset !important;
-}
-*/
-/* ENHANCED: Responsive Design */
-@media (max-width: 1024px) {
-    :root {
-        --slot-width-2month: 50px;
-        --slot-width-month: 60px;
-        --slot-width-week: 80px;
-        --slot-width-day: 100px;
-        --slot-width-12h: 120px;
-        --slot-width-6h: 100px;
-        --slot-width-4h: 80px;
-        --slot-width-2h: 70px;
-        --slot-width-1h: 60px;
-        --slot-width-30min: 50px;
-        --slot-width-15min: 40px;
-    }
-
-    .scheduler-machine-label {
-        padding: 12px 8px !important;
-        font-size: 13px !important;
-    }
-
-    .job-block {
-        font-size: 11px !important;
-        padding: 6px 8px !important;
-        min-height: 32px !important;
-    }
-}
-
-@media (max-width: 768px) {
-    :root {
-        --machine-label-width: 160px;
-        --slot-width-2month: 40px;
-        --slot-width-month: 50px;
-        --slot-width-week: 60px;
-        --slot-width-day: 80px;
-        --slot-width-12h: 100px;
-        --slot-width-6h: 80px;
-        --slot-width-4h: 70px;
-        --slot-width-2h: 60px;
-        --slot-width-1h: 50px;
-        --slot-width-30min: 40px;
-        --slot-width-15min: 35px;
-    }
-
-    .scheduler-machine-label {
-        padding: 12px 8px !important;
-        font-size: 13px !important;
-    }
-
-    .job-block {
-        font-size: 11px !important;
-        padding: 6px 8px !important;
-        min-height: 32px !important;
-    }
-}
-
-/* iOS-STYLE: Dark Mode Support */
-@media (prefers-color-scheme: dark) {
-    .scheduler-horizontal-container {
-        background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
-    }
-
-    .scheduler-main-grid {
-        background: #1f2937;
-    }
-
-    .scheduler-time-header.date-header {
-        background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
-        color: #f9fafb;
-    }
-
-    .scheduler-time-header.hour-header {
-        background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
-        color: #d1d5db;
-    }
-
-    .scheduler-machine-header,
-    .scheduler-machine-label {
-        background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
-        color: #f9fafb;
-        border-color: #4b5563;
-    }
-
-    .scheduler-grid-cell {
-        background: linear-gradient(135deg, #1f2937 0%, #1a1f2e 100%);
-        border-color: #374151;
-    }
-
-        .scheduler-grid-cell:hover {
-            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%) !important;
-        }
-}
-
-/* PROFESSIONAL: Print Media */
-@media print {
-    .scheduler-horizontal-container {
-        box-shadow: none;
-        border: 1px solid #e5e7eb;
-    }
-
-    .add-job-btn {
-        display: none !important;
-    }
-
-    .job-block {
-        box-shadow: none !important;
-        border: 1px solid rgba(0, 0, 0, 0.2) !important;
-    }
-}
-
-/* VERTICAL VIEW FIXES: allow continuous job blocks across time rows */
-.scheduler-vertical .scheduler-time-rows {
-    position: relative;
-}
-
-.scheduler-vertical .time-row {
-    position: relative;
-    overflow: visible !important; /* let vertical spans overflow into next rows visually */
-}
-
-.scheduler-vertical .scheduler-machine-columns {
-    overflow: visible !important; /* prevent clipping of tall job blocks */
-}
-
-.scheduler-vertical .scheduler-grid-cell.machine-column {
-    overflow: visible !important; /* required for absolute job-block children with tall height */
-}
-
-/* Ensure job-blocks can extend vertically without being cut */
-.scheduler-vertical .job-block {
-    top: auto; /* handled via inline styles */
-    bottom: auto;
-}
-
-/* Machine color mapping: apply consistent colors to machine labels and job blocks */
-.scheduler-machine-label.machine-ti1, .job-block.machine-ti1, .job-block.ti1, .scheduler-machine-label.ti1,
-.scheduler-machine-label.machine-ti2, .job-block.machine-ti2, .job-block.ti2, .scheduler-machine-label.ti2,
-.scheduler-machine-label.machine-inc, .job-block.machine-inc, .job-block.inc, .scheduler-machine-label.inc,
-.scheduler-machine-label.machine-cnc1, .job-block.machine-cnc1, .job-block.cnc1, .scheduler-machine-label.cnc1,
-.scheduler-machine-label.machine-edm, .job-block.machine-edm, .job-block.edm, .scheduler-machine-label.edm { }
-
 /* explicit machine color backgrounds (win over other rules) */
 .job-block.machine-ti1 { background-color: #f59e0b !important; border-left: 3px solid #b45309; }
 .job-block.machine-ti2 { background-color: #3b82f6 !important; border-left: 3px solid #1e40af; }
@@ -792,3 +1128,167 @@
 
 /* Ensure grid container fills width */
 .scheduler-grid-container.scheduler-vertical { width: 100% !important; }
+
+/* VERTICAL VIEW FIXES: allow continuous job blocks across time rows */
+.scheduler-vertical .scheduler-time-rows {
+    position: relative;
+}
+
+.scheduler-vertical .time-row {
+    position: relative;
+    overflow: visible !important; /* let vertical spans overflow into next rows visually */
+}
+
+.scheduler-vertical .scheduler-machine-columns {
+    overflow: visible !important; /* prevent clipping of tall job blocks */
+}
+
+.scheduler-vertical .scheduler-grid-cell.machine-column {
+    overflow: visible !important; /* required for absolute job-block children with tall height */
+}
+
+/* Ensure job-blocks can extend vertically without being cut */
+.scheduler-vertical .job-block {
+    top: auto; /* handled via inline styles */
+    bottom: auto;
+}
+
+/* ==============================================
+   MOBILE TOUCH IMPROVEMENTS
+   ============================================== */
+
+/* Enhanced touch targets for mobile */
+@media (hover: none) and (pointer: coarse) {
+    .icon-btn,
+    .text-btn,
+    .toggle-btn,
+    .chip,
+    .primary-btn,
+    .secondary-btn {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    .add-job-btn {
+        width: 36px;
+        height: 36px;
+        opacity: 0.7;
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    .scheduler-grid-cell:active .add-job-btn {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.1);
+    }
+
+    .job-block {
+        min-height: 40px;
+        font-size: 13px;
+    }
+}
+
+/* Improve horizontal scrolling on touch devices */
+.scheduler-horizontal-container {
+    touch-action: pan-x;
+}
+
+.chip-scroll {
+    touch-action: pan-x;
+}
+
+/* ==============================================
+   DARK MODE SUPPORT
+   ============================================== */
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --ios-light-gray: #1c1c1e;
+        --ios-separator: #38383a;
+    }
+
+    .scheduler-horizontal-container {
+        background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+    }
+
+    .scheduler-main-grid {
+        background: #1f2937;
+    }
+
+    .machine-info-container {
+        background: rgba(31, 41, 59, 0.98);
+        border-color: rgba(255, 255, 255, 0.1);
+        color: #f9fafb;
+    }
+
+    .machine-name {
+        color: #f9fafb;
+    }
+
+    .machine-stat-item {
+        background: #374151;
+        border-color: #4b5563;
+        color: #f9fafb;
+    }
+
+    .control-group {
+        background: #374151;
+        border-color: #4b5563;
+    }
+
+    .icon-btn,
+    .text-btn,
+    .toggle-btn,
+    .secondary-btn {
+        background: #374151;
+        border-color: #4b5563;
+        color: #f9fafb;
+    }
+
+    .primary-btn {
+        background: #3b82f6;
+        color: #ffffff;
+    }
+
+    .chip {
+        background: #374151;
+        border-color: #4b5563;
+        color: #f9fafb;
+    }
+
+    .chip-active {
+        background: #3b82f6;
+        color: #ffffff;
+    }
+}
+
+/* ==============================================
+   PRINT MEDIA OPTIMIZATIONS
+   ============================================== */
+
+@media print {
+    .scheduler-horizontal-container {
+        box-shadow: none;
+        border: 1px solid #e5e7eb;
+        background: white;
+    }
+
+    .machine-info-container {
+        box-shadow: none;
+        border: 1px solid #e5e7eb;
+        background: white;
+    }
+
+    .add-job-btn {
+        display: none !important;
+    }
+
+    .job-block {
+        box-shadow: none !important;
+        border: 1px solid rgba(0, 0, 0, 0.2) !important;
+    }
+
+    .control-group,
+    .scheduler-controls {
+        display: none !important;
+    }
+}

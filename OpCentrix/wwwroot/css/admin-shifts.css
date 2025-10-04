@@ -125,7 +125,7 @@ body{background:var(--oc-bg);}
 .week-view{grid-template-columns:repeat(7,1fr)}
 .week-view .calendar-day{min-height:200px;padding:1rem}
 .week-view .day-number{font-size:1rem;margin-bottom:.75rem}
-.week-view .shift-dot{height:24px;border-radius:12px;display:flex;align-items:center;padding:0 8px;color:#fff;font-size:.7rem;font-weight:600;margin:3px 0;cursor:pointer;transition:all .2s}
+.week-view .shift-dot{height:24px;border-radius:12px;display:flex;align-items:center;padding:18px 8px;color:#fff;font-size:.7rem;font-weight:600;margin:3px 0;cursor:pointer;transition:all .2s}
 .week-view .shift-dot:hover{transform:scale(1.05);box-shadow:0 2px 8px rgba(0,0,0,.2)}
 
 /* Day View Specific */

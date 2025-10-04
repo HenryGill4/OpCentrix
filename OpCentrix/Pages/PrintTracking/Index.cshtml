@@ -9,51 +9,79 @@
     <link rel="stylesheet" href="~/css/print-tracking.css" asp-append-version="true" />
 }
 
-<div class="min-h-screen bg-gray-50">
-    <!-- Role-Based Header -->
-    <div class="bg-white shadow">
+<div class="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/20">
+    <!-- Compact Enhanced Role-Based Header -->
+    <div class="header-section bg-white/95 backdrop-blur-lg shadow-lg border-b border-gray-200/50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="py-6">
+            <div class="py-4 lg:py-5">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">
+                    <div class="flex-1">
+                        <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-1">
                             @if (Model.IsAdminView)
                             {
-                                <span>SLS Print Tracking - Admin Console</span>
+                                <span class="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                                    SLS Print Tracking
+                                </span>
+                                <span class="block text-lg sm:text-xl lg:text-2xl text-gray-700 font-semibold">
+                                    Admin Console
+                                </span>
                             }
                             else
                             {
-                                <span>SLS Print Operations</span>
+                                <span class="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                                    SLS Print Operations
+                                </span>
                             }
                         </h1>
-                        <p class="mt-1 text-sm text-gray-600">
+                        <p class="text-sm sm:text-base text-gray-600 font-medium max-w-2xl">
                             @if (Model.IsAdminView)
                             {
-                                <span>Comprehensive oversight of Selective Laser Sintering operations</span>
+                                <span>Comprehensive oversight and control of Selective Laser Sintering operations</span>
                             }
                             else
                             {
-                                <span>Track and manage your SLS printing operations</span>
+                                <span>Track and manage your Selective Laser Sintering printing operations</span>
                             }
                         </p>
                     </div>
-                    <div class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                    <div class="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0 sm:space-x-4">
                         <div class="text-center sm:text-right">
-                            <p class="text-sm font-medium text-gray-900">@Model.Dashboard.OperatorName</p>
-                            <p class="text-xs text-gray-500">
-                                @Model.UserRole
-                                @if (Model.IsAdminView)
-                                {
-                                    <span class="ml-1 px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs">Admin Access</span>
-                                }
-                            </p>
+                            <div class="flex items-center justify-center sm:justify-end gap-2 mb-1">
+                                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                                    @Model.Dashboard.OperatorName.Substring(0, 1).ToUpper()
+                                </div>
+                                <div>
+                                    <p class="text-base font-bold text-gray-900">@Model.Dashboard.OperatorName</p>
+                                    <p class="text-xs text-gray-500 flex items-center gap-1">
+                                        @Model.UserRole
+                                        @if (Model.IsAdminView)
+                                        {
+                                            <span class="ml-1 px-2 py-0.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full text-xs font-bold">
+                                                Admin
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="ml-1 px-2 py-0.5 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-full text-xs font-bold">
+                                                Operator
+                                            </span>
+                                        }
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="text-xs text-gray-500 flex items-center justify-center sm:justify-end gap-1">
+                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"></path>
+                                </svg>
+                                @DateTime.Now.ToString("MMM dd, yyyy - HH:mm")
+                            </div>
                         </div>
                         <div class="flex flex-wrap justify-center sm:justify-end gap-2">
                             @if (Model.IsAdminView)
                             {
-                                <!-- Admin-only buttons -->
+                                <!-- Compact Admin-only buttons -->
                                 <a href="/Admin/Machines" 
-                                   class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm">
+                                   class="btn btn-primary px-3 py-2 rounded-lg flex items-center space-x-1.5 text-sm font-bold shadow-lg hover-lift">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -62,15 +90,15 @@
                                 </a>
                                 
                                 <a href="/ProductionBuild/Dashboard" 
-                                   class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm">
+                                   class="btn bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-3 py-2 rounded-lg flex items-center space-x-1.5 text-sm font-bold shadow-lg hover-lift">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
                                     </svg>
-                                    <span class="hidden sm:inline">Production Builds</span>
+                                    <span class="hidden sm:inline">Builds</span>
                                 </a>
                                 
                                 <a href="/Analytics/BuildTimeAnalytics" 
-                                   class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm">
+                                   class="btn bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white px-3 py-2 rounded-lg flex items-center space-x-1.5 text-sm font-bold shadow-lg hover-lift">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                                     </svg>
@@ -80,16 +108,16 @@
                             else
                             {
                                 <a href="/ProductionBuild/Dashboard" 
-                                   class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm">
+                                   class="btn bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-3 py-2 rounded-lg flex items-center space-x-1.5 text-sm font-bold shadow-lg hover-lift">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
                                     </svg>
-                                    <span class="hidden sm:inline">Production Builds</span>
+                                    <span class="hidden sm:inline">Builds</span>
                                 </a>
                             }
                             
                             <button id="refresh-dashboard-btn" 
-                                    class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm">
+                                    class="btn btn-success px-3 py-2 rounded-lg flex items-center space-x-1.5 text-sm font-bold shadow-lg hover-lift">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                                 </svg>
@@ -102,8 +130,8 @@
         </div>
     </div>
 
-    <!-- Dashboard Content with Role-Based Information -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8" id="dashboard-content">
+    <!-- Compact Dashboard Content -->
+    <div class="responsive-container py-4 sm:py-6 lg:py-8" id="dashboard-content">
         @{
             ViewBag.IsAdminView = Model.IsAdminView;
             ViewBag.UserRole = Model.UserRole;
@@ -111,32 +139,32 @@
         @await Html.PartialAsync("_PrintTrackingDashboard", Model.Dashboard)
     </div>
 
-    <!-- Role-Based Quick Action Buttons (Fixed Position) -->
-    <div class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 space-y-3 z-40">
+    <!-- Enhanced Floating Action Buttons -->
+    <div class="fab-container">
         @if (Model.IsAdminView)
         {
-            <!-- Admin quick actions -->
-            <div class="flex flex-col space-y-2">
+            <!-- Enhanced Admin quick actions -->
+            <div class="flex flex-col space-y-3">
                 <button id="start-print-btn" 
-                        class="bg-green-600 hover:bg-green-700 text-white p-3 sm:p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-200"
+                        class="fab btn-success shadow-xl hover:shadow-2xl"
                         title="Start New SLS Print">
-                    <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                     </svg>
                 </button>
                 
                 <button id="complete-print-btn" 
-                        class="bg-red-600 hover:bg-red-700 text-white p-3 sm:p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-200"
+                        class="fab btn-danger shadow-xl hover:shadow-2xl"
                         title="Complete SLS Build">
-                    <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </button>
 
                 <a href="/Scheduler" 
-                   class="bg-blue-600 hover:bg-blue-700 text-white p-3 sm:p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center"
+                   class="fab btn-primary shadow-xl hover:shadow-2xl flex items-center justify-center"
                    title="View Full Scheduler">
-                    <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                     </svg>
                 </a>
@@ -144,52 +172,68 @@
         }
         else
         {
-            <!-- Operator focused actions -->
-            <div class="flex flex-col space-y-2">
+            <!-- Enhanced Operator focused actions -->
+            <div class="flex flex-col space-y-3">
                 <button id="start-print-btn" 
-                        class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 sm:px-4 sm:py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2"
+                        class="btn btn-success px-4 py-3 rounded-full shadow-xl hover:shadow-2xl flex items-center space-x-2 font-bold"
                         title="Start New Build">
-                    <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                     </svg>
-                    <span class="text-xs sm:text-sm font-medium">Start Build</span>
+                    <span class="text-sm">Start Build</span>
                 </button>
                 
                 <button id="complete-print-btn" 
-                        class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 sm:px-4 sm:py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2"
+                        class="btn btn-danger px-4 py-3 rounded-full shadow-xl hover:shadow-2xl flex items-center space-x-2 font-bold"
                         title="Complete Build">
-                    <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
-                    <span class="text-xs sm:text-sm font-medium">Finish Build</span>
+                    <span class="text-sm">Finish Build</span>
                 </button>
             </div>
         }
     </div>
 
-    <!-- Help/Info Panel for Operators -->
+    <!-- Enhanced Help/Info Panel for Operators -->
     @if (!Model.IsAdminView)
     {
-        <div class="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 z-40">
+        <div class="fixed bottom-6 left-6 z-40">
             <button id="help-toggle" 
-                    class="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200"
+                    class="fab btn-primary shadow-xl hover:shadow-2xl"
                     title="Show Help">
-                <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
             </button>
             
-            <!-- Hidden help panel -->
-            <div id="help-panel" class="hidden absolute bottom-16 left-0 w-72 sm:w-80 bg-white rounded-lg shadow-xl border p-4">
-                <h4 class="font-medium text-gray-900 mb-3">SLS Operation Quick Guide</h4>
-                <div class="space-y-2 text-sm text-gray-600">
-                    <div><strong>Starting a Build:</strong> Click "Start Build" and select your machine</div>
-                    <div><strong>Completing a Build:</strong> Click "Finish Build" when your print is done</div>
-                    <div><strong>Materials:</strong> Current material is shown on each machine card</div>
-                    <div><strong>Issues:</strong> Contact supervisor if machines show errors</div>
+            <!-- Enhanced help panel -->
+            <div id="help-panel" class="help-panel hidden absolute bottom-20 left-0 w-80 sm:w-96">
+                <h4 class="text-gray-900 mb-4">SLS Operation Quick Guide</h4>
+                <div class="space-y-3">
+                    <div class="help-item">
+                        <div class="font-bold text-green-700 mb-1">Starting a Build</div>
+                        <div class="text-sm text-gray-600">Click "Start Build" and select your machine from the available options</div>
+                    </div>
+                    <div class="help-item">
+                        <div class="font-bold text-red-700 mb-1">Completing a Build</div>
+                        <div class="text-sm text-gray-600">Click "Finish Build" when your print is complete and follow the post-processing steps</div>
+                    </div>
+                    <div class="help-item">
+                        <div class="font-bold text-blue-700 mb-1">Materials</div>
+                        <div class="text-sm text-gray-600">Current material type is shown on each machine card - verify before starting</div>
+                    </div>
+                    <div class="help-item">
+                        <div class="font-bold text-amber-700 mb-1">Issues</div>
+                        <div class="text-sm text-gray-600">Contact your supervisor immediately if machines show error status</div>
+                    </div>
                 </div>
-                <button onclick="document.getElementById('help-panel').classList.add('hidden')" 
-                        class="mt-3 text-xs text-blue-600 hover:text-blue-500">Close</button>
+                <div class="mt-4 pt-3 border-t border-gray-200">
+                    <button onclick="document.getElementById('help-panel').classList.add('hidden')" 
+                            class="w-full text-sm text-blue-600 hover:text-blue-700 font-semibold transition-colors">
+                        Close Help
+                    </button>
+                </div>
             </div>
         </div>
     }
@@ -198,21 +242,21 @@
 <!-- Print Tracking Modals -->
 <div id="print-modal-container"></div>
 
-<!-- Loading Indicator -->
-<div id="loading-indicator" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
-    <div class="bg-white rounded-lg p-6 shadow-xl">
-        <div class="flex items-center space-x-3">
-            <svg class="animate-spin h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span class="text-gray-600">Loading...</span>
+<!-- Enhanced Loading Indicator -->
+<div id="loading-indicator" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+    <div class="bg-white/95 backdrop-blur-lg rounded-2xl p-8 shadow-2xl border border-white/20 max-w-sm mx-4">
+        <div class="flex flex-col items-center space-y-4">
+            <div class="loading-spinner"></div>
+            <div class="text-center">
+                <div class="text-lg font-semibold text-gray-900 mb-1">Loading...</div>
+                <div class="text-sm text-gray-600">Please wait while we process your request</div>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Toast Container -->
-<div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2 max-w-md w-full pointer-events-none"></div>
+<!-- Enhanced Toast Container -->
+<div id="toast-container" class="fixed top-6 right-6 z-50 space-y-3 max-w-md w-full pointer-events-none"></div>
 
 @section Scripts {
 <script>

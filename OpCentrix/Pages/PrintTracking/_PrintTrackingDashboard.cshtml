@@ -1,604 +1,552 @@
-@using OpCentrix.ViewModels.PrintTracking
+ï»¿@using OpCentrix.ViewModels.PrintTracking
 @using OpCentrix.Models
 @model PrintTrackingDashboardViewModel
 
-<!-- Enhanced Print Tracking Dashboard with Role-Based Views and SLS Machine Focus -->
-<div class="space-y-6">
-    <!-- Role-Based Header with Different Information -->
+<!-- Modernized Print Tracking Dashboard (Enhanced Production Styling) -->
+<div id="dashboard-content" class="space-y-6 md:space-y-8 stagger-animation">
+    <!-- Role-Based Header with Reduced Height -->
+    <style>
+        .p-5 {
+            padding: 1.25rem !important;
+        }
+    </style>
     @if (ViewBag.IsAdminView == true)
     {
-        <!-- Admin View Header - More detailed information -->
-        <div class="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg p-6 text-white">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-2xl font-bold">SLS Print Tracking - Administrator View</h2>
-                    <p class="text-blue-100 mt-1">Complete system oversight and control</p>
+        <!-- Admin View Header - Compact professional admin theme -->
+        <div class="relative overflow-hidden rounded-xl p-4 md:p-5 text-white shadow-lg bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 scale-in">
+            <div class="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_30%_20%,white,transparent_60%)]"></div>
+            <div class="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_70%_80%,white,transparent_50%)]"></div>
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between relative z-10 gap-4 md:gap-0">
+                <div class="flex-1">
+                    <h2 class="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2 mb-1">
+                        <span class="text-gradient-white">SLS Print Tracking</span>
+                        <span class="px-2 py-1 text-xs font-bold rounded-full bg-white/25 backdrop-blur border border-white/40 hover-scale">ADMIN</span>
+                    </h2>
+                    <p class="text-blue-100 text-sm md:text-base font-medium">Complete system oversight and control</p>
                 </div>
                 <div class="text-right">
-                    <div class="text-sm text-blue-100">Logged in as</div>
-                    <div class="font-medium">@Model.OperatorName (@Model.UserRole)</div>
-                    <div class="text-xs text-blue-200 mt-1">Full system access</div>
+                    <div class="text-xs uppercase tracking-wide text-blue-200 font-semibold">System Administrator</div>
+                    <div class="font-bold text-base md:text-lg text-white">@Model.OperatorName</div>
+                    <div class="text-xs text-blue-200 mt-0.5">
+                        <span class="inline-flex items-center gap-1">
+                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"></path></svg>
+                            @DateTime.Now.ToString("MMM dd, yyyy")
+                        </span>
+                    </div>
                 </div>
             </div>
-            
-            <!-- Quick Actions for Admins -->
-            <div class="mt-4 flex space-x-3">
+            <!-- Compact Quick Actions for Admins -->
+            <div class="mt-4 flex flex-wrap gap-2 relative z-10">
                 <button onclick="openSchedulerIntegrationPanel()" 
-                        class="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                    ?? Scheduler Integration
+                        class="btn glass-effect px-3 py-1.5 rounded-lg text-xs font-semibold text-white backdrop-blur border border-white/30 hover-lift transition-all">
+                    <span class="flex items-center gap-1.5">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        Scheduler
+                    </span>
                 </button>
                 <button onclick="refreshAllData()" 
-                        class="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                    ?? Refresh All Data
+                        class="btn glass-effect px-3 py-1.5 rounded-lg text-xs font-semibold text-white backdrop-blur border border-white/30 hover-lift transition-all">
+                    <span class="flex items-center gap-1.5">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        Refresh
+                    </span>
                 </button>
                 <a href="/Admin/Machines" 
-                   class="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                    ?? Manage Machines
+                   class="btn glass-effect px-3 py-1.5 rounded-lg text-xs font-semibold text-white backdrop-blur border border-white/30 hover-lift transition-all">
+                    <span class="flex items-center gap-1.5">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        Manage
+                    </span>
                 </a>
             </div>
         </div>
     }
     else
     {
-        <!-- Operator View Header - Simplified and focused -->
-        <div class="bg-gradient-to-r from-green-600 to-green-800 rounded-lg p-6 text-white">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-2xl font-bold">SLS Print Operations</h2>
-                    <p class="text-green-100 mt-1">Your daily print tracking dashboard</p>
+        <!-- Operator View Header - Compact friendly operator theme -->
+        <div class="relative overflow-hidden rounded-xl p-4 md:p-5 text-white shadow-lg bg-gradient-to-br from-green-600 via-green-700 to-emerald-800 scale-in">
+            <div class="absolute inset-0 opacity-15 bg-[radial-gradient(circle_at_70%_30%,white,transparent_55%)]"></div>
+            <div class="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_20%_80%,white,transparent_45%)]"></div>
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between relative z-10 gap-4 md:gap-0">
+                <div class="flex-1">
+                    <h2 class="text-2xl md:text-3xl font-bold tracking-tight mb-1">SLS Print Operations</h2>
+                    <p class="text-green-100 text-sm md:text-base font-medium">Your daily print tracking dashboard</p>
                 </div>
                 <div class="text-right">
-                    <div class="text-sm text-green-100">Operator</div>
-                    <div class="font-medium text-lg">@Model.OperatorName</div>
-                    <div class="text-xs text-green-200 mt-1">@DateTime.Now.ToString("MMMM dd, yyyy")</div>
+                    <div class="text-xs uppercase tracking-wide text-green-200 font-semibold">Print Operator</div>
+                    <div class="font-bold text-base md:text-lg text-white">@Model.OperatorName</div>
+                    <div class="text-xs text-green-200 mt-0.5">
+                        <span class="inline-flex items-center gap-1">
+                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"></path></svg>
+                            @DateTime.Now.ToString("MMM dd, yyyy")
+                        </span>
+                    </div>
                 </div>
             </div>
-            
-            <!-- Quick Actions for Operators -->
-            <div class="mt-4 flex space-x-3">
+            <!-- Compact Quick Actions for Operators -->
+            <div class="mt-4 flex flex-wrap gap-2 relative z-10">
                 <button onclick="quickStartPrint()" 
-                        class="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                    ?? Quick Start Print
+                        class="btn glass-effect px-3 py-1.5 rounded-lg text-xs font-semibold text-white backdrop-blur border border-white/30 hover-lift transition-all">
+                    <span class="flex items-center gap-1.5">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                        Quick Start
+                    </span>
                 </button>
                 <button onclick="viewMySchedule()" 
-                        class="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                    ?? My Schedule
+                        class="btn glass-effect px-3 py-1.5 rounded-lg text-xs font-semibold text-white backdrop-blur border border-white/30 hover-lift transition-all">
+                    <span class="flex items-center gap-1.5">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        My Schedule
+                    </span>
                 </button>
             </div>
         </div>
     }
 
-    <!-- Quick Stats with Role-Based Information -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Active SLS Builds</dt>
-                            <dd class="text-lg font-medium text-gray-900">@Model.ActiveBuilds.Count</dd>
-                        </dl>
-                    </div>
+    <!-- Enhanced Quick Stats with improved visual hierarchy -->
+    <div class="stats-grid fade-in">
+        <div class="group relative overflow-hidden rounded-2xl bg-white shadow-sm border border-gray-200/70 p-6 hover-lift transition-all hover:shadow-lg">
+            <div class="flex items-center gap-4">
+                <div class="h-12 w-12 flex items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white group-hover:scale-110 transition-transform">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-xs uppercase tracking-wide text-gray-500 font-bold">Active SLS Builds</div>
+                    <div class="text-2xl font-bold text-gray-900 mt-1">@Model.ActiveBuilds.Count</div>
+                    <div class="text-xs text-gray-500 mt-1">Currently printing</div>
                 </div>
             </div>
         </div>
-
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Completed Today</dt>
-                            <dd class="text-lg font-medium text-gray-900">@Model.RecentCompletedBuilds.Count</dd>
-                        </dl>
-                    </div>
+        
+        <div class="group relative overflow-hidden rounded-2xl bg-white shadow-sm border border-gray-200/70 p-6 hover-lift transition-all hover:shadow-lg">
+            <div class="flex items-center gap-4">
+                <div class="h-12 w-12 flex items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-green-600 text-white group-hover:scale-110 transition-transform">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-xs uppercase tracking-wide text-gray-500 font-bold">Completed Today</div>
+                    <div class="text-2xl font-bold text-gray-900 mt-1">@Model.RecentCompletedBuilds.Count</div>
+                    <div class="text-xs text-gray-500 mt-1">SLS builds finished</div>
                 </div>
             </div>
         </div>
-
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <svg class="h-6 w-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                        </svg>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">SLS Hours Today</dt>
-                            <dd class="text-lg font-medium text-gray-900">@Model.HoursToday.Values.Sum().ToString("F1")</dd>
-                        </dl>
-                    </div>
+        
+        <div class="group relative overflow-hidden rounded-2xl bg-white shadow-sm border border-gray-200/70 p-6 hover-lift transition-all hover:shadow-lg">
+            <div class="flex items-center gap-4">
+                <div class="h-12 w-12 flex items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 text-white group-hover:scale-110 transition-transform">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-xs uppercase tracking-wide text-gray-500 font-bold">SLS Hours Today</div>
+                    <div class="text-2xl font-bold text-gray-900 mt-1">@Model.HoursToday.Values.Sum().ToString("F1")</div>
+                    <div class="text-xs text-gray-500 mt-1">Production hours</div>
                 </div>
             </div>
         </div>
-
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <svg class="h-6 w-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z"></path>
-                        </svg>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">@(ViewBag.IsAdminView == true ? "Total Delays" : "Issues Today")</dt>
-                            <dd class="text-lg font-medium text-gray-900">@Model.TotalDelaysToday</dd>
-                        </dl>
-                    </div>
+        
+        <div class="group relative overflow-hidden rounded-2xl bg-white shadow-sm border border-gray-200/70 p-6 hover-lift transition-all hover:shadow-lg">
+            <div class="flex items-center gap-4">
+                <div class="h-12 w-12 flex items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 text-white group-hover:scale-110 transition-transform">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-xs uppercase tracking-wide text-gray-500 font-bold">@(ViewBag.IsAdminView == true ? "Total Issues" : "Issues Today")</div>
+                    <div class="text-2xl font-bold text-gray-900 mt-1">@Model.TotalDelaysToday</div>
+                    <div class="text-xs text-gray-500 mt-1">Delays reported</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- SLS Machine Status Overview with Role-Based Features -->
-    <div class="bg-white shadow rounded-lg">
-        <div class="px-4 py-5 sm:p-6">
-            <div class="flex items-center justify-between mb-4">
+    <!-- SLS Machine Status Overview with Enhanced Visual Design -->
+    <div class="bg-white shadow-lg rounded-2xl border border-gray-200 overflow-hidden fade-in">
+        <div class="px-6 pt-6 pb-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                    <h3 class="text-lg leading-6 font-medium text-gray-900">
-                        SLS Machine Status & Schedule
+                    <h3 class="text-xl font-bold text-gray-900 flex items-center gap-3">
+                        <span class="relative">SLS Machine Status & Schedule</span>
                         @if (Model.AvailableMachines?.Any() == true)
                         {
-                            <span class="text-sm text-gray-500 font-normal">(@Model.AvailableMachines.Count machines)</span>
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
+                                @Model.AvailableMachines.Count machines
+                            </span>
                         }
                     </h3>
-                    <p class="text-sm text-gray-600 mt-1">Selective Laser Sintering printers with upcoming jobs</p>
+                    <p class="text-sm text-gray-600 mt-1 font-medium">Selective Laser Sintering printers with upcoming jobs</p>
                 </div>
-                <div class="flex items-center space-x-3">
+                <div class="flex items-center gap-3">
                     @if (ViewBag.IsAdminView == true)
                     {
-                        <!-- Admin-only controls -->
-                        <a href="/Admin/Machines" class="text-sm text-blue-600 hover:text-blue-500 flex items-center">
-                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                            </svg>
-                            Manage Machines
+                        <a href="/Admin/Machines" class="btn btn-primary text-sm px-4 py-2 rounded-xl flex items-center gap-2 transition-all hover-lift">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            <span>Manage Machines</span>
                         </a>
-                        
-                        <a href="/Scheduler?machineType=SLS" class="text-sm text-blue-600 hover:text-blue-500 flex items-center">
-                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                            </svg>
-                            Full Scheduler
+                        <a href="/Scheduler?machineType=SLS" class="btn btn-primary text-sm px-4 py-2 rounded-xl flex items-center gap-2 transition-all hover-lift">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            <span>Full Scheduler</span>
                         </a>
                     }
                 </div>
             </div>
+        </div>
+        <div class="p-6" id="machine-summary">
+            @if (Model.AvailableMachines?.Any() == true)
+            {
+                <div class="machine-grid">
+                    @foreach (var machine in Model.AvailableMachines.OrderBy(m => m.Priority))
+                    {
+                        var activeCount = Model.ActiveJobsByPrinter.GetValueOrDefault(machine.MachineId, 0);
+                        var hoursToday = Model.HoursToday.GetValueOrDefault(machine.MachineId, 0);
+                        var queuedJobs = Model.QueueDepth.GetValueOrDefault(machine.MachineId, 0);
+                        var utilization = Model.UtilizationByMachine.GetValueOrDefault(machine.MachineId, 0);
+                        var activeBuild = Model.ActiveBuilds.FirstOrDefault(b => b.PrinterName == machine.MachineId);
 
-            <!-- SLS Machine Grid with Integrated Schedule Information -->
-            <div id="machine-summary">
-                @if (Model.AvailableMachines?.Any() == true)
-                {
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        @foreach (var machine in Model.AvailableMachines.OrderBy(m => m.Priority))
-                        {
-                            var activeCount = Model.ActiveJobsByPrinter.GetValueOrDefault(machine.MachineId, 0);
-                            var hoursToday = Model.HoursToday.GetValueOrDefault(machine.MachineId, 0);
-                            var queuedJobs = Model.QueueDepth.GetValueOrDefault(machine.MachineId, 0);
-                            var utilization = Model.UtilizationByMachine.GetValueOrDefault(machine.MachineId, 0);
-
-                            <div class="border rounded-lg p-4 hover:shadow-md transition-shadow duration-200 @GetMachineCardClasses(machine.Status)">
-                                <!-- Machine Header -->
-                                <div class="flex items-center justify-between mb-3">
-                                    <div>
-                                        <h4 class="font-medium text-gray-900 flex items-center">
-                                            @machine.MachineId
-                                            @if (machine.Priority <= 2)
-                                            {
-                                                <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                                    Priority
-                                                </span>
+                        <div class="machine-card" data-status="@machine.Status.ToLower()">
+                            <div class="p-5 flex flex-col h-full">
+                                <!-- Enhanced Machine Header -->
+                                <div class="flex items-start justify-between mb-4">
+                                    <div class="min-w-0 flex-1">
+                                        <h4 class="font-bold text-gray-900 text-lg flex items-center flex-wrap gap-2 mb-1">
+                                            <span class="truncate max-w-[140px]">@machine.MachineId</span>
+                                            @if (machine.Priority <= 2) { 
+                                                <span class="status-badge bg-gradient-to-r from-red-500 to-red-600 text-white text-xs px-2 py-1 rounded-full">Priority</span>
                                             }
-                                            <!-- SLS Machine Indicator -->
-                                            <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                SLS
-                                            </span>
+                                            <span class="status-badge bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs px-2 py-1 rounded-full">SLS</span>
                                         </h4>
-                                        <p class="text-sm text-gray-500">@machine.MachineName</p>
-                                        @if (ViewBag.IsAdminView == true && !string.IsNullOrEmpty(machine.Location))
-                                        {
-                                            <p class="text-xs text-gray-400">?? @machine.Location</p>
+                                        <p class="text-sm text-gray-600 truncate font-medium">@machine.MachineName</p>
+                                        @if (ViewBag.IsAdminView == true && !string.IsNullOrEmpty(machine.Location)) { 
+                                            <p class="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                                @machine.Location
+                                            </p>
                                         }
                                     </div>
-                                    <div class="text-right">
-                                        <span class="@GetStatusBadgeClasses(machine.Status) px-2 py-1 text-xs font-medium rounded-full">
-                                            @machine.Status
-                                        </span>
+                                    <div class="flex flex-col items-end gap-2">
+                                        <span class="status-badge @GetStatusBadgeClasses(machine.Status)">@machine.Status</span>
+                                        @if (utilization > 0)
+                                        {
+                                            <div class="text-xs text-gray-500 text-right">
+                                                <div class="font-semibold">@utilization.ToString("F0")% utilized</div>
+                                            </div>
+                                        }
                                     </div>
                                 </div>
 
-                                <!-- Machine Stats - Role-Based Display -->
-                                <div class="space-y-2 mb-3">
-                                    <div class="flex justify-between text-sm">
-                                        <span class="text-gray-600">Hours today:</span>
-                                        <span class="font-medium">@hoursToday.ToString("F1")h</span>
+                                <!-- Enhanced Active Build Display -->
+                                @if (activeBuild != null)
+                                {
+                                    var elapsed = DateTime.Now - activeBuild.ActualStartTime;
+                                    double? est = activeBuild.OperatorEstimatedHours.HasValue ? (double)activeBuild.OperatorEstimatedHours.Value : null;
+                                    var pct = est.HasValue && est.Value > 0 ? Math.Min(100, (elapsed.TotalHours / est.Value) * 100) : (double?)null;
+                                    <div class="mb-4 rounded-xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-4 text-sm">
+                                        <div class="flex justify-between items-start mb-3">
+                                            <div class="font-bold text-blue-900 truncate flex-1">
+                                                Build #@activeBuild.BuildId 
+                                                @if (!string.IsNullOrEmpty(activeBuild.Part?.PartNumber))
+                                                {
+                                                    <span class="text-gray-700 font-semibold">- @activeBuild.Part.PartNumber</span>
+                                                }
+                                                @if (activeBuild.Part != null)
+                                                { 
+                                                    var abStackProp = activeBuild.GetType().GetProperty("StackLevel"); 
+                                                    if(abStackProp != null)
+                                                    { 
+                                                        var abSL = abStackProp.GetValue(activeBuild); 
+                                                        if(abSL != null)
+                                                        { 
+                                                            <span class="ml-2 inline-flex items-center px-2 py-1 bg-white text-gray-700 rounded-lg text-xs font-bold">Level @abSL</span>
+                                                        } 
+                                                    } 
+                                                }
+                                            </div>
+                                            <button data-action="complete-print" data-build-id="@activeBuild.BuildId" data-printer="@machine.MachineId" 
+                                                    class="ml-3 px-3 py-1.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-lg text-xs font-bold transition-all hover-lift">
+                                                Complete
+                                            </button>
+                                        </div>
+                                        <div class="grid grid-cols-3 gap-3 text-xs text-gray-700 mb-3">
+                                            <div>
+                                                <div class="font-semibold text-gray-600">Started</div>
+                                                <div class="font-bold">@activeBuild.ActualStartTime.ToString("MM/dd HH:mm")</div>
+                                            </div>
+                                            <div>
+                                                <div class="font-semibold text-gray-600">Elapsed</div>
+                                                <div class="font-bold">@elapsed.TotalHours.ToString("F1")h</div>
+                                            </div>
+                                            @if (est.HasValue)
+                                            {
+                                                <div>
+                                                    <div class="font-semibold text-gray-600">Estimated</div>
+                                                    <div class="font-bold">@est.Value.ToString("F1")h</div>
+                                                </div>
+                                            }
+                                        </div>
+                                        @if (pct.HasValue)
+                                        {
+                                            <div>
+                                                <div class="flex justify-between text-xs text-gray-700 mb-2">
+                                                    <span class="font-semibold">Progress</span>
+                                                    <span class="font-bold">@pct.Value.ToString("F0")%</span>
+                                                </div>
+                                                <div class="progress-container h-3 bg-gray-300 rounded-full overflow-hidden">
+                                                    <div class="progress-bar h-3 rounded-full transition-all duration-500 @(pct>100?"bg-gradient-to-r from-red-500 to-red-600":pct>80?"bg-gradient-to-r from-yellow-500 to-yellow-600":"bg-gradient-to-r from-blue-500 to-blue-600")" 
+                                                         style="width: @Math.Min(100,pct.Value)%"></div>
+                                                </div>
+                                            </div>
+                                        }
                                     </div>
-                                    
-                                    @if (activeCount > 0)
-                                    {
-                                        <div class="flex justify-between text-sm">
-                                            <span class="text-gray-600">Active builds:</span>
-                                            <span class="font-medium text-green-600">@activeCount</span>
-                                        </div>
-                                    }
-                                    
-                                    @if (queuedJobs > 0)
-                                    {
-                                        <div class="flex justify-between text-sm">
-                                            <span class="text-gray-600">@(ViewBag.IsAdminView == true ? "Queued jobs:" : "Upcoming:"):</span>
-                                            <span class="font-medium text-blue-600">@queuedJobs</span>
-                                        </div>
-                                    }
+                                }
 
-                                    @if (ViewBag.IsAdminView == true && utilization > 0)
-                                    {
-                                        <!-- Admin-only utilization display -->
-                                        <div class="space-y-1">
-                                            <div class="flex justify-between text-sm">
-                                                <span class="text-gray-600">Utilization:</span>
-                                                <span class="font-medium">@utilization.ToString("F1")%</span>
-                                            </div>
-                                            <div class="w-full bg-gray-200 rounded-full h-2">
-                                                <div class="@GetUtilizationBarClass(utilization) h-2 rounded-full" style="width: @Math.Min(100, utilization)%"></div>
-                                            </div>
-                                        </div>
-                                    }
-                                </div>
-
-                                <!-- Material Information (Important for SLS) -->
+                                <!-- Enhanced Material Display -->
                                 @if (!string.IsNullOrEmpty(machine.CurrentMaterial))
                                 {
-                                    <div class="mb-3 px-2 py-1 bg-gray-100 rounded text-xs">
-                                        <span class="font-medium text-gray-700">Material:</span> 
-                                        <span class="text-gray-600">@machine.CurrentMaterial</span>
+                                    <div class="mb-4 px-3 py-2 bg-gradient-to-r from-gray-100 to-gray-200 rounded-xl text-sm flex items-center gap-2">
+                                        <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"/></svg>
+                                        <span class="font-bold text-gray-800">Material:</span> 
+                                        <span class="text-gray-700 font-semibold">@machine.CurrentMaterial</span>
                                     </div>
                                 }
 
-                                <!-- ENHANCED: Scheduled Jobs Section -->
-                                @{
-                                    var scheduledJobs = Model.ScheduledJobsByMachine?.GetValueOrDefault(machine.MachineId, new List<Job>()) ?? new List<Job>();
-                                    var nextJob = Model.NextJobByMachine?.GetValueOrDefault(machine.MachineId);
-                                    var nextJobTime = Model.NextJobTimeByMachine?.GetValueOrDefault(machine.MachineId);
+                                <!-- Enhanced Scheduled Jobs -->
+                                @{ 
+                                    var scheduledJobs = Model.ScheduledJobsByMachine?.GetValueOrDefault(machine.MachineId, new List<Job>()) ?? new List<Job>(); 
+                                    var nextJob = Model.NextJobByMachine?.GetValueOrDefault(machine.MachineId); 
+                                    var nextJobTime = Model.NextJobTimeByMachine?.GetValueOrDefault(machine.MachineId); 
                                 }
-                                
                                 @if (scheduledJobs.Any())
                                 {
-                                    <div class="mb-3">
-                                        <div class="text-xs font-medium text-gray-700 mb-2 flex items-center">
-                                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                            </svg>
-                                            Upcoming Jobs (@scheduledJobs.Count)
+                                    <div class="mb-4">
+                                        <div class="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                                            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                            Upcoming Jobs 
+                                            <span class="text-gray-500 font-semibold">(@scheduledJobs.Count)</span>
                                         </div>
-                                        <div class="space-y-1">
-                                            @foreach (var job in scheduledJobs.Take(2)) // Show next 2 jobs
+                                        <div class="space-y-2">
+                                            @foreach (var job in scheduledJobs.Take(2))
                                             {
                                                 var isNext = job == nextJob;
                                                 var isRunning = job.Status == "Building" || job.Status == "In Progress";
                                                 var isOverdue = job.ScheduledEnd < DateTime.Now && !isRunning;
-                                                
-                                                <div class="@GetJobCardClasses(isNext, isRunning, isOverdue) px-2 py-1 rounded text-xs">
-                                                    <div class="flex items-center justify-between">
+                                                <div class="px-3 py-3 rounded-xl text-sm leading-tight border-l-4 @GetJobCardClasses(isNext, isRunning, isOverdue)">
+                                                    <div class="flex items-start justify-between gap-3">
                                                         <div class="flex-1 min-w-0">
-                                                            <div class="font-medium text-gray-900 truncate flex items-center">
+                                                            <div class="font-bold text-gray-900 truncate flex items-center flex-wrap gap-2 mb-1">
                                                                 @job.PartNumber
-                                                                @if (isNext)
+                                                                @if (job.GetType().GetProperty("StackLevel") != null)
                                                                 {
-                                                                    <span class="ml-1 px-1 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">NEXT</span>
+                                                                    var slProp = job.GetType().GetProperty("StackLevel");
+                                                                    var slVal = slProp?.GetValue(job);
+                                                                    if (slVal != null)
+                                                                    { 
+                                                                        <span class="px-2 py-1 bg-white text-gray-700 rounded-lg text-xs font-bold border">@slVal x</span>
+                                                                    }
                                                                 }
-                                                                @if (isRunning)
-                                                                {
-                                                                    <span class="ml-1 px-1 py-0.5 bg-green-100 text-green-700 rounded text-xs font-medium">ACTIVE</span>
+                                                                @if (isNext) { 
+                                                                    <span class="status-badge bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs px-2 py-1 rounded-full">NEXT</span>
                                                                 }
-                                                                @if (job.Quantity > 1)
-                                                                {
-                                                                    <span class="ml-1 text-gray-500">(×@job.Quantity)</span>
+                                                                @if (isRunning) { 
+                                                                    <span class="status-badge bg-gradient-to-r from-green-500 to-green-600 text-white text-xs px-2 py-1 rounded-full">ACTIVE</span>
+                                                                }
+                                                                @if (job.Quantity > 1) { 
+                                                                    <span class="text-gray-600 font-semibold">(&times;@job.Quantity)</span>
                                                                 }
                                                             </div>
-                                                            <div class="text-xs text-gray-500">
-                                                                <span>@GetJobTimeDisplay(job, isRunning)</span>
-                                                                <span class="ml-2">@job.EstimatedHours.ToString("F1")h</span>
-                                                                @if (job.Priority <= 2)
-                                                                {
-                                                                    <span class="ml-1 text-red-600 font-medium">P@job.Priority</span>
+                                                            <div class="text-xs text-gray-600 flex items-center flex-wrap gap-3">
+                                                                <span class="flex items-center gap-1">
+                                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                                                    @GetJobTimeDisplay(job, isRunning)
+                                                                </span>
+                                                                <span class="flex items-center gap-1">
+                                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                                                    @job.EstimatedHours.ToString("F1")h
+                                                                </span>
+                                                                @if (job.Priority <= 2) { 
+                                                                    <span class="text-red-600 font-bold flex items-center gap-1">
+                                                                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path></svg>
+                                                                        P@job.Priority
+                                                                    </span>
                                                                 }
                                                             </div>
                                                         </div>
-                                                        @if (isRunning)
-                                                        {
-                                                            <div class="flex-shrink-0 ml-2">
-                                                                <button data-action="complete-print" data-printer="@machine.MachineId" data-job-id="@job.Id"
-                                                                        class="px-2 py-0.5 bg-orange-600 text-white rounded text-xs hover:bg-orange-700 transition-colors duration-200">
-                                                                    Complete
-                                                                </button>
-                                                            </div>
-                                                        }
                                                     </div>
                                                 </div>
                                             }
-                                            
                                             @if (scheduledJobs.Count > 2)
                                             {
-                                                <div class="text-xs text-center text-gray-500 py-1">
+                                                <div class="text-sm text-center text-gray-600 py-2 bg-gray-50 rounded-xl">
                                                     +@(scheduledJobs.Count - 2) more jobs
-                                                    <a href="/Scheduler?machine=@machine.MachineId" class="text-blue-600 hover:text-blue-500 ml-1">? View All</a>
+                                                    <a href="/Scheduler?machine=@machine.MachineId" class="text-blue-600 hover:text-blue-700 ml-2 inline-flex items-center gap-1 font-semibold transition-colors">
+                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6a4 4 0 103.446 6.032l4.261 4.26 1.414-1.414-4.26-4.261A4 4 0 0010 6z"/></svg>
+                                                        View All
+                                                    </a>
                                                 </div>
                                             }
                                         </div>
                                     </div>
                                 }
-                                else if (nextJob == null)
+                                else if (nextJob == null && activeBuild == null)
                                 {
-                                    <div class="mb-3 text-xs text-center text-gray-500 py-2 border border-dashed border-gray-200 rounded">
-                                        No upcoming jobs
+                                    <div class="mb-4 text-sm text-center text-gray-500 py-4 border-2 border-dashed border-gray-300 rounded-xl bg-gray-50">
+                                        <svg class="w-8 h-8 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                        <div class="font-semibold text-gray-600 mb-2">No upcoming jobs</div>
                                         <button data-action="schedule-job" data-machine="@machine.MachineId" 
-                                                class="text-blue-600 hover:text-blue-500 ml-1 font-medium bg-transparent border-none p-0 cursor-pointer">
-                                            ? Schedule Job
+                                                class="btn btn-primary text-xs px-3 py-1.5 rounded-lg font-semibold hover-lift transition-all">
+                                            <span class="flex items-center gap-1">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                                Schedule Job
+                                            </span>
                                         </button>
                                     </div>
                                 }
 
-                                <!-- Maintenance Alert -->
+                                <!-- Enhanced Maintenance Alerts -->
                                 @if (machine.MaintenanceStatus == "Due")
                                 {
-                                    <div class="mb-3 px-2 py-1 bg-red-100 text-red-800 rounded text-xs">
-                                        <svg class="w-3 h-3 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
-                                        </svg>
-                                        @(ViewBag.IsAdminView == true ? "Maintenance Due" : "Needs Service")
+                                    <div class="mb-4 px-3 py-2 bg-gradient-to-r from-red-100 to-red-200 text-red-800 rounded-xl text-sm flex items-center gap-2 border border-red-300">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5.07 19h13.86A2 2 0 0021 17.1L12.93 4.6a2 2 0 00-3.86 0L3 17.1A2 2 0 005.07 19z"/></svg>
+                                        <span class="font-bold">Maintenance Due</span>
                                     </div>
                                 }
                                 else if (machine.MaintenanceStatus == "Soon")
                                 {
-                                    <div class="mb-3 px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs">
-                                        <svg class="w-3 h-3 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
-                                        </svg>
-                                        @(ViewBag.IsAdminView == true ? "Maintenance Soon" : "Service Soon")
+                                    <div class="mb-4 px-3 py-2 bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 rounded-xl text-sm flex items-center gap-2 border border-yellow-300">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01m6-4a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                        <span class="font-bold">Service Soon</span>
                                     </div>
                                 }
 
-                                <!-- Action Buttons - Role-Based with Enhanced Scheduling -->
-                                <div class="flex space-x-1">
+                                <!-- Enhanced Action Buttons -->
+                                <div class="mt-auto pt-3 flex gap-2">
                                     @if (machine.IsActive && machine.IsAvailableForScheduling)
                                     {
                                         <button data-action="start-print" data-printer="@machine.MachineId" 
-                                                class="flex-1 text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors duration-200">
-                                            @(ViewBag.IsAdminView == true ? "Start Print" : "Start Build")
+                                                class="btn btn-success flex-1 text-sm px-3 py-2 rounded-xl font-bold transition-all hover-lift">
+                                            @(ViewBag.IsAdminView==true?"Start Print":"Start Build")
                                         </button>
-                                        
                                         @if (activeCount > 0)
                                         {
                                             <button data-action="complete-print" data-printer="@machine.MachineId" 
-                                                    class="flex-1 text-xs px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors duration-200">
-                                                @(ViewBag.IsAdminView == true ? "Complete" : "Finish")
+                                                    class="btn btn-danger flex-1 text-sm px-3 py-2 rounded-xl font-bold transition-all hover-lift">
+                                                @(ViewBag.IsAdminView==true?"Complete":"Finish")
                                             </button>
                                         }
                                         else
                                         {
                                             <button data-action="schedule-job" data-machine="@machine.MachineId" 
-                                                    class="flex-1 text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors duration-200">
+                                                    class="btn btn-primary flex-1 text-sm px-3 py-2 rounded-xl font-bold transition-all hover-lift inline-flex items-center justify-center gap-1">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                                                 Schedule
                                             </button>
                                         }
                                     }
                                     else
                                     {
-                                        <div class="flex-1 text-xs px-2 py-1 bg-gray-300 text-gray-500 rounded text-center">
-                                            @(machine.IsActive ? "Unavailable" : "Offline")
+                                        <div class="flex-1 text-sm px-3 py-2 bg-gradient-to-r from-gray-300 to-gray-400 text-gray-600 rounded-xl text-center font-bold">
+                                            @(machine.IsActive?"Unavailable":"Offline")
                                         </div>
                                     }
                                 </div>
                             </div>
-                        }
-                    </div>
-                }
-                else
-                {
-                    <!-- No SLS machines available -->
-                    <div class="text-center py-8">
-                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
-                        </svg>
-                        <h3 class="mt-2 text-sm font-medium text-gray-900">No SLS Machines Available</h3>
-                        <p class="mt-1 text-sm text-gray-500">No active SLS machines found for print tracking.</p>
-                        @if (ViewBag.IsAdminView == true)
-                        {
-                            <div class="mt-6">
-                                <a href="/Admin/Machines" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
-                                    Configure SLS Machines
-                                </a>
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="mt-6">
-                                <p class="text-sm text-gray-500">Please contact your supervisor if machines should be available.</p>
-                            </div>
-                        }
-                    </div>
-                }
-            </div>
-        </div>
-    </div>
-
-    <!-- Active SLS Builds (Enhanced with Role-Based Information) -->
-    @if (Model.ActiveBuilds.Any())
-    {
-        <div class="bg-white shadow rounded-lg">
-            <div class="px-4 py-5 sm:p-6">
-                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
-                    Active SLS Builds
-                    @if (ViewBag.IsAdminView == true)
-                    {
-                        <span class="text-sm text-gray-500 font-normal ml-2">(Administrator View)</span>
-                    }
-                </h3>
-                <div class="space-y-4">
-                    @foreach (var build in Model.ActiveBuilds)
-                    {
-                        var duration = DateTime.Now - build.ActualStartTime;
-                        var machine = Model.AvailableMachines?.FirstOrDefault(m => m.MachineId == build.PrinterName);
-                        
-                        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow duration-200">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center space-x-4">
-                                    <div class="flex-shrink-0">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                            @build.PrinterName (SLS)
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <h4 class="text-sm font-medium text-gray-900">
-                                            @(ViewBag.IsAdminView == true ? $"Build #{build.BuildId}" : "Active Build")
-                                            @if (!string.IsNullOrEmpty(build.Part?.PartNumber))
-                                            {
-                                                <span class="text-gray-500">- @build.Part.PartNumber</span>
-                                            }
-                                        </h4>
-                                        <div class="text-sm text-gray-500">
-                                            <span>Started: @build.ActualStartTime.ToString("MM/dd HH:mm")</span>
-                                            @if (ViewBag.IsAdminView == true && build.User != null)
-                                            {
-                                                <span class="ml-2">by @build.User.FullName</span>
-                                            }
-                                        </div>
-                                        @if (machine != null && !string.IsNullOrEmpty(machine.Location) && ViewBag.IsAdminView == true)
-                                        {
-                                            <div class="text-xs text-gray-400">Location: @machine.Location</div>
-                                        }
-                                    </div>
-                                </div>
-                                <div class="flex items-center space-x-4">
-                                    <div class="text-right">
-                                        <div class="text-sm font-medium text-gray-900">
-                                            @duration.TotalHours.ToString("F1")h
-                                        </div>
-                                        @if (build.OperatorEstimatedHours.HasValue)
-                                        {
-                                            <div class="text-xs text-gray-500">
-                                                Est: @build.OperatorEstimatedHours.Value.ToString("F1")h
-                                            </div>
-                                        }
-                                    </div>
-                                    <button data-action="complete-print" data-build-id="@build.BuildId" 
-                                            class="inline-flex items-center px-3 py-1 border border-transparent text-xs leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 transition-colors duration-200">
-                                        @(ViewBag.IsAdminView == true ? "Complete Build" : "Finish")
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            @if (build.OperatorEstimatedHours.HasValue)
-                            {
-                                var progressPercent = Math.Min(100, (duration.TotalHours / (double)build.OperatorEstimatedHours.Value) * 100);
-                                <div class="mt-3">
-                                    <div class="flex justify-between text-xs text-gray-600 mb-1">
-                                        <span>@(ViewBag.IsAdminView == true ? "Progress (estimated)" : "Build Progress")</span>
-                                        <span>@progressPercent.ToString("F0")%</span>
-                                    </div>
-                                    <div class="w-full bg-gray-200 rounded-full h-2">
-                                        <div class="@(progressPercent > 100 ? "bg-red-500" : progressPercent > 80 ? "bg-yellow-500" : "bg-blue-500") h-2 rounded-full transition-all duration-300" 
-                                             style="width: @Math.Min(100, progressPercent)%"></div>
-                                    </div>
-                                </div>
-                            }
                         </div>
                     }
                 </div>
-            </div>
+            }
+            else
+            {
+                <div class="text-center py-16 text-gray-500">
+                    <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                    <div class="text-lg font-semibold text-gray-600 mb-2">No SLS Machines Available</div>
+                    <div class="text-sm text-gray-500">Check back later or contact an administrator</div>
+                </div>
+            }
         </div>
-    }
+    </div>
 
-    <!-- Recent Activity Grid with Role-Based Content -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Recent Completed SLS Builds -->
-        <div class="bg-white shadow rounded-lg">
-            <div class="px-4 py-5 sm:p-6">
-                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Recent SLS Completions</h3>
+    <!-- Enhanced Recent Activity Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 fade-in">
+        <div class="bg-white shadow-lg rounded-2xl border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-green-50 to-green-100">
+                <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Recent SLS Completions
+                </h3>
+            </div>
+            <div class="p-6">
                 @if (Model.RecentCompletedBuilds.Any())
                 {
                     <div class="space-y-3">
                         @foreach (var build in Model.RecentCompletedBuilds.Take(5))
                         {
-                            <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
-                                <div>
-                                    <div class="text-sm font-medium text-gray-900">
-                                        @if (ViewBag.IsAdminView == true)
-                                        {
-                                            <span>#@build.BuildId - @build.PrinterName</span>
-                                        }
-                                        else
-                                        {
+                            <div class="flex items-center justify-between py-3 px-4 border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all hover-lift">
+                                <div class="min-w-0 flex-1">
+                                    <div class="text-sm font-bold text-gray-900 truncate">
+                                        @if (ViewBag.IsAdminView == true) { 
+                                            <span>Build #@build.BuildId - @build.PrinterName</span>
+                                        } else { 
                                             <span>@build.PrinterName Build</span>
                                         }
-                                        @if (!string.IsNullOrEmpty(build.Part?.PartNumber))
-                                        {
-                                            <span class="text-gray-500">(@build.Part.PartNumber)</span>
+                                        @if (!string.IsNullOrEmpty(build.Part?.PartNumber)) { 
+                                            <span class="text-gray-600 font-semibold">(@build.Part.PartNumber)</span>
                                         }
                                     </div>
-                                    <div class="text-xs text-gray-500">
-                                        @(build.CompletedAt?.ToString("HH:mm") ?? "Unknown") 
-                                        (@(build.PrintDuration?.TotalHours.ToString("F1") ?? "?")h)
-                                        @if (build.User != null && ViewBag.IsAdminView == true)
-                                        {
-                                            <span class="ml-1">by @build.User.FullName</span>
+                                    <div class="text-xs text-gray-500 flex flex-wrap gap-3 mt-1">
+                                        <span class="flex items-center gap-1">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                            @(build.CompletedAt?.ToString("HH:mm") ?? "Unknown")
+                                        </span>
+                                        <span class="flex items-center gap-1">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                            (@(build.PrintDuration?.TotalHours.ToString("F1") ?? "?")h)
+                                        </span>
+                                        @if (build.User != null && ViewBag.IsAdminView == true) { 
+                                            <span class="flex items-center gap-1">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                                                by @build.User.FullName
+                                            </span>
                                         }
                                     </div>
                                 </div>
-                                <span class="px-2 py-1 text-xs font-medium rounded-full @GetStatusBadgeClasses(build.Status)">
-                                    @build.Status
-                                </span>
+                                <span class="status-badge @GetStatusBadgeClasses(build.Status)">@build.Status</span>
                             </div>
                         }
                     </div>
                 }
                 else
                 {
-                    <p class="text-sm text-gray-500">No SLS builds completed today</p>
+                    <div class="text-center py-8 text-gray-500">
+                        <svg class="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <div class="font-semibold text-gray-600">No SLS builds completed today</div>
+                        <div class="text-sm text-gray-500 mt-1">Completed builds will appear here</div>
+                    </div>
                 }
             </div>
         </div>
 
-        <!-- Recent Issues/Delays -->
-        <div class="bg-white shadow rounded-lg">
-            <div class="px-4 py-5 sm:p-6">
-                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
+        <div class="bg-white shadow-lg rounded-2xl border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-amber-50 to-amber-100">
+                <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m6-4a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     @(ViewBag.IsAdminView == true ? "Recent Issues" : "Today's Issues")
                 </h3>
+            </div>
+            <div class="p-6">
                 @if (Model.RecentDelays.Any())
                 {
                     <div class="space-y-3">
                         @foreach (var delay in Model.RecentDelays.Take(5))
                         {
-                            <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
-                                <div>
-                                    <div class="text-sm font-medium text-gray-900">@delay.DelayReason</div>
-                                    <div class="text-xs text-gray-500">
-                                        @if (ViewBag.IsAdminView == true)
-                                        {
-                                            <span>Build #@delay.BuildId - @delay.DelayDuration min</span>
-                                        }
-                                        else
-                                        {
+                            <div class="flex items-center justify-between py-3 px-4 border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all hover-lift">
+                                <div class="flex-1">
+                                    <div class="text-sm font-bold text-gray-900">@delay.DelayReason</div>
+                                    <div class="text-xs text-gray-500 mt-1">
+                                        @if (ViewBag.IsAdminView == true) { 
+                                            <span>Build #@delay.BuildId - @delay.DelayDuration min delay</span>
+                                        } else { 
                                             <span>@delay.DelayDuration minutes delay</span>
                                         }
                                     </div>
                                 </div>
-                                <span class="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
+                                <span class="status-badge bg-gradient-to-r from-yellow-400 to-yellow-500 text-yellow-900 text-xs px-3 py-1 rounded-full">
                                     @delay.CreatedAt.ToString("HH:mm")
                                 </span>
                             </div>
@@ -607,41 +555,63 @@
                 }
                 else
                 {
-                    <p class="text-sm text-gray-500">No issues recorded today</p>
+                    <div class="text-center py-8 text-gray-500">
+                        <svg class="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <div class="font-semibold text-gray-600">No issues recorded today</div>
+                        <div class="text-sm text-gray-500 mt-1">Issues and delays will appear here</div>
+                    </div>
                 }
             </div>
         </div>
     </div>
 
-    <!-- Performance Metrics (Admin View Only) -->
+    <!-- Enhanced Performance Metrics (Admin Only) -->
     @if (ViewBag.IsAdminView == true && (Model.OverallEfficiency > 0 || Model.QualityScore > 0))
     {
-        <div class="bg-white shadow rounded-lg">
-            <div class="px-4 py-5 sm:p-6">
-                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
-                    SLS Performance Metrics
-                    <span class="text-sm text-gray-500 font-normal ml-2">(Administrator Only)</span>
+        <div class="bg-white shadow-lg rounded-2xl border border-gray-200 overflow-hidden fade-in">
+            <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-purple-100">
+                <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    SLS Performance Metrics 
+                    <span class="text-sm font-normal text-gray-500">Administrator Only</span>
                 </h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                     @if (Model.OverallEfficiency > 0)
                     {
                         <div class="text-center">
-                            <div class="text-2xl font-bold text-blue-600">@Model.OverallEfficiency.ToString("F1")%</div>
-                            <div class="text-sm text-gray-500">SLS Fleet Efficiency</div>
+                            <div class="text-4xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent mb-2">
+                                @Model.OverallEfficiency.ToString("F1")%
+                            </div>
+                            <div class="text-sm uppercase tracking-wide text-gray-600 font-bold">SLS Fleet Efficiency</div>
+                            <div class="mt-2 w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-500" style="width: @Model.OverallEfficiency.ToString("F0")%"></div>
+                            </div>
                         </div>
                     }
                     @if (Model.QualityScore > 0)
                     {
                         <div class="text-center">
-                            <div class="text-2xl font-bold text-green-600">@Model.QualityScore.ToString("F1")%</div>
-                            <div class="text-sm text-gray-500">Print Quality Score</div>
+                            <div class="text-4xl font-bold bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent mb-2">
+                                @Model.QualityScore.ToString("F1")%
+                            </div>
+                            <div class="text-sm uppercase tracking-wide text-gray-600 font-bold">Print Quality Score</div>
+                            <div class="mt-2 w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full transition-all duration-500" style="width: @Model.QualityScore.ToString("F0")%"></div>
+                            </div>
                         </div>
                     }
                     @if (Model.PartsProducedToday > 0)
                     {
                         <div class="text-center">
-                            <div class="text-2xl font-bold text-purple-600">@Model.PartsProducedToday</div>
-                            <div class="text-sm text-gray-500">SLS Parts Produced</div>
+                            <div class="text-4xl font-bold bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent mb-2">
+                                @Model.PartsProducedToday
+                            </div>
+                            <div class="text-sm uppercase tracking-wide text-gray-600 font-bold">SLS Parts Produced</div>
+                            <div class="mt-2 w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-gradient-to-r from-purple-500 to-purple-600 h-2 rounded-full transition-all duration-500" style="width: @(Math.Min(100, Model.PartsProducedToday * 2))%"></div>
+                            </div>
                         </div>
                     }
                 </div>
@@ -708,18 +678,20 @@
             var elapsed = DateTime.Now - job.ActualStart.Value;
             return $"Running {elapsed.TotalHours:F1}h";
         }
-        
+        if (job.ScheduledStart < DateTime.Now && !isRunning)
+        {
+            return $"Overdue {Math.Abs((DateTime.Now - job.ScheduledStart).TotalHours):F1}h";
+        }
         if (job.ScheduledStart.Date == DateTime.Today)
-            return $"Today @job.ScheduledStart:HH:mm";
-        else if (job.ScheduledStart.Date == DateTime.Today.AddDays(1))
-            return $"Tomorrow @job.ScheduledStart:HH:mm";
-        else
-            return $"@job.ScheduledStart:MM/dd HH:mm";
+            return $"Today {job.ScheduledStart:HH:mm}";
+        if (job.ScheduledStart.Date == DateTime.Today.AddDays(1))
+            return $"Tomorrow {job.ScheduledStart:HH:mm}";
+        return job.ScheduledStart.ToString("MM/dd HH:mm");
     }
 }
 
 <script>
-// Enhanced Print Tracking Dashboard JavaScript with Scheduler Integration
+/* Enhanced Print Tracking Dashboard JavaScript with Scheduler Integration */
 (function() {
     'use strict';
     
@@ -837,7 +809,7 @@
                     hideLoadingIndicator();
                 }).catch((error) => {
                     hideLoadingIndicator();
-                    console.error('? [START-PRINT] Error loading start print modal:', error);
+                    console.error('? [START-PRINT] Error loading start print modal:', </style>error);
                     showToast('Error loading start print form', 'error');
                 });
             } else {

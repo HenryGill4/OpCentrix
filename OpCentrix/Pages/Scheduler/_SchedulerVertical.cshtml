@@ -1,4 +1,5 @@
 @using OpCentrix.ViewModels.Scheduler
+@using OpCentrix.Models
 @model SchedulerPageViewModel
 @{
     var slotsPerDay = Model.SlotsPerDay;
@@ -6,151 +7,156 @@
     var slotTimes = Enumerable.Range(0, slotsPerDay).Select(i => TimeSpan.FromMinutes(i * slotMinutes)).ToList();
     var totalSlots = Model.Dates.Count * slotsPerDay;
     var zoom = Context.Request.Query["zoom"].FirstOrDefault() ?? "week";
-    var rowPx = 60;
+    var rowPx = 60; // pixel height per slot in vertical layout
     string GetColor(string m)=> Model.MachineColors!=null && Model.MachineColors.TryGetValue(m, out var c) ? c : "#6366F1";
 }
 <style>
+.scheduler-vertical-container.initializing .job-block{visibility:hidden;}
+.scheduler-vertical-container.ready .job-block{visibility:visible;}
 .scheduler-vertical .machine-column-header {position:relative;}
 .scheduler-vertical .machine-color-dot {width:10px;height:10px;border-radius:2px;display:inline-block;}
 .scheduler-vertical .job-block { color:#fff; border-radius:6px; transition:background-color .15s ease, box-shadow .15s ease; background:var(--machine-color,#6366F1); box-shadow:0 4px 10px -2px rgba(0,0,0,.25); }
-/* Remove any legacy colored left borders attached via machine-* classes (legacy) */
 .scheduler-vertical .scheduler-machine-columns .machine-column { border-left:0 !important; box-shadow:none !important; }
 .job-meta-line{font-size:.55rem;opacity:.9;margin-top:2px;display:flex;flex-wrap:wrap;gap:4px;}
 </style>
-<div class="scheduler-grid-container scheduler-vertical opcentrix-card" data-zoom="@zoom" data-orientation="vertical" data-total-slots="@totalSlots">
-    <div class="scheduler-machines-header">
-        <div class="scheduler-time-column scheduler-grid-header bg-white border-b border-r font-bold text-indigo-800">
-            <div class="flex items-center justify-center h-full p-2">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                Time
+<div class="scheduler-vertical-container initializing" data-orientation="vertical" data-zoom="@zoom" data-total-slots="@totalSlots">
+    <div class="scheduler-grid-container scheduler-vertical opcentrix-card" data-zoom="@zoom" data-orientation="vertical" data-total-slots="@totalSlots">
+        <div class="scheduler-machines-header">
+            <div class="scheduler-time-column scheduler-grid-header bg-white border-b border-r font-bold text-indigo-800">
+                <div class="flex items-center justify-center h-full p-2">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Time
+                </div>
+            </div>
+            <div class="scheduler-machine-columns">
+                @foreach (var machine in Model.Machines)
+                {
+                    var machineJobs = Model.Jobs.Where(j => j.MachineId == machine).ToList();
+                    var jobCount = machineJobs.Count;
+                    var color = GetColor(machine);
+                    <div class="machine-column scheduler-grid-header bg-white border-b border-r font-bold text-indigo-800 machine-column-header" data-machine="@machine" data-color="@color" style="--machine-color:@color">
+                        <div class="flex flex-col items-center justify-center h-full p-2 min-h-[80px]">
+                            <div class="flex items-center space-x-2 text-lg font-bold">
+                                <span class="machine-color-dot" style="background:@color"></span>
+                                <span>@machine</span>
+                            </div>
+                            <div class="text-xs opacity-75 mt-1">@jobCount job@(jobCount != 1 ? "s" : "")</div>
+                            @if (machineJobs.Any())
+                            {
+                                <div class="text-xs opacity-60">@machineJobs.Sum(j => j.DurationHours).ToString("F1")h</div>
+                            }
+                        </div>
+                    </div>
+                }
             </div>
         </div>
-        <div class="scheduler-machine-columns">
-            @foreach (var machine in Model.Machines)
+        <div class="scheduler-time-rows">
+            @for (int d = 0; d < Model.Dates.Count; d++)
             {
-                var machineJobs = Model.Jobs.Where(j => j.MachineId == machine).ToList();
-                var jobCount = machineJobs.Count;
-                var color = GetColor(machine);
-                <div class="machine-column scheduler-grid-header bg-white border-b border-r font-bold text-indigo-800 machine-column-header" data-machine="@machine" data-color="@color" style="--machine-color:@color">
-                    <div class="flex flex-col items-center justify-center h-full p-2 min-h-[80px]">
-                        <div class="flex items-center space-x-2 text-lg font-bold">
-                            <span class="machine-color-dot" style="background:@color"></span>
-                            <span>@machine</span>
-                        </div>
-                        <div class="text-xs opacity-75 mt-1">@jobCount job@(jobCount != 1 ? "s" : "")</div>
-                        @if (machineJobs.Any())
-                        {
-                            <div class="text-xs opacity-60">@machineJobs.Sum(j => j.DurationHours).ToString("F1")h</div>
-                        }
-                    </div>
-                </div>
-            }
-        </div>
-    </div>
-    <div class="scheduler-time-rows">
-        @for (int d = 0; d < Model.Dates.Count; d++)
-        {
-            var day = Model.Dates[d];
-            for (int s = 0; s < slotsPerDay; s++)
-            {
-                var slotTime = slotTimes[s];
-                var slotDateTime = day.Add(slotTime);
-                var isToday = day.Date == DateTime.Today;
-                var isCurrentTimeSlot = isToday && slotTime <= DateTime.Now.TimeOfDay && slotTime.Add(TimeSpan.FromMinutes(slotMinutes)) > DateTime.Now.TimeOfDay;
-                var isWeekend = day.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
-                var isPastWorkHours = slotTime < TimeSpan.FromHours(6) || slotTime >= TimeSpan.FromHours(18);
-                var currentSlot = d * slotsPerDay + s;
-                <div class="time-row flex" data-time="@slotDateTime:yyyy-MM-ddTHH:mm">
-                    <div class="scheduler-time-column scheduler-grid-header @(isCurrentTimeSlot ? "bg-blue-50 text-blue-800" : "bg-gray-50 text-gray-700") border-b border-r">
-                        <div class="flex items-center justify-center h-full p-2 min-h-[60px]">
-                            @if (slotsPerDay == 1)
-                            {
-                                <div class="text-center">
-                                    <div class="font-bold">@day.ToString("ddd")</div>
-                                    <div class="text-sm">@day.ToString("M/d")</div>
-                                    @if (isToday)
-                                    {
-                                        <div class="text-xs text-blue-600 font-semibold">Today</div>
-                                    }
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="text-center">
-                                    <div class="text-sm font-medium">@day.ToString("M/d")</div>
-                                    <div class="text-xs">
-                                        @{
-                                            var hour = slotTime.Hours;
-                                            var minute = slotTime.Minutes;
-                                            var displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
-                                            var period = hour >= 12 ? "PM" : "AM";
-                                            var timeText = $"{displayHour}:{minute:00}{period}";
-                                        }
-                                        @timeText
-                                    </div>
-                                </div>
-                            }
-                            @if (isCurrentTimeSlot)
-                            {
-                                <div class="absolute top-1 right-1 w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
-                            }
-                        </div>
-                    </div>
-                    <div class="scheduler-machine-columns">
-                        @foreach (var machine in Model.Machines)
-                        {
-                            var machineJobs = Model.Jobs.Where(j => j.MachineId == machine).OrderBy(j => j.ScheduledStart).ToList();
-                            var cellClasses = new List<string>{"machine-column","scheduler-grid-cell","group","relative","cursor-pointer","border-b","border-r"};
-                            if (isCurrentTimeSlot) cellClasses.Add("current-time");
-                            else if (isWeekend) cellClasses.Add("weekend");
-                            else if (isPastWorkHours) cellClasses.Add("off-hours");
-                            var slotEndDateTime = slotDateTime.Add(TimeSpan.FromMinutes(slotMinutes));
-                            var startingJobs = machineJobs.Where(job => job.ScheduledStart >= slotDateTime && job.ScheduledStart < slotEndDateTime).ToList();
-                            var overlappingJobs = machineJobs.Where(job => job.ScheduledStart < slotEndDateTime && job.ScheduledEnd > slotDateTime).ToList();
-                            var showAddBtn = !overlappingJobs.Any();
-                            var color = GetColor(machine);
-                            <div class="@string.Join(" ", cellClasses)" onclick="openJobModalSafely('@machine','@slotDateTime:yyyy-MM-ddTHH:mm')" title="Click to add job at @slotDateTime:MMM dd, yyyy HH:mm" data-slot-time="@slotDateTime:yyyy-MM-ddTHH:mm" data-machine="@machine">
-                                @foreach (var job in startingJobs)
+                var day = Model.Dates[d];
+                for (int s = 0; s < slotsPerDay; s++)
+                {
+                    var slotTime = slotTimes[s];
+                    var slotDateTime = day.Add(slotTime);
+                    var isToday = day.Date == DateTime.Today;
+                    var isCurrentTimeSlot = isToday && slotTime <= DateTime.Now.TimeOfDay && slotTime.Add(TimeSpan.FromMinutes(slotMinutes)) > DateTime.Now.TimeOfDay;
+                    var isWeekend = day.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+                    var isPastWorkHours = slotTime < TimeSpan.FromHours(6) || slotTime >= TimeSpan.FromHours(18);
+                    var currentSlot = d * slotsPerDay + s;
+                    <div class="time-row flex" data-time="@slotDateTime:yyyy-MM-ddTHH:mm">
+                        <div class="scheduler-time-column scheduler-grid-header @(isCurrentTimeSlot ? "bg-blue-50 text-blue-800" : "bg-gray-50 text-gray-700") border-b border-r">
+                            <div class="flex items-center justify-center h-full p-2 min-h-[60px]">
+                                @if (slotsPerDay == 1)
                                 {
-                                    var widthSlots = job.CalculateGridWidth(slotMinutes);
-                                    var offsetMinutes = (job.ScheduledStart - slotDateTime).TotalMinutes;
-                                    if (offsetMinutes < 0) offsetMinutes = 0;
-                                    if (offsetMinutes > slotMinutes) offsetMinutes = slotMinutes;
-                                    var offsetPx = 2 + (offsetMinutes / slotMinutes) * (rowPx - 4);
-                                    var totalPx = (widthSlots * rowPx) - (offsetPx - 2);
-                                    var maxVisibleSlotsFromStart = (totalSlots - currentSlot);
-                                    var maxVisiblePx = (maxVisibleSlotsFromStart * rowPx) - (offsetPx - 2);
-                                    var heightPx = Math.Max(24, Math.Min(totalPx, maxVisiblePx));
-                                    var jobLabel = $"Job: {job.PartNumber} ({job.Status}) - {job.ScheduledStart:MMM dd HH:mm} to {job.ScheduledEnd:MMM dd HH:mm} - Qty: {job.Quantity}";
-                                    if (!string.IsNullOrEmpty(job.SlsMaterial)) jobLabel += $" - {job.SlsMaterial}";
-                                    jobLabel += $" - Duration: {job.DurationHours:F1}h";
-                                    if(job.Priority>0) jobLabel += $" - Priority P{job.Priority}";
-                                    var rush = false; try { rush = (bool)(job.GetType().GetProperty("IsRushJob")?.GetValue(job) ?? false); } catch { }
-                                    var stackLevel = job.StackLevel.HasValue && job.StackLevel.Value>0 ? job.StackLevel.Value : (byte)1;
-                                    var stackMulti = stackLevel>1;
-                                    <div class="absolute job-block status-@job.Status.ToLower().Replace(" ", "-")@(rush?" rush-job":"")" style="left:2px;right:2px;top:@offsetPx.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)px;height:@heightPx.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)px;z-index:200; --machine-color:@color; background:@color" data-color="@color" data-material="@job.SlsMaterial" data-priority="@job.Priority" data-status="@job.Status" data-stack-level="@stackLevel" data-parts-per-build="@(job.PartsPerBuild?.ToString() ?? "")" onclick="event.stopPropagation(); openJobModalSafely('@machine','@job.ScheduledStart:yyyy-MM-ddTHH:mm',@job.Id)" title="@jobLabel" data-job-id="@job.Id" data-machine-id="@machine" data-job-date="@job.ScheduledStart:yyyy-MM-ddTHH:mm">
-                                        <div class="job-block-content p-1 text-white text-[10px]">
-                                            <div class="job-block-title truncate">@job.PartNumber</div>
-                                            <div class="job-meta-line">@job.DurationHours.ToString("F1")h � @job.Status@if(stackMulti){<span>� Stack @stackLevel x</span>}</div>
-                                            <div class="job-block-subtitle text-[10px] truncate opacity-90">@((!string.IsNullOrEmpty(job.SlsMaterial)? job.SlsMaterial.Length>14? job.SlsMaterial[..14]+"..." : job.SlsMaterial : string.Empty))</div>
-                                            <div class="job-meta-line">Qty @job.Quantity</div>
+                                    <div class="text-center">
+                                        <div class="font-bold">@day.ToString("ddd")</div>
+                                        <div class="text-sm">@day.ToString("M/d")</div>
+                                        @if (isToday)
+                                        { <div class="text-xs text-blue-600 font-semibold">Today</div>; }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="text-center">
+                                        <div class="text-sm font-medium">@day.ToString("M/d")</div>
+                                        <div class="text-xs">
+                                            @{
+                                                var hour = slotTime.Hours;
+                                                var minute = slotTime.Minutes;
+                                                var displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+                                                var period = hour >= 12 ? "PM" : "AM";
+                                                var timeText = $"{displayHour}:{minute:00}{period}";
+                                            }
+                                            @timeText
                                         </div>
                                     </div>
                                 }
-                                @if (showAddBtn)
-                                {
-                                    <div class="add-job-btn"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path></svg></div>
-                                }
                                 @if (isCurrentTimeSlot)
-                                {
-                                    <div class="absolute top-1 left-1 w-2 h-2 bg-blue-600 rounded-full animate-pulse z-30"></div>
-                                }
+                                { <div class="absolute top-1 right-1 w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>; }
                             </div>
-                        }
+                        </div>
+                        <div class="scheduler-machine-columns">
+                            @foreach (var machine in Model.Machines)
+                            {
+                                var machineJobs = Model.Jobs.Where(j => j.MachineId == machine).OrderBy(j => j.ScheduledStart).ToList();
+                                var cellClasses = new List<string>{"machine-column","scheduler-grid-cell","group","relative","cursor-pointer","border-b","border-r"};
+                                if (isCurrentTimeSlot) cellClasses.Add("current-time");
+                                else if (isWeekend) cellClasses.Add("weekend");
+                                else if (isPastWorkHours) cellClasses.Add("off-hours");
+                                var slotEndDateTime = slotDateTime.Add(TimeSpan.FromMinutes(slotMinutes));
+                                var startingJobs = machineJobs.Where(job => job.ScheduledStart >= slotDateTime && job.ScheduledStart < slotEndDateTime).ToList();
+                                var overlappingJobs = machineJobs.Where(job => job.ScheduledStart < slotEndDateTime && job.ScheduledEnd > slotDateTime).ToList();
+                                var showAddBtn = !overlappingJobs.Any();
+                                var color = GetColor(machine);
+                                <div class="@string.Join(" ", cellClasses)" onclick="openJobModalSafely('@machine','@slotDateTime:yyyy-MM-ddTHH:mm')" title="Click to add job at @slotDateTime:MMM dd, yyyy HH:mm" data-slot-time="@slotDateTime:yyyy-MM-ddTHH:mm" data-machine="@machine">
+                                    @foreach (var job in startingJobs)
+                                    {
+                                        var widthSlots = job.CalculateGridWidth(slotMinutes); // how many slots tall the job spans
+                                        var offsetMinutes = (job.ScheduledStart - slotDateTime).TotalMinutes;
+                                        if (offsetMinutes < 0) offsetMinutes = 0;
+                                        if (offsetMinutes > slotMinutes) offsetMinutes = slotMinutes;
+                                        var offsetPx = 2 + (offsetMinutes / slotMinutes) * (rowPx - 4);
+                                        var totalPx = (widthSlots * rowPx) - (offsetPx - 2);
+                                        var maxVisibleSlotsFromStart = (totalSlots - currentSlot);
+                                        var maxVisiblePx = (maxVisibleSlotsFromStart * rowPx) - (offsetPx - 2);
+                                        var heightPx = Math.Max(24, Math.Min(totalPx, maxVisiblePx));
+                                        var jobLabel = $"Job: {job.PartNumber} ({job.Status}) - {job.ScheduledStart:MMM dd HH:mm} to {job.ScheduledEnd:MMM dd HH:mm} - Qty: {job.Quantity}";
+                                        if (!string.IsNullOrEmpty(job.SlsMaterial)) jobLabel += $" - {job.SlsMaterial}";
+                                        jobLabel += $" - Duration: {job.DurationHours:F1}h";
+                                        if(job.Priority>0) jobLabel += $" - Priority P{job.Priority}";
+                                        var rush = false; try { rush = (bool)(job.GetType().GetProperty("IsRushJob")?.GetValue(job) ?? false); } catch { }
+                                        var stackLevel = job.StackLevel.HasValue && job.StackLevel.Value>0 ? job.StackLevel.Value : (byte)1;
+                                        var stackMulti = stackLevel>1;
+                                        <div class="absolute job-block status-@job.Status.ToLower().Replace(" ", "-")@(rush?" rush-job":"")" style="left:2px;right:2px;top:@offsetPx.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)px;height:@heightPx.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)px;z-index:200; --machine-color:@color; background:@color" data-color="@color" data-material="@job.SlsMaterial" data-priority="@job.Priority" data-status="@job.Status" data-stack-level="@stackLevel" data-parts-per-build="@(job.PartsPerBuild?.ToString() ?? "")" onclick="event.stopPropagation(); openJobModalSafely('@machine','@job.ScheduledStart:yyyy-MM-ddTHH:mm',@job.Id)" title="@jobLabel" data-job-id="@job.Id" data-machine-id="@machine" data-job-date="@job.ScheduledStart:yyyy-MM-ddTHH:mm">
+                                            <div class="job-block-content p-1 text-white text-[10px]">
+                                                <div class="job-block-title truncate">@job.PartNumber</div>
+                                                <div class="job-meta-line">@job.DurationHours.ToString("F1")h � @job.Status@if(stackMulti){<span>� Stack @stackLevel x</span>}</div>
+                                                <div class="job-block-subtitle text-[10px] truncate opacity-90">@((!string.IsNullOrEmpty(job.SlsMaterial)? job.SlsMaterial.Length>14? job.SlsMaterial[..14]+"..." : job.SlsMaterial : string.Empty))</div>
+                                                <div class="job-meta-line">Qty @job.Quantity</div>
+                                            </div>
+                                        </div>
+                                    }
+                                    @if (showAddBtn)
+                                    { <div class="add-job-btn"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path></svg></div>; }
+                                    @if (isCurrentTimeSlot)
+                                    { <div class="absolute top-1 left-1 w-2 h-2 bg-blue-600 rounded-full animate-pulse z-30"></div>; }
+                                </div>
+                            }
+                        </div>
                     </div>
-                </div>
+                }
             }
-        }
+        </div>
     </div>
 </div>
-<script>(function(){document.querySelectorAll('.scheduler-vertical .job-block[data-color]').forEach(b=>{const c=b.getAttribute('data-color'); if(c){b.style.setProperty('--machine-color',c); b.style.background=c;}});})();</script><script>(function(){document.querySelectorAll('.scheduler-vertical .job-block[data-color]').forEach(b=>{const c=b.getAttribute('data-color'); if(c){b.style.setProperty('--machine-color',c); b.style.background=c;}});})();</script>
+<script>
+(function(){
+  const cont=document.querySelector('.scheduler-vertical-container');
+  if(!cont) return;
+  function hydrateColors(){
+    try { document.querySelectorAll('.scheduler-vertical .job-block[data-color]').forEach(b=>{const c=b.getAttribute('data-color'); if(c){b.style.setProperty('--machine-color',c); b.style.background=c;}}); } catch(e){ console.warn('[VERT] color hydrate failed', e); }
+  }
+  function finalize(){ if(cont.classList.contains('ready')) return; hydrateColors(); cont.classList.remove('initializing'); cont.classList.add('ready'); try{ window.__schedulerSized=true; }catch{} document.dispatchEvent(new CustomEvent('scheduler:sized')); }
+  requestAnimationFrame(()=>requestAnimationFrame(finalize));
+})();
+</script>

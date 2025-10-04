@@ -25,22 +25,44 @@
 <!-- Hidden anti-forgery token source for JS batch operations -->
 <form id="__afTokenSource" style="display:none;">@Html.AntiForgeryToken()</form>
 
-<!-- Unified FULL-SCREEN loading overlay (centered) -->
-<div id="loading-indicator" aria-live="polite" aria-busy="false" class="oc-overlay">
+<!-- Unified FULL-SCREEN loading overlay (centered) now ACTIVE initially to block premature clicks -->
+<div id="loading-indicator" aria-live="polite" aria-busy="true" class="oc-overlay active initial">
   <div class="oc-overlay-box">
     <div class="oc-overlay-spinner"></div>
-    <div id="loading-indicator-text" class="oc-overlay-text">Working...</div>
+    <div id="loading-indicator-text" class="oc-overlay-text">Loading schedule...</div>
   </div>
 </div>
 <style>
-  /* Full-screen centered overlay */
-  #loading-indicator.oc-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.82);backdrop-filter:blur(2px);z-index:10000;opacity:0;visibility:hidden;transition:opacity .18s ease,visibility .18s ease;}
+  /* Subtle full-screen overlay (dark translucent, fades instead of flash) */
+  #loading-indicator.oc-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.42);backdrop-filter:blur(1.5px);-webkit-backdrop-filter:blur(1.5px);z-index:10000;opacity:0;visibility:hidden;transition:opacity .28s ease,visibility .28s ease;}
   #loading-indicator.oc-overlay.active{opacity:1;visibility:visible;}
-  .oc-overlay-box{display:flex;flex-direction:column;align-items:center;gap:.9rem;padding:1.75rem 2.1rem;border-radius:20px;background:#fff;box-shadow:0 10px 35px -5px rgba(0,0,0,.22),0 2px 8px -2px rgba(0,0,0,.1);min-width:210px;}
-  .oc-overlay-spinner{width:2.9rem;height:2.9rem;border:4px solid #e2e8f0;border-top-color:#6366f1;border-radius:50%;animation:ocspin 1s linear infinite;}
-  .oc-overlay-text{font-size:.8rem;font-weight:600;letter-spacing:.5px;color:#334155;text-align:center;}
+  #loading-indicator.oc-overlay.initial:not(.active){opacity:0;visibility:hidden;}
+  .oc-overlay-box{display:flex;flex-direction:column;align-items:center;gap:.65rem;padding:1.1rem 1.4rem;border-radius:14px;background:rgba(30,41,59,.88);box-shadow:0 8px 32px -8px rgba(0,0,0,.55),0 2px 6px -2px rgba(0,0,0,.4);min-width:160px;max-width:240px;color:#e2e8f0;transform:scale(.94) translateY(4px);opacity:0;transition:opacity .28s ease, transform .32s cubic-bezier(.32,.72,.33,1);}
+  .oc-overlay.active .oc-overlay-box{opacity:1;transform:scale(1) translateY(0);}  
+  .oc-overlay-spinner{width:1.9rem;height:1.9rem;border:3px solid rgba(255,255,255,.15);border-top-color:#818cf8;border-radius:50%;animation:ocspin .8s linear infinite;}
+  .oc-overlay-text{font-size:.7rem;font-weight:600;letter-spacing:.5px;color:#f1f5f9;text-align:center;white-space:nowrap;}
   @@keyframes ocspin{to{transform:rotate(360deg);}}
 </style>
+
+<!-- EARLY safety stubs + machineType persistence (must be before user interacts) -->
+<script>
+(function(){
+  const needed=['navigatePeriod','navigateToToday','changeZoom','toggleOrientation'];
+  needed.forEach(fn=>{ if(typeof window[fn] !== 'function'){ window[fn]=function(){ console.warn(fn+' called before scheduler-ui ready'); }; }});
+  try{
+     const LS_KEY='schedulerMachineType';
+     const url=new URL(window.location.href);
+     const current=url.searchParams.get('machineType');
+     if(current){ localStorage.setItem(LS_KEY,current); }
+     else { const saved=localStorage.getItem(LS_KEY); if(saved && saved!=='all'){ url.searchParams.set('machineType', saved); if(!url.searchParams.get('__mtRestore')){ url.searchParams.set('__mtRestore','1'); window.location.replace(url.toString()); } } }
+     document.addEventListener('DOMContentLoaded', ()=>{
+        document.querySelectorAll('.filter-group .chip').forEach(a=>{
+          a.addEventListener('click', ()=>{ try{ const u=new URL(a.href); const mt=u.searchParams.get('machineType'); if(mt) localStorage.setItem(LS_KEY, mt); }catch{} });
+        });
+     });
+  }catch(e){ console.warn('Machine type persistence failed', e); }
+})();
+</script>
 
 <!-- HTMX script sink (server may return <script>) -->
 <div id="htmx-script-sink" style="display:none;"></div>
@@ -50,30 +72,30 @@
     <div class="scheduler-header-wrapper">
         <div class="scheduler-controls">
             <div class="control-group">
-                <button onclick="navigatePeriod(-1)" class="icon-btn" title="Previous period">
+                <button onclick="navigatePeriod(-1)" class="icon-btn" title="Previous period" disabled data-auto-enable="1">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                 </button>
-                <button onclick="navigateToToday()" class="text-btn" title="Go to today">Today</button>
-                <button onclick="navigatePeriod(1)" class="icon-btn" title="Next period">
+                <button onclick="navigateToToday()" class="text-btn" title="Go to today" disabled data-auto-enable="1">Today</button>
+                <button onclick="navigatePeriod(1)" class="icon-btn" title="Next period" disabled data-auto-enable="1">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                 </button>
             </div>
             <div class="control-group">
                 <span class="group-label">Zoom</span>
-                <button id="zoomOut" @(zoomIndex <= 0 ? "disabled" : "") onclick="changeZoom(-1)" class="icon-btn" title="Zoom out">
+                <button id="zoomOut" @(zoomIndex <= 0 ? "disabled" : "") onclick="changeZoom(-1)" class="icon-btn" title="Zoom out" disabled data-auto-enable="1">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10h-6"/></svg>
                 </button>
                 <span class="chip-active !cursor-default">@zoom</span>
-                <button id="zoomIn" @(zoomIndex >= zoomLevels.Length - 1 ? "disabled" : "") onclick="changeZoom(1)" class="icon-btn" title="Zoom in">
+                <button id="zoomIn" @(zoomIndex >= zoomLevels.Length - 1 ? "disabled" : "") onclick="changeZoom(1)" class="icon-btn" title="Zoom in" disabled data-auto-enable="1">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                 </button>
             </div>
             <div class="control-group orientation-group">
                 <span class="group-label">Layout</span>
-                <button class="toggle-btn @(isVertical?"":"active")" onclick="toggleOrientation('horizontal')" title="Horizontal layout">
+                <button class="toggle-btn @(isVertical?"":"active")" onclick="toggleOrientation('horizontal')" title="Horizontal layout" disabled data-auto-enable="1">
                     <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>H
                 </button>
-                <button class="toggle-btn @(isVertical?"active":"")" onclick="toggleOrientation('vertical')" title="Vertical layout">
+                <button class="toggle-btn @(isVertical?"active":"")" onclick="toggleOrientation('vertical')" title="Vertical layout" disabled data-auto-enable="1">
                     <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 4v16M12 4v16M18 4v16"/></svg>V
                 </button>
             </div>
@@ -93,11 +115,11 @@
                 <span class="mini-pill bg-blue-100 text-blue-700">@viewModel.Machines.Count machines</span>
             </div>
             <div class="control-group">
-                <a href="/Admin/Machines?showCreate=1" class="primary-btn" title="Add machine">
+                <a href="/Admin/Machines?showCreate=1" class="primary-btn" title="Add machine" disabled data-auto-enable="1">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
                     Add Machine
                 </a>
-                <button type="button" class="secondary-btn" onclick="openModifySelectedMachine()" title="Modify selected machine">Modify Machine</button>
+                <button type="button" class="secondary-btn" onclick="openModifySelectedMachine()" title="Modify selected machine" disabled data-auto-enable="1">Modify Machine</button>
             </div>
         </div>
     </div>
@@ -105,10 +127,10 @@
 
 <!-- Batch Selection Toolbar -->
 <div id="batch-toolbar" class="opcentrix-card px-4 py-2 mb-4 flex items-center gap-3 text-xs scheduler-sticky-sub" style="display:flex;align-items:center;">
-    <button type="button" id="toggle-select-mode" class="secondary-btn" style="padding:.4rem .7rem;font-size:.65rem;">Select Jobs</button>
+    <button type="button" id="toggle-select-mode" class="secondary-btn" style="padding:.4rem .7rem;font-size:.65rem;" disabled data-auto-enable="1">Select Jobs</button>
     <div id="selection-stats" style="font-size:.65rem;color:#334155;display:none;"><span id="selected-count">0</span> selected</div>
     <button type="button" id="delete-selected" class="oc-btn-danger" style="display:none;padding:.45rem .7rem;font-size:.65rem;" disabled>Delete Selected</button>
-    <button type="button" id="clear-selection" class="secondary-btn" style="display:none;padding:.4rem .7rem;font-size:.65rem;">Clear</button>
+    <button type="button" id="clear-selection" class="secondary-btn" style="display:none;padding:.4rem .7rem;font-size:.65rem;" disabled>Clear</button>
 </div>
 
 <div id="scheduler-main-content" class="@(isVertical ? "scheduler-vertical" : "scheduler-horizontal")">
@@ -135,25 +157,24 @@
         .job-block.selected .select-check{background:#dc2626;} 
         .scheduler-horizontal-container .scheduler-machine-header,
         .scheduler-horizontal-container .scheduler-time-header{position:sticky;top:calc(var(--scheduler-header-height,72px) + var(--scheduler-subbar-height,48px));z-index:60;background:#fff;} 
-    </style>
+
+        </style>
 }
 
 @section Scripts {
     <script src="~/js/scheduler-ui.js" asp-append-version="true"></script>
     <script src="~/js/job-form.js" asp-append-version="true"></script>
     <script>
-      // Overlay helpers (global) - removed job-form submission overlay to only show after successful save refresh
       (function(){
         const overlay=document.getElementById('loading-indicator');
         const textEl=document.getElementById('loading-indicator-text');
+        function enableControls(){ document.querySelectorAll('[data-auto-enable]')?.forEach(el=>{ el.removeAttribute('disabled'); }); }
         window.showSchedulerOverlay=function(msg){ if(!overlay) return; if(textEl) textEl.textContent=msg||'Working...'; overlay.classList.add('active'); overlay.setAttribute('aria-busy','true'); };
         window.hideSchedulerOverlay=function(){ if(!overlay) return; overlay.classList.remove('active'); overlay.setAttribute('aria-busy','false'); };
-        if(window.htmx){
-            // Lightweight form feedback instead of fullscreen overlay
-            document.body.addEventListener('htmx:beforeRequest', e=>{ if(e.target && e.target.id==='job-form'){ const btn=e.target.querySelector('button[type="submit"]'); if(btn){ btn.disabled=true; btn.dataset.orig=btn.innerHTML; btn.innerHTML='<span class=\'spinner-border spinner-border-sm\'></span> Saving'; } }});
-            document.body.addEventListener('htmx:afterRequest', e=>{ if(e.target && e.target.id==='job-form'){ const btn=e.target.querySelector('button[type="submit"]'); if(btn && btn.dataset.orig){ btn.disabled=false; btn.innerHTML=btn.dataset.orig; } }});
-            ['htmx:responseError','htmx:sendError','htmx:timeout'].forEach(ev=> document.body.addEventListener(ev, e=>{ if(e.target && e.target.id==='job-form'){ const btn=e.target.querySelector('button[type="submit"]'); if(btn && btn.dataset.orig){ btn.disabled=false; btn.innerHTML=btn.dataset.orig; } }}));
-        }
+        function handleSized(){ hideSchedulerOverlay(); enableControls(); }
+        if(window.__schedulerSized){ setTimeout(handleSized,0); }
+        document.addEventListener('scheduler:sized', handleSized, { once:true });
+        setTimeout(()=>{ if(!window.__schedulerSized){ window.location.reload(); } },4000);
       })();
     </script>
     <script>
@@ -170,7 +191,6 @@
     <script>
         let lastSelectedMachineId = null; document.addEventListener('click', function(e){ const cell = e.target.closest('[data-machine]'); if(cell){ lastSelectedMachineId = cell.getAttribute('data-machine'); }});
         function openModifySelectedMachine(){ if(!lastSelectedMachineId){ alert('Click on a machine row or column first to select a machine.'); return; } window.location.href = '/Admin/Machines?editMachine=' + encodeURIComponent(lastSelectedMachineId); }
-        // Batch selection + refresh + overlay for delete
         (function(){
             const btnToggle=document.getElementById('toggle-select-mode');
             const btnDelete=document.getElementById('delete-selected');
@@ -179,23 +199,23 @@
             const countSpan=document.getElementById('selected-count');
             let selectMode=localStorage.getItem('schedulerSelectMode')==='1';
             const selected=new Set();
-            let pendingRefresh=0;
-
             function persist(){ localStorage.setItem('schedulerSelectMode', selectMode?'1':'0'); }
             function updateUI(){
                 document.querySelectorAll('.job-block').forEach(j=>{
                     if(selectMode){
                         j.classList.add('select-mode');
                         if(!j.querySelector('.select-check')){ const b=document.createElement('span'); b.className='select-check'; b.textContent='\u2713'; j.prepend(b);}    
-                    } else { j.classList.remove('select-mode','selected'); const sc=j.querySelector('.select-check'); if(sc) sc.remove(); }
+                    } else {
+                        j.classList.remove('select-mode','selected');
+                        const sc=j.querySelector('.select-check'); if(sc) sc.remove();
+                    }
                 });
                 stats.style.display=selectMode?'inline-flex':'none';
                 btnDelete.style.display=selectMode?'inline-flex':'none';
                 btnClear.style.display=selectMode?'inline-flex':'none';
                 btnDelete.disabled=selected.size===0;
                 countSpan.textContent=selected.size;
-                btnToggle.textContent=selectMode?'Exit Select':'Select Jobs';
-                window.__schedulerSelectMode=selectMode;
+                if(btnToggle) btnToggle.textContent=selectMode?'Exit Select':'Select Jobs';
             }
             function attachJobClick(){
                 document.querySelectorAll('.job-block').forEach(j=>{
@@ -203,33 +223,21 @@
                     j.addEventListener('click', e=>{ if(!selectMode) return; e.stopPropagation(); const id=j.getAttribute('data-job-id'); if(!id) return; if(selected.has(id)){ selected.delete(id); j.classList.remove('selected'); } else { selected.add(id); j.classList.add('selected'); } countSpan.textContent=selected.size; btnDelete.disabled=selected.size===0; }, true);
                 });
             }
-            function refreshScheduler(){
-                if(!window.htmx){ window.location.reload(); return; }
-                const qs=window.location.search; pendingRefresh=2; showSchedulerOverlay('Refreshing schedule...');
-                htmx.ajax('GET','/Scheduler?handler=RefreshGrid'+(qs?qs.replace('?','&'):''),{target:'#scheduler-main-content',swap:'innerHTML'});
-                htmx.ajax('GET','/Scheduler?handler=RefreshSummary'+(qs?qs.replace('?','&'):''),{target:'#footer-summary',swap:'innerHTML'});
-            }
-            function resetAfterDelete(){ selected.clear(); selectMode=false; persist(); updateUI(); }
-
-            document.addEventListener('htmx:afterSwap', e=>{
-                const id = e.detail && e.detail.target ? e.detail.target.id : '';
-                if(id==='scheduler-main-content'){ attachJobClick(); if(selectMode) updateUI(); }
-                if(id==='scheduler-main-content' || id==='footer-summary'){ if(pendingRefresh>0){ pendingRefresh--; if(pendingRefresh===0){ hideSchedulerOverlay(); resetAfterDelete(); } } }
-                if(id==='htmx-script-sink' && pendingRefresh===0){ setTimeout(refreshScheduler,40); }
-            });
-
-            btnToggle.addEventListener('click',()=>{ selectMode=!selectMode; if(!selectMode) selected.clear(); attachJobClick(); updateUI(); persist(); });
-            btnClear.addEventListener('click',()=>{ selected.clear(); document.querySelectorAll('.job-block.selected').forEach(j=>j.classList.remove('selected')); updateUI(); });
-            btnDelete.addEventListener('click',()=>{
+            if(btnToggle) btnToggle.addEventListener('click',()=>{ selectMode=!selectMode; if(!selectMode) selected.clear(); attachJobClick(); updateUI(); persist(); });
+            if(btnClear) btnClear.addEventListener('click',()=>{ selected.clear(); document.querySelectorAll('.job-block.selected').forEach(j=>j.classList.remove('selected')); updateUI(); });
+            if(btnDelete) btnDelete.addEventListener('click',()=>{
                 if(selected.size===0) return; if(!confirm('Delete '+selected.size+' selected job(s)? This cannot be undone.')) return;
                 const ids=[...selected].join(','); const tokenEl=document.querySelector('#__afTokenSource input[name="__RequestVerificationToken"]'); const token=tokenEl?tokenEl.value:'';
                 showSchedulerOverlay('Deleting '+selected.size+' job(s)...');
-                if(window.htmx){ htmx.ajax('POST','/Scheduler?handler=DeleteJobs',{target:'#htmx-script-sink',swap:'innerHTML',values:{jobIds:ids},headers:{'RequestVerificationToken':token}}); }
-                else { fetch('/Scheduler?handler=DeleteJobs',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','RequestVerificationToken':token},body:'jobIds='+encodeURIComponent(ids)})
-                    .then(r=>r.text()).then(html=>{ document.getElementById('htmx-script-sink').innerHTML=html; refreshScheduler(); })
-                    .catch(()=>{ hideSchedulerOverlay(); alert('Delete failed'); }); }
+                if(window.htmx){
+                    htmx.ajax('POST','/Scheduler?handler=DeleteJobs',{target:'#htmx-script-sink',swap:'innerHTML',values:{jobIds:ids},headers:{'RequestVerificationToken':token}})
+                        .then(()=> setTimeout(()=>window.location.reload(),150));
+                } else {
+                    fetch('/Scheduler?handler=DeleteJobs',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','RequestVerificationToken':token},body:'jobIds='+encodeURIComponent(ids)})
+                      .then(()=> setTimeout(()=>window.location.reload(),150))
+                      .catch(()=>{ hideSchedulerOverlay(); alert('Delete failed'); });
+                }
             });
-
             attachJobClick(); updateUI();
         })();
     </script>
