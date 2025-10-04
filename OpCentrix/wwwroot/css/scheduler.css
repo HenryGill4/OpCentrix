@@ -1200,7 +1200,7 @@
    DARK MODE SUPPORT
    ============================================== */
 
-@media (prefers-color-scheme: dark) {
+/*@media (prefers-color-scheme: dark) {
     :root {
         --ios-light-gray: #1c1c1e;
         --ios-separator: #38383a;
@@ -1260,7 +1260,7 @@
         color: #ffffff;
     }
 }
-
+*/
 /* ==============================================
    PRINT MEDIA OPTIMIZATIONS
    ============================================== */

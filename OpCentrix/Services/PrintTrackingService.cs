@@ -1164,9 +1164,26 @@ namespace OpCentrix.Services
                 }
             }
 
+            // Capture machine id before removing build record
+            var machineIdForStatus = buildJob.PrinterName;
+
             // NEW: Remove the build job record after completion so dashboard list does not accumulate
-            // (Retain schedule job + historical metrics already copied). If historical retention needed later, persist instead.
             _context.BuildJobs.Remove(buildJob);
+
+            // Update machine status to Idle if no other active builds remain
+            try
+            {
+                var machine = await _context.Machines.FirstOrDefaultAsync(m => m.MachineId == machineIdForStatus);
+                if (machine != null)
+                {
+                    var stillHasActive = await _context.BuildJobs.AnyAsync(b => b.PrinterName == machine.MachineId && b.Status == "In Progress");
+                    machine.Status = stillHasActive ? "Building" : "Idle";
+                }
+            }
+            catch (Exception mex)
+            {
+                _logger.LogWarning(mex, "Failed to update machine status on completion for {Machine}", machineIdForStatus);
+            }
 
             await _context.SaveChangesAsync();
             return true;
@@ -1205,7 +1222,7 @@ namespace OpCentrix.Services
         public async Task<BuildTimeEstimate> GetBuildTimeEstimateAsync(string buildFileHash, string machineType)
         {
             var historical = await _context.BuildJobs.Where(b => b.BuildFileHash == buildFileHash && b.Status == "Completed" && b.OperatorActualHours.HasValue)
-                .OrderByDescending(b => b.CreatedAt).Take(10).ToListAsync();
+                .OrderByDescending(b => b.CreatedAt). Take(10).ToListAsync();
             if (historical.Any())
             {
                 var avg = historical.Average(b => b.OperatorActualHours!.Value);
@@ -1250,7 +1267,7 @@ namespace OpCentrix.Services
         public async Task<List<BuildPerformanceData>> GetHistoricalBuildDataAsync(string partNumber)
         {
             var builds = await _context.BuildJobs.Where(b => b.Status == "Completed" && b.OperatorEstimatedHours.HasValue && b.OperatorActualHours.HasValue)
-                .OrderByDescending(b => b.CreatedAt).Take(50).ToListAsync();
+                .OrderByDescending(b => b.CreatedAt). Take(50).ToListAsync();
             return builds.Select(b => new BuildPerformanceData
             {
                 BuildId = b.BuildId,
@@ -1318,6 +1335,19 @@ namespace OpCentrix.Services
                 SetupNotes = $"Started from scheduler job {jobId} - {job.PartNumber} (Qty: {job.Quantity})"
             };
             _context.BuildJobs.Add(build);
+            // Also update machine status immediately for scheduler-origin builds
+            try
+            {
+                var machine = await _context.Machines.FirstOrDefaultAsync(m => m.MachineId == job.MachineId);
+                if (machine != null)
+                {
+                    machine.Status = "Building";
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to set machine status to Building for scheduler started build {JobId}", jobId);
+            }
             await _context.SaveChangesAsync();
             return build.BuildId;
         }
