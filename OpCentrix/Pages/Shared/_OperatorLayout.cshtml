@@ -1,0 +1,13 @@
+@{
+    Layout = "_Layout"; // inherit primary layout
+}
+
+@* Pass through optional style section from content pages *@
+@RenderSection("Styles", required: false)
+
+<div class="operator-layout-wrapper">
+    @RenderBody()
+</div>
+
+@* Pass through optional scripts section from content pages (ensures base layout scripts like htmx load correctly) *@
+@RenderSection("Scripts", required: false)

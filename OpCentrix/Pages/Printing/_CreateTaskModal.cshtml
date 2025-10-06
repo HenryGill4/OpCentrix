@@ -1,0 +1,144 @@
+@model OpCentrix.Pages.Printing.IndexModel
+<div id="task-modal-wrapper" class="fixed inset-0 flex items-center justify-center p-4 z-50">
+  <div class="absolute inset-0 bg-black/50" onclick="closeJobModal()"></div>
+  <div class="relative bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden" id="create-task-modal">
+    <div class="px-5 py-4 border-b flex items-center justify-between bg-gray-50">
+      <h3 class="text-lg font-semibold text-gray-900">Create Operational Task</h3>
+      <button type="button" onclick="closeJobModal()" class="text-gray-400 hover:text-gray-600">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <form method="post"
+          asp-page="/Printing/Index"
+          asp-page-handler="CreateTask"
+          hx-post="/Printing?handler=CreateTask"
+          hx-target="#task-modal-wrapper"
+          hx-swap="innerHTML"
+          hx-indicator="#create-task-spinner"
+          class="p-5 space-y-5 create-task-form" novalidate>
+      @Html.AntiForgeryToken()
+
+      @if(!ViewContext.ModelState.IsValid){
+        <div class="bg-red-50 border border-red-200 text-red-700 text-sm rounded p-3">
+          <ul class="list-disc ml-5 space-y-1">
+          @foreach(var kv in ViewContext.ModelState.Where(ms=>ms.Value?.Errors.Count>0)){
+              foreach(var err in kv.Value!.Errors){<li>@err.ErrorMessage</li>}
+          }
+          </ul>
+        </div>
+      }
+
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wide text-gray-600 mb-1">Title <span class="text-red-500">*</span></label>
+        <input asp-for="NewTask.Title" required minlength="3" class="w-full rounded-md border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-sm" placeholder="Describe the task succinctly" />
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wide text-gray-600 mb-1">Description</label>
+        <textarea asp-for="NewTask.Description" rows="3" class="w-full rounded-md border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-sm" placeholder="Details, context, required action..."></textarea>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wide text-gray-600 mb-1">Priority</label>
+          <select asp-for="NewTask.Priority" class="w-full rounded-md border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-sm">
+            <option value="1">1 - Critical</option>
+            <option value="2">2 - High</option>
+            <option value="3" selected>3 - Normal</option>
+            <option value="4">4 - Low</option>
+            <option value="5">5 - Lowest</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wide text-gray-600 mb-1">Machine</label>
+          <select asp-for="NewTask.MachineId" class="w-full rounded-md border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-sm">
+            <option value="">(Any)</option>
+            <option>TI1</option>
+            <option>TI2</option>
+            <option>INC</option>
+            <option>TI3</option>
+            <option>TI4</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wide text-gray-600 mb-1">Due At (optional)</label>
+          <input asp-for="NewTask.DueAt" type="datetime-local" class="w-full rounded-md border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wide text-gray-600 mb-1">Category</label>
+          <input asp-for="NewTask.Category" class="w-full rounded-md border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-sm" placeholder="Maintenance, Safety..." />
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wide text-gray-600 mb-1">Tags</label>
+        <input asp-for="NewTask.Tags" class="w-full rounded-md border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-sm" placeholder="comma,separated,tags" />
+      </div>
+
+      <div class="flex items-center justify-between border-t pt-3">
+        <div class="flex items-center text-xs text-gray-500" id="create-task-spinner">
+            <svg class="w-4 h-4 mr-2 animate-spin hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle class="opacity-25" cx="12" cy="12" r="10" stroke-width="4"/><path class="opacity-75" stroke-width="4" d="M4 12a8 8 0 018-8"/></svg>
+            <span class="htmx-request:inline hidden">Saving...</span>
+        </div>
+        <div class="flex items-center gap-3">
+            <button type="button" onclick="closeJobModal()" class="px-4 py-2 text-sm bg-white border rounded-md hover:bg-gray-50">Cancel</button>
+            <button type="submit" id="wizard-submit" class="px-4 py-2 text-sm rounded-md bg-green-600 text-white hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed">Create Task</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function(){
+  const form = document.querySelector('#create-task-modal form.create-task-form');
+  if(!form) return;
+  console.log('[CreateTaskModal] Mounted. hx-target for submit:', form.getAttribute('hx-target'));
+
+  // Prevent double submit
+  form.addEventListener('submit', function(e){
+     const btn = form.querySelector('#wizard-submit');
+     if(btn?.disabled){ e.preventDefault(); return; }
+     btn.disabled = true; btn.dataset.originalText = btn.textContent; btn.textContent = 'Creating...';
+     console.log('[CreateTaskModal] Submitting to', form.getAttribute('hx-post'),'target:', form.getAttribute('hx-target'));
+  });
+
+  // Listen for custom trigger to refresh notifications
+  document.body.addEventListener('htmx:afterRequest', function(evt){
+     try {
+       const trig = evt?.detail?.xhr?.getResponseHeader('HX-Trigger');
+       if(trig){
+          let parsed; try { parsed = JSON.parse(trig); } catch { }
+          if(parsed?.taskCreated){
+             const notifEl = document.getElementById('task-notifications');
+             if(notifEl){
+               console.log('[CreateTaskModal] Refreshing #task-notifications');
+               if(window.htmx){ htmx.ajax('GET','/Printing?handler=TaskNotifications',{target:'#task-notifications',swap:'innerHTML'}); }
+             } else {
+               console.warn('[CreateTaskModal] #task-notifications not found in DOM. Skipping refresh. Current URL:', window.location.pathname);
+             }
+          }
+       }
+     } catch (e) { console.error('[CreateTaskModal] afterRequest handler error', e); }
+  });
+
+  // Global target error logging
+  document.body.addEventListener('htmx:targetError', function(e){
+     console.error('[HTMX targetError] Event detail:', e.detail, 'Trigger element:', e.target, 'hx-target attr:', e.target?.getAttribute?.('hx-target'));
+  });
+
+  // When modal target swapped empty (success) our page-level handler closes it. Provide safety timeout fallback.
+  document.addEventListener('htmx:afterSwap', function(ev){
+      if(ev.detail?.target?.id === 'task-modal-wrapper'){
+          console.log('[CreateTaskModal] afterSwap on task-modal-wrapper. New HTML length:', ev.detail.target.innerHTML.length);
+          if(ev.detail.target.innerHTML.trim()===''){
+              console.log('[CreateTaskModal] Wrapper emptied, scheduling closeJobModal()');
+              setTimeout(()=>{ if(typeof closeJobModal==='function') closeJobModal(); },50);
+          }
+      }
+  });
+})();
+</script>

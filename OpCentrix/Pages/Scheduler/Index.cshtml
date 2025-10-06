@@ -158,6 +158,7 @@
         .scheduler-horizontal-container .scheduler-machine-header,
         .scheduler-horizontal-container .scheduler-time-header{position:sticky;top:calc(var(--scheduler-header-height,72px) + var(--scheduler-subbar-height,48px));z-index:60;background:#fff;} 
 
+ 
         </style>
 }
 
@@ -182,8 +183,11 @@
             function setHeights(){
                 const header = document.getElementById('scheduler-header-card');
                 const sub = document.getElementById('batch-toolbar');
-                if(header){ document.documentElement.style.setProperty('--scheduler-header-height', header.offsetHeight + 'px'); }
-                if(sub){ document.documentElement.style.setProperty('--scheduler-subbar-height', sub.offsetHeight + 'px'); }
+                const isMobile = window.matchMedia('(max-width:640px)').matches;
+                if(!isMobile){
+                    if(header){ document.documentElement.style.setProperty('--scheduler-header-height', header.offsetHeight + 'px'); }
+                    if(sub){ document.documentElement.style.setProperty('--scheduler-subbar-height', sub.offsetHeight + 'px'); }
+                }
             }
             window.addEventListener('load', setHeights); window.addEventListener('resize', setHeights);
         })();

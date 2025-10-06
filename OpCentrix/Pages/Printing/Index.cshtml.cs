@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using OpCentrix.Authorization;
 using OpCentrix.Services;
 using OpCentrix.Models.MaintenanceV2;
+using System.ComponentModel.DataAnnotations;
 
 namespace OpCentrix.Pages.Printing
 {
@@ -14,127 +15,199 @@ namespace OpCentrix.Pages.Printing
 
         public List<OperationalTask> OperationalTasks { get; set; } = new();
 
+        public int HighPriorityCount { get; private set; }
+        public int OverdueCount { get; private set; }
+        public DateTime SnapshotUtc { get; private set; }
+
+        private static readonly string[] PrintingMachines = { "TI1", "TI2", "INC", "TI3", "TI4" };
+
         public IndexModel(IOperationalTaskService taskService, ILogger<IndexModel> logger)
         {
             _taskService = taskService;
             _logger = logger;
         }
 
-        public void OnGet()
+        [BindProperty]
+        public CreateTaskInput NewTask { get; set; } = new();
+
+        public class CreateTaskInput
         {
+            [Required, StringLength(120)] public string Title { get; set; } = string.Empty;
+            [StringLength(500)] public string? Description { get; set; }
+            [Range(1,5)] public int Priority { get; set; } = 3;
+            [StringLength(20)] public string? MachineId { get; set; }
+            public DateTime? DueAt { get; set; }
+            [StringLength(50)] public string? Category { get; set; }
+            [StringLength(200)] public string? Tags { get; set; }
         }
 
-        /// <summary>
-        /// Get task notifications for operators - filters to relevant tasks only
-        /// </summary>
-        public async Task<IActionResult> OnGetTaskNotificationsAsync()
+        public async Task OnGetAsync() => await LoadTaskSnapshotAsync();
+
+        public async Task<IActionResult> OnGetTaskNotificationsAsync(string? format = null)
         {
+            await LoadTaskSnapshotAsync();
+            if (string.Equals(format, "json", StringComparison.OrdinalIgnoreCase))
+            {
+                var payload = OperationalTasks.Select(t => new TaskNotificationDto
+                {
+                    Id = t.Id,
+                    Title = t.Title,
+                    Description = t.Description,
+                    MachineId = t.MachineId,
+                    Priority = t.Priority,
+                    DueAt = t.DueAt,
+                    Overdue = t.OverdueFlag == 1,
+                    Status = t.Status,
+                    Tags = t.Tags,
+                    Category = t.Category
+                });
+                return new JsonResult(new
+                {
+                    snapshotUtc = SnapshotUtc,
+                    highPriority = HighPriorityCount,
+                    overdue = OverdueCount,
+                    total = OperationalTasks.Count,
+                    tasks = payload
+                });
+            }
+            return Partial("_TaskNotifications", this);
+        }
+
+        public async Task<IActionResult> OnGetCreateTaskModalAsync()
+        {
+            NewTask = new CreateTaskInput();
+            return Partial("_CreateTaskModal", this);
+        }
+
+        public async Task<IActionResult> OnPostCreateTaskAsync()
+        {
+            if (!ModelState.IsValid)
+            {
+                Response.StatusCode = 400;
+                return Partial("_CreateTaskModal", this);
+            }
             try
             {
-                // Get all open operational tasks
-                var allTasks = await _taskService.GetOpenAsync(50);
-                
-                // Filter to tasks that are relevant for printing operators:
-                // 1. Machine-specific tasks for printing machines (TI1, TI2, INC, etc.)
-                // 2. General maintenance tasks without specific machine assignments
-                // 3. Tasks that are overdue or high priority
-                var printingMachines = new[] { "TI1", "TI2", "INC", "TI3", "TI4" };
-                
-                OperationalTasks = allTasks.Where(task => 
-                    // Include machine-specific tasks for printing machines
-                    (task.MachineId != null && printingMachines.Contains(task.MachineId, StringComparer.OrdinalIgnoreCase)) ||
-                    // Include general tasks without machine assignment (could be department-wide)
-                    string.IsNullOrEmpty(task.MachineId) ||
-                    // Include any overdue tasks that need immediate attention
-                    task.OverdueFlag == 1 ||
-                    // Include high priority tasks (Priority 1 or 2)
-                    task.Priority <= 2
-                ).OrderByDescending(t => t.Priority)
-                 .ThenBy(t => t.DueAt ?? DateTime.MaxValue)
-                 .Take(10) // Limit to top 10 most important
-                 .ToList();
+                var task = new OperationalTask
+                {
+                    Title = NewTask.Title.Trim(),
+                    Description = NewTask.Description?.Trim(),
+                    Priority = NewTask.Priority,
+                    MachineId = string.IsNullOrWhiteSpace(NewTask.MachineId) ? null : NewTask.MachineId.Trim().ToUpperInvariant(),
+                    DueAt = NewTask.DueAt?.ToUniversalTime(),
+                    Category = NewTask.Category?.Trim(),
+                    Tags = NewTask.Tags?.Trim(),
+                    Status = "Open",
+                    OverdueFlag = 0
+                };
+                await _taskService.CreateAsync(task);
+                await LoadTaskSnapshotAsync();
 
-                return Partial("_TaskNotifications", this);
+                // Signal front-end (htmx) to refresh and close modal (listeners already in modal script)
+                Response.Headers["HX-Trigger"] = "{\"taskCreated\":true}";
+                // Return empty content so the modal wrapper innerHTML becomes empty -> JS closes it
+                return Content(string.Empty, "text/html");
+            }
+            catch (DuplicateOperationalTaskException)
+            {
+                ModelState.AddModelError(string.Empty, "A similar task already exists.");
+                Response.StatusCode = 409;
+                return Partial("_CreateTaskModal", this);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading task notifications for printing operators");
-                OperationalTasks = new List<OperationalTask>();
-                return Partial("_TaskNotifications", this);
+                _logger.LogError(ex, "Failed creating operational task");
+                ModelState.AddModelError(string.Empty, "Unexpected error creating task.");
+                Response.StatusCode = 500;
+                return Partial("_CreateTaskModal", this);
             }
         }
 
-        /// <summary>
-        /// Mark an operational task as completed
-        /// </summary>
         public async Task<IActionResult> OnPostCompleteTaskAsync(int taskId)
         {
             try
             {
                 var userId = GetCurrentUserId();
                 var success = await _taskService.CompleteAsync(taskId, userId);
-                
                 if (success)
-                {
                     _logger.LogInformation("Task {TaskId} completed by user {UserId}", taskId, userId);
-                }
-
-                // Return updated task notifications
-                return await OnGetTaskNotificationsAsync();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error completing task {TaskId}", taskId);
-                return await OnGetTaskNotificationsAsync();
             }
+            return await OnGetTaskNotificationsAsync();
         }
 
-        /// <summary>
-        /// Dismiss/reset a task (early completion/reset cycle)
-        /// </summary>
         public async Task<IActionResult> OnPostDismissTaskAsync(int taskId)
         {
             try
             {
                 var userId = GetCurrentUserId();
                 var success = await _taskService.ResetAsync(taskId, userId);
-                
                 if (success)
-                {
                     _logger.LogInformation("Task {TaskId} dismissed/reset by user {UserId}", taskId, userId);
-                }
-
-                // Return updated task notifications
-                return await OnGetTaskNotificationsAsync();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error dismissing task {TaskId}", taskId);
-                return await OnGetTaskNotificationsAsync();
+            }
+            return await OnGetTaskNotificationsAsync();
+        }
+
+        private async Task LoadTaskSnapshotAsync()
+        {
+            try
+            {
+                SnapshotUtc = DateTime.UtcNow;
+                OperationalTasks = await CreateTaskNotificationSnapshotAsync();
+                HighPriorityCount = OperationalTasks.Count(t => t.Priority <= 2);
+                OverdueCount = OperationalTasks.Count(t => t.OverdueFlag == 1);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to load operational task snapshot");
+                OperationalTasks = new();
+                HighPriorityCount = 0;
+                OverdueCount = 0;
             }
         }
 
-        /// <summary>
-        /// Get current user ID from session/claims
-        /// </summary>
+        private async Task<List<OperationalTask>> CreateTaskNotificationSnapshotAsync(int fetchMax = 50, int displayMax = 10)
+        {
+            var all = await _taskService.GetOpenAsync(fetchMax);
+            var filtered = all.Where(task =>
+                    (task.MachineId != null && PrintingMachines.Contains(task.MachineId, StringComparer.OrdinalIgnoreCase)) ||
+                    string.IsNullOrEmpty(task.MachineId) ||
+                    task.OverdueFlag == 1 ||
+                    task.Priority <= 2)
+                .OrderByDescending(t => t.Priority)
+                .ThenBy(t => t.DueAt ?? DateTime.MaxValue)
+                .Take(displayMax)
+                .ToList();
+            return filtered;
+        }
+
         private int GetCurrentUserId()
         {
-            // Try to get user ID from session first
             if (HttpContext.Session.TryGetValue("UserId", out var userIdBytes))
-            {
                 return BitConverter.ToInt32(userIdBytes, 0);
-            }
-
-            // Fallback to claims if session not available
             var userIdClaim = User.FindFirst("UserId")?.Value;
-            if (int.TryParse(userIdClaim, out var userId))
-            {
-                return userId;
-            }
+            return int.TryParse(userIdClaim, out var userId) ? userId : 1;
+        }
 
-            // Default fallback - should ideally not happen in production
-            _logger.LogWarning("Could not determine current user ID, using default");
-            return 1; // Default admin user ID
+        private sealed record TaskNotificationDto
+        {
+            public int Id { get; init; }
+            public string Title { get; init; } = string.Empty;
+            public string? Description { get; init; }
+            public string? MachineId { get; init; }
+            public int Priority { get; init; }
+            public DateTime? DueAt { get; init; }
+            public bool Overdue { get; init; }
+            public string Status { get; init; } = string.Empty;
+            public string? Tags { get; init; }
+            public string? Category { get; init; }
         }
     }
 }

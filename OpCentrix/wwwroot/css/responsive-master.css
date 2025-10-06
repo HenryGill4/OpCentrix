@@ -276,7 +276,26 @@
         min-width: 0 !important;
     }
 }
+/* Disable sticky behavior on small screens (mobile) */
+@media (max-width: 640px) {
+    .scheduler-sticky-header,
+    .scheduler-sticky-sub {
+        position: static !important;
+        top: auto;
+        box-shadow: none;
+    }
 
+    .scheduler-horizontal-container .scheduler-machine-header,
+    .scheduler-horizontal-container .scheduler-time-header {
+        position: static !important;
+        top: auto;
+    }
+    /* Prevent reserved space offsets when not sticky */
+    :root {
+        --scheduler-header-height: 0px;
+        --scheduler-subbar-height: 0px;
+    }
+}
 /* ==============================================
    SMALL MOBILE DEVICES (0-480px)
    ============================================== */

@@ -319,7 +319,10 @@ builder.Services.AddScoped<OpCentrix.Services.Maintenance.IMaintenanceService>(s
 });
 
 // NEW: Maintenance Background Service for automated processing
-builder.Services.AddHostedService<OpCentrix.Services.Background.MaintenanceBackgroundService>();
+if (builder.Configuration.GetValue<bool>("EnableMaintenanceBackgroundService", false))
+{
+    builder.Services.AddHostedService<OpCentrix.Services.Background.MaintenanceBackgroundService>();
+}
 
 var app = builder.Build();
 

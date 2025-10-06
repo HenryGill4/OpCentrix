@@ -7,17 +7,31 @@
 
 <div class="container-fluid py-6">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex items-center justify-between mb-8">
+        <div class="flex flex-wrap items-center justify-between mb-8 gap-4">
             <div>
                 <h1 class="text-3xl font-bold text-gray-900">SLS Metal Printing Department</h1>
                 <p class="mt-1 text-sm text-gray-600">Manage metal printing operations for titanium and Inconel</p>
             </div>
-            <div>
+            <div class="flex items-center gap-3">
+                <!-- HARDENED: Create Task trigger with explicit type + JS fallback if HTMX is unavailable -->
+                <button id="create-task-btn"
+                        type="button"
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-all"
+                        hx-get="/Printing?handler=CreateTaskModal"
+                        hx-target="#modal-content"
+                        hx-swap="innerHTML"
+                        hx-on:htmx:beforeSend="this.disabled=true;this.classList.add('opacity-70');"
+                        hx-on:htmx:afterOnLoad="this.disabled=false;this.classList.remove('opacity-70');"
+                        hx-on:htmx:responseError="console.error('CreateTaskModal load failed', event.detail); window.OpCentrix?.showNotification('error','Failed loading task form'); createTaskModalFallback();"
+                        onclick="if(!window.htmx){createTaskModalFallback();}">
+                    <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                    Create Task
+                </button>
                 <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-all"
+                        type="button"
                         hx-get="/Scheduler?handler=ShowAddModal&machineId=TI1&date=@DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm")"
                         hx-target="#modal-content" 
-                        hx-swap="innerHTML"
-                        hx-indicator=".request-indicator">
+                        hx-swap="innerHTML">
                     <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                     </svg>
@@ -311,6 +325,17 @@
 
 @section Scripts {
 <script>
+    // Fallback loader in case HTMX is not available or request fails
+    function createTaskModalFallback(){
+        const btn=document.getElementById('create-task-btn');
+        if(btn) btn.disabled=true;
+        fetch('/Printing?handler=CreateTaskModal', { headers: { 'X-Requested-With':'XMLHttpRequest' }})
+            .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); })
+            .then(html=>{ const modal=document.getElementById('modal-content'); if(modal){ modal.innerHTML=html; showJobModal(); }})
+            .catch(err=>{ console.error('Fallback modal load failed', err); window.OpCentrix?.showNotification('error','Unable to load Create Task form'); })
+            .finally(()=>{ if(btn) btn.disabled=false; });
+    }
+
     // Enhanced modal functions
     function showJobModal() {
         const modal = document.getElementById('modal-content');
@@ -318,15 +343,9 @@
             modal.classList.remove('hidden');
             modal.classList.add('flex');
             document.body.style.overflow = 'hidden';
-            
-            // Focus first input for accessibility
-            setTimeout(() => {
-                const firstInput = modal.querySelector('input, select, textarea');
-                firstInput?.focus();
-            }, 100);
+            setTimeout(() => { const firstInput = modal.querySelector('input, select, textarea'); firstInput?.focus(); }, 100);
         }
     }
-
     function closeJobModal() {
         const modal = document.getElementById('modal-content');
         if (modal) {
@@ -337,52 +356,26 @@
         }
     }
 
-    // Task notification actions
-    function completeTask(taskId) {
-        if (confirm('Mark this task as completed?')) {
-            htmx.ajax('POST', `/PrintTracking?handler=CompleteTask&taskId=${taskId}`, {
-                target: '#task-notifications',
-                swap: 'innerHTML'
-            });
-        }
-    }
-
-    function dismissTask(taskId) {
-        if (confirm('Dismiss this task notification?')) {
-            htmx.ajax('POST', `/PrintTracking?handler=DismissTask&taskId=${taskId}`, {
-                target: '#task-notifications', 
-                swap: 'innerHTML'
-            });
-        }
-    }
-
-    // HTMX event handlers
+    // HTMX event handlers (resilient)
     document.body.addEventListener('htmx:afterSwap', function (e) {
-        if (e.detail.target.id === "modal-content") {
-            const container = document.getElementById("modal-content");
-            if (container.innerHTML.trim() === "") {
-                closeJobModal();
-            } else {
-                showJobModal();
-            }
+        if (e.detail?.target?.id === 'modal-content') {
+            const container = document.getElementById('modal-content');
+            if (!container) return;
+            if (container.innerHTML.trim() === '') { closeJobModal(); } else { showJobModal(); }
         }
     });
 
     // Background modal close
     document.addEventListener('click', function(e) {
         const modal = document.getElementById('modal-content');
-        if (e.target === modal && modal.classList.contains('flex')) {
-            closeJobModal();
-        }
+        if (e.target === modal && modal.classList.contains('flex')) { closeJobModal(); }
     });
 
     // Escape key modal close
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             const modal = document.getElementById('modal-content');
-            if (modal.classList.contains('flex')) {
-                closeJobModal();
-            }
+            if (modal && modal.classList.contains('flex')) { closeJobModal(); }
         }
     });
 </script>

@@ -8,7 +8,8 @@
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
     </div>
-    <form id="task-wizard-form" hx-post="/PrintTracking?handler=CreateTask" hx-target="#task-list" hx-swap="outerHTML">
+    <!-- CHANGED: hx-target from #task-list to #task-list-wrapper (actual existing element) -->
+    <form id="task-wizard-form" hx-post="/PrintTracking?handler=CreateTask" hx-target="#task-list-wrapper" hx-swap="outerHTML">
         @Html.AntiForgeryToken()
         <input type="hidden" name="WizardStep" id="wizard-step" value="1" />
         <input type="hidden" name="IntervalsJson" id="intervals-json" />
@@ -19,7 +20,6 @@
                 <li class="wizard-step-item" data-step="2">2. Intervals</li>
                 <li class="wizard-step-item" data-step="3">3. Review</li>
             </ol>
-
             <!-- STEP 1: BASICS -->
             <section class="wizard-step" data-step="1">
                 <div class="grid md:grid-cols-2 gap-6">
@@ -55,7 +55,6 @@
                     </div>
                 </div>
             </section>
-
             <!-- STEP 2: INTERVALS -->
             <section class="wizard-step hidden" data-step="2">
                 <div class="flex items-start justify-between gap-4 mb-3">
@@ -65,8 +64,7 @@
                     </div>
                     <button type="button" id="add-interval" class="px-3 py-1.5 rounded-md bg-blue-600 text-white text-xs font-semibold">Add Interval</button>
                 </div>
-                <div class="border rounded-md divide-y" id="interval-rows" data-empty-message="No intervals added yet. Add at least one.">
-                </div>
+                <div class="border rounded-md divide-y" id="interval-rows" data-empty-message="No intervals added yet. Add at least one."></div>
                 <div class="mt-4 flex items-center gap-4">
                     <label class="inline-flex items-center gap-2 text-xs">
                         <input type="checkbox" name="Options.SuppressIfOpen" class="rounded border-gray-300" />
@@ -78,7 +76,6 @@
                     </label>
                 </div>
             </section>
-
             <!-- STEP 3: REVIEW -->
             <section class="wizard-step hidden" data-step="3">
                 <h4 class="font-semibold text-gray-700 mb-3">Review & Confirm</h4>
@@ -108,6 +105,11 @@
 </style>
 <script>
 (function(){
+  // Log actual presence of target to diagnose previous htmx:targetError
+  const targetExists = !!document.querySelector('#task-list-wrapper');
+  console.log('[TaskWizard] Initialized. Using hx-target #task-list-wrapper. Exists:', targetExists);
+  if(!targetExists){ console.warn('[TaskWizard] Expected target #task-list-wrapper not found. CreateTask POST will still succeed but swap will be skipped.'); }
+
   const modal=document.getElementById('create-task-modal');
   const stepInput=modal.querySelector('#wizard-step');
   const steps=[...modal.querySelectorAll('.wizard-step')];
@@ -127,10 +129,7 @@
     btnNext.classList.toggle('hidden', n==3);
     btnSubmit.classList.toggle('hidden', n!=3);
     stepInput.value=n;
-    if(n==3){
-      if(!packIntervals(true)) { showStep(2); return; }
-      buildReview();
-    }
+    if(n==3){ if(!packIntervals(true)) { showStep(2); return; } buildReview(); }
   }
   function current(){return parseInt(stepInput.value);}  
   btnPrev.addEventListener('click',()=>{ if(current()>1) showStep(current()-1); });
@@ -156,69 +155,32 @@
     row.querySelector('[data-field=type]').addEventListener('change',e=>{row.dataset.type=e.target.value;slot.innerHTML=intervalTemplates[e.target.value]();});
     row.querySelector('.remove-btn').addEventListener('click',()=>{row.remove();packIntervals(false);});
   }
-
-  function getRemoveIconSvg(){
-     return '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>';
-  }
-
+  function getRemoveIconSvg(){return '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>';}
   function packIntervals(showErrors){
     const rows=[...intervalContainer.querySelectorAll('.interval-row')];
     const list=[]; let hasError=false; intervalError.classList.add('hidden');
-    rows.forEach(r=>{
-      const type=r.dataset.type; const obj={ type };
-      function get(field){ return r.querySelector(`[data-field="${field}"]`); }
-      switch(type){
-        case 'BuildCount': obj.material=get('material').value; obj.threshold=parseInt(get('threshold').value||'0'); if(!obj.threshold||obj.threshold<1){hasError=true;} break;
-        case 'MachineHours': obj.hours=parseFloat(get('hours').value||'0'); if(!obj.hours||obj.hours<=0){hasError=true;} break;
-        case 'CalendarWeeks': obj.every=parseInt(get('every').value||'0'); if(!obj.every||obj.every<1){hasError=true;} break;
-        case 'DayOfWeek': obj.dayOfWeek=get('dayOfWeek').value; break;
-        case 'FixedDate': obj.fixedDate=get('fixedDate').value; break;
-      }
-      list.push(obj);
-    });
+    rows.forEach(r=>{ const type=r.dataset.type; const obj={ type }; function get(field){ return r.querySelector(`[data-field="${field}"]`); }
+      switch(type){ case 'BuildCount': obj.material=get('material').value; obj.threshold=parseInt(get('threshold').value||'0'); if(!obj.threshold||obj.threshold<1){hasError=true;} break; case 'MachineHours': obj.hours=parseFloat(get('hours').value||'0'); if(!obj.hours||obj.hours<=0){hasError=true;} break; case 'CalendarWeeks': obj.every=parseInt(get('every').value||'0'); if(!obj.every||obj.every<1){hasError=true;} break; case 'DayOfWeek': obj.dayOfWeek=get('dayOfWeek').value; break; case 'FixedDate': obj.fixedDate=get('fixedDate').value; break; }
+      list.push(obj); });
     if(list.length===0){hasError=true;}
     if(hasError && showErrors){ intervalError.textContent='Please add at least one valid interval (fix inputs) or provide a Due date on the Basics step.'; intervalError.classList.remove('hidden'); }
-    intervalsJsonInput.value=JSON.stringify(list);
-    return !hasError;
+    intervalsJsonInput.value=JSON.stringify(list); return !hasError;
   }
-
   const form=modal.querySelector('#task-wizard-form');
-  form.addEventListener('submit',e=>{ if(!packIntervals(true)){ e.preventDefault(); showStep(2);} });
-
+  form.addEventListener('submit',e=>{ if(!packIntervals(true)){ e.preventDefault(); showStep(2);} else { console.log('[TaskWizard] Submitting to', form.getAttribute('hx-post'),'target:', form.getAttribute('hx-target')); }});
   function buildReview(){
     const basic=`<strong>Basics:</strong> ${form.querySelector('[name="NewTask.Title"]').value || '(no title)'} | Priority ${form.querySelector('[name="NewTask.Priority"]').value} | Machine ${form.querySelector('[name="NewTask.MachineId"]').value||'-'}`;
     modal.querySelector('[data-review="basic"]').innerHTML=basic;
     const intervals = JSON.parse(intervalsJsonInput.value||'[]');
     const modeAll = form.querySelector('[name="Options.MatchAll"]').checked;
     const suppress = form.querySelector('[name="Options.SuppressIfOpen"]').checked;
-    const lines = intervals.map(i=>{
-      switch(i.type){
-        case 'BuildCount': return `Builds (${i.material}) >= ${i.threshold}`;
-        case 'MachineHours': return `Machine Hours >= ${i.hours}`;
-        case 'CalendarWeeks': return `Every ${i.every} week(s)`;
-        case 'DayOfWeek': return `Weekly on ${i.dayOfWeek}`;
-        case 'FixedDate': return `Fixed Date ${i.fixedDate}`;
-        default: return JSON.stringify(i);
-      }
-    });
+    const lines = intervals.map(i=>{ switch(i.type){ case 'BuildCount': return `Builds (${i.material}) >= ${i.threshold}`; case 'MachineHours': return `Machine Hours >= ${i.hours}`; case 'CalendarWeeks': return `Every ${i.every} week(s)`; case 'DayOfWeek': return `Weekly on ${i.dayOfWeek}`; case 'FixedDate': return `Fixed Date ${i.fixedDate}`; default: return JSON.stringify(i);} });
     const intervalsHtml = `<strong>Intervals (${modeAll?'ALL required':'ANY'}):</strong><ul class='list-disc ml-5 mt-1 space-y-0.5'>${lines.map(l=>`<li>${l}</li>`).join('')}</ul>` + (suppress?"<div class='mt-2 text-xs text-amber-600'>Duplicate suppression enabled.</div>":'');
     modal.querySelector('[data-review="intervals"]').innerHTML=intervalsHtml;
   }
-
-  // INITIALIZE: Add a default first interval and wire button
   addInterval();
   if(addIntervalBtn){ addIntervalBtn.addEventListener('click', ()=> addInterval()); }
-
   showStep(1);
-
-  // Force refresh of task list after successful POST (in case initial partial returns empty due to schema race)
-  form.addEventListener('htmx:afterRequest', (e)=>{
-    if(e.detail.xhr && e.detail.xhr.responseURL && e.detail.xhr.responseURL.indexOf('handler=CreateTask')>-1 && e.detail.xhr.status===200){
-      // Delay a tick to allow modal removal script, then fetch fresh list
-      setTimeout(()=>{ if(window.htmx){ htmx.ajax('GET','/PrintTracking?handler=TaskList',{target:'#task-list', swap:'outerHTML'}); } },150);
-    }
-  });
+  form.addEventListener('htmx:afterRequest', (e)=>{ if(e.detail.xhr && e.detail.xhr.responseURL && e.detail.xhr.responseURL.indexOf('handler=CreateTask')>-1 && e.detail.xhr.status===200){ setTimeout(()=>{ if(window.htmx){ console.log('[TaskWizard] Refreshing task list after create'); htmx.ajax('GET','/PrintTracking?handler=TaskList',{target:'#task-list-wrapper', swap:'outerHTML'}); }},150); }});
 })();
-
-document.addEventListener('htmx:afterOnLoad',e=>{if(e.detail.target.id==='task-list'){document.getElementById('create-task-modal')?.remove();}});
 </script>
