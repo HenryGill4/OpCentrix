@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using OpCentrix.Data;
 using OpCentrix.Models;
@@ -10,6 +10,7 @@ using Serilog;
 using Serilog.Events;
 using System.Reflection;
 using Microsoft.AspNetCore.Localization;
+using Microsoft.Extensions.Caching.Memory;
 
 // Configure Serilog for global logging (Task 2.5)
 Log.Logger = new LoggerConfiguration()
@@ -160,6 +161,8 @@ builder.Services.AddAuthorization(options =>
 
     options.AddPolicy("ComplianceSpecialistAccess", policy =>
         policy.RequireRole("Admin", "Manager", "ComplianceSpecialist"));
+
+    options.AddPolicy("MaintenanceAdmin", policy => policy.RequireRole("Admin","Manager"));
 });
 
 // Register application services
@@ -170,6 +173,11 @@ builder.Services.AddScoped<IPrintTrackingService, PrintTrackingService>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<IMasterScheduleService, MasterScheduleService>(); // Task 12: Master Schedule Service
 builder.Services.AddScoped<SlsDataSeedingService>(); // SLS Data Seeding Service
+
+// NEW: Operational Task service registration (Phase 1 Maintenance V2 tasks)
+builder.Services.AddScoped<IOperationalTaskService, OperationalTaskService>();
+builder.Services.AddScoped<IOperationalTaskEvaluationService, OperationalTaskEvaluationService>();
+builder.Services.AddHostedService<OperationalTaskEvaluationHostedService>();
 
 // Register database validation service
 builder.Services.AddScoped<DatabaseValidationService>();
@@ -268,7 +276,7 @@ builder.Services.AddScoped<IStageProgressionService, StageProgressionService>();
 // Phase 5: Build Time Analytics Service (Machine Learning and Performance Analytics)
 builder.Services.AddScoped<IBuildTimeAnalyticsService, BuildTimeAnalyticsService>();
 
-// NEW: Stage Dashboard Seeding Service for comprehensive test data
+// NEW: Stage Dashboard Seeding Service
 builder.Services.AddScoped<StageDashboardSeedingService>();
 
 // NEW: Core manufacturing data seeding (materials + machines + demo part)
@@ -284,7 +292,8 @@ builder.Services.AddScoped<IPrintTrackingService>(provider =>
     var logger = provider.GetRequiredService<ILogger<PrintTrackingService>>();
     var cohortService = provider.GetService<ICohortManagementService>(); // Optional
     var stageProgressionService = provider.GetRequiredService<IStageProgressionService>(); // Required for Phase 3
-    return new PrintTrackingService(context, logger, cohortService, stageProgressionService);
+    var maint = provider.GetService<OpCentrix.Services.Maintenance.IMaintenanceService>();
+    return new PrintTrackingService(context, logger, cohortService, stageProgressionService, null, null, maint);
 });
 
 // NEW: Production Build System Service
@@ -293,11 +302,24 @@ builder.Services.AddScoped<IProductionBuildService, ProductionBuildService>();
 // FIXED: Use only the Admin namespace ProductionStageSeederService to resolve ambiguity - COMPLETE FIX
 builder.Services.AddScoped<OpCentrix.Services.Admin.IProductionStageSeederService, OpCentrix.Services.Admin.ProductionStageSeederService>();
 
-// Register the new StageTemplateService for custom field templates - PLACEHOLDER
-// builder.Services.AddScoped<IStageTemplateService, StageTemplateService>();
-
 // NEW: Runtime scheduler service (Phase 3)
 builder.Services.AddScoped<OpCentrix.Services.Runtime.ISchedulerRuntimeService, OpCentrix.Services.Runtime.SchedulerRuntimeService>();
+builder.Services.AddScoped<OpCentrix.Services.Maintenance.MaintenanceComponentSeedingService>();
+
+// Register maintenance services with proper dependencies including memory cache
+builder.Services.AddMemoryCache(); // Add memory cache service
+
+builder.Services.AddScoped<OpCentrix.Services.Maintenance.IMaintenanceService>(serviceProvider =>
+{
+    var context = serviceProvider.GetRequiredService<SchedulerContext>();
+    var logger = serviceProvider.GetRequiredService<ILogger<OpCentrix.Services.Maintenance.MaintenanceService>>();
+    var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
+    var memoryCache = serviceProvider.GetRequiredService<IMemoryCache>();
+    return new OpCentrix.Services.Maintenance.MaintenanceService(context, logger, loggerFactory, memoryCache);
+});
+
+// NEW: Maintenance Background Service for automated processing
+builder.Services.AddHostedService<OpCentrix.Services.Background.MaintenanceBackgroundService>();
 
 var app = builder.Build();
 
@@ -312,11 +334,14 @@ using (var scope = app.Services.CreateScope())
         
         var coreSeeder = scope.ServiceProvider.GetRequiredService<CoreManufacturingDataSeedingService>();
         await coreSeeder.EnsureCoreManufacturingDataAsync();
+        // NEW: seed maintenance components
+        var maintCompSeeder = scope.ServiceProvider.GetRequiredService<OpCentrix.Services.Maintenance.MaintenanceComponentSeedingService>();
+        await maintCompSeeder.EnsureSeedAsync();
     }
     catch (Exception ex)
     {
         var log = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        log.LogError(ex, "❌ [STARTUP] Failed during startup initialization");
+        log.LogError(ex, "? [STARTUP] Failed during startup initialization");
     }
 }
 
@@ -357,233 +382,6 @@ app.MapRazorPages();
 
 // FIXED: Map API controllers for Production Stages and other API endpoints  
 app.MapControllers();
-
-// TEMPORARY FIX: Direct endpoint to bypass controller routing issues
-app.MapGet("/api/production-stages/available", async (SchedulerContext context, ILogger<Program> logger) =>
-{
-    try
-    {
-        logger.LogInformation("🔧 [DIRECT-API] Direct production stages endpoint called");
-
-        // Ensure we have some stages
-        var stageCount = await context.ProductionStages.CountAsync();
-        if (stageCount == 0)
-        {
-            logger.LogWarning("⚠️ [DIRECT-API] No stages found, creating default stages...");
-            await CreateDefaultStagesDirectly(context, logger);
-        }
-
-        var stages = await context.ProductionStages
-            .Where(ps => ps.IsActive)
-            .OrderBy(ps => ps.DisplayOrder)
-            .ThenBy(ps => ps.Name)
-            .Select(ps => new
-            {
-                id = ps.Id,
-                name = ps.Name,
-                description = ps.Description ?? "",
-                defaultHourlyRate = ps.DefaultHourlyRate,
-                defaultSetupMinutes = ps.DefaultSetupMinutes,
-                isActive = ps.IsActive,
-                defaultDurationHours = ps.DefaultDurationHours,
-                defaultMaterialCost = ps.DefaultMaterialCost,
-                displayOrder = ps.DisplayOrder,
-                department = ps.Department ?? "",
-                stageColor = ps.StageColor ?? "#007bff",
-                stageIcon = ps.StageIcon ?? "fas fa-cog"
-            })
-            .ToListAsync();
-
-        logger.LogInformation("✅ [DIRECT-API] Returning {StageCount} production stages", stages.Count);
-        return Results.Ok(stages);
-    }
-    catch (Exception ex)
-    {
-        logger.LogError(ex, "❌ [DIRECT-API] Error in direct stages endpoint");
-        
-        // Return fallback data
-        var fallbackStages = new[]
-        {
-            new
-            {
-                id = 1,
-                name = "3D Printing (SLS)",
-                description = "Selective Laser Sintering (Fallback)",
-                defaultHourlyRate = 85.00m,
-                defaultDurationHours = 8.0,
-                defaultSetupMinutes = 30,
-                defaultMaterialCost = 0.00m,
-                displayOrder = 1,
-                department = "3D Printing",
-                stageColor = "#007bff",
-                stageIcon = "fas fa-cube",
-                isActive = true
-            },
-            new
-            {
-                id = 2,
-                name = "CNC Machining",
-                description = "Computer Numerical Control machining (Fallback)",
-                defaultHourlyRate = 85.00m,
-                defaultDurationHours = 4.0,
-                defaultSetupMinutes = 45,
-                defaultMaterialCost = 0.00m,
-                displayOrder = 2,
-                department = "CNC Machining",
-                stageColor = "#28a745",
-                stageIcon = "fas fa-cogs",
-                isActive = true
-            },
-            new
-            {
-                id = 3,
-                name = "EDM Operations",
-                description = "Electrical Discharge Machining (Fallback)",
-                defaultHourlyRate = 95.00m,
-                defaultDurationHours = 6.0,
-                defaultSetupMinutes = 60,
-                defaultMaterialCost = 0.00m,
-                displayOrder = 3,
-                department = "EDM",
-                stageColor = "#ffc107",
-                stageIcon = "fas fa-bolt",
-                isActive = true
-            }
-        };
-        
-        logger.LogWarning("⚠️ [DIRECT-API] Returning fallback stages due to error");
-        return Results.Ok(fallbackStages);
-    }
-});
-
-// Add explicit API routing for Production Stages (troubleshooting)
-app.MapGet("/api/production-stages/test", async (HttpContext context) =>
-{
-    return Results.Ok(new { message = "Direct route test working", timestamp = DateTime.UtcNow });
-});
-
-// Add fallback route for API debugging
-app.MapFallback("/api/{**path}", async (HttpContext context) =>
-{
-    var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-    logger.LogWarning("🔍 [API-FALLBACK] Unmatched API route: {Path}", context.Request.Path);
-    return Results.NotFound(new { error = "API endpoint not found", path = context.Request.Path.ToString() });
-});
-
-// Helper function to create default stages directly
-static async Task CreateDefaultStagesDirectly(SchedulerContext context, Microsoft.Extensions.Logging.ILogger<Program> logger)
-{
-    try
-    {
-        var defaultStages = new[]
-        {
-            new OpCentrix.Models.ProductionStage
-            {
-                Name = "3D Printing (SLS)",
-                Description = "Selective Laser Sintering manufacturing process",
-                Department = "3D Printing",
-                DefaultHourlyRate = 85.00m,
-                DefaultDurationHours = 8.0,
-                DefaultSetupMinutes = 30,
-                DefaultMaterialCost = 0.00m,
-                DisplayOrder = 1,
-                IsActive = true,
-                StageColor = "#007bff",
-                StageIcon = "fas fa-cube",
-                RequiresQualityCheck = true,
-                CreatedDate = DateTime.UtcNow,
-                CreatedBy = "System",
-                LastModifiedDate = DateTime.UtcNow,
-                LastModifiedBy = "System"
-            },
-            new OpCentrix.Models.ProductionStage
-            {
-                Name = "CNC Machining",
-                Description = "Computer Numerical Control machining operations",
-                Department = "CNC Machining",
-                DefaultHourlyRate = 85.00m,
-                DefaultDurationHours = 4.0,
-                DefaultSetupMinutes = 45,
-                DefaultMaterialCost = 0.00m,
-                DisplayOrder = 2,
-                IsActive = true,
-                StageColor = "#28a745",
-                StageIcon = "fas fa-cogs",
-                RequiresQualityCheck = true,
-                CreatedDate = DateTime.UtcNow,
-                CreatedBy = "System",
-                LastModifiedDate = DateTime.UtcNow,
-                LastModifiedBy = "System"
-            },
-            new OpCentrix.Models.ProductionStage
-            {
-                Name = "EDM Operations",
-                Description = "Electrical Discharge Machining operations",
-                Department = "EDM",
-                DefaultHourlyRate = 95.00m,
-                DefaultDurationHours = 6.0,
-                DefaultSetupMinutes = 60,
-                DefaultMaterialCost = 0.00m,
-                DisplayOrder = 3,
-                IsActive = true,
-                StageColor = "#ffc107",
-                StageIcon = "fas fa-bolt",
-                RequiresQualityCheck = true,
-                CreatedDate = DateTime.UtcNow,
-                CreatedBy = "System",
-                LastModifiedDate = DateTime.UtcNow,
-                LastModifiedBy = "System"
-            },
-            new OpCentrix.Models.ProductionStage
-            {
-                Name = "Heat Treatment",
-                Description = "Heat treatment and stress relief",
-                Department = "Finishing",
-                DefaultHourlyRate = 75.00m,
-                DefaultDurationHours = 2.0,
-                DefaultSetupMinutes = 15,
-                DefaultMaterialCost = 0.00m,
-                DisplayOrder = 4,
-                IsActive = true,
-                StageColor = "#dc3545",
-                StageIcon = "fas fa-fire",
-                RequiresQualityCheck = true,
-                CreatedDate = DateTime.UtcNow,
-                CreatedBy = "System",
-                LastModifiedDate = DateTime.UtcNow,
-                LastModifiedBy = "System"
-            },
-            new OpCentrix.Models.ProductionStage
-            {
-                Name = "Finishing",
-                Description = "Final finishing operations",
-                Department = "Finishing",
-                DefaultHourlyRate = 65.00m,
-                DefaultDurationHours = 3.0,
-                DefaultSetupMinutes = 20,
-                DefaultMaterialCost = 0.00m,
-                DisplayOrder = 5,
-                IsActive = true,
-                StageColor = "#6f42c1",
-                StageIcon = "fas fa-polish",
-                RequiresQualityCheck = true,
-                CreatedDate = DateTime.UtcNow,
-                CreatedBy = "System",
-                LastModifiedDate = DateTime.UtcNow,
-                LastModifiedBy = "System"
-            }
-        };
-
-        context.ProductionStages.AddRange(defaultStages);
-        await context.SaveChangesAsync();
-        
-        logger.LogInformation("✅ [DIRECT-API] Created {StageCount} default production stages", defaultStages.Length);
-    }
-    catch (Exception ex)
-    {
-        logger.LogError(ex, "❌ [DIRECT-API] Error creating default stages");
-    }
-}
 
 app.Run();
 

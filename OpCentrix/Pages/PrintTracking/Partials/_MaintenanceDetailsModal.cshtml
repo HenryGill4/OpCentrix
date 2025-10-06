@@ -1,0 +1,104 @@
+@model OpCentrix.ViewModels.Maintenance.MaintenanceSummaryViewModel
+@using OpCentrix.ViewModels.Maintenance
+@using OpCentrix.Models.Maintenance
+@{
+    var ruleList = Model.Rules ?? new List<RuleStatusDto>();
+    var hasRules = ruleList.Any();
+    var machineLevel = ruleList.Where(r => string.IsNullOrEmpty(r.ComponentName)).ToList();
+    var componentGroups = ruleList
+        .Where(r => !string.IsNullOrEmpty(r.ComponentName))
+        .GroupBy(r => r.ComponentName!)
+        .OrderBy(g => g.Key)
+        .ToList();
+}
+<div class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" id="maintenance-details-modal">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+    <div class="px-6 py-4 border-b flex items-center justify-between">
+        <h3 class="text-lg font-bold">Maintenance Status - @Model.MachineId</h3>
+        <button class="text-gray-500 hover:text-gray-700" title="Close" aria-label="Close" onclick="document.getElementById('maintenance-details-modal').remove();window.PrintTracking?.resumeAutoRefresh();">&times;</button>
+    </div>
+    <div class="p-5 overflow-y-auto space-y-6 text-sm">
+        @if(!hasRules)
+        {
+            <div class="text-gray-500">No maintenance rules configured.</div>
+        }
+        else
+        {
+            <div class="space-y-5">
+                @if(machineLevel.Any())
+                {
+                    <div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <h4 class="font-bold text-gray-800">Machine Level</h4>
+                            <span class="text-xs text-gray-500">(@machineLevel.Count)</span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            @foreach(var r in machineLevel.OrderByDescending(r=>r.IsOverdue).ThenByDescending(r=>r.IsDue).ThenByDescending(r=>r.Percent))
+                            {
+                                var badge = r.IsOverdue?"bg-red-600 text-white":r.IsDue?"bg-amber-500 text-amber-900":"bg-green-600 text-white";
+                                <div class="border rounded-xl p-4 bg-gray-50 flex flex-col gap-2">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <div class="font-semibold text-xs md:text-sm truncate" title="@r.Title">@r.Title</div>
+                                        <span class="px-2 py-0.5 text-[10px] rounded-full font-bold @badge">@(r.IsOverdue?"Overdue":r.IsDue?"Due Soon":"OK")</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 text-[11px] text-gray-600 flex-wrap">
+                                        <span class="font-semibold">@r.CurrentValue.ToString("F1") / @r.Threshold.ToString("F1")</span>
+                                        <span class="px-2 py-0.5 rounded bg-gray-200 text-gray-700 font-medium">@r.Percent.ToString("F0")%</span>
+                                        @if(r.NextDueDate.HasValue){<span class="text-gray-500">Next: @r.NextDueDate.Value.ToString("MM/dd")</span>}
+                                        @if(!string.IsNullOrEmpty(r.DueInText)){<span class="text-gray-500">(@r.DueInText)</span>}
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+                @if(componentGroups.Any())
+                {
+                    <div class="space-y-6">
+                        <div class="flex items-center gap-2">
+                            <h4 class="font-bold text-gray-800">Components</h4>
+                            <span class="text-xs text-gray-500">(@componentGroups.Count)</span>
+                        </div>
+                        @foreach(var grp in componentGroups)
+                        {
+                            var overdue = grp.Count(r=>r.IsOverdue);
+                            var due = grp.Count(r=>r.IsDue && !r.IsOverdue);
+                            var headerClass = overdue>0?"bg-red-600 text-white":due>0?"bg-amber-400 text-amber-900":"bg-gray-200 text-gray-700";
+                            <div class="border rounded-xl overflow-hidden">
+                                <div class="px-4 py-2 flex items-center justify-between text-xs font-bold @headerClass">
+                                    <div class="truncate">@grp.Key</div>
+                                    <div class="flex items-center gap-2">
+                                        @if(overdue>0){<span>@overdue Overdue</span>}
+                                        @if(due>0){<span>@due Due</span>}
+                                    </div>
+                                </div>
+                                <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50">
+                                    @foreach(var r in grp.OrderByDescending(r=>r.IsOverdue).ThenByDescending(r=>r.IsDue).ThenByDescending(r=>r.Percent))
+                                    {
+                                        var badge = r.IsOverdue?"bg-red-600 text-white":r.IsDue?"bg-amber-500 text-amber-900":"bg-green-600 text-white";
+                                        <div class="border rounded-lg p-3 bg-white flex flex-col gap-2 shadow-sm">
+                                            <div class="flex items-center justify-between gap-2">
+                                                <div class="font-semibold text-[11px] md:text-xs truncate" title="@r.Title">@r.Title</div>
+                                                <span class="px-2 py-0.5 text-[10px] rounded-full font-bold @badge">@(r.IsOverdue?"Overdue":r.IsDue?"Due Soon":"OK")</span>
+                                            </div>
+                                            <div class="flex items-center gap-2 text-[10px] text-gray-600 flex-wrap">
+                                                <span class="font-semibold">@r.CurrentValue.ToString("F1") / @r.Threshold.ToString("F1")</span>
+                                                <span class="px-2 py-0.5 rounded bg-gray-200 text-gray-700 font-medium">@r.Percent.ToString("F0")%</span>
+                                                @if(r.NextDueDate.HasValue){<span class="text-gray-500">Next: @r.NextDueDate.Value.ToString("MM/dd")</span>}
+                                                @if(!string.IsNullOrEmpty(r.DueInText)){<span class="text-gray-500">(@r.DueInText)</span>}
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+    <div class="px-6 py-3 border-t bg-gray-50 flex justify-end">
+        <button class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold" onclick="document.getElementById('maintenance-details-modal').remove();window.PrintTracking?.resumeAutoRefresh();">Close</button>
+    </div>
+  </div>
+</div>

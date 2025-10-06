@@ -26,6 +26,11 @@
             </div>
         </div>
 
+        <!-- Task Notifications Section -->
+        <div id="task-notifications" class="mb-8" hx-get="/Printing?handler=TaskNotifications" hx-trigger="load, every 60s" hx-swap="innerHTML">
+            <!-- Task notifications will be loaded here -->
+        </div>
+
         <!-- Dashboard Cards -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -127,73 +132,120 @@
                     <div class="lg:col-span-2">
                         <h3 class="text-lg font-medium text-gray-900 mb-4">Printer Status</h3>
                         <div class="space-y-4">
-                            <div class="border border-gray-200 rounded-lg p-4">
+                            <!-- Active Printer 1 - Running -->
+                            <div class="bg-green-50 border-l-4 border-green-400 border border-green-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200">
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center">
-                                        <div class="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
-                                        <h4 class="font-medium">TI1 - EOS M290 (Titanium)</h4>
+                                        <div class="relative mr-3">
+                                            <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                                            <div class="absolute inset-0 w-3 h-3 bg-green-500 rounded-full animate-ping opacity-40"></div>
+                                        </div>
+                                        <h4 class="font-semibold text-green-900">TI1 - EOS M290 (Titanium)</h4>
                                     </div>
-                                    <span class="text-sm text-green-600 font-medium">Active</span>
+                                    <div class="flex items-center">
+                                        <span class="text-sm text-green-700 font-medium bg-green-100 px-2 py-1 rounded-full">Running</span>
+                                    </div>
                                 </div>
                                 <div class="mt-3">
-                                    <div class="text-sm text-gray-600 flex justify-between">
+                                    <div class="text-sm text-green-800 flex justify-between font-medium">
                                         <span>Progress: 68%</span>
                                         <span>ETC: 3h 42m</span>
                                     </div>
-                                    <div class="w-full bg-gray-200 rounded-full h-2.5 mt-2">
-                                        <div class="bg-green-600 h-2.5 rounded-full" style="width: 68%"></div>
+                                    <div class="w-full bg-green-200 rounded-full h-3 mt-2">
+                                        <div class="bg-green-600 h-3 rounded-full transition-all duration-500" style="width: 68%"></div>
                                     </div>
                                 </div>
-                                <div class="mt-3 text-sm text-gray-600">
-                                    <span>Job: Medical Implant - Batch A</span>
+                                <div class="mt-3 text-sm text-green-800">
+                                    <span class="font-medium">Job:</span> Medical Implant - Batch A
                                 </div>
                             </div>
 
-                            <div class="border border-gray-200 rounded-lg p-4">
+                            <!-- Active Printer 2 - Running -->
+                            <div class="bg-green-50 border-l-4 border-green-400 border border-green-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200">
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center">
-                                        <div class="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
-                                        <h4 class="font-medium">TI2 - EOS M400-4 (Titanium)</h4>
+                                        <div class="relative mr-3">
+                                            <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                                            <div class="absolute inset-0 w-3 h-3 bg-green-500 rounded-full animate-ping opacity-40"></div>
+                                        </div>
+                                        <h4 class="font-semibold text-green-900">TI2 - EOS M400-4 (Titanium)</h4>
                                     </div>
-                                    <span class="text-sm text-green-600 font-medium">Active</span>
+                                    <div class="flex items-center">
+                                        <span class="text-sm text-green-700 font-medium bg-green-100 px-2 py-1 rounded-full">Running</span>
+                                    </div>
                                 </div>
                                 <div class="mt-3">
-                                    <div class="text-sm text-gray-600 flex justify-between">
+                                    <div class="text-sm text-green-800 flex justify-between font-medium">
                                         <span>Progress: 23%</span>
                                         <span>ETC: 11h 15m</span>
                                     </div>
-                                    <div class="w-full bg-gray-200 rounded-full h-2.5 mt-2">
-                                        <div class="bg-green-600 h-2.5 rounded-full" style="width: 23%"></div>
+                                    <div class="w-full bg-green-200 rounded-full h-3 mt-2">
+                                        <div class="bg-green-600 h-3 rounded-full transition-all duration-500" style="width: 23%"></div>
                                     </div>
                                 </div>
-                                <div class="mt-3 text-sm text-gray-600">
-                                    <span>Job: Aerospace Components - Series X3</span>
+                                <div class="mt-3 text-sm text-green-800">
+                                    <span class="font-medium">Job:</span> Aerospace Components - Series X3
                                 </div>
                             </div>
 
-                            <div class="border border-gray-200 rounded-lg p-4">
+                            <!-- Maintenance Printer -->
+                            <div class="bg-amber-50 border-l-4 border-amber-400 border border-amber-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200">
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center">
-                                        <div class="w-3 h-3 bg-amber-500 rounded-full mr-3"></div>
-                                        <h4 class="font-medium">INC - Concept Laser M2 (Inconel)</h4>
+                                        <div class="relative mr-3">
+                                            <div class="w-3 h-3 bg-amber-500 rounded-full"></div>
+                                            <div class="absolute inset-0 w-3 h-3 bg-amber-500 rounded-full animate-pulse"></div>
+                                        </div>
+                                        <h4 class="font-semibold text-amber-900">INC - Concept Laser M2 (Inconel)</h4>
                                     </div>
-                                    <span class="text-sm text-amber-600 font-medium">Maintenance</span>
+                                    <div class="flex items-center">
+                                        <svg class="w-4 h-4 text-amber-600 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                        </svg>
+                                        <span class="text-sm text-amber-700 font-medium bg-amber-100 px-2 py-1 rounded-full">Maintenance</span>
+                                    </div>
                                 </div>
-                                <div class="mt-3 text-sm text-gray-600">
-                                    <span>Scheduled maintenance - Available in 2h 30m</span>
+                                <div class="mt-3 text-sm text-amber-800">
+                                    <span class="font-medium">Status:</span> Scheduled maintenance - Available in 2h 30m
                                 </div>
                             </div>
 
-                            <div class="border border-gray-200 rounded-lg p-4">
+                            <!-- Offline Printer -->
+                            <div class="bg-red-50 border-l-4 border-red-400 border border-red-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200">
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center">
                                         <div class="w-3 h-3 bg-red-500 rounded-full mr-3"></div>
-                                        <h4 class="font-medium">TI3 - SLM 280 (Titanium)</h4>
+                                        <h4 class="font-semibold text-red-900">TI3 - SLM 280 (Titanium)</h4>
                                     </div>
-                                    <span class="text-sm text-red-600 font-medium">Offline</span>
+                                    <div class="flex items-center">
+                                        <svg class="w-4 h-4 text-red-600 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        <span class="text-sm text-red-700 font-medium bg-red-100 px-2 py-1 rounded-full">Offline</span>
+                                    </div>
                                 </div>
-                                <div class="mt-3 text-sm text-gray-600">
-                                    <span>Error: Laser calibration required - Technician scheduled</span>
+                                <div class="mt-3 text-sm text-red-800">
+                                    <span class="font-medium">Error:</span> Laser calibration required - Technician scheduled
+                                </div>
+                            </div>
+
+                            <!-- Completed/Ready Printer -->
+                            <div class="bg-blue-50 border-l-4 border-blue-400 border border-blue-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center">
+                                        <div class="w-3 h-3 bg-blue-500 rounded-full mr-3"></div>
+                                        <h4 class="font-semibold text-blue-900">TI4 - EOS M290 (Titanium)</h4>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <svg class="w-4 h-4 text-blue-600 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        <span class="text-sm text-blue-700 font-medium bg-blue-100 px-2 py-1 rounded-full">Ready</span>
+                                    </div>
+                                </div>
+                                <div class="mt-3 text-sm text-blue-800">
+                                    <span class="font-medium">Status:</span> Print completed - Ready for new job
                                 </div>
                             </div>
                         </div>
@@ -203,48 +255,48 @@
                     <div>
                         <h3 class="text-lg font-medium text-gray-900 mb-4">Metal Powder Inventory</h3>
                         <div class="space-y-4">
-                            <div class="border border-gray-200 rounded-lg p-4">
+                            <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200">
                                 <h4 class="font-medium text-sm text-gray-900 mb-2">Ti-6Al-4V Grade 5</h4>
                                 <div class="flex items-center">
                                     <div class="w-full bg-gray-200 rounded-full h-2.5">
-                                        <div class="bg-amber-600 h-2.5 rounded-full" style="width: 70%"></div>
+                                        <div class="bg-amber-600 h-2.5 rounded-full transition-all duration-500" style="width: 70%"></div>
                                     </div>
                                     <span class="ml-2 text-sm font-medium">52.4 kg (70%)</span>
                                 </div>
                                 <p class="text-xs text-gray-500 mt-2">Last refill: 3 days ago</p>
                             </div>
                             
-                            <div class="border border-gray-200 rounded-lg p-4">
+                            <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200">
                                 <h4 class="font-medium text-sm text-gray-900 mb-2">Ti-6Al-4V ELI Grade 23</h4>
                                 <div class="flex items-center">
                                     <div class="w-full bg-gray-200 rounded-full h-2.5">
-                                        <div class="bg-blue-600 h-2.5 rounded-full" style="width: 90%"></div>
+                                        <div class="bg-green-600 h-2.5 rounded-full transition-all duration-500" style="width: 90%"></div>
                                     </div>
                                     <span class="ml-2 text-sm font-medium">28.6 kg (90%)</span>
                                 </div>
                                 <p class="text-xs text-gray-500 mt-2">Last refill: 1 day ago</p>
                             </div>
                             
-                            <div class="border border-gray-200 rounded-lg p-4">
+                            <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200">
                                 <h4 class="font-medium text-sm text-gray-900 mb-2">Inconel 718</h4>
                                 <div class="flex items-center">
                                     <div class="w-full bg-gray-200 rounded-full h-2.5">
-                                        <div class="bg-blue-600 h-2.5 rounded-full" style="width: 75%"></div>
+                                        <div class="bg-blue-600 h-2.5 rounded-full transition-all duration-500" style="width: 75%"></div>
                                     </div>
                                     <span class="ml-2 text-sm font-medium">38.7 kg (75%)</span>
                                 </div>
                                 <p class="text-xs text-gray-500 mt-2">Last refill: 2 days ago</p>
                             </div>
                             
-                            <div class="border border-gray-200 rounded-lg p-4">
-                                <h4 class="font-medium text-sm text-gray-900 mb-2">Inconel 625</h4>
+                            <div class="bg-red-50 border border-red-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200">
+                                <h4 class="font-medium text-sm text-red-900 mb-2">Inconel 625</h4>
                                 <div class="flex items-center">
-                                    <div class="w-full bg-gray-200 rounded-full h-2.5">
-                                        <div class="bg-red-600 h-2.5 rounded-full" style="width: 15%"></div>
+                                    <div class="w-full bg-red-200 rounded-full h-2.5">
+                                        <div class="bg-red-600 h-2.5 rounded-full transition-all duration-500" style="width: 15%"></div>
                                     </div>
-                                    <span class="ml-2 text-sm font-medium text-red-600">8.2 kg (15%) - Reorder</span>
+                                    <span class="ml-2 text-sm font-medium text-red-700">8.2 kg (15%) - Reorder</span>
                                 </div>
-                                <p class="text-xs text-gray-500 mt-2">Last refill: 14 days ago</p>
+                                <p class="text-xs text-red-600 mt-2 font-medium">?? Low stock - Last refill: 14 days ago</p>
                             </div>
                         </div>
                     </div>
@@ -282,6 +334,25 @@
             modal.classList.remove('flex');
             modal.innerHTML = '';
             document.body.style.overflow = '';
+        }
+    }
+
+    // Task notification actions
+    function completeTask(taskId) {
+        if (confirm('Mark this task as completed?')) {
+            htmx.ajax('POST', `/PrintTracking?handler=CompleteTask&taskId=${taskId}`, {
+                target: '#task-notifications',
+                swap: 'innerHTML'
+            });
+        }
+    }
+
+    function dismissTask(taskId) {
+        if (confirm('Dismiss this task notification?')) {
+            htmx.ajax('POST', `/PrintTracking?handler=DismissTask&taskId=${taskId}`, {
+                target: '#task-notifications', 
+                swap: 'innerHTML'
+            });
         }
     }
 

@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OpCentrix.Models;
 using OpCentrix.Models.JobStaging;
+using OpCentrix.Models.Maintenance;
 
 namespace OpCentrix.Data
 {
@@ -100,6 +101,28 @@ namespace OpCentrix.Data
         public DbSet<PartBatch> PartBatches { get; set; }
         public DbSet<ScheduleAdjustment> ScheduleAdjustments { get; set; } = null!; // NEW
 
+        // Maintenance module entities
+        public DbSet<MaintenanceRule> MaintenanceRules { get; set; }
+        public DbSet<MaintenanceState> MaintenanceStates { get; set; }
+        public DbSet<MaintenanceActionLog> MaintenanceActionLogs { get; set; }
+        public DbSet<OpCentrix.Models.Maintenance.MachineComponent> MachineComponents { get; set; } // NEW
+        public DbSet<OpCentrix.Models.Maintenance.MaintenanceService> MaintenanceServices { get; set; }
+        public DbSet<MaintenanceServiceData> MaintenanceServiceData { get; set; }
+        public DbSet<MaintenanceWorkOrder> MaintenanceWorkOrders { get; set; }
+        public DbSet<MaintenanceSchedule> MaintenanceSchedules { get; set; }
+        public DbSet<MaintenanceNotification> MaintenanceNotifications { get; set; }
+
+        // Maintenance V2 entities
+        public DbSet<OpCentrix.Models.MaintenanceV2.MaintenanceAsset> MaintenanceAssets { get; set; }
+        public DbSet<OpCentrix.Models.MaintenanceV2.MaintenanceProcedureTemplate> MaintenanceProcedureTemplates { get; set; }
+        public DbSet<OpCentrix.Models.MaintenanceV2.MaintenanceFactorDefinition> MaintenanceFactorDefinitions { get; set; }
+        public DbSet<OpCentrix.Models.MaintenanceV2.MaintenanceProcedureTemplateFactor> MaintenanceProcedureTemplateFactors { get; set; }
+        public DbSet<OpCentrix.Models.MaintenanceV2.MaintenanceScheduleInstance> MaintenanceScheduleInstances { get; set; }
+        public DbSet<OpCentrix.Models.MaintenanceV2.MaintenanceOccurrence> MaintenanceOccurrences { get; set; }
+        public DbSet<OpCentrix.Models.MaintenanceV2.MaintenanceCounterAggregate> MaintenanceCounterAggregates { get; set; }
+        public DbSet<OpCentrix.Models.MaintenanceV2.MaintenanceCounterBaseline> MaintenanceCounterBaselines { get; set; }
+        public DbSet<OpCentrix.Models.MaintenanceV2.OperationalTask> OperationalTasks { get; set; }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             if (!optionsBuilder.IsConfigured)
@@ -133,6 +156,70 @@ namespace OpCentrix.Data
 
             // NEW: Configure Production Build System entities
             ConfigureProductionBuildEntities(modelBuilder);
+
+            // Maintenance module entities
+            modelBuilder.Entity<MaintenanceRule>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.MachineId).HasMaxLength(50);
+                entity.Property(e => e.Title).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Description).HasMaxLength(500);
+                entity.Property(e => e.CreatedBy).HasMaxLength(100).HasDefaultValue("System");
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.UpdatedBy).HasMaxLength(100);
+                entity.HasIndex(e => e.MachineId);
+                entity.HasIndex(e => e.IsActive);
+                entity.HasIndex(e => new { e.MachineId, e.IsActive });
+            });
+
+            modelBuilder.Entity<MaintenanceState>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.MachineId).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.CalculatedAt).HasDefaultValueSql("datetime('now')");
+                entity.HasIndex(e => e.MachineId);
+                entity.HasIndex(e => e.RuleId);
+                entity.HasIndex(e => new { e.MachineId, e.RuleId }).IsUnique();
+                entity.HasIndex(e => e.IsOverdue);
+                entity.HasIndex(e => e.IsDue);
+            });
+
+            modelBuilder.Entity<MaintenanceActionLog>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.MachineId).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.PerformedAt).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.Notes).HasMaxLength(1000);
+                entity.HasIndex(e => e.RuleId);
+                entity.HasIndex(e => e.MachineId);
+                entity.HasIndex(e => e.PerformedByUserId);
+                entity.HasIndex(e => e.PerformedAt);
+            });
+
+            modelBuilder.Entity<OpCentrix.Models.Maintenance.MachineComponent>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.MachineId).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Description).HasMaxLength(500);
+                entity.Property(e => e.Category).HasMaxLength(50).HasDefaultValue("General");
+                entity.Property(e => e.Icon).HasMaxLength(20).HasDefaultValue("cog");
+                entity.Property(e => e.ColorCode).HasMaxLength(7).HasDefaultValue("#6B7280");
+                entity.Property(e => e.CreatedBy).HasMaxLength(100).HasDefaultValue("System");
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.UpdatedBy).HasMaxLength(100);
+                entity.HasIndex(e => e.MachineId);
+                entity.HasIndex(e => new { e.MachineId, e.IsActive });
+                entity.HasIndex(e => new { e.MachineId, e.Category });
+            });
+
+            // Extend MaintenanceRule indexes for new FKs
+            modelBuilder.Entity<MaintenanceRule>(entity =>
+            {
+                entity.HasIndex(e => e.MachineComponentId);
+                entity.HasIndex(e => e.ProductionStageId);
+                entity.HasIndex(e => new { e.MachineComponentId, e.IsActive });
+            });
 
             // Note: Other configuration methods temporarily disabled to prevent build errors
             // These can be added back when the respective features are implemented:
@@ -575,6 +662,314 @@ namespace OpCentrix.Data
 
                 entity.ToTable(t => t.HasCheckConstraint("CK_Assignment_DateRange",
                     "(EffectiveTo IS NULL) OR (EffectiveFrom IS NULL) OR (EffectiveTo >= EffectiveFrom)"));
+            });
+
+            // Add proper EF Core entity configuration for all maintenance entities
+            modelBuilder.Entity<OpCentrix.Models.Maintenance.MaintenanceService>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.ServiceName).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Description).HasMaxLength(500);
+                entity.Property(e => e.MachineId).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.ServiceType).IsRequired();
+                entity.Property(e => e.Unit).HasMaxLength(20);
+                entity.Property(e => e.DataSource).HasMaxLength(100);
+                entity.Property(e => e.IsEnabled).HasDefaultValue(true);
+                entity.Property(e => e.CreatedBy).HasMaxLength(100).HasDefaultValue("System");
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.UpdatedBy).HasMaxLength(100);
+                entity.HasIndex(e => e.MachineId);
+                entity.HasIndex(e => e.ServiceType);
+                entity.HasIndex(e => e.IsEnabled);
+            });
+
+            modelBuilder.Entity<MaintenanceWorkOrder>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.WorkOrderNumber).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Description).HasMaxLength(1000);
+                entity.Property(e => e.MachineId).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.WorkOrderType).IsRequired();
+                entity.Property(e => e.Priority).IsRequired();
+                entity.Property(e => e.Status).IsRequired();
+                entity.Property(e => e.AssignedTechnician).HasMaxLength(100);
+                entity.Property(e => e.CreatedBy).HasMaxLength(100).HasDefaultValue("System");
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.UpdatedBy).HasMaxLength(100);
+                entity.HasIndex(e => e.WorkOrderNumber).IsUnique();
+                entity.HasIndex(e => e.MachineId);
+                entity.HasIndex(e => e.Status);
+                entity.HasIndex(e => e.Priority);
+                entity.HasIndex(e => e.CreatedAt);
+            });
+
+            modelBuilder.Entity<MaintenanceSchedule>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.ScheduleName).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Description).HasMaxLength(500);
+                entity.Property(e => e.MachineId).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.ScheduleType).IsRequired();
+                entity.Property(e => e.IsActive).HasDefaultValue(true);
+                entity.Property(e => e.CreatedBy).HasMaxLength(100).HasDefaultValue("System");
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.UpdatedBy).HasMaxLength(100);
+                entity.HasIndex(e => e.MachineId);
+                entity.HasIndex(e => e.ScheduleType);
+                entity.HasIndex(e => e.IsActive);
+            });
+
+            modelBuilder.Entity<MaintenanceServiceData>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.MaintenanceServiceId).IsRequired();
+                entity.Property(e => e.Timestamp).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.Value).IsRequired();
+                entity.Property(e => e.Source).HasMaxLength(50);
+                entity.HasOne<OpCentrix.Models.Maintenance.MaintenanceService>()
+                    .WithMany()
+                    .HasForeignKey(e => e.MaintenanceServiceId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasIndex(e => e.MaintenanceServiceId);
+                entity.HasIndex(e => e.Timestamp);
+            });
+
+            modelBuilder.Entity<MaintenanceNotification>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Message).HasMaxLength(1000);
+                entity.Property(e => e.MachineId).HasMaxLength(50);
+                entity.Property(e => e.NotificationType).IsRequired();
+                entity.Property(e => e.Severity).IsRequired();
+                entity.Property(e => e.IsDismissed).HasDefaultValue(false);
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+                entity.HasIndex(e => e.MachineId);
+                entity.HasIndex(e => e.NotificationType);
+                entity.HasIndex(e => e.Severity);
+                entity.HasIndex(e => e.IsDismissed);
+                entity.HasIndex(e => e.CreatedAt);
+            });
+
+            // Maintenance V2 configuration
+            modelBuilder.Entity<OpCentrix.Models.MaintenanceV2.MaintenanceAsset>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.AssetType).HasMaxLength(40).IsRequired();
+                entity.Property(e => e.MachineId).HasMaxLength(50);
+                entity.Property(e => e.Name).HasMaxLength(120).IsRequired();
+                entity.Property(e => e.Location).HasMaxLength(120);
+                entity.Property(e => e.Department).HasMaxLength(120);
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.CreatedBy).HasMaxLength(100).HasDefaultValue("System");
+                entity.HasIndex(e => e.MachineId);
+                entity.HasIndex(e => e.Active);
+            });
+
+            modelBuilder.Entity<OpCentrix.Models.MaintenanceV2.MaintenanceProcedureTemplate>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).HasMaxLength(150).IsRequired();
+                entity.Property(e => e.AppliesToAssetType).HasMaxLength(40);
+                entity.Property(e => e.RecurrenceStrategy).HasMaxLength(30).HasDefaultValue("FactorBased");
+                entity.Property(e => e.GroupCombinationOperator).HasMaxLength(5).HasDefaultValue("OR");
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+                entity.HasIndex(e => e.Active);
+            });
+
+            modelBuilder.Entity<OpCentrix.Models.MaintenanceV2.MaintenanceFactorDefinition>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Code).HasMaxLength(80).IsRequired();
+                entity.Property(e => e.Name).HasMaxLength(120).IsRequired();
+                entity.Property(e => e.FactorType).HasMaxLength(30).HasDefaultValue("Counter");
+                entity.Property(e => e.SourceType).HasMaxLength(30).HasDefaultValue("BuildData");
+                entity.Property(e => e.Unit).HasMaxLength(30).HasDefaultValue("");
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+                entity.HasIndex(e => e.Code).IsUnique();
+                entity.HasIndex(e => e.Active);
+            });
+
+            modelBuilder.Entity<OpCentrix.Models.MaintenanceV2.MaintenanceProcedureTemplateFactor>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.ComparisonOperator).HasMaxLength(30).HasDefaultValue("GreaterOrEqual");
+                entity.Property(e => e.LogicalGroupKey).HasMaxLength(10).HasDefaultValue("A");
+                entity.Property(e => e.GroupOperator).HasMaxLength(5).HasDefaultValue("AND");
+                entity.HasOne(f => f.ProcedureTemplate)
+                      .WithMany(t => t.Factors)
+                      .HasForeignKey(f => f.ProcedureTemplateId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(f => f.FactorDefinition)
+                      .WithMany(d => d.TemplateFactors)
+                      .HasForeignKey(f => f.FactorDefinitionId)
+                      .OnDelete(DeleteBehavior.Restrict);
+                entity.HasIndex(e => new { e.ProcedureTemplateId, e.LogicalGroupKey });
+            });
+
+            modelBuilder.Entity<OpCentrix.Models.MaintenanceV2.MaintenanceScheduleInstance>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.CustomName).HasMaxLength(150);
+                entity.Property(e => e.Status).HasMaxLength(20).HasDefaultValue("Active");
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+                entity.HasOne(s => s.ProcedureTemplate)
+                      .WithMany(t => t.ScheduleInstances)
+                      .HasForeignKey(s => s.ProcedureTemplateId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(s => s.Asset)
+                      .WithMany(a => a.Schedules)
+                      .HasForeignKey(s => s.AssetId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                entity.HasIndex(e => e.AssetId);
+                entity.HasIndex(e => e.Status);
+            });
+
+            modelBuilder.Entity<OpCentrix.Models.MaintenanceV2.MaintenanceOccurrence>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Status).HasMaxLength(20).HasDefaultValue("Open");
+                entity.Property(e => e.OpenedAt).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.EvaluationSnapshotJson).HasDefaultValue("{}");
+                entity.Property(e => e.CreatedFromFactorGroup).HasMaxLength(10);
+                entity.HasOne(o => o.ScheduleInstance)
+                      .WithMany(s => s.Occurrences)
+                      .HasForeignKey(o => o.ScheduleInstanceId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                entity.HasIndex(e => new { e.ScheduleInstanceId, e.Status });
+            });
+
+            modelBuilder.Entity<OpCentrix.Models.MaintenanceV2.MaintenanceCounterAggregate>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasOne(a => a.Asset)
+                      .WithMany()
+                      .HasForeignKey(a => a.AssetId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(a => a.FactorDefinition)
+                      .WithMany()
+                      .HasForeignKey(a => a.FactorDefinitionId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                entity.HasIndex(e => new { e.AssetId, e.FactorDefinitionId, e.PeriodStart }).IsUnique();
+            });
+
+            modelBuilder.Entity<OpCentrix.Models.MaintenanceV2.MaintenanceCounterBaseline>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasOne(b => b.Asset)
+                      .WithMany()
+                      .HasForeignKey(b => b.AssetId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(b => b.FactorDefinition)
+                      .WithMany()
+                      .HasForeignKey(b => b.FactorDefinitionId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(b => b.Occurrence)
+                      .WithMany()
+                      .HasForeignKey(b => b.OccurrenceId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                entity.HasIndex(e => new { e.AssetId, e.FactorDefinitionId });
+            });
+
+            // Configure remaining entities with basic setup
+            modelBuilder.Entity<ArchivedJob>().HasKey(e => e.Id);
+            modelBuilder.Entity<AdminAlert>().HasKey(e => e.Id);
+            modelBuilder.Entity<FeatureToggle>().HasKey(e => e.Id);
+            modelBuilder.Entity<BuildJob>().HasKey(e => e.BuildId);
+            modelBuilder.Entity<BuildJobPart>().HasKey(e => e.PartEntryId);
+            modelBuilder.Entity<DelayLog>().HasKey(e => e.DelayId);
+            modelBuilder.Entity<Material>().HasKey(e => e.Id);
+            modelBuilder.Entity<JobNote>().HasKey(e => e.Id);
+            modelBuilder.Entity<JobStage>().HasKey(e => e.Id);
+            modelBuilder.Entity<JobStageDependency>().HasKey(e => e.Id);
+            modelBuilder.Entity<StageNote>().HasKey(e => e.Id);
+            modelBuilder.Entity<User>().HasKey(e => e.Id);
+            modelBuilder.Entity<UserSettings>().HasKey(e => e.Id);
+            modelBuilder.Entity<JobLogEntry>().HasKey(e => e.Id);
+
+            // Configure BugReport entity
+            modelBuilder.Entity<BugReport>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.BugId).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Title).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Description).IsRequired();
+                entity.Property(e => e.Severity).IsRequired().HasMaxLength(20).HasDefaultValue("Medium");
+                entity.Property(e => e.Priority).IsRequired().HasMaxLength(20).HasDefaultValue("Medium");
+                entity.Property(e => e.Status).IsRequired().HasMaxLength(20).HasDefaultValue("New");
+                entity.Property(e => e.Category).IsRequired().HasMaxLength(50).HasDefaultValue("General");
+                entity.Property(e => e.PageUrl).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.PageName).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.PageArea).HasMaxLength(50).HasDefaultValue("");
+                entity.Property(e => e.PageController).HasMaxLength(50).HasDefaultValue("");
+                entity.Property(e => e.PageAction).HasMaxLength(50).HasDefaultValue("");
+                entity.Property(e => e.ReportedBy).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.UserRole).HasMaxLength(20).HasDefaultValue("");
+                entity.Property(e => e.UserEmail).HasMaxLength(100).HasDefaultValue("");
+                entity.Property(e => e.ReportedDate).IsRequired().HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.UserAgent).HasMaxLength(500).HasDefaultValue("");
+                entity.Property(e => e.BrowserName).HasMaxLength(50).HasDefaultValue("");
+                entity.Property(e => e.BrowserVersion).HasMaxLength(20).HasDefaultValue("");
+                entity.Property(e => e.OperatingSystem).HasMaxLength(50).HasDefaultValue("");
+                entity.Property(e => e.ScreenResolution).HasMaxLength(20).HasDefaultValue("");
+                entity.Property(e => e.IpAddress).HasMaxLength(50).HasDefaultValue("");
+                entity.Property(e => e.ErrorType).HasMaxLength(100).HasDefaultValue("");
+                entity.Property(e => e.ErrorMessage).HasDefaultValue("");
+                entity.Property(e => e.StackTrace).HasDefaultValue("");
+                entity.Property(e => e.OperationId).HasMaxLength(50).HasDefaultValue("");
+                entity.Property(e => e.StepsToReproduce).HasDefaultValue("");
+                entity.Property(e => e.ExpectedBehavior).HasDefaultValue("");
+                entity.Property(e => e.ActualBehavior).HasDefaultValue("");
+                entity.Property(e => e.AdditionalNotes).HasDefaultValue("");
+                entity.Property(e => e.AttachedFiles).HasMaxLength(500).HasDefaultValue("");
+                entity.Property(e => e.FormData).HasDefaultValue("");
+                entity.Property(e => e.NetworkRequests).HasDefaultValue("");
+                entity.Property(e => e.ConsoleErrors).HasDefaultValue("");
+                entity.Property(e => e.AssignedTo).HasMaxLength(100).HasDefaultValue("");
+                entity.Property(e => e.ResolvedBy).HasMaxLength(100).HasDefaultValue("");
+                entity.Property(e => e.ResolutionNotes).HasDefaultValue("");
+                entity.Property(e => e.ResolutionType).HasMaxLength(50).HasDefaultValue("");
+                entity.Property(e => e.ViewCount).HasDefaultValue(0);
+                entity.Property(e => e.VoteCount).HasDefaultValue(0);
+                entity.Property(e => e.LastViewedBy).HasMaxLength(100).HasDefaultValue("");
+                entity.Property(e => e.IsReproduced).HasDefaultValue(false);
+                entity.Property(e => e.ReproducedBy).HasMaxLength(100).HasDefaultValue("");
+                entity.Property(e => e.IsActive).HasDefaultValue(true);
+                entity.Property(e => e.IsPublic).HasDefaultValue(false);
+                entity.Property(e => e.NotifyReporter).HasDefaultValue(true);
+                entity.Property(e => e.CreatedBy).HasMaxLength(100).HasDefaultValue("");
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.LastModifiedBy).HasMaxLength(100).HasDefaultValue("");
+                entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.RelatedBugIds).HasMaxLength(200).HasDefaultValue("");
+                entity.Property(e => e.DuplicateOf).HasMaxLength(200).HasDefaultValue("");
+                entity.Property(e => e.PerformanceImpact).HasMaxLength(20).HasDefaultValue("None");
+                entity.Property(e => e.PageLoadTime).HasPrecision(8, 2);
+                entity.Property(e => e.MemoryUsage).HasPrecision(8, 2);
+                entity.Property(e => e.CpuUsage).HasPrecision(5, 2);
+                entity.Property(e => e.Tags).HasMaxLength(500).HasDefaultValue("");
+                entity.Property(e => e.CustomMetadata).HasDefaultValue("{}");
+
+                // Unique constraint on BugId
+                entity.HasIndex(e => e.BugId).IsUnique();
+
+                // Performance indexes
+                entity.HasIndex(e => e.Status);
+                entity.HasIndex(e => e.Severity);
+                entity.HasIndex(e => e.Priority);
+                entity.HasIndex(e => e.Category);
+                entity.HasIndex(e => e.PageArea);
+                entity.HasIndex(e => e.ReportedBy);
+                entity.HasIndex(e => e.AssignedTo);
+                entity.HasIndex(e => e.ReportedDate);
+                entity.HasIndex(e => e.ResolvedDate);
+                entity.HasIndex(e => e.IsActive);
+                entity.HasIndex(e => e.IsPublic);
+                entity.HasIndex(e => e.OperationId);
+                entity.HasIndex(e => new { e.PageArea, e.Status });
+                entity.HasIndex(e => new { e.Severity, e.Priority });
+                entity.HasIndex(e => new { e.ReportedDate, e.Status });
             });
         }
 

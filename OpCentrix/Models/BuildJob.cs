@@ -40,6 +40,10 @@ namespace OpCentrix.Models
         [StringLength(1000)]
         public string? Notes { get; set; }
 
+        // NEW: Direct material snapshot for faster counters / filtering (captured at start; may differ from Part if changed later)
+        [StringLength(100)]
+        public string? Material { get; set; }
+
         #endregion
 
         #region Print Details (from printer summary screen)

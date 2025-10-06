@@ -4,6 +4,9 @@ using OpCentrix.Models;
 using OpCentrix.Models.JobStaging;
 using OpCentrix.ViewModels.PrintTracking;
 using OpCentrix.Services.Admin; // added for material service
+using OpCentrix.Models.MaintenanceV2; // for OperationalTask
+using System.Text.Json; // added for ConfigJson parsing
+using System.Linq; // added for LINQ extensions
 
 namespace OpCentrix.Services
 {
@@ -77,7 +80,7 @@ namespace OpCentrix.Services
         Task AnalyzeBuildPerformanceAsync(int buildId);
 
         // Machine Learning Data Collection
-        Task<List<BuildPerformanceData>> GetHistoricalBuildDataAsync(string partNumber);
+        Task<List<BuildPerformanceData>> GetHistoricalBuildDataAsync(String partNumber);
         Task UpdateBuildTimeLearningAsync(int buildId, BuildCompletionData data);
 
         // NEW: Schedule Integration
@@ -93,6 +96,7 @@ namespace OpCentrix.Services
         private readonly IStageProgressionService _stageProgressionService;
         private readonly IMaterialService? _materialService; // NEW
         private readonly IOperatingShiftService? _shiftService; // NEW
+        private readonly OpCentrix.Services.Maintenance.IMaintenanceService? _maintenanceService; // NEW maintenance
 
         // Added: cached detection for ScheduleAdjustments table (SQLite dev env may not have migration applied)
         private static bool _adjTableChecked = false;
@@ -115,7 +119,7 @@ namespace OpCentrix.Services
                 {
                     _logger.LogInformation("Creating ScheduleAdjustments table (migration fallback)");
                     using var create = conn.CreateCommand();
-                    // FIX: remove literal \n tokens (were causing 'unrecognized token: "\\"') and use proper newlines
+                    // FIX: remove literal \n tokens (were causing 'unrecognized token: "\\\\"') and use proper newlines
                     create.CommandText = @"CREATE TABLE IF NOT EXISTS ScheduleAdjustments (
     Id INTEGER PRIMARY KEY AUTOINCREMENT,
     TriggerJobId INTEGER NOT NULL,
@@ -149,7 +153,8 @@ namespace OpCentrix.Services
             ICohortManagementService? cohortManagementService = null,
             IStageProgressionService? stageProgressionService = null,
             IMaterialService? materialService = null,
-            IOperatingShiftService? shiftService = null)
+            IOperatingShiftService? shiftService = null,
+            OpCentrix.Services.Maintenance.IMaintenanceService? maintenanceService = null)
         {
             _context = context;
             _logger = logger;
@@ -157,6 +162,17 @@ namespace OpCentrix.Services
             _stageProgressionService = stageProgressionService ?? throw new ArgumentNullException(nameof(stageProgressionService));
             _materialService = materialService;
             _shiftService = shiftService;
+            _maintenanceService = maintenanceService; // assign
+        }
+
+        // Helper: resolve snapshot material for build job (Part.SlsMaterial preferred, else Part.Material, else machine current material)
+        private string? ResolveSnapshotMaterial(Part? part, Machine? machine)
+        {
+            var partMat = part?.SlsMaterial;
+            if (!string.IsNullOrWhiteSpace(partMat)) return partMat.Trim();
+            if (!string.IsNullOrWhiteSpace(part?.Material)) return part!.Material!.Trim();
+            var machMat = machine?.CurrentMaterial;
+            return string.IsNullOrWhiteSpace(machMat) ? null : machMat.Trim();
         }
 
         public async Task<PrintTrackingDashboardViewModel> GetDashboardDataAsync(int userId)
@@ -418,6 +434,18 @@ namespace OpCentrix.Services
 
                 var friendlyName = model.PrinterName;
 
+                // Determine snapshot material
+                Part? linkedPart = null;
+                if (model.PartId.HasValue)
+                {
+                    linkedPart = await _context.Parts.FindAsync(model.PartId.Value);
+                }
+                else if (scheduledJob?.PartId != null)
+                {
+                    linkedPart = await _context.Parts.FindAsync(scheduledJob.PartId);
+                }
+                var snapshotMaterial = ResolveSnapshotMaterial(linkedPart, machine);
+
                 var buildJob = new BuildJob
                 {
                     BuildId = await GenerateBuildIdAsync(),
@@ -438,7 +466,8 @@ namespace OpCentrix.Services
                     MachinePerformanceNotes = (canonicalMachineId != friendlyName ? $"FriendlyName={friendlyName}; " : string.Empty) + model.MachinePerformanceNotes,
                     SetupNotes = model.SetupNotes,
                     ScheduledStartTime = scheduledStart,
-                    ScheduledEndTime = scheduledEnd
+                    ScheduledEndTime = scheduledEnd,
+                    Material = snapshotMaterial // NEW: capture at start
                 };
 
                 _context.BuildJobs.Add(buildJob);
@@ -565,7 +594,7 @@ namespace OpCentrix.Services
                 }
 
                 await _context.SaveChangesAsync();
-                _logger.LogInformation("Started build {BuildId} on {Printer} (JobId={JobId}) netShift={Shift}m End={End}", buildJob.BuildId, canonicalMachineId, buildJob.AssociatedScheduledJobId, netCascadeShift.TotalMinutes, buildJob.ScheduledEndTime);
+                _logger.LogInformation("Started build {BuildId} on {Printer} (JobId={JobId}) netShift={Shift}m End={End} Mat={Mat}", buildJob.BuildId, canonicalMachineId, buildJob.AssociatedScheduledJobId, netCascadeShift.TotalMinutes, buildJob.ScheduledEndTime, buildJob.Material);
                 return buildJob.BuildId;
             }
             catch (Exception ex)
@@ -695,8 +724,6 @@ namespace OpCentrix.Services
             };
             return map.TryGetValue(code, out var friendly) ? friendly : fallback;
         }
-
-        // ... existing methods unchanged ...
 
         private async Task<List<JobStageInfo>> GetActiveJobStagesAsync()
         {
@@ -982,15 +1009,27 @@ namespace OpCentrix.Services
         {
             var today = DateTime.Today;
             var todayBuilds = await _context.BuildJobs
-                .Where(b => b.ActualStartTime >= today && b.Status == "Completed")
+                .Where(b => b.ActualStartTime >= today && b.Status == "Completed" && b.ActualEndTime.HasValue)
                 .ToListAsync();
+
             var partsProduced = todayBuilds.Sum(b => b.TotalPartsInBuild);
-            var efficiency = todayBuilds.Any()
-                ? todayBuilds.Average(b => b.ActualEndTime.HasValue
-                    ? Math.Min(100, (b.ScheduledEndTime?.Subtract(b.ScheduledStartTime ?? b.ActualStartTime).TotalHours ?? 8) /
-                               b.ActualEndTime.Value.Subtract(b.ActualStartTime).TotalHours * 100)
-                    : 0)
-                : 0;
+            double efficiency = 0;
+            if (todayBuilds.Any())
+            {
+                var efficiencies = new List<double>();
+                foreach (var b in todayBuilds)
+                {
+                    var scheduledDuration = (b.ScheduledEndTime.HasValue && b.ScheduledStartTime.HasValue)
+                        ? (b.ScheduledEndTime.Value - b.ScheduledStartTime.Value).TotalHours
+                        : 0;
+                    var actualDuration = (b.ActualEndTime.Value - b.ActualStartTime).TotalHours;
+                    if (actualDuration > 0)
+                    {
+                        efficiencies.Add(Math.Min(100, scheduledDuration / actualDuration * 100));
+                    }
+                }
+                efficiency = efficiencies.Any() ? efficiencies.Average() : 0;
+            }
             var qualityScore = 100.0;
             var totalCost = 0m;
             return (efficiency, qualityScore, totalCost, partsProduced);
@@ -1098,14 +1137,10 @@ namespace OpCentrix.Services
         // ===== Re-implemented interface methods (delegating to existing helpers) =====
         public async Task<bool> CompletePrintJobAsync(PostPrintViewModel model, int userId)
         {
-            var buildJob = await _context.BuildJobs.FirstOrDefaultAsync(b => b.BuildId == model.BuildId);
-            if (buildJob == null)
+            var buildJob = await _context.BuildJobs.Include(b=>b.Part).FirstOrDefaultAsync(b => b.BuildId == model.BuildId);
+            if (buildJob == null && model.JobId.HasValue)
             {
-                // Try infer build by associated job
-                if (model.JobId.HasValue)
-                {
-                    buildJob = await _context.BuildJobs.FirstOrDefaultAsync(b => b.AssociatedScheduledJobId == model.JobId && b.Status == "In Progress");
-                }
+                buildJob = await _context.BuildJobs.Include(b=>b.Part).FirstOrDefaultAsync(b => b.AssociatedScheduledJobId == model.JobId && b.Status == "In Progress");
             }
             if (buildJob == null) return false;
 
@@ -1124,123 +1159,170 @@ namespace OpCentrix.Services
             buildJob.LessonsLearned = model.LessonsLearned;
             if (model.TimeFactors?.Any() == true)
             {
-                var existing = !string.IsNullOrEmpty(buildJob.TimeFactors) ? buildJob.TimeFactors.Split(',').ToList() : new List<string>();
-                existing.AddRange(model.TimeFactors);
-                buildJob.TimeFactors = string.Join(",", existing.Distinct());
+                buildJob.TimeFactors = string.Join(',', model.TimeFactors);
             }
-
-            // Update scheduled job linkage
-            Job? job = null;
-            if (buildJob.AssociatedScheduledJobId.HasValue)
-                job = await _context.Jobs.FirstOrDefaultAsync(j => j.Id == buildJob.AssociatedScheduledJobId.Value);
-            else if (model.JobId.HasValue)
-                job = await _context.Jobs.FirstOrDefaultAsync(j => j.Id == model.JobId.Value);
-
-            if (job != null)
+            if (string.IsNullOrWhiteSpace(buildJob.Material))
             {
-                if (!job.ActualStart.HasValue) job.ActualStart = model.ActualStartTime; // safety
-                job.ActualEnd = model.ActualEndTime;
-                job.Status = buildJob.Status == "Completed" ? "Completed" : job.Status switch
-                {
-                    _ when buildJob.Status == "Aborted" => "Aborted",
-                    _ when buildJob.Status == "Rework" => "Rework",
-                    _ => "Completed"
-                };
-                job.LastModifiedDate = DateTime.UtcNow;
-                job.LastModifiedBy = "PrintTracking";
-                // Adjust scheduled end if actual finished early/late > 10 min
-                var diff = model.ActualEndTime - job.ScheduledEnd;
-                if (Math.Abs(diff.TotalMinutes) > 10)
-                {
-                    var shift = model.ActualEndTime - job.ScheduledEnd;
-                    job.ScheduledEnd = model.ActualEndTime;
-                    if (job.EstimatedHours > 0 && job.Quantity > 0)
-                    {
-                        var newDuration = (job.ScheduledEnd - job.ScheduledStart).TotalHours;
-                        await UpdatePartDurationFromScheduleAsync(job.Id, newDuration); // updates part estimate
-                    }
-                    if (shift.TotalMinutes != 0)
-                        await CascadeScheduleChangesAsync(job.MachineId, job.ScheduledEnd, shift);
-                }
-            }
-
-            // Capture machine id before removing build record
-            var machineIdForStatus = buildJob.PrinterName;
-
-            // NEW: Remove the build job record after completion so dashboard list does not accumulate
-            _context.BuildJobs.Remove(buildJob);
-
-            // Update machine status to Idle if no other active builds remain
-            try
-            {
-                var machine = await _context.Machines.FirstOrDefaultAsync(m => m.MachineId == machineIdForStatus);
-                if (machine != null)
-                {
-                    var stillHasActive = await _context.BuildJobs.AnyAsync(b => b.PrinterName == machine.MachineId && b.Status == "In Progress");
-                    machine.Status = stillHasActive ? "Building" : "Idle";
-                }
-            }
-            catch (Exception mex)
-            {
-                _logger.LogWarning(mex, "Failed to update machine status on completion for {Machine}", machineIdForStatus);
+                var machine = await _context.Machines.FirstOrDefaultAsync(m => m.MachineId == buildJob.PrinterName);
+                buildJob.Material = ResolveSnapshotMaterial(buildJob.Part, machine);
             }
 
             await _context.SaveChangesAsync();
+
+            try
+            {
+                var mat = buildJob.Material ?? buildJob.Part?.SlsMaterial ?? buildJob.Part?.Material ?? "";
+                await EvaluateOperationalTasksOnBuildCompletionAsync(mat, buildJob.PrinterName, buildJob.CompletedAt ?? DateTime.UtcNow);
+            }
+            catch (Exception recurEx)
+            {
+                _logger.LogWarning(recurEx, "[PT][TASK] Recurrence evaluation failed for build {BuildId}", buildJob.BuildId);
+            }
+
             return true;
         }
 
+        private async Task EvaluateOperationalTasksOnBuildCompletionAsync(string material, string machineId, DateTime completionUtc)
+        {
+            // Unified material normalization
+            material = TaskTriggerHelpers.NormalizeMaterial(material);
+            var allTasks = await _context.OperationalTasks
+                .Where(t => t.ConfigJson != null)
+                .ToListAsync();
+            if (!allTasks.Any()) return;
+
+            // Group by Title + Machine scope (empty machine treated global)
+            var grouped = allTasks.GroupBy(t => new { t.Title, Machine = t.MachineId ?? string.Empty });
+            foreach (var grp in grouped)
+            {
+                // Skip if any open task in group (prevents duplicates)
+                if (grp.Any(t => t.Status == "Open" || t.Status == "InProgress")) continue;
+
+                var lastCompleted = grp
+                    .Where(t => t.Status == "Completed" && t.CompletedAt.HasValue)
+                    .OrderByDescending(t => t.CompletedAt)
+                    .FirstOrDefault();
+                if (lastCompleted == null) continue; // No baseline
+
+                int threshold = 0; string intervalMaterial = "Any"; bool hasBuildCount = false; bool suppressIfOpen = false; string logic = "ANY";
+                try
+                {
+                    using var doc = JsonDocument.Parse(lastCompleted.ConfigJson!);
+                    var root = doc.RootElement;
+                    if (root.TryGetProperty("intervals", out var intervals) && intervals.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var el in intervals.EnumerateArray())
+                        {
+                            if (el.TryGetProperty("type", out var tp) && tp.GetString() == "BuildCount")
+                            {
+                                hasBuildCount = true;
+                                intervalMaterial = el.TryGetProperty("material", out var mEl) ? (mEl.GetString() ?? "Any") : "Any";
+                                threshold = el.TryGetProperty("threshold", out var thEl) && thEl.TryGetInt32(out var thV) ? thV : 0;
+                                break; // only one BuildCount used for spawn logic
+                            }
+                        }
+                    }
+                    if (root.TryGetProperty("options", out var opt))
+                    {
+                        if (opt.TryGetProperty("suppressIfOpen", out var supEl) && supEl.ValueKind == JsonValueKind.True)
+                            suppressIfOpen = true; // already enforced above
+                    }
+                }
+                catch { continue; }
+
+                if (!hasBuildCount || threshold <= 0) continue;
+
+                // Baseline = last cycle completion (CompletedAt). If task used a reset model we could look at LastResetAt of the clone, but
+                // clone creation time (CreatedAt) already equals cycle start.
+                var baseline = lastCompleted.CompletedAt!.Value;
+                var targetMaterialNorm = TaskTriggerHelpers.NormalizeMaterial(intervalMaterial);
+
+                // Count builds after baseline (inclusive > baseline) optionally by machine + material
+                var buildQuery = _context.BuildJobs
+                    .Include(b => b.Part)
+                    .Where(b => b.Status == "Completed" && b.CompletedAt.HasValue && b.CompletedAt > baseline);
+
+                // Machine scoping: if original completed task had a machine set, restrict; otherwise global
+                if (!string.IsNullOrEmpty(grp.Key.Machine))
+                {
+                    buildQuery = buildQuery.Where(b => b.PrinterName == grp.Key.Machine);
+                }
+
+                var candidates = await buildQuery
+                    .Select(b => new { b.BuildId, Mat = TaskTriggerHelpers.NormalizeMaterial(TaskTriggerHelpers.ResolveEffectiveMaterial(b)) })
+                    .ToListAsync();
+
+                int buildCount = targetMaterialNorm.Equals("Any", StringComparison.OrdinalIgnoreCase)
+                    ? candidates.Count
+                    : candidates.Count(c => c.Mat.Equals(targetMaterialNorm, StringComparison.OrdinalIgnoreCase));
+
+                if (buildCount < threshold) continue;
+
+                var newTask = new OperationalTask
+                {
+                    Title = lastCompleted.Title,
+                    Description = lastCompleted.Description,
+                    Priority = lastCompleted.Priority,
+                    MachineId = string.IsNullOrEmpty(grp.Key.Machine) ? null : grp.Key.Machine,
+                    CreatedByUserId = lastCompleted.CreatedByUserId,
+                    ConfigJson = lastCompleted.ConfigJson,
+                    Status = "Open",
+                    CreatedAt = DateTime.UtcNow,
+                    LastResetAt = DateTime.UtcNow // baseline for next cycle
+                };
+                _context.OperationalTasks.Add(newTask);
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("[PT][TASK] Recurring task '{Title}' spawned after {Count}/{Threshold} builds (Mat={Mat}, Machine={Machine})", newTask.Title, buildCount, threshold, targetMaterialNorm, grp.Key.Machine);
+            }
+        }
+
+        // ===== Re-implemented interface methods (delegating to existing helpers) =====
         public Task<List<Job>> GetAvailableScheduledJobsAsync(string printerName) => _context.Jobs.Where(j => j.MachineId == printerName && j.Status == "Scheduled").OrderBy(j => j.ScheduledStart).ToListAsync();
         public Task<List<JobStage>> GetAvailableJobStagesAsync(string printerName) => Task.FromResult(new List<JobStage>());
         public Task<List<PrototypeJob>> GetAvailablePrototypeJobsAsync() => _context.PrototypeJobs.Where(p => p.Status == "Scheduled" && p.IsActive).OrderBy(p => p.Priority).ToListAsync();
         public Task<BuildJob?> GetActiveBuildJobAsync(string printerName) => _context.BuildJobs.Where(b => b.PrinterName == printerName && b.Status == "In Progress").FirstOrDefaultAsync();
         public Task<bool> HasActiveBuildAsync(string printerName) => _context.BuildJobs.AnyAsync(b => b.PrinterName == printerName && b.Status == "In Progress");
-        public Task<List<BuildJob>> GetRecentBuildsAsync(int count = 20) => _context.BuildJobs.Include(b => b.User).Include(b => b.Part).OrderByDescending(b => b.CreatedAt).Take(count).ToListAsync();
+        public Task<List<BuildJob>> GetRecentBuildsAsync(int count = 20) => _context.BuildJobs.Include(b=>b.User).Include(b=>b.Part).OrderByDescending(b=>b.CreatedAt).Take(count).ToListAsync();
         public Task CreateCooldownAndChangeoverBlocksAsync(BuildJob completedJob) => Task.CompletedTask;
-
         public async Task<MultiStageWorkflowViewModel> GetWorkflowStatusAsync(int jobId)
         {
-            var job = await _context.Jobs.Include(j => j.Part).FirstOrDefaultAsync(j => j.Id == jobId);
+            var job = await _context.Jobs.Include(j=>j.Part).FirstOrDefaultAsync(j=>j.Id==jobId);
             if (job == null) return new MultiStageWorkflowViewModel();
             return new MultiStageWorkflowViewModel
             {
-                JobId = jobId,
+                JobId = job.Id,
                 PartNumber = job.PartNumber,
-                PartDescription = job.Part?.Description ?? "",
+                PartDescription = job.Part?.Description ?? string.Empty,
                 OverallStatus = job.Status,
                 StartDate = job.ActualStart,
                 EstimatedCompletionDate = job.ScheduledEnd,
                 ActualCompletionDate = job.ActualEnd
             };
         }
-
         public Task<bool> AdvanceJobStageAsync(int jobStageId, int userId) => Task.FromResult(false);
         public Task<bool> UpdateStageProgressAsync(int jobStageId, double progressPercent, string? statusUpdate = null) => Task.FromResult(false);
-        public Task<List<Part>> GetAvailablePartsAsync() => _context.Parts.Where(p => p.IsActive).OrderBy(p => p.PartNumber).ToListAsync();
-        public async Task<bool> ValidatePartCompatibilityAsync(string partNumber, string machineId) => await _context.Parts.AnyAsync(p => p.PartNumber == partNumber && p.IsActive);
+        public Task<List<Part>> GetAvailablePartsAsync() => _context.Parts.Where(p=>p.IsActive).OrderBy(p=>p.PartNumber).ToListAsync();
+        public Task<bool> ValidatePartCompatibilityAsync(string partNumber, string machineId) => _context.Parts.AnyAsync(p=>p.PartNumber==partNumber && p.IsActive);
         public Task<bool> TryCreateCohortFromCompletedBuildAsync(BuildJob buildJob) => Task.FromResult(false);
-
         public async Task<BuildTimeEstimate> GetBuildTimeEstimateAsync(string buildFileHash, string machineType)
         {
-            var historical = await _context.BuildJobs.Where(b => b.BuildFileHash == buildFileHash && b.Status == "Completed" && b.OperatorActualHours.HasValue)
-                .OrderByDescending(b => b.CreatedAt). Take(10).ToListAsync();
+            var historical = await _context.BuildJobs.Where(b=>b.BuildFileHash==buildFileHash && b.Status=="Completed" && b.OperatorActualHours.HasValue)
+                .OrderByDescending(b=>b.CreatedAt).Take(10).ToListAsync();
             if (historical.Any())
             {
-                var avg = historical.Average(b => b.OperatorActualHours!.Value);
-                return new BuildTimeEstimate { EstimatedHours = avg, ConfidenceLevel = Math.Min(100, historical.Count * 10), BasedOnBuilds = historical.Count, LastBuildDate = historical.First().CreatedAt, MachineSpecific = true };
+                var avg = historical.Average(b=>b.OperatorActualHours!.Value);
+                return new BuildTimeEstimate{ EstimatedHours = avg, ConfidenceLevel = Math.Min(100, historical.Count*10), BasedOnBuilds = historical.Count, LastBuildDate = historical.First().CreatedAt, MachineSpecific = true};
             }
-            return new BuildTimeEstimate { EstimatedHours = 8.0m, ConfidenceLevel = 10, BasedOnBuilds = 0, MachineSpecific = false };
+            return new BuildTimeEstimate{ EstimatedHours = 8.0m, ConfidenceLevel = 10, BasedOnBuilds = 0, MachineSpecific = false};
         }
-
         public async Task LogOperatorEstimateAsync(int buildId, decimal estimatedHours, string notes)
         {
             var build = await _context.BuildJobs.FindAsync(buildId);
             if (build == null) return;
             build.OperatorEstimatedHours = estimatedHours;
-            if (!string.IsNullOrEmpty(notes))
-                build.Notes = string.IsNullOrEmpty(build.Notes) ? notes : build.Notes + "\n" + notes;
+            if(!string.IsNullOrEmpty(notes)) build.Notes = string.IsNullOrEmpty(build.Notes)? notes : build.Notes + "\n" + notes;
             await _context.SaveChangesAsync();
         }
-
         public async Task RecordActualBuildTimeAsync(int buildId, decimal actualHours, string assessment)
         {
             var build = await _context.BuildJobs.FindAsync(buildId);
@@ -1249,7 +1331,6 @@ namespace OpCentrix.Services
             build.OperatorBuildAssessment = assessment;
             await _context.SaveChangesAsync();
         }
-
         public async Task AnalyzeBuildPerformanceAsync(int buildId)
         {
             var build = await _context.BuildJobs.FindAsync(buildId);
@@ -1257,17 +1338,16 @@ namespace OpCentrix.Services
             {
                 var est = build.OperatorEstimatedHours.Value;
                 var act = build.OperatorActualHours.Value;
-                var variancePct = est > 0 ? Math.Abs(act - est) / est * 100 : 0;
-                var perf = variancePct switch { <= 10 => "Excellent", <= 20 => "Good", <= 30 => "Fair", _ => "Needs Improvement" };
-                build.MachinePerformanceNotes = string.IsNullOrEmpty(build.MachinePerformanceNotes) ? perf : build.MachinePerformanceNotes + "\n" + perf;
+                var variancePct = est>0 ? Math.Abs(act-est)/est*100 : 0;
+                var perf = variancePct switch { <=10 => "Excellent", <=20 => "Good", <=30 => "Fair", _=>"Needs Improvement"};
+                build.MachinePerformanceNotes = string.IsNullOrEmpty(build.MachinePerformanceNotes)? perf : build.MachinePerformanceNotes + "\n" + perf;
                 await _context.SaveChangesAsync();
             }
         }
-
         public async Task<List<BuildPerformanceData>> GetHistoricalBuildDataAsync(string partNumber)
         {
-            var builds = await _context.BuildJobs.Where(b => b.Status == "Completed" && b.OperatorEstimatedHours.HasValue && b.OperatorActualHours.HasValue)
-                .OrderByDescending(b => b.CreatedAt). Take(50).ToListAsync();
+            var builds = await _context.BuildJobs.Where(b=>b.Status=="Completed" && b.OperatorEstimatedHours.HasValue && b.OperatorActualHours.HasValue)
+                .OrderByDescending(b=>b.CreatedAt).Take(50).ToListAsync();
             return builds.Select(b => new BuildPerformanceData
             {
                 BuildId = b.BuildId,
@@ -1282,7 +1362,6 @@ namespace OpCentrix.Services
                 DefectCount = b.DefectCount ?? 0
             }).ToList();
         }
-
         public async Task UpdateBuildTimeLearningAsync(int buildId, BuildCompletionData data)
         {
             var build = await _context.BuildJobs.FindAsync(buildId);
@@ -1300,23 +1379,21 @@ namespace OpCentrix.Services
             build.LaserOnTime = data.LaserOnTime;
             await _context.SaveChangesAsync();
         }
-
         public async Task UpdatePartDurationFromScheduleAsync(int jobId, double newDurationHours)
         {
-            var job = await _context.Jobs.Include(j => j.Part).FirstOrDefaultAsync(j => j.Id == jobId);
-            if (job?.Part == null || job.Quantity <= 0) return;
+            var job = await _context.Jobs.Include(j=>j.Part).FirstOrDefaultAsync(j=>j.Id==jobId);
+            if (job?.Part == null || job.Quantity<=0) return;
             var timePerPart = newDurationHours / job.Quantity;
             job.Part.EstimatedHours = timePerPart;
             job.Part.LastModifiedDate = DateTime.UtcNow;
             job.EstimatedHours = newDurationHours;
             await _context.SaveChangesAsync();
         }
-
         public async Task<int> CreateBuildJobFromScheduledJobAsync(int jobId, string operatorName)
         {
-            var job = await _context.Jobs.Include(j => j.Part).FirstOrDefaultAsync(j => j.Id == jobId);
+            var job = await _context.Jobs.Include(j=>j.Part).FirstOrDefaultAsync(j=>j.Id==jobId);
             if (job == null) throw new InvalidOperationException($"Job {jobId} not found");
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.FullName == operatorName) ?? await _context.Users.FirstAsync();
+            var user = await _context.Users.FirstOrDefaultAsync(u=>u.FullName==operatorName) ?? await _context.Users.FirstAsync();
             var build = new BuildJob
             {
                 BuildId = await GenerateBuildIdAsync(),
@@ -1332,25 +1409,12 @@ namespace OpCentrix.Services
                 ScheduledEndTime = job.ScheduledEnd,
                 BuildFileHash = GenerateBuildFileHash(job.PartNumber),
                 IsLearningBuild = true,
-                SetupNotes = $"Started from scheduler job {jobId} - {job.PartNumber} (Qty: {job.Quantity})"
+                SetupNotes = $"Started from scheduler job {jobId} - {job.PartNumber} (Qty: {job.Quantity})",
+                Material = ResolveSnapshotMaterial(job.Part, await _context.Machines.FirstOrDefaultAsync(m=>m.MachineId==job.MachineId))
             };
             _context.BuildJobs.Add(build);
-            // Also update machine status immediately for scheduler-origin builds
-            try
-            {
-                var machine = await _context.Machines.FirstOrDefaultAsync(m => m.MachineId == job.MachineId);
-                if (machine != null)
-                {
-                    machine.Status = "Building";
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to set machine status to Building for scheduler started build {JobId}", jobId);
-            }
             await _context.SaveChangesAsync();
             return build.BuildId;
         }
-        // ===== end restored methods =====
     }
 }

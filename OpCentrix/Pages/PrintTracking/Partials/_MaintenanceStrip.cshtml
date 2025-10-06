@@ -1,0 +1,43 @@
+@model OpCentrix.ViewModels.Maintenance.MaintenanceSummaryViewModel
+@using OpCentrix.Models.Maintenance
+@if (Model == null || Model.Rules == null || !Model.Rules.Any())
+{
+    <div class="flex items-center gap-2 text-xs text-gray-500 px-2 py-1">No maintenance rules</div>
+}
+else
+{
+    // Group component rules separately
+    var componentGroups = Model.Rules
+        .Where(r => !string.IsNullOrEmpty(r.ComponentName))
+        .GroupBy(r => r.ComponentName!)
+        .Select(g => new {
+            Component = g.Key,
+            Overdue = g.Count(x=>x.IsOverdue),
+            Due = g.Count(x=>x.IsDue && !x.IsOverdue)
+        })
+        .OrderByDescending(g=>g.Overdue)
+        .ThenByDescending(g=>g.Due)
+        .Take(3)
+        .ToList();
+
+    var statusClass = Model.OverdueCount>0?"bg-red-100 text-red-800 border-red-300":"";
+    if(string.IsNullOrEmpty(statusClass) && Model.DueSoonCount>0) statusClass="bg-amber-100 text-amber-800 border-amber-300";
+    if(string.IsNullOrEmpty(statusClass)) statusClass="bg-green-100 text-green-700 border-green-300";
+    <div class="flex items-center gap-3 text-xs px-3 py-2 rounded-lg border @statusClass">
+        <div class="font-bold whitespace-nowrap">
+            @(Model.OverdueCount>0?"Maintenance Overdue":Model.DueSoonCount>0?"Maintenance Due Soon":"Maintenance OK")
+        </div>
+        <div class="flex items-center gap-2 whitespace-nowrap">
+            @if(Model.OverdueCount>0){<span class="px-2 py-0.5 rounded bg-red-600 text-white font-semibold">@Model.OverdueCount Overdue</span>}
+            @if(Model.DueSoonCount>0){<span class="px-2 py-0.5 rounded bg-amber-500 text-white font-semibold">@Model.DueSoonCount Due Soon</span>}
+        </div>
+        <div class="hidden lg:flex items-center gap-2 flex-wrap overflow-hidden">
+            @foreach(var c in componentGroups)
+            {
+                var compClass = c.Overdue>0?"bg-red-600 text-white":c.Due>0?"bg-amber-400 text-amber-900":"bg-gray-300 text-gray-700";
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold @compClass" title="@c.Component: @c.Overdue overdue, @c.Due due soon">@c.Component@if(c.Overdue>0){<text>*</text>}</span>
+            }
+        </div>
+        <button class="ml-auto text-blue-600 hover:underline font-semibold" onclick="window.PrintTracking && window.PrintTracking.openMaintenance('@Model.MachineId')">View</button>
+    </div>
+}

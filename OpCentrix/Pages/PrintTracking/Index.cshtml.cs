@@ -10,6 +10,9 @@ using OpCentrix.Services;
 using OpCentrix.Services.Admin;
 using OpCentrix.Authorization;
 using System.Security.Claims;
+using OpCentrix.Services.Maintenance; // added
+using OpCentrix.Models.MaintenanceV2; // NEW for OperationalTask
+using System.Text.Json; // added for interval summary parsing
 
 namespace OpCentrix.Pages.PrintTracking
 {
@@ -25,8 +28,15 @@ namespace OpCentrix.Pages.PrintTracking
         private readonly IMaterialService _materialService;
         private readonly SchedulerContext _context;
         private readonly ILogger<IndexModel> _logger;
+        private readonly IMaintenanceService _maintenanceService; // added
+        private readonly IOperationalTaskService _taskService; // NEW
 
         public PrintTrackingDashboardViewModel Dashboard { get; set; } = new();
+
+        // NEW: Operational Tasks data (loaded via HTMX handlers)
+        public List<OperationalTask> OpenTasks { get; set; } = new();
+        public int OpenTaskCount => OpenTasks?.Count(t => t.Status == "Open" || t.Status == "InProgress") ?? 0;
+        public int HighPriorityTaskCount => OpenTasks?.Count(t => t.Priority <= 2 && (t.Status == "Open" || t.Status == "InProgress")) ?? 0;
 
         // New: Role-based view properties
         public bool IsAdminView { get; set; }
@@ -38,18 +48,60 @@ namespace OpCentrix.Pages.PrintTracking
         public bool HasCriticalError { get; set; } = false;
         public string ErrorContext { get; set; } = string.Empty;
 
+        // NEW: Task creation input binding model
+        [BindProperty]
+        public TaskInput NewTask { get; set; } = new();
+        public class TaskInput
+        {
+            [BindProperty]
+            public string Title { get; set; } = string.Empty;
+            [BindProperty]
+            public string? Description { get; set; }
+            [BindProperty]
+            public int Priority { get; set; } = 3; // 1-5
+            [BindProperty]
+            public string? MachineId { get; set; }
+            [BindProperty]
+            public DateTime? DueAt { get; set; }
+
+            // ---- NEW ADVANCED FIELDS (not yet persisted structurally) ----
+            // Controlling Intervals
+            [BindProperty] public bool TrackIncBuilds { get; set; }
+            [BindProperty] public bool TrackTiBuilds { get; set; }
+            [BindProperty] public bool TrackTotalBuilds { get; set; }
+            [BindProperty] public bool TrackMachineHours { get; set; }
+            [BindProperty] public int? IncBuildThreshold { get; set; }
+            [BindProperty] public int? TiBuildThreshold { get; set; }
+            [BindProperty] public int? TotalBuildThreshold { get; set; }
+            [BindProperty] public double? MachineHoursThreshold { get; set; }
+
+            // Repeat Frequency
+            [BindProperty] public bool EnableRepeat { get; set; }
+            [BindProperty] public string? RepeatType { get; set; } // DayOfWeek|IncBuilds|TiBuilds|TotalBuilds|MachineHours|None
+            [BindProperty] public DayOfWeek? RepeatDayOfWeek { get; set; }
+            [BindProperty] public int? RepeatEveryNIncBuilds { get; set; }
+            [BindProperty] public int? RepeatEveryNTiBuilds { get; set; }
+            [BindProperty] public int? RepeatEveryNTotalBuilds { get; set; }
+            [BindProperty] public double? RepeatEveryMachineHours { get; set; }
+        }
+
+        // FIXED constructor
         public IndexModel(
             IPrintTrackingService printTrackingService,
             IMachineManagementService machineManagementService,
             IMaterialService materialService,
             SchedulerContext context,
-            ILogger<IndexModel> logger)
+            ILogger<IndexModel> logger,
+            IMaintenanceService maintenanceService,
+            IOperationalTaskService taskService) // NEW
         {
             _printTrackingService = printTrackingService ?? throw new ArgumentNullException(nameof(printTrackingService));
             _machineManagementService = machineManagementService ?? throw new ArgumentNullException(nameof(machineManagementService));
             _materialService = materialService ?? throw new ArgumentNullException(nameof(materialService));
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _maintenanceService = maintenanceService ?? throw new ArgumentNullException(nameof(maintenanceService));
+            _taskService = taskService ?? throw new ArgumentNullException(nameof(taskService));
         }
 
         public async Task<IActionResult> OnGetAsync(int? jobId = null, string? machineId = null)
@@ -100,6 +152,20 @@ namespace OpCentrix.Pages.PrintTracking
                     PageErrors.Add("Machine data service unavailable - using fallback data");
                 }
 
+                // Load open tasks summary for initial page (list itself via HTMX later)
+                if (IsAdminView)
+                {
+                    try
+                    {
+                        OpenTasks = await _taskService.GetOpenAsync(15);
+                    }
+                    catch (Exception tex)
+                    {
+                        _logger.LogWarning(tex, "Failed loading open tasks (non-blocking)");
+                        OpenTasks = new List<OperationalTask>();
+                    }
+                }
+
                 // ENHANCED: Handle scheduler integration parameters with error handling
                 try
                 {
@@ -146,6 +212,140 @@ namespace OpCentrix.Pages.PrintTracking
             }
         }
 
+        // ==================== OPERATIONAL TASK HTMX HANDLERS ====================
+        public async Task<IActionResult> OnGetTaskListAsync()
+        {
+            UserRole = GetCurrentUserRole();
+            if (!IsAdmin()) return Unauthorized();
+            OpenTasks = await SafeGetOpenTasksAsync();
+            return Partial("PrintTracking/Partials/_TaskList", OpenTasks);
+        }
+
+        public IActionResult OnGetCreateTaskModal()
+        {
+            UserRole = GetCurrentUserRole();
+            if (!IsAdmin()) return Unauthorized();
+            NewTask = new TaskInput();
+            return Partial("PrintTracking/Partials/_CreateTaskModal", this);
+        }
+
+        public async Task<IActionResult> OnPostCreateTaskAsync()
+        {
+            UserRole = GetCurrentUserRole();
+            if (!IsAdmin()) return Unauthorized();
+
+            if (string.IsNullOrWhiteSpace(NewTask.Title) || NewTask.Title.Trim().Length < 3)
+                ModelState.AddModelError("NewTask.Title", "Title must be at least 3 characters");
+            if (NewTask.Title?.Length > 160)
+                ModelState.AddModelError("NewTask.Title", "Title must be 160 characters or less");
+            if (NewTask.Priority < 1 || NewTask.Priority > 5)
+                ModelState.AddModelError("NewTask.Priority", "Priority must be between 1 and 5");
+
+            var form = Request.Form;
+            string intervalsJson = form["IntervalsJson"].FirstOrDefault() ?? "[]";
+            bool suppressIfOpen = form["Options.SuppressIfOpen"].FirstOrDefault() == "on";
+            bool matchAll = form["Options.MatchAll"].FirstOrDefault() == "on";
+
+            // Basic lightweight validation of intervals JSON
+            List<Dictionary<string, object?>> intervalList = new();
+            try
+            {
+                intervalList = System.Text.Json.JsonSerializer.Deserialize<List<Dictionary<string, object?>>>(intervalsJson) ?? new();
+            }
+            catch
+            {
+                ModelState.AddModelError(string.Empty, "Invalid intervals definition");
+            }
+            if (!intervalList.Any() && !NewTask.DueAt.HasValue)
+            {
+                ModelState.AddModelError(string.Empty, "At least one interval or a manual Due date is required");
+            }
+
+            if (!ModelState.IsValid)
+                return Partial("PrintTracking/Partials/_CreateTaskModal", this);
+
+            OperationalTask? entity = null;
+            try
+            {
+                var config = new
+                {
+                    version = 2,
+                    created = DateTime.UtcNow,
+                    intervals = intervalList,
+                    logic = matchAll ? "ALL" : "ANY",
+                    options = new { suppressIfOpen }
+                };
+                string configJson = System.Text.Json.JsonSerializer.Serialize(config);
+
+                entity = new OperationalTask
+                {
+                    Title = NewTask.Title.Trim(),
+                    Description = string.IsNullOrWhiteSpace(NewTask.Description) ? null : NewTask.Description.Trim(),
+                    Priority = NewTask.Priority,
+                    MachineId = string.IsNullOrWhiteSpace(NewTask.MachineId) ? null : NewTask.MachineId.Trim(),
+                    CreatedByUserId = GetCurrentUserId(),
+                    DueAt = NewTask.DueAt.HasValue ? DateTime.SpecifyKind(NewTask.DueAt.Value, DateTimeKind.Local).ToUniversalTime() : null,
+                    ConfigJson = configJson
+                };
+                await _taskService.CreateAsync(entity);
+
+                // Attempt full refresh
+                OpenTasks = await SafeGetOpenTasksAsync();
+
+                // Fallback: ensure created task present even if query failed (schema patch race)
+                if (entity != null && (OpenTasks == null || !OpenTasks.Any(o => o.Id == entity.Id)))
+                {
+                    OpenTasks ??= new List<OperationalTask>();
+                    OpenTasks.Insert(0, entity); // prepend for visibility
+                }
+
+                if (entity != null && entity.Id > 0)
+                    ViewData["NewTaskId"] = entity.Id; // expose to partial for scroll/highlight
+
+                return Partial("PrintTracking/Partials/_TaskList", OpenTasks);
+            }
+            catch (DuplicateOperationalTaskException dex)
+            {
+                ModelState.AddModelError(string.Empty, dex.Message);
+                return Partial("PrintTracking/Partials/_CreateTaskModal", this);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[MAINT][ERR] Error creating operational task (interval wizard) - fallback insert attempt");
+                if (entity != null && entity.Id == 0)
+                {
+                    // Present user-friendly message
+                    ModelState.AddModelError(string.Empty, "Failed to create task (DB). Please retry.");
+                    return Partial("PrintTracking/Partials/_CreateTaskModal", this);
+                }
+                ModelState.AddModelError(string.Empty, "Failed to create task");
+                return Partial("PrintTracking/Partials/_CreateTaskModal", this);
+            }
+        }
+
+        public async Task<IActionResult> OnPostCompleteTaskAsync(int id, bool early = false)
+        {
+            UserRole = GetCurrentUserRole();
+            if (!IsAdmin()) return Unauthorized();
+            try
+            {
+                await _taskService.CompleteAsync(id, GetCurrentUserId(), early: early);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed completing task {TaskId}", id);
+            }
+            OpenTasks = await SafeGetOpenTasksAsync();
+            return Partial("PrintTracking/Partials/_TaskList", OpenTasks);
+        }
+
+        private bool IsAdmin() => UserRole == "Admin" || UserRole == "Manager" || UserRole == "Administrator";
+        private async Task<List<OperationalTask>> SafeGetOpenTasksAsync()
+        {
+            try { return await _taskService.GetOpenAsync(50); } catch { return new List<OperationalTask>(); }
+        }
+        // =======================================================================
+
         public async Task<IActionResult> OnGetRefreshDashboardAsync()
         {
             var operationId = Guid.NewGuid().ToString("N")[..8];
@@ -158,6 +358,12 @@ namespace OpCentrix.Pages.PrintTracking
 
                 Dashboard = await _printTrackingService.GetDashboardDataAsync(userId);
                 await PopulateSlsMachinesOnlyAsync();
+
+                // Refresh task counts for the stats card (list loaded lazily)
+                if (IsAdminView)
+                {
+                    OpenTasks = await SafeGetOpenTasksAsync();
+                }
 
                 _logger.LogInformation("✅ [PRINT-TRACKING-{OperationId}] Dashboard refreshed successfully", operationId);
                 return Partial("_PrintTrackingDashboard", Dashboard);
@@ -995,5 +1201,90 @@ namespace OpCentrix.Pages.PrintTracking
         }
 
         #endregion
+
+        public async Task<IActionResult> OnGetMaintenanceSummaryAsync(string machineId)
+        {
+            if (string.IsNullOrWhiteSpace(machineId)) return BadRequest("machineId required");
+            var rules = await _maintenanceService.GetMachineStatusAsync(machineId, includeComponents: true);
+            var summary = new OpCentrix.ViewModels.Maintenance.MaintenanceSummaryViewModel
+            {
+                MachineId = machineId,
+                Rules = rules,
+                OverdueCount = rules.Count(r => r.IsOverdue),
+                DueSoonCount = rules.Count(r => r.IsDue && !r.IsOverdue),
+                HighestSeverity = rules.Where(r => r.IsOverdue || r.IsDue)
+                                        .OrderByDescending(r => r.IsOverdue)
+                                        .ThenByDescending(r => r.Severity)
+                                        .Select(r => r.Severity)
+                                        .DefaultIfEmpty(OpCentrix.Models.Maintenance.MaintenanceSeverity.Info)
+                                        .First()
+            };
+            return Partial("PrintTracking/Partials/_MaintenanceStrip", summary);
+        }
+
+        public async Task<IActionResult> OnGetMaintenanceDetailsAsync(string machineId)
+        {
+            if (string.IsNullOrWhiteSpace(machineId)) return BadRequest("machineId required");
+            var rules = await _maintenanceService.GetMachineStatusAsync(machineId, includeComponents: true);
+            var vm = new OpCentrix.ViewModels.Maintenance.MaintenanceSummaryViewModel
+            {
+                MachineId = machineId,
+                Rules = rules,
+                OverdueCount = rules.Count(r => r.IsOverdue),
+                DueSoonCount = rules.Count(r => r.IsDue && !r.IsOverdue),
+                HighestSeverity = rules.Where(r => r.IsOverdue || r.IsDue)
+                                        .OrderByDescending(r => r.IsOverdue)
+                                        .ThenByDescending(r => r.Severity)
+                                        .Select(r => r.Severity)
+                                        .DefaultIfEmpty(OpCentrix.Models.Maintenance.MaintenanceSeverity.Info)
+                                        .First()
+            };
+            return Partial("PrintTracking/Partials/_MaintenanceDetailsModal", vm);
+        }
+
+        public async Task<IActionResult> OnGetMaintenanceFleetSummaryAsync()
+        {
+            try
+            {
+                // Load fleet status via service
+                var machines = await _context.Machines.Where(m => m.IsActive).Select(m => m.MachineId).ToListAsync();
+                var overdueMachines = new List<string>();
+                var dueSoonMachines = new List<string>();
+                int overdueRules = 0;
+                int dueSoonRules = 0;
+                foreach (var m in machines)
+                {
+                    var rules = await _maintenanceService.GetMachineStatusAsync(m);
+                    if (!rules.Any()) continue;
+                    var machineOverdue = rules.Count(r => r.IsOverdue);
+                    var machineDue = rules.Count(r => r.IsDue && !r.IsOverdue);
+                    if (machineOverdue > 0)
+                    {
+                        overdueMachines.Add(m);
+                        overdueRules += machineOverdue;
+                    }
+                    if (machineDue > 0)
+                    {
+                        dueSoonMachines.Add(m);
+                        dueSoonRules += machineDue;
+                    }
+                }
+                var vm = new OpCentrix.ViewModels.Maintenance.MaintenanceFleetSummaryViewModel
+                {
+                    MachinesWithIssues = overdueMachines.Union(dueSoonMachines).Distinct().Count(),
+                    OverdueRules = overdueRules,
+                    DueSoonRules = dueSoonRules,
+                    MachinesOverdue = overdueMachines.Distinct().OrderBy(x => x).ToList(),
+                    MachinesDueSoon = dueSoonMachines.Except(overdueMachines).Distinct().OrderBy(x => x).ToList(),
+                    GeneratedAt = DateTime.UtcNow
+                };
+                return Partial("PrintTracking/Partials/_MaintenanceFleetSummary", vm);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating maintenance fleet summary");
+                return Partial("PrintTracking/Partials/_MaintenanceFleetSummary", new OpCentrix.ViewModels.Maintenance.MaintenanceFleetSummaryViewModel { GeneratedAt = DateTime.UtcNow });
+            }
+        }
     }
 }

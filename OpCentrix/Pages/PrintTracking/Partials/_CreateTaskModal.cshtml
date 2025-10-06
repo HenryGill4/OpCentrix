@@ -1,0 +1,224 @@
+@model OpCentrix.Pages.PrintTracking.IndexModel
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" id="create-task-modal">
+  <div class="bg-white rounded-xl shadow-xl w-full max-w-4xl p-0 relative overflow-hidden">
+    <div class="flex items-center justify-between px-6 py-4 border-b">
+        <h3 class="text-lg font-bold">New Operational Task</h3>
+        <button type="button" class="text-gray-500 hover:text-gray-700 inline-flex items-center justify-center w-8 h-8 rounded-md hover:bg-gray-100" onclick="document.getElementById('create-task-modal').remove()" aria-label="Close modal">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+    </div>
+    <form id="task-wizard-form" hx-post="/PrintTracking?handler=CreateTask" hx-target="#task-list" hx-swap="outerHTML">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="WizardStep" id="wizard-step" value="1" />
+        <input type="hidden" name="IntervalsJson" id="intervals-json" />
+        <div id="wizard-body" class="p-6 space-y-6">
+            <!-- Step Navigation -->
+            <ol class="flex items-center text-sm font-medium text-gray-500 gap-4" id="wizard-steps">
+                <li class="wizard-step-item" data-step="1">1. Basics</li>
+                <li class="wizard-step-item" data-step="2">2. Intervals</li>
+                <li class="wizard-step-item" data-step="3">3. Review</li>
+            </ol>
+
+            <!-- STEP 1: BASICS -->
+            <section class="wizard-step" data-step="1">
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Title <span class="text-red-500">*</span></label>
+                            <input asp-for="NewTask.Title" maxlength="160" required class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
+                            <span asp-validation-for="NewTask.Title" class="text-xs text-red-600"></span>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Description</label>
+                            <textarea asp-for="NewTask.Description" rows="5" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"></textarea>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Priority</label>
+                                <select asp-for="NewTask.Priority" class="mt-1 w-full rounded-md border border-gray-300 px-2 py-2 text-sm">
+                                    @for (int p = 1; p <=5; p++) {<option value="@p">@p</option>}
+                                </select>
+                            </div>
+                            <div class="col-span-2">
+                                <label class="block text-sm font-medium text-gray-700">Machine (optional)</label>
+                                <input asp-for="NewTask.MachineId" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" placeholder="TI1" />
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Due (optional)</label>
+                            <input asp-for="NewTask.DueAt" type="datetime-local" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
+                        </div>
+                        <div class="text-xs text-gray-500">Next: add one or more intervals that make this task become due. You can mix build counts, hours, calendar weeks, day-of-week or a fixed date. The task will become due when ANY interval condition is met (future option for ALL).</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- STEP 2: INTERVALS -->
+            <section class="wizard-step hidden" data-step="2">
+                <div class="flex items-start justify-between gap-4 mb-3">
+                    <div>
+                        <h4 class="font-semibold text-gray-700">Intervals / Triggers</h4>
+                        <p class="text-xs text-gray-500 max-w-lg">Add one or more interval rules. The task becomes due when the earliest rule is satisfied. Examples: Every 150 Inconel builds; Every 2 weeks; Every 1000 machine hours. All optional – but at least one interval required unless you set a manual Due date.</p>
+                    </div>
+                    <button type="button" id="add-interval" class="px-3 py-1.5 rounded-md bg-blue-600 text-white text-xs font-semibold">Add Interval</button>
+                </div>
+                <div class="border rounded-md divide-y" id="interval-rows" data-empty-message="No intervals added yet. Add at least one.">
+                </div>
+                <div class="mt-4 flex items-center gap-4">
+                    <label class="inline-flex items-center gap-2 text-xs">
+                        <input type="checkbox" name="Options.SuppressIfOpen" class="rounded border-gray-300" />
+                        <span>Suppress if similar open task exists (same machine & title)</span>
+                    </label>
+                    <label class="inline-flex items-center gap-2 text-xs">
+                        <input type="checkbox" name="Options.MatchAll" class="rounded border-gray-300" />
+                        <span>Require ALL intervals (default ANY)</span>
+                    </label>
+                </div>
+            </section>
+
+            <!-- STEP 3: REVIEW -->
+            <section class="wizard-step hidden" data-step="3">
+                <h4 class="font-semibold text-gray-700 mb-3">Review & Confirm</h4>
+                <div id="wizard-review" class="space-y-3 text-sm">
+                    <div class="p-3 rounded-md bg-gray-50 border text-gray-700" data-review="basic"></div>
+                    <div class="p-3 rounded-md bg-gray-50 border text-gray-700" data-review="intervals"></div>
+                    <div class="text-xs text-gray-500">Submitting will create the task with these interval rules. Advanced evaluation logic will be wired in a later phase.</div>
+                </div>
+            </section>
+        </div>
+        <div class="flex items-center justify-between gap-3 px-6 py-4 border-t bg-gray-50">
+            <button type="button" id="wizard-prev" class="px-4 py-2 text-sm rounded-md border disabled:opacity-40" disabled>Back</button>
+            <div class="flex items-center gap-3">
+                <span id="interval-error" class="hidden text-xs text-red-600"></span>
+                <button type="button" id="wizard-next" class="px-4 py-2 text-sm rounded-md bg-blue-600 text-white">Next</button>
+                <button type="submit" id="wizard-submit" class="hidden px-4 py-2 text-sm rounded-md bg-green-600 text-white">Create Task</button>
+            </div>
+        </div>
+    </form>
+  </div>
+</div>
+<style>
+.interval-row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:.75rem;padding:.75rem;background:#fff;} .interval-row:nth-child(odd){background:#f9fafb;} .interval-row:hover{background:#f1f5f9;} .interval-row .form-block{flex:1 1 140px;} .interval-row .remove-btn{color:#b91c1c;font-size:.75rem;display:inline-flex;align-items:center;justify-content:center;width:1.75rem;height:1.75rem;border-radius:.375rem;border:1px solid transparent;} .interval-row .remove-btn:hover{background:#fee2e2;border-color:#fecaca;} .badge{background:#e0f2fe;color:#0369a1;font-size:.65rem;padding:2px 6px;border-radius:9999px;letter-spacing:.5px;text-transform:uppercase;font-weight:600;}
+.wizard-step-item{cursor:pointer;position:relative;padding:.25rem .5rem;border-radius:.375rem;} .wizard-step-item[data-active="true"]{color:#1d4ed8;font-weight:600;background:#eff6ff;}
+.option-tile { border:1px solid #d1d5db; border-radius:.375rem; padding:.75rem; text-align:center; cursor:pointer; user-select:none; color:#4b5563; transition:all .15s; }
+.option-tile:hover { border-color:#60a5fa; color:#2563eb; }
+</style>
+<script>
+(function(){
+  const modal=document.getElementById('create-task-modal');
+  const stepInput=modal.querySelector('#wizard-step');
+  const steps=[...modal.querySelectorAll('.wizard-step')];
+  const navItems=[...modal.querySelectorAll('.wizard-step-item')];
+  const btnPrev=modal.querySelector('#wizard-prev');
+  const btnNext=modal.querySelector('#wizard-next');
+  const btnSubmit=modal.querySelector('#wizard-submit');
+  const intervalContainer=modal.querySelector('#interval-rows');
+  const addIntervalBtn=modal.querySelector('#add-interval');
+  const intervalsJsonInput=modal.querySelector('#intervals-json');
+  const intervalError=modal.querySelector('#interval-error');
+
+  function showStep(n){
+    steps.forEach(s=>s.classList.toggle('hidden', s.dataset.step!=n));
+    navItems.forEach(i=>i.dataset.active = (i.dataset.step==n));
+    btnPrev.disabled = n==1;
+    btnNext.classList.toggle('hidden', n==3);
+    btnSubmit.classList.toggle('hidden', n!=3);
+    stepInput.value=n;
+    if(n==3){
+      if(!packIntervals(true)) { showStep(2); return; }
+      buildReview();
+    }
+  }
+  function current(){return parseInt(stepInput.value);}  
+  btnPrev.addEventListener('click',()=>{ if(current()>1) showStep(current()-1); });
+  btnNext.addEventListener('click',()=>{ if(current()<3) showStep(current()+1); });
+  navItems.forEach(i=>i.addEventListener('click',()=>{ const target=parseInt(i.dataset.step); if(target<current()) showStep(target); else if(target===current()+1) btnNext.click(); }));
+
+  const intervalTemplates = {
+    BuildCount:()=>`<div class="form-block"><label class="block text-2xs font-medium text-gray-600">Material</label><select class="mt-1 w-full rounded-md border-gray-300 text-sm" data-field="material"><option value="Any">Any</option><option value="Inc">Inconel</option><option value="Ti">Titanium</option></select></div><div class="form-block"><label class="block text-2xs font-medium text-gray-600">Threshold (builds)</label><input type="number" min="1" value="150" data-field="threshold" class="mt-1 w-full rounded-md border-gray-300 text-sm" /></div>`,
+    MachineHours:()=>`<div class="form-block"><label class="block text-2xs font-medium text-gray-600">Threshold (hours)</label><input type="number" step="0.1" min="0.1" value="1000" data-field="hours" class="mt-1 w-full rounded-md border-gray-300 text-sm" /></div>`,
+    CalendarWeeks:()=>`<div class="form-block"><label class="block text-2xs font-medium text-gray-600">Every N Weeks</label><input type="number" min="1" value="2" data-field="every" class="mt-1 w-full rounded-md border-gray-300 text-sm" /></div>`,
+    DayOfWeek:()=>`<div class="form-block"><label class="block text-2xs font-medium text-gray-600">Day</label><select data-field="dayOfWeek" class="mt-1 w-full rounded-md border-gray-300 text-sm"><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option><option>Sunday</option></select></div>`,
+    FixedDate:()=>`<div class="form-block"><label class="block text-2xs font-medium text-gray-600">Date</label><input type="datetime-local" data-field="fixedDate" class="mt-1 w-full rounded-md border-gray-300 text-sm" /></div>`
+  };
+
+  function addInterval(initialType='BuildCount'){
+    const row=document.createElement('div');
+    row.className='interval-row';
+    row.dataset.type=initialType;
+    row.innerHTML=`<div class="form-block"><label class="block text-2xs font-medium text-gray-600">Type</label><select data-field="type" class="mt-1 w-full rounded-md border-gray-300 text-sm">${Object.keys(intervalTemplates).map(t=>`<option ${t===initialType?'selected':''}>${t}</option>`).join('')}</select></div><div class="flex flex-1 gap-4 flex-wrap" data-slot></div><button type="button" class="remove-btn ml-auto" title="Remove interval" aria-label="Remove interval">${getRemoveIconSvg()}</button>`;
+    intervalContainer.appendChild(row);
+    const slot=row.querySelector('[data-slot]');
+    slot.innerHTML=intervalTemplates[initialType]();
+    row.querySelector('[data-field=type]').addEventListener('change',e=>{row.dataset.type=e.target.value;slot.innerHTML=intervalTemplates[e.target.value]();});
+    row.querySelector('.remove-btn').addEventListener('click',()=>{row.remove();packIntervals(false);});
+  }
+
+  function getRemoveIconSvg(){
+     return '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>';
+  }
+
+  function packIntervals(showErrors){
+    const rows=[...intervalContainer.querySelectorAll('.interval-row')];
+    const list=[]; let hasError=false; intervalError.classList.add('hidden');
+    rows.forEach(r=>{
+      const type=r.dataset.type; const obj={ type };
+      function get(field){ return r.querySelector(`[data-field="${field}"]`); }
+      switch(type){
+        case 'BuildCount': obj.material=get('material').value; obj.threshold=parseInt(get('threshold').value||'0'); if(!obj.threshold||obj.threshold<1){hasError=true;} break;
+        case 'MachineHours': obj.hours=parseFloat(get('hours').value||'0'); if(!obj.hours||obj.hours<=0){hasError=true;} break;
+        case 'CalendarWeeks': obj.every=parseInt(get('every').value||'0'); if(!obj.every||obj.every<1){hasError=true;} break;
+        case 'DayOfWeek': obj.dayOfWeek=get('dayOfWeek').value; break;
+        case 'FixedDate': obj.fixedDate=get('fixedDate').value; break;
+      }
+      list.push(obj);
+    });
+    if(list.length===0){hasError=true;}
+    if(hasError && showErrors){ intervalError.textContent='Please add at least one valid interval (fix inputs) or provide a Due date on the Basics step.'; intervalError.classList.remove('hidden'); }
+    intervalsJsonInput.value=JSON.stringify(list);
+    return !hasError;
+  }
+
+  const form=modal.querySelector('#task-wizard-form');
+  form.addEventListener('submit',e=>{ if(!packIntervals(true)){ e.preventDefault(); showStep(2);} });
+
+  function buildReview(){
+    const basic=`<strong>Basics:</strong> ${form.querySelector('[name="NewTask.Title"]').value || '(no title)'} | Priority ${form.querySelector('[name="NewTask.Priority"]').value} | Machine ${form.querySelector('[name="NewTask.MachineId"]').value||'-'}`;
+    modal.querySelector('[data-review="basic"]').innerHTML=basic;
+    const intervals = JSON.parse(intervalsJsonInput.value||'[]');
+    const modeAll = form.querySelector('[name="Options.MatchAll"]').checked;
+    const suppress = form.querySelector('[name="Options.SuppressIfOpen"]').checked;
+    const lines = intervals.map(i=>{
+      switch(i.type){
+        case 'BuildCount': return `Builds (${i.material}) >= ${i.threshold}`;
+        case 'MachineHours': return `Machine Hours >= ${i.hours}`;
+        case 'CalendarWeeks': return `Every ${i.every} week(s)`;
+        case 'DayOfWeek': return `Weekly on ${i.dayOfWeek}`;
+        case 'FixedDate': return `Fixed Date ${i.fixedDate}`;
+        default: return JSON.stringify(i);
+      }
+    });
+    const intervalsHtml = `<strong>Intervals (${modeAll?'ALL required':'ANY'}):</strong><ul class='list-disc ml-5 mt-1 space-y-0.5'>${lines.map(l=>`<li>${l}</li>`).join('')}</ul>` + (suppress?"<div class='mt-2 text-xs text-amber-600'>Duplicate suppression enabled.</div>":'');
+    modal.querySelector('[data-review="intervals"]').innerHTML=intervalsHtml;
+  }
+
+  // INITIALIZE: Add a default first interval and wire button
+  addInterval();
+  if(addIntervalBtn){ addIntervalBtn.addEventListener('click', ()=> addInterval()); }
+
+  showStep(1);
+
+  // Force refresh of task list after successful POST (in case initial partial returns empty due to schema race)
+  form.addEventListener('htmx:afterRequest', (e)=>{
+    if(e.detail.xhr && e.detail.xhr.responseURL && e.detail.xhr.responseURL.indexOf('handler=CreateTask')>-1 && e.detail.xhr.status===200){
+      // Delay a tick to allow modal removal script, then fetch fresh list
+      setTimeout(()=>{ if(window.htmx){ htmx.ajax('GET','/PrintTracking?handler=TaskList',{target:'#task-list', swap:'outerHTML'}); } },150);
+    }
+  });
+})();
+
+document.addEventListener('htmx:afterOnLoad',e=>{if(e.detail.target.id==='task-list'){document.getElementById('create-task-modal')?.remove();}});
+</script>
