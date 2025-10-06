@@ -1,13 +1,13 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore; // minimal refs retained for future re-enable
 using Microsoft.Extensions.Logging;
 using OpCentrix.Data;
-using OpCentrix.Models.Maintenance;
 
 namespace OpCentrix.Services.Maintenance
 {
+    /// <summary>
+    /// LEGACY (disabled) maintenance component seeding.
+    /// Table MachineComponents has been retired. This service now no-ops to avoid startup errors.
+    /// </summary>
     public class MaintenanceComponentSeedingService
     {
         private readonly SchedulerContext _context;
@@ -18,51 +18,13 @@ namespace OpCentrix.Services.Maintenance
             _logger = logger;
         }
 
-        public async Task EnsureSeedAsync()
+        /// <summary>
+        /// No-op: MachineComponents seeding removed. Call left in place for backward compatibility.
+        /// </summary>
+        public Task EnsureSeedAsync()
         {
-            // Ensure migration table exists
-            if (!await _context.Database.CanConnectAsync()) return;
-            try
-            {
-                var slsMachines = await _context.Machines.Where(m=>m.IsActive && (m.MachineType.Contains("SLS") || m.MachineType.Contains("Print") || m.MachineType==""))
-                    .Select(m=>m.MachineId).ToListAsync();
-                if (!slsMachines.Any()) return;
-                var defaultComponents = new []{"Recoater Arm","Laser Optics","Inert Gas Filter","Build Chamber","Powder Feed System"};
-                foreach (var machineId in slsMachines)
-                {
-                    foreach (var name in defaultComponents)
-                    {
-                        if (!await _context.MachineComponents.AnyAsync(c=>c.MachineId==machineId && c.Name==name))
-                        {
-                            _context.MachineComponents.Add(new MachineComponent
-                            {
-                                MachineId = machineId,
-                                Name = name,
-                                Category = "Core",
-                                DisplayOrder = 10,
-                                CreatedBy = "Seeder"
-                            });
-                        }
-                    }
-                }
-                // Global stage-like component for Sieve Station (shared)
-                if (!await _context.MachineComponents.AnyAsync(c=>c.MachineId=="SIEVE-STATION"))
-                {
-                    _context.MachineComponents.Add(new MachineComponent
-                    {
-                        MachineId = "SIEVE-STATION",
-                        Name = "Sieve Station",
-                        Category = "Stage",
-                        DisplayOrder = 5,
-                        CreatedBy = "Seeder"
-                    });
-                }
-                await _context.SaveChangesAsync();
-            }
-            catch(System.Exception ex)
-            {
-                _logger.LogError(ex, "Error seeding maintenance machine components");
-            }
+            _logger.LogInformation("[MAINT-SEED] Skipped legacy MachineComponents seeding (table removed)");
+            return Task.CompletedTask;
         }
     }
 }

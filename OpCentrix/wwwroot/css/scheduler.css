@@ -51,6 +51,10 @@
     --mobile-sm: 480px;
     --mobile-md: 768px;
     --tablet: 1024px;
+    /* Tooltip */
+    --job-tooltip-bg: #0f172a;
+    --job-tooltip-border: rgba(255,255,255,0.08);
+    --job-tooltip-shadow: 0 8px 24px -4px rgba(0,0,0,.45),0 2px 6px -2px rgba(0,0,0,.4);
 }
 
 /* ==============================================
@@ -172,6 +176,32 @@
     border-radius: 50%;
     background: currentColor;
     animation: pulse 2s infinite;
+}
+
+/* ================== JOB TOOLTIP SYSTEM ================== */
+.job-block{position:relative;}
+.job-tooltip{position:absolute;inset:auto auto calc(100% + 6px) 0;background:var(--job-tooltip-bg);color:#e2e8f0;padding:6px 8px 8px 8px;border-radius:10px;min-width:180px;max-width:260px;font-size:10px;line-height:1.25;display:flex;flex-direction:column;gap:2px;opacity:0;pointer-events:none;transform:translateY(4px) scale(.94);border:1px solid var(--job-tooltip-border);box-shadow:var(--job-tooltip-shadow);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);transition:opacity .18s ease,transform .22s cubic-bezier(.32,.72,.33,1);z-index:400;}
+.job-tooltip .jt-line{display:flex;flex-wrap:wrap;gap:4px;align-items:baseline;}
+.job-tooltip .jt-line.dim{opacity:.65;font-weight:500;}
+.job-tooltip .jt-part{font-size:11px;letter-spacing:.3px;}
+.job-tooltip .jt-rush{background:#dc2626;color:#fff;padding:2px 4px;border-radius:4px;font-size:9px;font-weight:600;letter-spacing:.5px;}
+.job-block:focus .job-tooltip,.job-block:hover .job-tooltip{opacity:1;transform:translateY(0) scale(1);} 
+/* Auto flip below if not enough top space */
+.job-block .job-tooltip[data-pos='below']{top:calc(100% + 6px);bottom:auto;}
+
+/* Responsive safeguard: tighter width on very small blocks */
+@media (max-width:640px){
+  .job-tooltip{font-size:11px;min-width:160px;}
+}
+
+/* High contrast preference */
+@media (prefers-contrast: more){
+  .job-tooltip{border-color:#94a3b8;background:#0f172a;}
+}
+
+/* Reduce motion */
+@media (prefers-reduced-motion: reduce){
+  .job-tooltip{transition:none;}
 }
 
 /* ==============================================
@@ -860,6 +890,19 @@
         overflow: visible !important;
     }
 
+    .scheduler-grid-cell:has(.job-block:hover) {
+        background: transparent !important;
+        border-left-color: transparent !important;
+        box-shadow: none !important;
+    }
+
+    /* TEMP: Specific fix for certain job cells causing jumps */
+    .scheduler-grid-cell:has(.job-block) {
+        min-height: 68px !important;
+        height: auto !important;
+    }
+}
+
 /* CORRECTED Z-INDEX HIERARCHY - Clean and Clear */
 
 /* Background elements - lowest priority */
@@ -1126,170 +1169,3 @@
 .scheduler-vertical .time-row { display: flex !important; }
 .scheduler-vertical .time-row > .scheduler-time-column { flex: 0 0 var(--vertical-time-col-width) !important; }
 .scheduler-vertical .time-row .scheduler-machine-columns { display: flex !important; flex-direction: row !important; flex: 1 1 auto !important; width: auto !important; }
-
-/* Ensure grid container fills width */
-.scheduler-grid-container.scheduler-vertical { width: 100% !important; }
-
-/* VERTICAL VIEW FIXES: allow continuous job blocks across time rows */
-.scheduler-vertical .scheduler-time-rows {
-    position: relative;
-}
-
-.scheduler-vertical .time-row {
-    position: relative;
-    overflow: visible !important; /* let vertical spans overflow into next rows visually */
-}
-
-.scheduler-vertical .scheduler-machine-columns {
-    overflow: visible !important; /* prevent clipping of tall job blocks */
-}
-
-.scheduler-vertical .scheduler-grid-cell.machine-column {
-    overflow: visible !important; /* required for absolute job-block children with tall height */
-}
-
-/* Ensure job-blocks can extend vertically without being cut */
-.scheduler-vertical .job-block {
-    top: auto; /* handled via inline styles */
-    bottom: auto;
-}
-
-/* ==============================================
-   MOBILE TOUCH IMPROVEMENTS
-   ============================================== */
-
-/* Enhanced touch targets for mobile */
-@media (hover: none) and (pointer: coarse) {
-    .icon-btn,
-    .text-btn,
-    .toggle-btn,
-    .chip,
-    .primary-btn,
-    .secondary-btn {
-        min-height: 44px;
-        min-width: 44px;
-    }
-
-    .add-job-btn {
-        width: 36px;
-        height: 36px;
-        opacity: 0.7;
-        transform: translate(-50%, -50%) scale(1);
-    }
-
-    .scheduler-grid-cell:active .add-job-btn {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1.1);
-    }
-
-    .job-block {
-        min-height: 40px;
-        font-size: 13px;
-    }
-}
-
-/* Improve horizontal scrolling on touch devices */
-.scheduler-horizontal-container {
-    touch-action: pan-x;
-}
-
-.chip-scroll {
-    touch-action: pan-x;
-}
-
-/* ==============================================
-   DARK MODE SUPPORT
-   ============================================== */
-
-/*@media (prefers-color-scheme: dark) {
-    :root {
-        --ios-light-gray: #1c1c1e;
-        --ios-separator: #38383a;
-    }
-
-    .scheduler-horizontal-container {
-        background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
-    }
-
-    .scheduler-main-grid {
-        background: #1f2937;
-    }
-
-    .machine-info-container {
-        background: rgba(31, 41, 59, 0.98);
-        border-color: rgba(255, 255, 255, 0.1);
-        color: #f9fafb;
-    }
-
-    .machine-name {
-        color: #f9fafb;
-    }
-
-    .machine-stat-item {
-        background: #374151;
-        border-color: #4b5563;
-        color: #f9fafb;
-    }
-
-    .control-group {
-        background: #374151;
-        border-color: #4b5563;
-    }
-
-    .icon-btn,
-    .text-btn,
-    .toggle-btn,
-    .secondary-btn {
-        background: #374151;
-        border-color: #4b5563;
-        color: #f9fafb;
-    }
-
-    .primary-btn {
-        background: #3b82f6;
-        color: #ffffff;
-    }
-
-    .chip {
-        background: #374151;
-        border-color: #4b5563;
-        color: #f9fafb;
-    }
-
-    .chip-active {
-        background: #3b82f6;
-        color: #ffffff;
-    }
-}
-*/
-/* ==============================================
-   PRINT MEDIA OPTIMIZATIONS
-   ============================================== */
-
-@media print {
-    .scheduler-horizontal-container {
-        box-shadow: none;
-        border: 1px solid #e5e7eb;
-        background: white;
-    }
-
-    .machine-info-container {
-        box-shadow: none;
-        border: 1px solid #e5e7eb;
-        background: white;
-    }
-
-    .add-job-btn {
-        display: none !important;
-    }
-
-    .job-block {
-        box-shadow: none !important;
-        border: 1px solid rgba(0, 0, 0, 0.2) !important;
-    }
-
-    .control-group,
-    .scheduler-controls {
-        display: none !important;
-    }
-}

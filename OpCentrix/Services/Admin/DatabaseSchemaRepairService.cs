@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using OpCentrix.Data;
+using System.Data;
+using Microsoft.Data.Sqlite;
 
 namespace OpCentrix.Services.Admin
 {
@@ -41,58 +43,79 @@ namespace OpCentrix.Services.Admin
 
         /// <summary>
         /// Ensures ProductionStageExecutions table has all required columns
+        /// Rewritten to avoid dynamic LINQ raw query which was throwing at startup.
+        /// Uses direct ADO with PRAGMA for SQLite and guards for table absence.
         /// </summary>
         private async Task EnsureProductionStageExecutionColumnsAsync()
         {
             try
             {
-                var sql = @"
-                    PRAGMA table_info(ProductionStageExecutions);
-                ";
+                var connection = _context.Database.GetDbConnection();
+                if (connection.State != ConnectionState.Open)
+                    await connection.OpenAsync();
 
-                var columns = await _context.Database.SqlQueryRaw<dynamic>(sql).ToListAsync();
-                var columnNames = new HashSet<string>();
-
-                // Parse column information (SQLite specific)
-                foreach (var column in columns)
+                // First verify the table exists (SQLite specific check)
+                using (var tableCheck = connection.CreateCommand())
                 {
-                    // Extract column name from the dynamic result
-                    // This is SQLite specific - column info returns: cid, name, type, notnull, dflt_value, pk
-                    var columnInfo = column.ToString();
-                    // Parse the column name from the result
-                    if (columnInfo.Contains("name"))
+                    tableCheck.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name='ProductionStageExecutions' LIMIT 1";
+                    var existsResult = await tableCheck.ExecuteScalarAsync();
+                    if (existsResult == null || existsResult == DBNull.Value)
                     {
-                        // Simple parsing - in real implementation you'd parse the JSON properly
-                        // For now, let's add the columns we know might be missing
+                        _logger.LogWarning("[SCHEMA-REPAIR] ProductionStageExecutions table not found – skipping column repair");
+                        return; // Nothing else to do
                     }
                 }
 
-                // Add missing columns one by one (SQLite doesn't support adding multiple columns in one statement)
-                var columnsToAdd = new[]
+                // Collect existing column names
+                var existing = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                using (var pragma = connection.CreateCommand())
                 {
-                    "ALTER TABLE ProductionStageExecutions ADD COLUMN ActualEndTime DATETIME;",
-                    "ALTER TABLE ProductionStageExecutions ADD COLUMN ActualStartTime DATETIME;",
-                    "ALTER TABLE ProductionStageExecutions ADD COLUMN OperatorName TEXT;",
-                    "ALTER TABLE ProductionStageExecutions ADD COLUMN CreatedBy TEXT;",
-                    "ALTER TABLE ProductionStageExecutions ADD COLUMN LastModifiedBy TEXT;",
-                    "ALTER TABLE ProductionStageExecutions ADD COLUMN LastModifiedDate DATETIME;"
+                    pragma.CommandText = "PRAGMA table_info('ProductionStageExecutions');";
+                    using var reader = await pragma.ExecuteReaderAsync();
+                    while (await reader.ReadAsync())
+                    {
+                        // PRAGMA table_info returns: cid | name | type | notnull | dflt_value | pk
+                        if (!reader.IsDBNull(1))
+                        {
+                            existing.Add(reader.GetString(1));
+                        }
+                    }
+                }
+
+                // Desired columns (name, type) – keep types simple / provider-agnostic
+                var desired = new (string Name, string Type)[]
+                {
+                    ("ActualEndTime", "DATETIME"),
+                    ("ActualStartTime", "DATETIME"),
+                    ("OperatorName", "TEXT"),
+                    ("CreatedBy", "TEXT"),
+                    ("LastModifiedBy", "TEXT"),
+                    ("LastModifiedDate", "DATETIME")
                 };
 
-                foreach (var alterSql in columnsToAdd)
+                foreach (var (name, type) in desired)
                 {
+                    if (existing.Contains(name))
+                    {
+                        _logger.LogDebug("[SCHEMA-REPAIR] Column already present: {Column}", name);
+                        continue;
+                    }
+
                     try
                     {
-                        await _context.Database.ExecuteSqlRawAsync(alterSql);
-                        _logger.LogDebug("[SCHEMA-REPAIR] Added column: {AlterSql}", alterSql);
+                        using var alter = connection.CreateCommand();
+                        alter.CommandText = $"ALTER TABLE ProductionStageExecutions ADD COLUMN {name} {type};";
+                        await alter.ExecuteNonQueryAsync();
+                        _logger.LogInformation("[SCHEMA-REPAIR] Added missing column {Column}", name);
                     }
-                    catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.Message.Contains("duplicate column name"))
+                    catch (SqliteException sx) when (sx.Message.Contains("duplicate column name", StringComparison.OrdinalIgnoreCase))
                     {
-                        // Column already exists - this is expected
-                        _logger.LogDebug("[SCHEMA-REPAIR] Column already exists: {AlterSql}", alterSql);
+                        // Race condition / already added by another instance – safe to ignore
+                        _logger.LogDebug("[SCHEMA-REPAIR] Duplicate column ignored: {Column}", name);
                     }
-                    catch (Exception ex)
+                    catch (Exception colEx)
                     {
-                        _logger.LogWarning(ex, "[SCHEMA-REPAIR] Could not add column: {AlterSql}", alterSql);
+                        _logger.LogWarning(colEx, "[SCHEMA-REPAIR] Failed adding column {Column}", name);
                     }
                 }
 
@@ -101,7 +124,7 @@ namespace OpCentrix.Services.Admin
             catch (Exception ex)
             {
                 _logger.LogError(ex, "[SCHEMA-REPAIR] Error checking ProductionStageExecutions columns");
-                throw;
+                throw; // propagate so startup can log clearly
             }
         }
 
@@ -112,13 +135,13 @@ namespace OpCentrix.Services.Admin
         {
             try
             {
-                // Add other column checks here as needed
+                // Placeholder for future repair logic
                 _logger.LogDebug("[SCHEMA-REPAIR] Other column checks completed");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "[SCHEMA-REPAIR] Error checking other columns");
-                // Don't throw - these are non-critical
+                // Non?critical – do not rethrow
             }
         }
     }
