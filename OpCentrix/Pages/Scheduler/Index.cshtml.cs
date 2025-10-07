@@ -25,6 +25,7 @@ namespace OpCentrix.Pages.Scheduler
         private readonly ITimeSlotService _timeSlotService;
         private readonly ILogger<IndexModel> _logger;
         private readonly IOperatingShiftService _shiftService;
+        private readonly IScheduleCompressionService _compressionService; // NEW
         // Single authoritative flag (allow end outside shift but still validate start)
         private const bool BYPASS_SHIFT_CHECKS = false;
 
@@ -34,7 +35,8 @@ namespace OpCentrix.Pages.Scheduler
             IMachineManagementService machineService,
             ITimeSlotService timeSlotService,
             ILogger<IndexModel> logger,
-            IOperatingShiftService shiftService)
+            IOperatingShiftService shiftService,
+            IScheduleCompressionService compressionService) // NEW
         {
             _context = context;
             _schedulerService = schedulerService;
@@ -42,6 +44,7 @@ namespace OpCentrix.Pages.Scheduler
             _timeSlotService = timeSlotService;
             _logger = logger;
             _shiftService = shiftService;
+            _compressionService = compressionService; // NEW
         }
 
         // Display properties - Clean separation
@@ -1618,5 +1621,39 @@ namespace OpCentrix.Pages.Scheduler
             return Content(script, "text/html");
         }
         // ===== end helper methods =====
+
+        // NEW: Compress machine schedule handler (MVP)
+        public async Task<IActionResult> OnPostCompressMachineAsync(string machineId)
+        {
+            var opId = Guid.NewGuid().ToString("N")[..8];
+            try
+            {
+                if (string.IsNullOrWhiteSpace(machineId))
+                    return new JsonResult(new { success = false, error = "Machine id required" });
+
+                var machineExists = await _machineService.GetMachineByMachineIdAsync(machineId) != null;
+                if (!machineExists)
+                    return new JsonResult(new { success = false, error = "Machine not found" });
+
+                var userName = User?.Identity?.Name ?? "System";
+                var compression = await _compressionService.CompressMachineAsync(machineId, DateTime.UtcNow, null, null, userName);
+
+                return new JsonResult(new
+                {
+                    success = compression.JobsMoved >= 0,
+                    machineId,
+                    moved = compression.JobsMoved,
+                    considered = compression.JobsConsidered,
+                    pulledMinutes = (int)compression.TotalMinutesPulledForward,
+                    changedIds = compression.ChangedIds.ToArray(),
+                    warnings = compression.Warnings
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[COMPRESS-ERR] Compression failure for machine {MachineId}", machineId);
+                return new JsonResult(new { success = false, error = "Compression failed" });
+            }
+        }
     }
 }

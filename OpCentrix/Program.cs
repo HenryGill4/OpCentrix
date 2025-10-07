@@ -174,6 +174,9 @@ builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<IMasterScheduleService, MasterScheduleService>(); // Task 12: Master Schedule Service
 builder.Services.AddScoped<SlsDataSeedingService>(); // SLS Data Seeding Service
 
+// NEW: Schedule Compression Service (MVP)
+builder.Services.AddScoped<IScheduleCompressionService, ScheduleCompressionService>();
+
 // NEW: Operational Task service registration (Phase 1 Maintenance V2 tasks)
 builder.Services.AddScoped<IOperationalTaskService, OperationalTaskService>();
 builder.Services.AddScoped<IOperationalTaskEvaluationService, OperationalTaskEvaluationService>();

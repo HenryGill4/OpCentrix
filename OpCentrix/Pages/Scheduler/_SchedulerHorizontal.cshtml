@@ -27,6 +27,9 @@
     .scheduler-horizontal-container .scheduler-grid-cell{position:relative;overflow:visible;}
     .machine-jobs-overlay{position:relative; grid-column:2 / span var(--overlay-slot-count); height:var(--row-height); margin-top:calc(var(--row-height) * -1); pointer-events:none;}
     .machine-jobs-overlay .job-block{position:absolute; top:2px; bottom:2px; left:0; width:1px; z-index:20; pointer-events:auto; height:auto !important;}
+    .machine-compress-btn{position:absolute;top:4px;right:4px;background:#EEF2FF;color:#3730A3;border:1px solid #C7D2FE;font-size:10px;padding:2px 4px;border-radius:4px;cursor:pointer;display:flex;align-items:center;gap:2px;}
+    .machine-compress-btn:hover{background:#E0E7FF;}
+    .machine-compress-btn.loading{opacity:.6;pointer-events:none;}
 </style>
 <script>
 if(typeof window.openJobModalSafely !== 'function'){
@@ -92,6 +95,9 @@ if(typeof window.openJobModalSafely !== 'function'){
             var totalHours = machineJobs.Sum(j => j.DurationHours);
             var utilizationPercent = (totalHours / 24.0 * 100).ToString("F0");
             <div class="scheduler-machine-label" style="min-height:@(rowHeight)px; --machine-color:@color" data-machine="@machine" data-color="@color">
+                <button type="button" class="machine-compress-btn" data-compress-machine="@machine" title="Compress (reflow) SLS jobs on @machine" onclick="compressMachine('@machine', this)">
+                    <span class="icon">⇣</span><span class="text">Pack</span>
+                </button>
                 <div class="machine-name flex items-center space-x-2"><span class="inline-block w-2.5 h-2.5 rounded-sm" style="background:@color"></span><span>@machine</span></div>
                 <div class="machine-stats"><div class="job-count">@jobCount job@(jobCount==1?"":"s") · @totalHours.ToString("F1")h</div><div class="utilization">@utilizationPercent% utilization</div></div>
                 @{ var hasActive = machineJobs.Any(j => j.Status == "Building" || j.Status == "Running"); }
@@ -202,4 +208,29 @@ if(typeof window.openJobModalSafely !== 'function'){
   size(true);
   restoreScroll();
 })();
+// Compression JS (horizontal) - enforce full reload after success
+if(typeof window.compressMachine !== 'function'){
+  window.compressMachine = async function(machineId, btn){
+    if(!machineId) return;
+    try{
+      if(btn){ btn.classList.add('loading'); btn.disabled=true; }
+      const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+      const resp = await fetch(`/Scheduler?handler=CompressMachine&machineId=${encodeURIComponent(machineId)}`,{ method:'POST', headers:{'RequestVerificationToken':token} });
+      const data = await resp.json();
+      if(data.success){
+        if(window.showSuccessNotification) window.showSuccessNotification(`Compressed ${data.moved} job(s) on ${machineId}`);
+        setTimeout(()=>window.location.reload(),250);
+      } else {
+        if(window.showErrorNotification) window.showErrorNotification(data.error || 'Compression failed');
+      }
+    }catch(err){ console.error('[COMPRESS] error', err); if(window.showErrorNotification) window.showErrorNotification('Compression error'); }
+    finally{ if(btn){ btn.classList.remove('loading'); btn.disabled=false; } }
+  }
+} else {
+  const original = window.compressMachine;
+  window.compressMachine = async function(machineId, btn){
+    await original(machineId, btn);
+    setTimeout(()=>{ try{ if(!document.hidden) window.location.reload(); }catch{} }, 300);
+  }
+}
 </script>

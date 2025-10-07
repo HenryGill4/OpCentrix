@@ -18,6 +18,9 @@
 .scheduler-vertical .job-block { color:#fff; border-radius:6px; transition:background-color .15s ease, box-shadow .15s ease; background:var(--machine-color,#6366F1); box-shadow:0 4px 10px -2px rgba(0,0,0,.25); }
 .scheduler-vertical .scheduler-machine-columns .machine-column { border-left:0 !important; box-shadow:none !important; }
 .job-meta-line{font-size:.55rem;opacity:.9;margin-top:2px;display:flex;flex-wrap:wrap;gap:4px;}
+.machine-compress-btn{position:absolute;top:4px;right:4px;background:#EEF2FF;color:#3730A3;border:1px solid #C7D2FE;font-size:10px;padding:2px 4px;border-radius:4px;cursor:pointer;display:flex;align-items:center;gap:2px;}
+.machine-compress-btn:hover{background:#E0E7FF;}
+.machine-compress-btn.loading{opacity:.6;pointer-events:none;}
 </style>
 <div class="scheduler-vertical-container initializing" data-orientation="vertical" data-zoom="@zoom" data-total-slots="@totalSlots">
     <div class="scheduler-grid-container scheduler-vertical opcentrix-card" data-zoom="@zoom" data-orientation="vertical" data-total-slots="@totalSlots">
@@ -35,6 +38,9 @@
                     var jobCount = machineJobs.Count;
                     var color = GetColor(machine);
                     <div class="machine-column scheduler-grid-header bg-white border-b border-r font-bold text-indigo-800 machine-column-header" data-machine="@machine" data-color="@color" style="--machine-color:@color">
+                        <button type="button" class="machine-compress-btn" data-compress-machine="@machine" title="Compress (reflow) SLS jobs on @machine" onclick="compressMachine('@machine', this)">
+                            <span class="icon">?</span><span class="text">Pack</span>
+                        </button>
                         <div class="flex flex-col items-center justify-center h-full p-2 min-h-[80px]">
                             <div class="flex items-center space-x-2 text-lg font-bold">
                                 <span class="machine-color-dot" style="background:@color"></span>
@@ -159,4 +165,32 @@
   function finalize(){ if(cont.classList.contains('ready')) return; hydrateColors(); cont.classList.remove('initializing'); cont.classList.add('ready'); try{ window.__schedulerSized=true; }catch{} document.dispatchEvent(new CustomEvent('scheduler:sized')); }
   requestAnimationFrame(()=>requestAnimationFrame(finalize));
 })();
+// Compression JS (vertical) - reuses global compressMachine if defined
+if(typeof window.compressMachine !== 'function'){
+  window.compressMachine = async function(machineId, btn){
+    if(!machineId) return;
+    try{
+      if(btn){ btn.classList.add('loading'); btn.disabled=true; }
+      const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+      const resp = await fetch(`/Scheduler?handler=CompressMachine&machineId=${encodeURIComponent(machineId)}`,{ method:'POST', headers:{'RequestVerificationToken':token} });
+      const data = await resp.json();
+      if(data.success){
+        if(window.showSuccessNotification) window.showSuccessNotification(`Compressed ${data.moved} job(s) on ${machineId}`);
+        // Full reload ensures correct re-render and recalculation of job block geometry
+        setTimeout(()=>window.location.reload(), 250);
+      } else {
+        if(window.showErrorNotification) window.showErrorNotification(data.error || 'Compression failed');
+      }
+    }catch(err){ console.error('[COMPRESS] error', err); if(window.showErrorNotification) window.showErrorNotification('Compression error'); }
+    finally{ if(btn){ btn.classList.remove('loading'); btn.disabled=false; } }
+  }
+} else {
+  // If already defined, extend to force full reload (idempotent)
+  const original = window.compressMachine;
+  window.compressMachine = async function(machineId, btn){
+    await original(machineId, btn);
+    // If original used partial refresh, still enforce reload to correct layout
+    setTimeout(()=>{ try{ if(!document.hidden) window.location.reload(); }catch{} }, 300);
+  }
+}
 </script>
