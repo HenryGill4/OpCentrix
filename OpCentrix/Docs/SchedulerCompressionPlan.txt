@@ -1,0 +1,146 @@
+Scheduler Machine Compression / Reflow Feature Plan
+Version: 2025-10-07
+Owner: AI Assistant (GitHub Copilot)
+Status: Draft (MVP implementation pending)
+
+IMPORTANT NAMING RULE:
+- Always use the acronym "SLS" (Selective Laser Sintering) in code, comments, identifiers, documentation.
+- Never use or auto-correct to "SSL". Before every reply and code change, re-scan the response to ensure "SSL" does not appear.
+
+GOAL (MVP):
+Add a button per machine in the scheduler UI (vertical & horizontal layouts) to "compress" (pack / reflow) all future Scheduled SLS jobs for that machine forward to their earliest valid start times while:
+  - Preserving original job ordering (no reordering yet)
+  - Inserting required material changeover delays between jobs
+  - Respecting operating shifts (aligning starts inside shifts)
+  - Maintaining each job's original duration
+  - Moving only Scheduled jobs; ignoring Building / Completed / Cancelled
+  - Not moving jobs earlier than current UTC time
+  - Returning a JSON result (counts, list of changed jobs) and refreshing the grid
+
+FUTURE EXTENSIONS (keep design open):
+  - Priority-based reordering
+  - Upstream dependency earliest-ready times
+  - Drag-and-drop manual ordering, followed by recompute (normalize)
+  - Locking jobs from movement
+  - Generating synthetic changeover placeholder blocks
+  - Multi-machine batch compression
+  - Partial range compression (date horizon filters)
+  - Integration with stack duration learning
+
+ARCHITECTURE COMPONENTS:
+1. Service: `IScheduleCompressionService` + implementation `ScheduleCompressionService`
+2. DTOs / Options:
+   - CompressionOptions: SkipInProgress(bool), AlignStartsToShiftBoundary(bool), KeepCrossShiftAllowed(bool), RespectLocks(bool - future)
+   - ChangedJobDto: Id, OldStart, NewStart, OldEnd, NewEnd, MinutesPulledForward
+   - CompressionResult: MachineId, JobsConsidered, JobsMoved, TotalMinutesPulledForward, List<ChangedJobDto>, Warnings(List<string>)
+3. Endpoint: Razor Page Handler `OnPostCompressMachineAsync(string machineId)` in `Pages/Scheduler/Index.cshtml.cs`
+4. UI: Add a small icon/button inside each machine header (both vertical & horizontal partials) invoking JS `compressMachine(machineId)`
+5. JS Module: `wwwroot/js/scheduler-compress.js` performing POST fetch (HX optional) then triggers existing RefreshGrid + toast.
+6. DI: Register service in `Program.cs` (services.AddScoped<IScheduleCompressionService, ScheduleCompressionService>();)
+7. Logging: Use operation id prefix [COMPRESS-opid]; log counts & warnings.
+8. Validation: Machine existence; at least 1 eligible job; return warning if none moved.
+9. Concurrency (MVP): Single transaction, optimistic; only move jobs with Status == Scheduled at read time. If SaveChanges conflict later, report warning.
+
+ALGORITHM (Detailed):
+Input: machineId, options, horizonStart (default UtcNow), horizonEnd (optional)
+Steps:
+ 1. horizonStartUtc = (provided) or DateTime.UtcNow
+ 2. Fetch eligible jobs:
+    jobs = context.Jobs.Where(j => j.MachineId == machineId && j.ScheduledEnd > horizonStartUtc)
+           .OrderBy(j => j.ScheduledStart).ToList()
+ 3. Filter to mutable set = jobs where Status == "Scheduled" (and NOT Building, Completed, Cancelled)
+ 4. Initialize:
+      current = horizonStartUtc
+      changed = []
+      prevMaterial = null
+ 5. For each job in order:
+      originalStart = job.ScheduledStart; originalEnd = job.ScheduledEnd; duration = originalEnd - originalStart
+      if job.Status != Scheduled and options.SkipInProgress => skip (do not affect current; set current = max(current, originalEnd))
+      if current < originalStart: current = originalStart (we only pull forward, not delay) // but we still may pull earlier if earlier than originalStart? (Yes we want to pull earlier). Actually we WANT to advance forward earlier: so remove this line. Instead set current = max(current, horizonStartUtc)
+      Add changeover: if prevMaterial != null: changeoverMinutes = job.CalculatePowderChangeoverTime(prevMaterial); current += changeoverMinutes; Realign inside shift.
+      Shift alignment: if not inside a shift -> advance to next valid shift start using OperatingShiftService. If AlignStartsToShiftBoundary option is true, additionally snap to shift start (even if already inside shift) or to nearest boundary logic.
+      Ensure current >= horizonStartUtc.
+      If current < originalStart: (movement earlier) set newStart = current else newStart = originalStart (MVP pull forward only; we do NOT push later unless shift rules require)
+      newEnd = newStart + duration
+      If KeepCrossShiftAllowed == false and newEnd crosses gap (exits active shift and more than e.g. 30 min of non-shift time mid job): shift start to next shift start and recompute newEnd (one relocation pass)
+      Update job (Start/End, LastModified, LastModifiedBy="System-Compress")
+      If movement occurred (newStart != originalStart): record ChangedJobDto + accumulate minutes advanced (originalStart - newStart)
+      current = job.ScheduledEnd
+      prevMaterial = job.SlsMaterial
+ 6. SaveChanges inside try/catch.
+ 7. Build result with warnings (e.g., "No shift data; treated all hours as valid", "Changeover truncated by horizonEnd" etc.)
+
+SHIFT HELPERS (pseudo):
+  bool IsInsideShift(DateTime t, string machineId)
+  DateTime AlignIntoShift(DateTime t, string machineId) => while(!IsInsideShift(t) && guard<500) t+=TimeSpan.FromMinutes(15)
+  DateTime SnapToShiftStart(DateTime t, string machineId) => find shift window containing t else AlignIntoShift(t); return shift.start
+
+UI INJECTION POINTS:
+  - In `_SchedulerVertical.cshtml` machine header DIV: add button span: <button type="button" class="compress-btn" data-machine="@machine" onclick="compressMachine('@machine')" title="Compress (pack) schedule">?</button>
+  - Same for `_SchedulerHorizontal.cshtml` (mirrored location). Add minimal CSS if not existing.
+
+JS LOGIC (simplified spec, actual code later):
+  window.compressMachine = async function(machineId){
+     if(!machineId) return;
+     showBusy(machineId);
+     const resp = await fetch(`/Scheduler?handler=CompressMachine&machineId=${encodeURIComponent(machineId)}`, {method:'POST', headers:{'RequestVerificationToken': token}});
+     const data = await resp.json();
+     hideBusy(machineId);
+     if(data.success){ toast(`${data.moved} job(s) compressed`); refreshGrid(); }
+     else toastError(data.error||'Compression failed');
+  };
+
+VALIDATION / QA CHECKLIST (perform every change):
+  [ ] No instances of the incorrect term "SSL" introduced (only use "SLS").
+  [ ] Service registered in DI.
+  [ ] Handler method compiles and reachable (POST form or fetch, anti-forgery token handled if necessary).
+  [ ] UI button renders only once per machine header; no layout shift.
+  [ ] Algorithm moves only Scheduled jobs and never into the past.
+  [ ] Material changeover time applied only when material differs.
+  [ ] Shift alignment: starts always inside a shift (or shifts absent warning logged).
+  [ ] Duration preserved exactly (to the second). If seconds lost, adjust rounding.
+  [ ] JSON response includes: success, moved, changedIds (array), warnings (array), machineId.
+  [ ] Grid refresh reuses existing partial refresh path (RefreshGrid handler) to avoid duplicate logic.
+  [ ] Logging includes operation id marker [COMPRESS-*].
+  [ ] No database schema changes required for MVP.
+
+CODING CONVENTIONS:
+  - Keep methods small; extract helper methods in service for testability.
+  - Use async/await end-to-end.
+  - Guard loops with reasonable iteration caps.
+  - Prefer UTC for all internal calculations; only convert for display.
+  - Null-check injected services; throw ArgumentNullException in ctor.
+  - Use ILogger<T> with structured messages.
+
+TEST SCENARIOS (later unit tests):
+  1. Single job -> unchanged (no earlier pull possible) vs. current start > now.
+  2. Two jobs same material -> second starts immediately after first.
+  3. Two jobs different materials -> changeover inserted; start aligns into shift if spilled.
+  4. Job originally outside shift -> compressed into first shift boundary.
+  5. Weekend gap (no shifts) -> jobs moved to Monday shift start.
+  6. No active shifts stored -> warning and still compress sequentially.
+
+FUTURE TODO MARKERS TO PLACE IN CODE:
+  // TODO-SLS-REORDER: implement priority-based reordering
+  // TODO-SLS-UPSTREAM: integrate earliest-ready constraints
+  // TODO-SLS-DND: normalize after drag-drop sequence
+  // TODO-SLS-LOCKS: skip locked jobs
+  // TODO-SLS-CHANGEOVER-BLOCK: insert synthetic changeover render items
+
+EXECUTION ORDER FOR IMPLEMENTATION:
+  1. Create service + DTOs.
+  2. Register in DI.
+  3. Add handler to PageModel.
+  4. Add UI button + JS module.
+  5. Manual test.
+  6. Add unit tests (optional interim).
+  7. Refine warnings & logging.
+
+RESPONSE SELF-CHECK PROTOCOL (Assistant Internal):
+Before replying:
+  - Re-read answer ensuring no "SSL" token.
+  - Ensure references match filenames & namespaces actually present.
+  - Ensure plan integrity not contradicted.
+  - If implementing code, tick QA checklist mentally.
+
+END OF PLAN.
