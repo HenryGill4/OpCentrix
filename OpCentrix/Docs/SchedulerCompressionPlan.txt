@@ -1,146 +1,187 @@
-Scheduler Machine Compression / Reflow Feature Plan
-Version: 2025-10-07
+Scheduler Machine Compression / Dependency Scheduling Plan
+Version: 2025-10-07.1
 Owner: AI Assistant (GitHub Copilot)
-Status: Draft (MVP implementation pending)
+Status: Active Roadmap
 
 IMPORTANT NAMING RULE:
-- Always use the acronym "SLS" (Selective Laser Sintering) in code, comments, identifiers, documentation.
-- Never use or auto-correct to "SSL". Before every reply and code change, re-scan the response to ensure "SSL" does not appear.
+- Always use the acronym "SLS" (Selective Laser Sintering) everywhere.
+- Never use "SSL". Manually scan each change for accidental usage.
 
-GOAL (MVP):
-Add a button per machine in the scheduler UI (vertical & horizontal layouts) to "compress" (pack / reflow) all future Scheduled SLS jobs for that machine forward to their earliest valid start times while:
-  - Preserving original job ordering (no reordering yet)
-  - Inserting required material changeover delays between jobs
-  - Respecting operating shifts (aligning starts inside shifts)
-  - Maintaining each job's original duration
-  - Moving only Scheduled jobs; ignoring Building / Completed / Cancelled
-  - Not moving jobs earlier than current UTC time
-  - Returning a JSON result (counts, list of changed jobs) and refreshing the grid
+SCOPE OVERVIEW
+Phase A (Done/In Progress): Machine schedule compression (reflow) with shift alignment + base 3h setup + material changeover.
+Phase B (Next): Upstream (predecessor / dependency) job support.
+Phase C (Future): Multi-upstream graphs, chain compression, drag & drop normalization, priority reordering, changeover visualization.
 
-FUTURE EXTENSIONS (keep design open):
-  - Priority-based reordering
-  - Upstream dependency earliest-ready times
-  - Drag-and-drop manual ordering, followed by recompute (normalize)
-  - Locking jobs from movement
-  - Generating synthetic changeover placeholder blocks
-  - Multi-machine batch compression
-  - Partial range compression (date horizon filters)
-  - Integration with stack duration learning
+============================================================
+PHASE A SUMMARY (COMPRESSION) – CURRENT IMPLEMENTATION
+============================================================
+Goal: Pack SLS jobs on a machine forward to earliest feasible start times.
+Key Behaviors Implemented:
+  - 3h base setup between consecutive jobs (BaseSetupHours=3)
+  - Additional material changeover delay when material differs (Job.CalculatePowderChangeoverTime)
+  - Shift alignment (start must be inside a shift and not before shiftStart+BaseSetup)
+  - 15-minute rounding
+  - Full page reload on success (ensures job block geometry recalculation)
+  - Logging prefix [COMPRESS-*]
+Pending Enhancements:
+  - Synthetic changeover block rendering (TODO-SLS-CHANGEOVER-BLOCK)
+  - Option to disallow spanning outside shift (future flag)
+  - Respect locked jobs / statuses (TODO-SLS-LOCKS)
+  - Priority-aware reordering (TODO-SLS-REORDER)
 
-ARCHITECTURE COMPONENTS:
-1. Service: `IScheduleCompressionService` + implementation `ScheduleCompressionService`
-2. DTOs / Options:
-   - CompressionOptions: SkipInProgress(bool), AlignStartsToShiftBoundary(bool), KeepCrossShiftAllowed(bool), RespectLocks(bool - future)
-   - ChangedJobDto: Id, OldStart, NewStart, OldEnd, NewEnd, MinutesPulledForward
-   - CompressionResult: MachineId, JobsConsidered, JobsMoved, TotalMinutesPulledForward, List<ChangedJobDto>, Warnings(List<string>)
-3. Endpoint: Razor Page Handler `OnPostCompressMachineAsync(string machineId)` in `Pages/Scheduler/Index.cshtml.cs`
-4. UI: Add a small icon/button inside each machine header (both vertical & horizontal partials) invoking JS `compressMachine(machineId)`
-5. JS Module: `wwwroot/js/scheduler-compress.js` performing POST fetch (HX optional) then triggers existing RefreshGrid + toast.
-6. DI: Register service in `Program.cs` (services.AddScoped<IScheduleCompressionService, ScheduleCompressionService>();)
-7. Logging: Use operation id prefix [COMPRESS-opid]; log counts & warnings.
-8. Validation: Machine existence; at least 1 eligible job; return warning if none moved.
-9. Concurrency (MVP): Single transaction, optimistic; only move jobs with Status == Scheduled at read time. If SaveChanges conflict later, report warning.
+QA Checklist (Compression):
+  [ ] No "SSL" tokens
+  [ ] All times UTC internal, localized only for display
+  [ ] Duration preserved exactly
+  [ ] Start never before horizonStartUtc
+  [ ] Material changeover added only when material differs
+  [ ] Base 3h always applied between consecutive jobs
+  [ ] Shift alignment enforced (candidate within shift; fallback adds base setup if no shifts)
 
-ALGORITHM (Detailed):
-Input: machineId, options, horizonStart (default UtcNow), horizonEnd (optional)
-Steps:
- 1. horizonStartUtc = (provided) or DateTime.UtcNow
- 2. Fetch eligible jobs:
-    jobs = context.Jobs.Where(j => j.MachineId == machineId && j.ScheduledEnd > horizonStartUtc)
-           .OrderBy(j => j.ScheduledStart).ToList()
- 3. Filter to mutable set = jobs where Status == "Scheduled" (and NOT Building, Completed, Cancelled)
- 4. Initialize:
-      current = horizonStartUtc
-      changed = []
-      prevMaterial = null
- 5. For each job in order:
-      originalStart = job.ScheduledStart; originalEnd = job.ScheduledEnd; duration = originalEnd - originalStart
-      if job.Status != Scheduled and options.SkipInProgress => skip (do not affect current; set current = max(current, originalEnd))
-      if current < originalStart: current = originalStart (we only pull forward, not delay) // but we still may pull earlier if earlier than originalStart? (Yes we want to pull earlier). Actually we WANT to advance forward earlier: so remove this line. Instead set current = max(current, horizonStartUtc)
-      Add changeover: if prevMaterial != null: changeoverMinutes = job.CalculatePowderChangeoverTime(prevMaterial); current += changeoverMinutes; Realign inside shift.
-      Shift alignment: if not inside a shift -> advance to next valid shift start using OperatingShiftService. If AlignStartsToShiftBoundary option is true, additionally snap to shift start (even if already inside shift) or to nearest boundary logic.
-      Ensure current >= horizonStartUtc.
-      If current < originalStart: (movement earlier) set newStart = current else newStart = originalStart (MVP pull forward only; we do NOT push later unless shift rules require)
-      newEnd = newStart + duration
-      If KeepCrossShiftAllowed == false and newEnd crosses gap (exits active shift and more than e.g. 30 min of non-shift time mid job): shift start to next shift start and recompute newEnd (one relocation pass)
-      Update job (Start/End, LastModified, LastModifiedBy="System-Compress")
-      If movement occurred (newStart != originalStart): record ChangedJobDto + accumulate minutes advanced (originalStart - newStart)
-      current = job.ScheduledEnd
-      prevMaterial = job.SlsMaterial
- 6. SaveChanges inside try/catch.
- 7. Build result with warnings (e.g., "No shift data; treated all hours as valid", "Changeover truncated by horizonEnd" etc.)
+============================================================
+PHASE B PLAN: UPSTREAM (PREDECESSOR) JOB SUPPORT (MVP)
+============================================================
+Objectives:
+  - Enforce that a job cannot start before all defined upstream jobs have finished + gap.
+  - Allow user to define a single predecessor first (leveraging existing Job.PredecessorJobId).
+  - Provide optional gap hours (buffer) between predecessor end and downstream start.
+  - Modify compression to honor earliest-ready constraint (EarliestReady = predecessor.End + Gap, if later than current candidate).
+  - UI affordance: add predecessor selection in job modal.
 
-SHIFT HELPERS (pseudo):
-  bool IsInsideShift(DateTime t, string machineId)
-  DateTime AlignIntoShift(DateTime t, string machineId) => while(!IsInsideShift(t) && guard<500) t+=TimeSpan.FromMinutes(15)
-  DateTime SnapToShiftStart(DateTime t, string machineId) => find shift window containing t else AlignIntoShift(t); return shift.start
+Phase B.1 (Single Predecessor):
+Data Changes:
+  - Add Job.UpstreamGapHours (double? default null => treat as 0).
+  - Keep Job.PredecessorJobId (already present) as the single upstream reference.
 
-UI INJECTION POINTS:
-  - In `_SchedulerVertical.cshtml` machine header DIV: add button span: <button type="button" class="compress-btn" data-machine="@machine" onclick="compressMachine('@machine')" title="Compress (pack) schedule">?</button>
-  - Same for `_SchedulerHorizontal.cshtml` (mirrored location). Add minimal CSS if not existing.
+Service Changes:
+  - Extend ScheduleCompressionService logic:
+      earliestReady = predecessor.ScheduledEnd (+ gap)
+      candidate = max(candidate, earliestReady)
+  - If earliestReady pushes job later, allow push (dependency precedence overrides compression pull forward).
 
-JS LOGIC (simplified spec, actual code later):
-  window.compressMachine = async function(machineId){
-     if(!machineId) return;
-     showBusy(machineId);
-     const resp = await fetch(`/Scheduler?handler=CompressMachine&machineId=${encodeURIComponent(machineId)}`, {method:'POST', headers:{'RequestVerificationToken': token}});
-     const data = await resp.json();
-     hideBusy(machineId);
-     if(data.success){ toast(`${data.moved} job(s) compressed`); refreshGrid(); }
-     else toastError(data.error||'Compression failed');
-  };
+Validation Rules (Single Predecessor):
+  - Cannot set predecessor to self.
+  - If predecessor chain loops (A->B then B->A) detect and reject.
+  - When saving downstream job: if ScheduledStart < predecessor.ScheduledEnd + gap => auto-adjust or return validation message.
 
-VALIDATION / QA CHECKLIST (perform every change):
-  [ ] No instances of the incorrect term "SSL" introduced (only use "SLS").
-  [ ] Service registered in DI.
-  [ ] Handler method compiles and reachable (POST form or fetch, anti-forgery token handled if necessary).
-  [ ] UI button renders only once per machine header; no layout shift.
-  [ ] Algorithm moves only Scheduled jobs and never into the past.
-  [ ] Material changeover time applied only when material differs.
-  [ ] Shift alignment: starts always inside a shift (or shifts absent warning logged).
-  [ ] Duration preserved exactly (to the second). If seconds lost, adjust rounding.
-  [ ] JSON response includes: success, moved, changedIds (array), warnings (array), machineId.
-  [ ] Grid refresh reuses existing partial refresh path (RefreshGrid handler) to avoid duplicate logic.
-  [ ] Logging includes operation id marker [COMPRESS-*].
-  [ ] No database schema changes required for MVP.
+UI Changes (MVP):
+  - Job modal: New collapsible section "Upstream Dependency" with:
+      * Dropdown (searchable) of eligible jobs (Status: Scheduled/Building/Completed, excluding self & descendants).
+      * Numeric input: Gap (hours, min 0, step 0.25).
+      * Display read-only earliest-ready time preview.
+  - Job block tooltip: append "Upstream: {PartNumber} ends {End:MMM dd HH:mm} (+{Gap}h)" when set.
+  - Job block icon: small link chain glyph to signal dependency.
 
-CODING CONVENTIONS:
-  - Keep methods small; extract helper methods in service for testability.
-  - Use async/await end-to-end.
-  - Guard loops with reasonable iteration caps.
-  - Prefer UTC for all internal calculations; only convert for display.
-  - Null-check injected services; throw ArgumentNullException in ctor.
-  - Use ILogger<T> with structured messages.
+Compression Flow Update (Pseudo):
+  previousJob logic (material + base) -> candidate
+  if job.PredecessorJobId != null:
+      load pred
+      earliestReady = pred.ScheduledEnd + (job.UpstreamGapHours ?? 0) hours
+      candidate = max(candidate, earliestReady)
+  align with shift (if candidate now outside shift, advance as today)
+  finalize start/end
 
-TEST SCENARIOS (later unit tests):
-  1. Single job -> unchanged (no earlier pull possible) vs. current start > now.
-  2. Two jobs same material -> second starts immediately after first.
-  3. Two jobs different materials -> changeover inserted; start aligns into shift if spilled.
-  4. Job originally outside shift -> compressed into first shift boundary.
-  5. Weekend gap (no shifts) -> jobs moved to Monday shift start.
-  6. No active shifts stored -> warning and still compress sequentially.
+Edge Cases (Single):
+  - Predecessor scheduled after downstream (bad order): compression will push downstream forward automatically.
+  - Predecessor on different machine: still enforce chronological dependency; base setup & material changeover only within same-machine sequential chain.
+  - Deleted predecessor: null out PredecessorJobId + UpstreamGapHours.
 
-FUTURE TODO MARKERS TO PLACE IN CODE:
-  // TODO-SLS-REORDER: implement priority-based reordering
-  // TODO-SLS-UPSTREAM: integrate earliest-ready constraints
-  // TODO-SLS-DND: normalize after drag-drop sequence
-  // TODO-SLS-LOCKS: skip locked jobs
-  // TODO-SLS-CHANGEOVER-BLOCK: insert synthetic changeover render items
+Testing (Single):
+  1. No predecessor -> unchanged behavior.
+  2. Predecessor ends earlier than candidate -> unaffected.
+  3. Predecessor ends later -> job delayed to earliestReady.
+  4. Gap inserted pushes into next shift -> shift align and round-up.
+  5. Chain A->B->C ensures transitive order after compression.
+  6. Cross-machine dependency enforced (B on Machine2 waits for A on Machine1).
 
-EXECUTION ORDER FOR IMPLEMENTATION:
-  1. Create service + DTOs.
-  2. Register in DI.
-  3. Add handler to PageModel.
-  4. Add UI button + JS module.
-  5. Manual test.
-  6. Add unit tests (optional interim).
-  7. Refine warnings & logging.
+Phase B.2 (Preparation for Multi-Upstream):
+  - Introduce IScheduleDependencyService with:
+      BuildGraphAsync(jobIds)
+      GetEarliestReadyUtc(job, graph)
+      DetectCycles(graph)
+  - Initially graph contains at most one edge per job.
+  - Refactor compression to use dependency service so multi-upstream is a drop-in change.
 
-RESPONSE SELF-CHECK PROTOCOL (Assistant Internal):
-Before replying:
-  - Re-read answer ensuring no "SSL" token.
-  - Ensure references match filenames & namespaces actually present.
-  - Ensure plan integrity not contradicted.
-  - If implementing code, tick QA checklist mentally.
+============================================================
+PHASE C PLAN: MULTI-UPSTREAM & ADVANCED FEATURES
+============================================================
+Data Migration:
+  - New table JobDependency (Id, JobId, UpstreamJobId, GapMinutes, CreatedUtc, CreatedBy).
+  - Migration script: for each job with PredecessorJobId -> create JobDependency.
+  - Keep legacy fields for back-compat until fully removed.
 
-END OF PLAN.
+Scheduling Adjustments:
+  - EarliestReady = MAX over all upstream (UpstreamEnd + GapMinutes).
+  - Topological sort (Kahn). On cycle: log warning, remove offending edge(s).
+  - Chain compression: method CompressChainAsync(rootJobId) (affects downstream set only).
+
+UI (Multi-Upstream):
+  - Upstream list with add/remove pills.
+  - Gap edit inline per upstream.
+  - Warnings on cycle attempt.
+
+Additional Enhancements:
+  - Critical path highlighting (longest upstream chain).
+  - Risk flag if earliestReady > CustomerDueDate - buffer.
+  - Drag & drop reorder writes ephemeral dependency (optional future).
+
+============================================================
+EXECUTION ORDER (ACTIONABLE)
+============================================================
+1. Add UpstreamGapHours to Job + migration.
+2. Extend job modal view model & form fields.
+3. Add server-side validation & persistence of predecessor + gap.
+4. Refactor ScheduleCompressionService.
+5. Manual / unit tests for single predecessor.
+6. Introduce IScheduleDependencyService abstraction (still single edge).
+7. Implement JobDependency table + migration, backfill existing predecessor links.
+8. Switch compression to graph-based earliestReady computation.
+9. Multi-upstream UI & APIs (add/remove dependency endpoints).
+10. Cycle detection & chain compression endpoint.
+11. Visual indicators (icons / tooltip enhancements).
+12. Optional: synthetic changeover block insertion.
+
+============================================================
+DTO / SERVICE ADDITIONS (FOR UPCOMING STEPS)
+============================================================
+IScheduleDependencyService (future):
+  Task<DependencyGraph> BuildGraphAsync(IEnumerable<int> jobIds);
+  DateTime GetEarliestReadyUtc(Job job, DependencyGraph graph, IReadOnlyDictionary<int, Job> lookup);
+  IReadOnlyList<(int from,int to)> DetectCycles(DependencyGraph graph);
+
+DependencyGraph:
+  Dictionary<int, List<(int upstreamId, TimeSpan gap)>> UpstreamsByJob;
+
+JobDependencyDto:
+  int UpstreamJobId; double GapHours; DateTime UpstreamEnd; DateTime EffectiveReady;
+
+============================================================
+RISK & MITIGATION
+============================================================
+Risk: Shift gaps cause large pushes -> Provide warning badge on job.
+Risk: Cycles introduced by user -> Detect & block.
+Risk: Performance with large graphs -> Preload jobs + dependencies in one query; memoize earliestReady.
+Risk: UI confusion -> Clear tooltip + icon + modal explanation.
+
+============================================================
+OPEN TODO MARKERS
+============================================================
+// TODO-SLS-UPSTREAM: EarliestReady enforcement (Phase B.1)
+// TODO-SLS-UPSTREAM-GAP: Gap validation (non-negative, max 72h)
+// TODO-SLS-UPSTREAM-GRAPH: Multi-upstream graph implementation
+// TODO-SLS-UPSTREAM-CYCLE: Cycle detection logic
+// TODO-SLS-CHANGEOVER-BLOCK: Visual changeover placeholders
+// TODO-SLS-REORDER: Priority-based order strategy
+// TODO-SLS-DND: Drag-drop normalization
+// TODO-SLS-LOCKS: Support locked jobs
+
+============================================================
+SELF-CHECK PROTOCOL
+============================================================
+Before each reply / code change:
+  - No "SSL" tokens.
+  - Filenames / types exist in repository.
+  - Plan steps remain consistent.
+  - Update this plan if scope shifts.
+
+END OF PLAN

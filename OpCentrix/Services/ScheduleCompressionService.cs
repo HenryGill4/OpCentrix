@@ -12,7 +12,7 @@ namespace OpCentrix.Services;
 
 /// <summary>
 /// Service that "compresses" / reflows Scheduled SLS jobs on a single machine forward
-/// honoring a base 3h setup/changeover plus material changeover delays and operating shifts. (MVP)
+/// honoring a base 3h setup/changeover plus material changeover delays, operating shifts, and (Phase B.1) single predecessor dependency.
 /// </summary>
 public interface IScheduleCompressionService
 {
@@ -63,6 +63,7 @@ public class ScheduleCompressionService : IScheduleCompressionService
                 return result;
             }
 
+            // Preload all jobs on machine in horizon *plus* potential predecessor jobs (phase B.1 simple: single predecessor possibly off-machine)
             var query = _context.Jobs
                 .Where(j => j.MachineId == machineId && j.ScheduledEnd > startUtc);
             if (endUtc.HasValue)
@@ -72,6 +73,16 @@ public class ScheduleCompressionService : IScheduleCompressionService
                 .OrderBy(j => j.ScheduledStart)
                 .AsTracking()
                 .ToListAsync();
+
+            // Load predecessor references (could be on other machines) into lookup for earliest-ready calculation
+            var predecessorIds = jobs.Where(j => j.PredecessorJobId.HasValue).Select(j => j.PredecessorJobId!.Value).Distinct().ToList();
+            Dictionary<int, Job> predecessors = new();
+            if (predecessorIds.Any())
+            {
+                predecessors = await _context.Jobs
+                    .Where(j => predecessorIds.Contains(j.Id))
+                    .ToDictionaryAsync(j => j.Id, j => j);
+            }
 
             result.JobsConsidered = jobs.Count;
             if (!jobs.Any())
@@ -101,7 +112,6 @@ public class ScheduleCompressionService : IScheduleCompressionService
 
                 if (duration <= TimeSpan.Zero)
                 {
-                    // Skip invalid duration jobs
                     previousJob = job;
                     continue;
                 }
@@ -113,16 +123,14 @@ public class ScheduleCompressionService : IScheduleCompressionService
                     continue;
                 }
 
-                // Start from current cursor or original start if that is earlier (we want to pull forward earlier than original)
                 DateTime candidate = cursor;
 
-                // Baseline mandatory setup AFTER previous job (except first)
+                // Base setup after previous same-machine job
                 if (previousJob != null)
                 {
                     candidate = previousJob.ScheduledEnd > candidate ? previousJob.ScheduledEnd : candidate;
-                    candidate = candidate.Add(BaseSetup); // add 3h base
+                    candidate = candidate.Add(BaseSetup);
 
-                    // Material changeover layered on top if different material
                     if (!string.IsNullOrEmpty(previousJob.SlsMaterial) && !string.Equals(previousJob.SlsMaterial, job.SlsMaterial, StringComparison.OrdinalIgnoreCase))
                     {
                         var changeMinutes = job.CalculatePowderChangeoverTime(previousJob.SlsMaterial);
@@ -132,27 +140,32 @@ public class ScheduleCompressionService : IScheduleCompressionService
                 }
                 else
                 {
-                    // First job cannot start before horizon start + base setup inside shift
                     if (candidate < startUtc)
                         candidate = startUtc;
                 }
 
-                // Ensure not before horizon start
                 if (candidate < startUtc)
                     candidate = startUtc;
 
-                // Shift alignment algorithm: ensure candidate is inside a shift AND not before (shiftStart + base setup) for that shift
+                // PHASE B.1: Single predecessor earliest-ready enforcement (may be on different machine)
+                if (job.PredecessorJobId.HasValue && predecessors.TryGetValue(job.PredecessorJobId.Value, out var pred))
+                {
+                    var gapHours = job.UpstreamGapHours.HasValue && job.UpstreamGapHours.Value > 0 ? job.UpstreamGapHours.Value : 0;
+                    var earliestReady = pred.ScheduledEnd.AddHours(gapHours);
+                    if (earliestReady > candidate)
+                    {
+                        candidate = earliestReady; // allow push later due to dependency
+                    }
+                }
+
+                // Shift alignment (still enforce inside shift + shiftStart + base setup rule)
                 candidate = await AlignWithShiftSetupAsync(candidate, duration, machineId);
 
-                // If we pulled candidate earlier than original start we accept earlier move
-                // If candidate ended up later (due to shift boundaries) we accept pushing later
                 var newStart = candidate;
                 var newEnd = newStart.Add(duration);
 
-                // Optional rule: if crossing out of operating hours at end and not allowed, push to next shift start + setup and recompute
                 if (!options.KeepCrossShiftAllowed && !await _shiftService.IsTimeWithinOperatingHoursAsync(newEnd, machineId))
                 {
-                    // Move to next shift start + setup
                     newStart = await AlignWithShiftSetupAsync(newEnd, duration, machineId, forceNextShift: true);
                     newEnd = newStart.Add(duration);
                 }
@@ -179,7 +192,6 @@ public class ScheduleCompressionService : IScheduleCompressionService
                     });
                 }
 
-                // Advance cursor to earliest possible after this job (job end)
                 cursor = job.ScheduledEnd;
                 previousJob = job;
 
@@ -200,7 +212,7 @@ public class ScheduleCompressionService : IScheduleCompressionService
             }
 
             result.JobsMoved = result.Changes.Count;
-            _logger.LogInformation("[COMPRESS-{OpId}] Machine {MachineId} considered {Considered} jobs; moved {Moved}; pulled {Pulled} min (baseSetup=3h)", opId, machineId, result.JobsConsidered, result.JobsMoved, (int)result.TotalMinutesPulledForward);
+            _logger.LogInformation("[COMPRESS-{OpId}] Machine {MachineId} considered {Considered} jobs; moved {Moved}; pulled {Pulled} min (baseSetup=3h, predSupport=1)" , opId, machineId, result.JobsConsidered, result.JobsMoved, (int)result.TotalMinutesPulledForward);
         }
         catch (Exception ex)
         {
@@ -216,15 +228,12 @@ public class ScheduleCompressionService : IScheduleCompressionService
     /// </summary>
     private async Task<DateTime> AlignWithShiftSetupAsync(DateTime candidateUtc, TimeSpan duration, string machineId, bool forceNextShift = false)
     {
-        // Round candidate to 15 min grid for consistency
         candidateUtc = RoundUp15(candidateUtc);
 
         for (int dayOffset = 0; dayOffset < 14; dayOffset++)
         {
-            var probe = candidateUtc.AddDays(dayOffset == 0 ? 0 : dayOffset).Date; // day we are checking (candidate day or future days)
-            // gather shifts for that day
+            var probe = candidateUtc.AddDays(dayOffset == 0 ? 0 : dayOffset).Date;
             var shifts = await _shiftService.GetShiftsForDayAsync(probe.DayOfWeek, machineId) ?? new List<OperatingShift>();
-            // include previous day for cross-midnight shifts if dayOffset==0
             List<OperatingShift>? prevDayShifts = null;
             if (dayOffset == 0)
             {
@@ -237,28 +246,22 @@ public class ScheduleCompressionService : IScheduleCompressionService
                 var shiftEnd = window.end;
                 if (forceNextShift && candidateUtc < shiftEnd)
                 {
-                    // ensure we pick first shift strictly after original candidate time
                     if (candidateUtc >= shiftStart)
                         continue;
                 }
 
-                // If candidate before this shift start, move to shift start
                 if (candidateUtc < shiftStart)
                     candidateUtc = shiftStart;
 
                 if (candidateUtc >= shiftStart && candidateUtc < shiftEnd)
                 {
-                    // Enforce base setup offset inside shift
                     var minOperational = shiftStart.Add(BaseSetup);
                     if (candidateUtc < minOperational)
                         candidateUtc = minOperational;
-
-                    // If duration begins inside shift; we allow spanning beyond shift end for now (MVP) – could be improved later
                     return RoundUp15(candidateUtc);
                 }
             }
         }
-        // Fallback: no shifts discovered (treat all hours valid) -> add base setup relative to original day start
         return RoundUp15(candidateUtc.Add(BaseSetup));
     }
 
@@ -277,7 +280,7 @@ public class ScheduleCompressionService : IScheduleCompressionService
         {
             var start = day + s.StartTime;
             var end = day + s.EndTime;
-            if (s.EndTime < s.StartTime) // crosses midnight
+            if (s.EndTime < s.StartTime)
                 end = end.AddDays(1);
             yield return (start, end);
         }

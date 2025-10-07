@@ -14,6 +14,11 @@ namespace OpCentrix.ViewModels.Scheduler
         public List<Machine> Machines { get; set; } = new();
         public List<string> Errors { get; set; } = new();
 
+        // Upstream dependency editing (Phase B.1 single predecessor)
+        public List<Job>? CandidatePredecessors { get; set; } // populated server-side when opening modal
+        public int? SelectedPredecessorId => Job.PredecessorJobId;
+        public double? UpstreamGapHours => Job.UpstreamGapHours;
+
         public bool IsEdit => Job.Id > 0;
         public bool IsEditing => Job.Id > 0;
         public string Title => IsEditing ? "Edit Job" : "Add New Job";

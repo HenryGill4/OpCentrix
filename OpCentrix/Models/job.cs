@@ -382,6 +382,12 @@ namespace OpCentrix.Models
         
         public int? PredecessorJobId { get; set; }
         
+        /// <summary>
+        /// Optional gap hours to wait after predecessor finishes before this job may start (Phase B.1 single predecessor support).
+        /// Null or <=0 treated as no additional gap. // TODO-SLS-UPSTREAM-GAP: validate range (0-72h) in UI/service
+        /// </summary>
+        public double? UpstreamGapHours { get; set; }
+        
         public int? OperatorUserId { get; set; }
         
         public DateTime? LastStatusChangeUtc { get; set; }

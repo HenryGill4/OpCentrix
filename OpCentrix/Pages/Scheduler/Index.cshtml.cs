@@ -17,7 +17,7 @@ namespace OpCentrix.Pages.Scheduler
     /// Modern scheduler page using best practices and clean architecture
     /// </summary>
     [SchedulerAccess]
-    public class IndexModel : PageModel
+    public partial class IndexModel : PageModel
     {
         private readonly SchedulerContext _context;
         private readonly ISchedulerService _schedulerService;
@@ -899,6 +899,7 @@ namespace OpCentrix.Pages.Scheduler
         /// 1. Base = last job end on machine (any status) OR now, whichever is later
         /// 2. Add 3 hour changeover buffer (operator setup)
         /// 3. If user clicked future slot that is later, prefer that
+        ///    NEW: If user clicked an earlier slot and that slot is EMPTY on the machine, allow inserting there (upstream insertion)
         /// 4. Align forward into an operating shift. If alignment lands inside a shift BEFORE its 3h setup window is satisfied (shiftStart + 3h), push to shiftStart + 3h.
         /// 5. Round to nearest 15 minutes (floor)
         /// </summary>
@@ -908,6 +909,12 @@ namespace OpCentrix.Pages.Scheduler
             const double defaultDurationHours = 8.0;
             try
             {
+                // Normalize requested start (treat unspecified kind as UTC to stay consistent)
+                if (requestedStart.Kind == DateTimeKind.Unspecified)
+                    requestedStart = DateTime.SpecifyKind(requestedStart, DateTimeKind.Utc);
+                else if (requestedStart.Kind == DateTimeKind.Local)
+                    requestedStart = requestedStart.ToUniversalTime();
+
                 var nowUtc = DateTime.UtcNow;
 
                 // 1 + 2: base candidate from last job + setup buffer
@@ -920,15 +927,29 @@ namespace OpCentrix.Pages.Scheduler
                 DateTime candidate = (lastJobEnd.HasValue && lastJobEnd.Value > nowUtc) ? lastJobEnd.Value : nowUtc;
                 candidate = candidate.AddHours(setupBufferHours);
 
-                // 3: honor user click if later
+                // 3a (existing): honor user click if later
                 if (requestedStart > candidate)
+                {
                     candidate = requestedStart;
+                }
+                else if (requestedStart < candidate)
+                {
+                    // NEW: Upstream insertion – if clicked slot is earlier than the auto trailing slot AND that time is free on the machine, allow scheduling there.
+                    // Check if any job occupies the requestedStart instant.
+                    bool slotOccupied = await _context.Jobs
+                        .AnyAsync(j => j.MachineId == machineId && j.ScheduledStart <= requestedStart && j.ScheduledEnd > requestedStart);
+                    if (!slotOccupied && requestedStart >= nowUtc.AddMinutes(-5))
+                    {
+                        // Safe to place upstream – adopt requestedStart as candidate.
+                        candidate = requestedStart;
+                        _logger.LogInformation("🪄 [SCHEDULER-{OperationId}] Upstream insertion: using empty clicked slot {Requested} instead of trailing start {Trailing}", operationId, requestedStart, lastJobEnd);
+                    }
+                }
 
                 if (candidate < nowUtc)
                     candidate = nowUtc.AddMinutes(5);
 
                 // 4: shift alignment with setup requirement relative to shift start
-                // We will iterate (safety cap) advancing in 15 min increments until inside an acceptable shift window.
                 int guard = 0;
                 while (guard < 96) // up to 24h search
                 {
@@ -937,7 +958,6 @@ namespace OpCentrix.Pages.Scheduler
                     DateTime? shiftStartForCandidate = null;
                     DateTime? shiftEndForCandidate = null;
 
-                    // Fetch shifts for candidate day and previous day (to catch cross-midnight shifts)
                     var dayShifts = await _shiftService.GetShiftsForDayAsync(candidate.DayOfWeek, machineId) ?? new List<OperatingShift>();
                     var prevDayShifts = await _shiftService.GetShiftsForDayAsync(candidate.AddDays(-1).DayOfWeek, machineId) ?? new List<OperatingShift>();
 
@@ -946,10 +966,9 @@ namespace OpCentrix.Pages.Scheduler
 
                     foreach (var (sStart, sEnd) in materialized.OrderBy(w => w.start))
                     {
-                        // If candidate before this shift window start, jump to its start (still need setup buffer afterwards)
                         if (candidate < sStart)
                         {
-                            candidate = sStart; // move to shift start then apply buffer rule below
+                            candidate = sStart;
                         }
                         if (candidate >= sStart && candidate < sEnd)
                         {
@@ -962,25 +981,20 @@ namespace OpCentrix.Pages.Scheduler
 
                     if (!insideAnyShift)
                     {
-                        // Advance 15 minutes and continue searching
                         candidate = candidate.AddMinutes(15);
                         continue;
                     }
 
-                    // Enforce setup buffer AFTER shift start
                     var minOperationalStart = shiftStartForCandidate.Value.AddHours(setupBufferHours);
                     if (candidate < minOperationalStart)
                     {
                         candidate = minOperationalStart;
-                        // If pushing past shift end, we need to move to next shift, so continue loop
                         if (candidate >= shiftEndForCandidate.Value)
                         {
-                            continue;
+                            continue; // need next shift
                         }
                     }
-
-                    // We are inside a shift and after setup buffer; exit loop
-                    break;
+                    break; // aligned
                 }
 
                 // 5: floor to nearest 15 minutes

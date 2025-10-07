@@ -2,7 +2,7 @@
 @model OpCentrix.ViewModels.Scheduler.AddEditJobViewModel
 
 <!-- Add/Edit Job Modal (logic embedded in scheduler-ui.js) -->
-<div class="modal-backdrop" style="position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;">
+<div class="modal-backdrop" style="position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;" onclick="closeJobModal()">
   <div class="opcentrix-card" style="width:100%;max-width:60rem;max-height:95vh;overflow-y:auto;background:#fff;border-radius:14px;box-shadow:0 25px 40px -10px rgba(0,0,0,.4);" onclick="event.stopPropagation()">
     <form hx-post="/Scheduler?handler=AddOrUpdateJob" hx-target="#modal-container" hx-swap="innerHTML" id="job-form" novalidate>
       @Html.AntiForgeryToken()
@@ -13,11 +13,14 @@
       <input type="hidden" name="PartId" id="hidden-part-id" value="@Model.Job.PartId" />
       <input type="hidden" name="SuggestedStackLevel" id="hidden-suggested-stack-level" value="" />
       <input type="hidden" name="PartNumber" id="hidden-part-number" value="@Model.Job.PartNumber" />
-      
+      <input type="hidden" name="PredecessorJobId" id="hidden-predecessor-id" value="@(Model.Job.PredecessorJobId?.ToString() ?? "")" />
+      <input type="hidden" name="UpstreamGapHours" id="hidden-upstream-gap" value="@(Model.Job.UpstreamGapHours?.ToString("F2") ?? "")" />
+
       <header style="padding:1.25rem 1.75rem;border-bottom:1px solid #e5e7eb;background:linear-gradient(90deg,#f8fafc,#eef2ff);display:flex;justify-content:space-between;align-items:center;">
         <div>
           <h2 style="margin:0;font-size:1.35rem;font-weight:700;color:#1f2937;">@(Model.Job.Id==0?"Schedule Job":"Edit Job #"+Model.Job.Id)</h2>
           <p style="margin:.35rem 0 0;font-size:.75rem;color:#64748b;">Master part stacking enabled for SLS jobs</p>
+          <p style="margin:.35rem 0 0;font-size:.65rem;color:#64748b;">Auto dependency & stack recommendation active</p>
         </div>
         <button type="button" onclick="closeJobModal()" style="background:#f1f5f9;border:none;border-radius:8px;padding:.6rem .8rem;cursor:pointer;color:#475569;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">✕</button>
       </header>
@@ -37,7 +40,6 @@
           <select name="MachineId" id="machine-select" class="oc-input" required>
             <option value="">Select machine...</option>
             @foreach(var m in Model.Machines){
-              // Safely attempt to read reflective properties for current / supported materials if present
               var currentMat = string.Empty; try { currentMat = (m.GetType().GetProperty("CurrentMaterial")?.GetValue(m)?.ToString() ?? string.Empty); } catch {}
               var supportedMats = string.Empty; try { supportedMats = (m.GetType().GetProperty("SupportedMaterials")?.GetValue(m)?.ToString() ?? string.Empty); } catch {}
               <option value="@m.MachineId" selected="@(Model.Job.MachineId==m.MachineId)" data-current-material="@currentMat" data-supported-materials="@supportedMats">@m.MachineId - @m.MachineName</option>
@@ -51,8 +53,9 @@
               @foreach(var mp in Model.MasterParts.OrderBy(p=>p.PartNumber)){
                   var legacyMatch = Model.Parts.FirstOrDefault(p=>p.PartNumber==mp.PartNumber);
                   var singleHours = mp.SingleStackDurationHours ?? mp.StageEstimateSingle ?? 0;
+                  var doubleHours = mp.DoubleStackDurationHours;
+                  var tripleHours = mp.TripleStackDurationHours;
                   var isSelected = Model.Job.MasterPartId == mp.Id;
-                  // derive a short material code for filtering
                   string mat = mp.Material ?? string.Empty;
                   string matU = mat.ToUpperInvariant();
                   string matCode = matU.Contains("INCONEL 718") ? "IN718" :
@@ -62,37 +65,68 @@
                                    (matU.Contains("ALSI10")||matU.Contains("AL SI10")) ? "ALSI10MG" :
                                    matU.Contains("316L") ? "SS316L" :
                                    matU.Replace(" ","").Replace("-","");
-                  <option value="@mp.Id" 
-                          selected="@isSelected"
-                          data-part-number="@mp.PartNumber" 
-                          data-legacy-id="@(legacyMatch?.Id.ToString() ?? "")" 
-                          data-single-hours="@(singleHours.ToString("F2"))" 
-                          data-double-hours="@(mp.DoubleStackDurationHours?.ToString("F2")??"")" 
-                          data-triple-hours="@(mp.TripleStackDurationHours?.ToString("F2")??"")" 
-                          data-stage-single="@(mp.StageEstimateSingle?.ToString("F2") ?? "")" 
-                          data-allow-stacking="@mp.AllowStacking.ToString().ToLower()" 
-                          data-enable-double="@mp.EnableDoubleStack.ToString().ToLower()" 
-                          data-enable-triple="@mp.EnableTripleStack.ToString().ToLower()" 
-                          data-max-stack="@mp.MaxStackCount" 
-                          data-parts-single="@mp.PartsPerBuildSingle" 
-                          data-parts-double="@(mp.PartsPerBuildDouble?.ToString()??"")" 
-                          data-parts-triple="@(mp.PartsPerBuildTriple?.ToString()??"")"
-                          data-material="@mat"
-                          data-material-code="@matCode">
-                    @mp.PartNumber - @mp.Name
-                  </option>
+                  if(isSelected){
+                    <option selected value="@mp.Id"
+                            data-part-number="@mp.PartNumber"
+                            data-legacy-id="@(legacyMatch?.Id.ToString() ?? "")"
+                            data-single-hours="@(singleHours.ToString("F2"))"
+                            data-double-hours="@(doubleHours?.ToString("F2")??"")"
+                            data-triple-hours="@(tripleHours?.ToString("F2")??"")"
+                            data-stage-single="@(mp.StageEstimateSingle?.ToString("F2") ?? "")"
+                            data-allow-stacking="@mp.AllowStacking.ToString().ToLower()"
+                            data-enable-double="@mp.EnableDoubleStack.ToString().ToLower()"
+                            data-enable-triple="@mp.EnableTripleStack.ToString().ToLower()"
+                            data-max-stack="@mp.MaxStackCount"
+                            data-parts-single="@mp.PartsPerBuildSingle"
+                            data-parts-double="@(mp.PartsPerBuildDouble?.ToString()??"")"
+                            data-parts-triple="@(mp.PartsPerBuildTriple?.ToString()??"")"
+                            data-material="@mat"
+                            data-material-code="@matCode">@mp.PartNumber - @mp.Name</option>
+                  } else {
+                    <option value="@mp.Id"
+                            data-part-number="@mp.PartNumber"
+                            data-legacy-id="@(legacyMatch?.Id.ToString() ?? "")"
+                            data-single-hours="@(singleHours.ToString("F2"))"
+                            data-double-hours="@(doubleHours?.ToString("F2")??"")"
+                            data-triple-hours="@(tripleHours?.ToString("F2")??"")"
+                            data-stage-single="@(mp.StageEstimateSingle?.ToString("F2") ?? "")"
+                            data-allow-stacking="@mp.AllowStacking.ToString().ToLower()"
+                            data-enable-double="@mp.EnableDoubleStack.ToString().ToLower()"
+                            data-enable-triple="@mp.EnableTripleStack.ToString().ToLower()"
+                            data-max-stack="@mp.MaxStackCount"
+                            data-parts-single="@mp.PartsPerBuildSingle"
+                            data-parts-double="@(mp.PartsPerBuildDouble?.ToString()??"")"
+                            data-parts-triple="@(mp.PartsPerBuildTriple?.ToString()??"")"
+                            data-material="@mat"
+                            data-material-code="@matCode">@mp.PartNumber - @mp.Name</option>
+                  }
               }
             </select>
             <small style="font-size:.6rem;color:#64748b;">Filtered by machine material; change machine to view other materials.</small>
           </div>
 
+          <!-- Auto Upstream Dependency Display -->
+          <div style="margin-top:1rem;border:1px solid #e2e8f0;border-radius:10px;padding:.7rem .75rem;background:#f9fafb;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem;">
+              <span style="font-size:.6rem;font-weight:700;letter-spacing:.5px;color:#334155;">AUTO UPSTREAM</span>
+              <span style="font-size:.55rem;padding:.2rem .45rem;border-radius:9999px;background:#eef2ff;color:#3730a3;">System</span>
+            </div>
+            @if(Model.Job.PredecessorJobId.HasValue){
+              <div style="font-size:.6rem;color:#334155;font-weight:600;">Depends on Job #@Model.Job.PredecessorJobId (3h setup enforced)</div>
+            } else {
+              <div style="font-size:.6rem;color:#334155;font-weight:600;">First job in chain – no predecessor</div>
+            }
+            <small style="display:block;margin-top:.35rem;font-size:.55rem;color:#64748b;">Scheduler links sequential jobs automatically (3h base + material changeover + shift alignment).</small>
+          </div>
+
+          <!-- Stacking Section -->
           <div id="stacking-section" style="display:none;margin-top:1rem;border:1px dashed #cbd5e1;border-radius:10px;padding:.75rem .85rem;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
               <span style="font-size:.7rem;font-weight:600;color:#334155;letter-spacing:.5px;">STACKING</span>
               <span id="stack-recommend" style="font-size:.6rem;color:#6366f1;font-weight:600;"></span>
             </div>
             <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
-              <button type="button" class="stack-chip" data-level="1">1x <span class="h" data-h="single">--</span></button>
+              <button type="button" class="stack-chip" data-level="1" disabled>1x <span class="h" data-h="single">--</span></button>
               <button type="button" class="stack-chip" data-level="2" disabled>2x <span class="h" data-h="double">--</span></button>
               <button type="button" class="stack-chip" data-level="3" disabled>3x <span class="h" data-h="triple">--</span></button>
             </div>
@@ -102,13 +136,15 @@
               <span>Level: <span id="stack-summary-level">-</span></span>
               <span style="margin-left:.75rem;">Parts/Build: <span id="stack-summary-ppb">-</span></span>
               <span style="margin-left:.75rem;">Total Units: <span id="stack-summary-total">-</span></span>
+              <span style="margin-left:.75rem;">Dur: <span id="stack-summary-dur">-</span>h</span>
             </div>
+            <small style="display:block;margin-top:.45rem;font-size:.55rem;color:#64748b;">Recommendation picks highest efficient level not exceeding configuration.</small>
           </div>
 
           <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.75rem;margin-top:1rem;">
             <div>
               <label class="oc-label">Quantity *</label>
-              <input type="number" name="Quantity" class="oc-input" value="@Model.Job.Quantity" min="1" required />
+              <input type="number" name="Quantity" id="qty-input" class="oc-input" value="@Model.Job.Quantity" min="1" required />
             </div>
             <div>
               <label class="oc-label">Priority</label>
@@ -142,12 +178,13 @@
           <div id="sls-params" class="machine-panel" style="display:none;">
             <h4 class="panel-title">SLS Parameters</h4>
             <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.65rem;">
-              <div><label class="oc-label">Material *</label>
+              <div>
+                <label class="oc-label">Material *</label>
                 <select name="SlsMaterial" class="oc-input" id="sls-material-select">
-                  <option value="Ti-6Al-4V Grade 5" selected="@(Model.Job.SlsMaterial=="Ti-6Al-4V Grade 5")">Ti-6Al-4V Grade 5</option>
-                  <option value="Ti-6Al-4V ELI Grade 23" selected="@(Model.Job.SlsMaterial=="Ti-6Al-4V ELI Grade 23")">Ti-6Al-4V ELI Grade 23</option>
-                  <option value="Inconel 718" selected="@(Model.Job.SlsMaterial=="Inconel 718")">Inconel 718</option>
-                  <option value="Inconel 625" selected="@(Model.Job.SlsMaterial=="Inconel 625")">Inconel 625</option>
+                  @{ string[] mats = new[]{"Ti-6Al-4V Grade 5","Ti-6Al-4V ELI Grade 23","Inconel 718","Inconel 625"}; }
+                  @foreach(var mat in mats){
+                    if(Model.Job.SlsMaterial == mat){ <option selected value="@mat">@mat</option> } else { <option value="@mat">@mat</option> }
+                  }
                 </select>
               </div>
               <div><label class="oc-label">Powder (kg)</label><input type="number" step="0.01" min="0" name="EstimatedPowderUsageKg" class="oc-input" value="@Model.Job.EstimatedPowderUsageKg.ToString("F2")" /></div>
@@ -170,7 +207,7 @@
 
           <div style="margin-top:1rem;display:flex;gap:.75rem;align-items:center;">
             <label style="display:flex;align-items:center;gap:.35rem;font-size:.7rem;font-weight:600;color:#334155;">
-              <input type="checkbox" name="IsRushJob" value="true" checked="@Model.Job.IsRushJob" /> Rush
+              <input type="checkbox" name="IsRushJob" value="true" @(Model.Job.IsRushJob?"checked":"") /> Rush
             </label>
             <label style="display:flex;align-items:center;gap:.35rem;font-size:.7rem;font-weight:600;color:#334155;">
               <input type="checkbox" name="RequiresPreheating" value="true" checked disabled /> Preheat
@@ -182,6 +219,8 @@
       <footer style="padding:1rem 1.75rem;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;background:#f8fafc;align-items:center;">
         <div style="display:flex;flex-direction:column;gap:.35rem;">
           <div style="font-size:.65rem;color:#64748b;">Stack levels drive duration and resource planning. System recommends optimal level based on shift timing.</div>
+          <div style="font-size:.6rem;color:#64748b;">Auto chain: each job depends on prior same-machine job (3h base + changeover + shift align).</div>
+          <div style="font-size:.6rem;color:#64748b;">Stack selection adjusts duration and end time.</div>
           @if(Model.Job.Id > 0){
             <div>
               <button type="button"
@@ -221,86 +260,3 @@
 .oc-btn-danger{background:#dc2626;color:#fff;border:none;padding:.45rem .9rem;font-size:.7rem;font-weight:600;border-radius:8px;cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,.15);} 
 .oc-btn-danger:hover{background:#b91c1c;} 
 </style>
-
-<script>
-// Material-aware filtering & auto-selection
-(function(){
-  const machineSelect = document.getElementById('machine-select');
-  const masterSelect = document.getElementById('masterpart-select');
-  const slsMaterialSelect = document.getElementById('sls-material-select');
-
-  if(!machineSelect || !masterSelect) return;
-
-  const codeToFriendly = {
-    'IN718':'Inconel 718',
-    'IN625':'Inconel 625',
-    'TI64-G5':'Ti-6Al-4V Grade 5',
-    'TI64G5':'Ti-6Al-4V Grade 5',
-    'TI64-G23':'Ti-6Al-4V ELI Grade 23',
-    'TI64G23':'Ti-6Al-4V ELI Grade 23',
-    'ALSI10MG':'AlSi10Mg',
-    'SS316L':'316L Stainless Steel'
-  };
-
-  function normalizeCode(raw){ return (raw||'').toUpperCase().replace(/[^A-Z0-9]/g,''); }
-
-  function deriveCode(friendly){
-    const u = (friendly||'').toUpperCase();
-    if(u.includes('INCONEL 718')) return 'IN718';
-    if(u.includes('INCONEL 625')) return 'IN625';
-    if(u.includes('ELI') || u.includes('GRADE 23')) return 'TI64-G23';
-    if(u.includes('GRADE 5')) return 'TI64-G5';
-    if(u.includes('ALSI10')) return 'ALSI10MG';
-    if(u.includes('316L')) return 'SS316L';
-    return normalizeCode(u);
-  }
-
-  function getMachineMaterialCode(){
-    const opt = machineSelect.options[machineSelect.selectedIndex];
-    if(!opt) return '';
-    const cur = opt.getAttribute('data-current-material')||'';
-    let code = cur.trim();
-    if(code && code.length<=8) return normalizeCode(code); // already a code (e.g. IN718)
-    return deriveCode(code);
-  }
-
-  function filterMasterParts(){
-    const machineCode = getMachineMaterialCode();
-    const normMachine = normalizeCode(machineCode);
-    const showAll = !normMachine;
-    let visibleCount = 0;
-    Array.from(masterSelect.options).forEach(o=>{
-      if(!o.value){ o.hidden=false; o.disabled=false; return; }
-      const partCode = normalizeCode(o.getAttribute('data-material-code')||'');
-      const match = showAll || !partCode || partCode===normMachine;
-      o.hidden = !match;
-      o.disabled = !match;
-      if(match) visibleCount++;
-    });
-    // If current selection hidden, reset
-    if(masterSelect.selectedOptions.length && masterSelect.selectedOptions[0].hidden){
-      masterSelect.value='';
-    }
-    masterSelect.classList.toggle('filtered-empty', visibleCount===0);
-  }
-
-  function autoSelectSlsMaterial(){
-    if(!slsMaterialSelect) return;
-    const code = getMachineMaterialCode();
-    if(!code) return;
-    const friendly = codeToFriendly[code] || codeToFriendly[normalizeCode(code)] || null;
-    if(!friendly) return;
-    for(const opt of slsMaterialSelect.options){
-      if(opt.value.toLowerCase() === friendly.toLowerCase()){
-        opt.selected = true;
-        break;
-      }
-    }
-  }
-
-  machineSelect.addEventListener('change', ()=>{ filterMasterParts(); autoSelectSlsMaterial(); });
-  // Initial run
-  filterMasterParts();
-  autoSelectSlsMaterial();
-})();
-</script>
