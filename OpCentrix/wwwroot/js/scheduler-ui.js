@@ -9,6 +9,49 @@
         };
     }
 
+    // Runtime bridge for Print Tracking integration from scheduler
+    if(!window.OpCentrixRuntime){ window.OpCentrixRuntime = {}; }
+    // Open Start modal using job id
+    window.OpCentrixRuntime.openStartJobModal = function(jobId){
+        return safeExecute('SCHED','openStartJobModal', ()=>{
+            if(!jobId){ console.warn('[SCHED] openStartJobModal requires jobId'); return false; }
+            const url = `/PrintTracking?handler=StartPrintModal&jobId=${encodeURIComponent(jobId)}`;
+            ensureModalContainer();
+            if(typeof htmx !== 'undefined'){
+                return htmx.ajax('GET', url, { target:'#modal-container', swap:'innerHTML' });
+            }
+            window.open(url,'_blank');
+            return true;
+        }, {jobId});
+    };
+    // Open Complete modal using job id (preferred) or machine id
+    window.OpCentrixRuntime.openCompleteJobModal = function(jobId, machineId){
+        return safeExecute('SCHED','openCompleteJobModal', ()=>{
+            let url = '/PrintTracking?handler=PostPrintModal';
+            const p = new URLSearchParams();
+            if(jobId){ p.set('jobId', jobId); }
+            if(machineId){ p.set('printerName', machineId); }
+            if([...
+                p.keys()].length){ url += '&' + p.toString(); }
+            ensureModalContainer();
+            if(typeof htmx !== 'undefined'){
+                return htmx.ajax('GET', url, { target:'#modal-container', swap:'innerHTML' });
+            }
+            window.open(url,'_blank');
+            return true;
+        }, {jobId, machineId});
+    };
+    // Close modal shortcut used by print tracking JS
+    window.OpCentrixRuntime.closeModal = function(){ try{ window.closeJobModal && window.closeJobModal(); }catch(e){ console.warn('close modal failed', e);} };
+    // Refresh scheduler grid after PT operations
+    window.OpCentrixRuntime.refreshScheduler = function(){ try{
+        const qs = window.location.search || '';
+        if(window.htmx){
+            htmx.ajax('GET', '/Scheduler?handler=RefreshGrid'+(qs?qs.replace('?', '&'):''), { target:'#scheduler-main-content', swap:'innerHTML' });
+            htmx.ajax('GET', '/Scheduler?handler=RefreshSummary'+(qs?qs.replace('?', '&'):''), { target:'#footer-summary', swap:'innerHTML' });
+        } else { window.location.reload(); }
+    }catch(e){ console.warn('refresh scheduler failed', e);} };
+
     function hydrateSchedulerColors(){
         try {
             if(!document.getElementById('scheduler-color-override')){
@@ -174,6 +217,21 @@
                 if(machineId && slotTime) window.openJobModalSafely(machineId, slotTime);
             });
         });
+        // Click on job blocks to open appropriate modal based on status
+        document.querySelectorAll('.job-core[data-job-status]')?.forEach(j=>{
+            if(j.dataset.ptBound==='1') return; j.dataset.ptBound='1';
+            j.addEventListener('dblclick', (e)=>{
+                const jobId = j.getAttribute('data-job-id');
+                const machineId = j.getAttribute('data-machine-id');
+                const status = (j.getAttribute('data-job-status')||'').toLowerCase();
+                if(status.includes('building') || status.includes('progress')){
+                    window.OpCentrixRuntime && window.OpCentrixRuntime.openCompleteJobModal(jobId, machineId);
+                } else if(status.includes('scheduled')){
+                    window.OpCentrixRuntime && window.OpCentrixRuntime.openStartJobModal(jobId);
+                }
+                e.stopPropagation();
+            });
+        });
     }
 
     // Modal form logic has been externalized to scheduler-addjob-modal.js (JobFormHandler) to avoid duplication.
@@ -233,7 +291,7 @@
         try{ if(e.target && e.target.id === 'job-form'){ console.error('[SCHED-Debug] htmx:responseError', {status: e.detail.xhr?.status, response: e.detail.xhr?.responseText?.substring(0,500)}); } }catch(ex){ console.warn('[SCHED-Debug] responseError log failed', ex); }
     });
     document.body.addEventListener('htmx:sendError', function(e){
-        try{ if(e.target && e.target.id === 'job-form'){ console.error('[SCHED-Debug] htmx:sendError network issue', e.detail); } }catch(ex){ console.warn('[SCHED-Debug] sendError log failed', ex); }
+        try{ if(e.target && e.target.id === 'job-form'){ console.error('[SCHED-Debug] sendError network issue', e.detail); } }catch(ex){ console.warn('[SCHED-Debug] sendError log failed', ex); }
     });
 
     function enhanceLegacyJobBlocks(){

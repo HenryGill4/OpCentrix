@@ -48,13 +48,15 @@
     .job-progress-fill.overrun{background:linear-gradient(90deg,#dc2626,#b91c1c);} 
     .building-anim:before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(34,197,94,.15) 0 8px,rgba(16,185,129,.15) 8px 16px);animation: moveStripes 6s linear infinite;mix-blend-mode:overlay;pointer-events:none;}
     @@keyframes moveStripes {0%{background-position:0 0;}100%{background-position:256px 0;}}
-    .run-badge{position:absolute;top:0;right:0;background:#16a34a;color:#fff;font-size:10px;padding:0 4px;border-bottom-left-radius:4px;font-weight:600;display:flex;align-items:center;gap:2px;animation:pulse-green 1.4s ease-in-out infinite;}
+    .run-badge{position:absolute;top:0;right:0;background:#16a34a;color:#fff;font-size:10px;padding:0 4px;border-bottom-left-radius:4px;font-weight:600;display:flex;align-items:center;gap:2px;animation:pulse-green 1.4s ease-in-out infinite; cursor:pointer;}
     @@keyframes pulse-green{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.8);}50%{box-shadow:0 0 0 6px rgba(34,197,94,0);} }
     .eta-chip{position:absolute;left:4px;bottom:4px;background:rgba(0,0,0,.35);color:#fff;font-size:10px;padding:2px 6px;border-radius:6px;font-weight:600;backdrop-filter:blur(2px);display:flex;gap:4px;align-items:center;}
     .eta-chip .pct{font-weight:700;}
 </style>
 
-<div class="job-core @priorityClass @(isDelayed?"delayed-job":"") @(isBuilding?"building-anim":"")" data-has-progress="@(progressPercent.HasValue)" data-job-status="@Model.Status">
+<div class="job-core @priorityClass @(isDelayed?"delayed-job":"") @(isBuilding?"building-anim":"")"
+     data-job-id="@Model.Id" data-machine-id="@Model.MachineId" data-job-status="@Model.Status"
+     title="@Model.PartNumber (@Model.Status)">
     <div class="job-block-title font-bold text-[11px] leading-tight flex items-center flex-wrap gap-0.5 pr-6">
         <span>@rushIndicator@shortPartNumber</span>
         <span class="stack-badge @(showStack?"highlight":"")" aria-label="Stack level and quantity">
@@ -67,7 +69,7 @@
     </div>
     @if (!string.IsNullOrWhiteSpace(Model.SlsMaterial))
     { <div class="mt-0.5 text-[10px] opacity-70 truncate pr-4">@Model.SlsMaterial</div> }
-    @if (isBuilding){ <div class="run-badge" title="Printing in progress">PRINTING</div> }
+    @if (isBuilding){ <div class="run-badge" title="Printing in progress – click to complete" onclick="event.stopPropagation(); if(window.OpCentrixRuntime) OpCentrixRuntime.openCompleteJobModal(@Model.Id);">PRINTING</div> }
     else if (isComplete){ <div class="absolute top-0 right-0 bg-green-600 text-white text-[10px] px-1 rounded-bl">DONE</div> }
     @if(isScheduled){ <div class="start-chip" title="Start Job" onclick="event.stopPropagation(); if(window.OpCentrixRuntime) OpCentrixRuntime.openStartJobModal(@Model.Id);">▶ Start</div> }
     @if(progressPercent.HasValue){

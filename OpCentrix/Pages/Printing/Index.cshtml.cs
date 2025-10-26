@@ -4,6 +4,9 @@ using OpCentrix.Authorization;
 using OpCentrix.Services;
 using OpCentrix.Models.MaintenanceV2;
 using System.ComponentModel.DataAnnotations;
+using OpCentrix.Data; // added
+using Microsoft.EntityFrameworkCore; // added
+using OpCentrix.Models; // added
 
 namespace OpCentrix.Pages.Printing
 {
@@ -12,6 +15,7 @@ namespace OpCentrix.Pages.Printing
     {
         private readonly IOperationalTaskService _taskService;
         private readonly ILogger<IndexModel> _logger;
+        private readonly SchedulerContext _context; // added
 
         public List<OperationalTask> OperationalTasks { get; set; } = new();
 
@@ -21,10 +25,11 @@ namespace OpCentrix.Pages.Printing
 
         private static readonly string[] PrintingMachines = { "TI1", "TI2", "INC", "TI3", "TI4" };
 
-        public IndexModel(IOperationalTaskService taskService, ILogger<IndexModel> logger)
+        public IndexModel(IOperationalTaskService taskService, ILogger<IndexModel> logger, SchedulerContext context)
         {
             _taskService = taskService;
             _logger = logger;
+            _context = context; // added
         }
 
         [BindProperty]
@@ -42,6 +47,226 @@ namespace OpCentrix.Pages.Printing
         }
 
         public async Task OnGetAsync() => await LoadTaskSnapshotAsync();
+
+        // NEW: ViewModel for dynamic printer card
+        public sealed class PrinterCardViewModel
+        {
+            public string MachineId { get; init; } = string.Empty;
+            public string MachineName { get; init; } = string.Empty;
+            public string Status { get; init; } = "Idle"; // Idle | Printing | Cooling | Completed | Maintenance | Offline
+            public BuildJob? ActiveBuild { get; init; }
+            public Job? CurrentJob { get; init; }
+            public List<Job> UpcomingJobs { get; init; } = new();
+            public double? ProgressPercent { get; init; }
+            public BuildJob? RecentlyCompleted { get; init; }
+            public int? CoolingMinutesTotal { get; init; }
+            public int? CoolingMinutesRemaining { get; init; }
+            public int? DowntimeMinutes { get; init; }
+        }
+
+        // NEW: HTMX handler that returns a single printer card partial
+        public async Task<IActionResult> OnGetPrinterCardAsync(string machineId)
+        {
+            if (string.IsNullOrWhiteSpace(machineId)) return BadRequest("machineId required");
+            try
+            {
+                machineId = machineId.Trim();
+                var now = DateTime.UtcNow;
+                // Active build on machine
+                var activeBuild = await _context.BuildJobs
+                    .Include(b => b.Part)
+                    .Where(b => b.PrinterName == machineId && b.Status == "In Progress")
+                    .OrderByDescending(b => b.ActualStartTime)
+                    .FirstOrDefaultAsync();
+
+                // Recently completed within last 2 hours to show completion state briefly
+                var recentlyCompleted = await _context.BuildJobs
+                    .Include(b => b.Part)
+                    .Where(b => b.PrinterName == machineId && b.Status == "Completed" && b.CompletedAt.HasValue && b.CompletedAt > now.AddHours(-2))
+                    .OrderByDescending(b => b.CompletedAt)
+                    .FirstOrDefaultAsync();
+
+                // Near-term scheduled jobs
+                var upcomingJobs = await _context.Jobs
+                    .Include(j => j.Part)
+                    .Where(j => j.MachineId == machineId && (j.Status == "Scheduled" || j.Status == "Building" || j.Status == "In Progress") && j.ScheduledStart >= DateTime.UtcNow.AddDays(-1))
+                    .OrderBy(j => j.ScheduledStart)
+                    .Take(3)
+                    .ToListAsync();
+
+                Job? currentJob = null;
+                if (activeBuild != null)
+                {
+                    if (activeBuild.AssociatedScheduledJobId.HasValue)
+                    {
+                        currentJob = await _context.Jobs.Include(j => j.Part).FirstOrDefaultAsync(j => j.Id == activeBuild.AssociatedScheduledJobId.Value);
+                    }
+                    if (currentJob == null)
+                    {
+                        currentJob = upcomingJobs.FirstOrDefault(j => j.Status == "Building" || j.Status == "In Progress");
+                    }
+                }
+
+                // Determine status & progress
+                string status;
+                double? progress = null;
+                int? coolingTotal = null;
+                int? coolingRemaining = null;
+
+                if (activeBuild != null)
+                {
+                    // Policy: allow up to 110% of estimated duration before entering Cooling
+                    const double overrunFactor = 1.10;
+                    // Machine-specific cooling window: INC=120m, TI*=60m (fallback 90)
+                    int coolingDurationMinutes = DetermineCoolingMinutes(machineId);
+                    double? estHours = null;
+                    if (activeBuild.OperatorEstimatedHours.HasValue)
+                        estHours = (double)activeBuild.OperatorEstimatedHours.Value;
+                    else if (currentJob != null && currentJob.EstimatedHours > 0)
+                        estHours = currentJob.EstimatedHours;
+
+                    if (estHours.HasValue && estHours.Value > 0)
+                    {
+                        var elapsedHours = (now - activeBuild.ActualStartTime).TotalHours;
+                        // Cap progress at 110% for display/logic
+                        progress = Math.Max(0, Math.Min(110, elapsedHours / estHours.Value * 100.0));
+
+                        // Switch to Cooling only after 110% of estimate has elapsed
+                        var thresholdHours = estHours.Value * overrunFactor;
+                        if (elapsedHours >= thresholdHours)
+                        {
+                            coolingTotal = coolingDurationMinutes;
+                            var overMinutes = (int)Math.Max(0, Math.Round((elapsedHours - thresholdHours) * 60.0));
+                            if (overMinutes < coolingTotal)
+                            {
+                                status = "Cooling";
+                                coolingRemaining = Math.Max(0, coolingTotal.GetValueOrDefault() - overMinutes);
+                            }
+                            else
+                            {
+                                // Cooling complete -> Ready for changeover (Idle)
+                                status = "Idle";
+                            }
+                        }
+                        else
+                        {
+                            status = "Printing";
+                        }
+                    }
+                    else
+                    {
+                        // No estimate available -> treat as Printing (unknown progress)
+                        status = "Printing";
+                    }
+                }
+                else
+                {
+                    // When no active build: if something just completed, apply machine-specific cooling then mark Urgent after elapsed
+                    if (recentlyCompleted != null && recentlyCompleted.CompletedAt.HasValue)
+                    {
+                        int machineCooling = DetermineCoolingMinutes(machineId);
+                        coolingTotal = machineCooling;
+                        var minutesSinceComplete = (int)Math.Max(0, Math.Round((now - recentlyCompleted.CompletedAt.Value).TotalMinutes));
+                        if (minutesSinceComplete < machineCooling)
+                        {
+                            status = "Cooling";
+                            coolingRemaining = Math.Max(0, machineCooling - minutesSinceComplete);
+                        }
+                        else
+                        {
+                            // Cooling finished -> if no new build started, this is urgent downtime
+                            status = "Urgent";
+                            var downtime = minutesSinceComplete - machineCooling;
+                            // Persist/Upsert to DelayLog as Post-Cooldown Downtime against the completed build
+                            await UpsertPostCooldownDowntimeAsync(recentlyCompleted, recentlyCompleted.CompletedAt.Value.AddMinutes(machineCooling), now, downtime);
+                            coolingRemaining = 0;
+                            coolingTotal = machineCooling;
+                            // Attach downtime minutes to model later
+                        }
+                    }
+                    else
+                    {
+                        status = "Idle";
+                    }
+                }
+
+                // Compute downtime if status is Urgent (for display)
+                int? downtimeMinutes = null;
+                if (status == "Urgent" && recentlyCompleted?.CompletedAt != null)
+                {
+                    var machineCooling = DetermineCoolingMinutes(machineId);
+                    downtimeMinutes = (int)Math.Max(0, Math.Round((now - recentlyCompleted.CompletedAt.Value).TotalMinutes)) - machineCooling;
+                }
+
+                var vm = new PrinterCardViewModel
+                {
+                    MachineId = machineId,
+                    MachineName = machineId, // could map to friendly name later
+                    Status = status,
+                    ActiveBuild = activeBuild,
+                    CurrentJob = currentJob,
+                    UpcomingJobs = upcomingJobs,
+                    ProgressPercent = progress,
+                    RecentlyCompleted = recentlyCompleted,
+                    CoolingMinutesTotal = coolingTotal,
+                    CoolingMinutesRemaining = coolingRemaining,
+                    DowntimeMinutes = downtimeMinutes
+                };
+                return Partial("_PrinterCard", vm);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to load printer card for {MachineId}", machineId);
+                Response.StatusCode = 500;
+                return Content($"<div class='p-4 text-red-600'>Error loading {machineId} card</div>", "text/html");
+            }
+        }
+
+        private static int DetermineCoolingMinutes(string machineId)
+        {
+            if (string.IsNullOrWhiteSpace(machineId)) return 90;
+            var id = machineId.Trim().ToUpperInvariant();
+            if (id.StartsWith("INC")) return 120; // 2 hours for Inconel machine
+            if (id.StartsWith("TI")) return 60;   // 1 hour for Titanium machines
+            return 90; // default fallback
+        }
+
+        private async Task UpsertPostCooldownDowntimeAsync(BuildJob completedBuild, DateTime downtimeStartUtc, DateTime nowUtc, int downtimeMinutes)
+        {
+            try
+            {
+                // Store as DelayLog entry tied to the completed build
+                var reason = "Post-Cooldown Downtime";
+                var existing = await _context.DelayLogs
+                    .Where(d => d.BuildId == completedBuild.BuildId && d.DelayReason == reason)
+                    .OrderByDescending(d => d.CreatedAt)
+                    .FirstOrDefaultAsync();
+
+                if (existing == null)
+                {
+                    _context.DelayLogs.Add(new DelayLog
+                    {
+                        BuildId = completedBuild.BuildId,
+                        DelayReason = reason,
+                        DelayDuration = Math.Max(0, downtimeMinutes),
+                        Description = $"Machine {completedBuild.PrinterName} downtime since cooldown end at {downtimeStartUtc:u}",
+                        CreatedAt = nowUtc,
+                        CreatedBy = "System"
+                    });
+                }
+                else
+                {
+                    // Update duration to latest value
+                    existing.DelayDuration = Math.Max(existing.DelayDuration, downtimeMinutes);
+                    existing.CreatedAt = nowUtc;
+                }
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to upsert Post-Cooldown Downtime for build {BuildId}", completedBuild.BuildId);
+            }
+        }
 
         public async Task<IActionResult> OnGetTaskNotificationsAsync(string? format = null)
         {
@@ -177,7 +402,7 @@ namespace OpCentrix.Pages.Printing
         {
             var all = await _taskService.GetOpenAsync(fetchMax);
             var filtered = all.Where(task =>
-                    (task.MachineId != null && PrintingMachines.Contains(task.MachineId, StringComparer.OrdinalIgnoreCase)) ||
+                    ((task.MachineId != null && Array.Exists(PrintingMachines, m => string.Equals(m, task.MachineId, StringComparison.OrdinalIgnoreCase)))) ||
                     string.IsNullOrEmpty(task.MachineId) ||
                     task.OverdueFlag == 1 ||
                     task.Priority <= 2)

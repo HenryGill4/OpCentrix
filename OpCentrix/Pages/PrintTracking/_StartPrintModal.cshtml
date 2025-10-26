@@ -1,7 +1,7 @@
 ﻿@using OpCentrix.ViewModels.PrintTracking
 @model PrintStartViewModel
 
-<div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" id="start-print-modal">
+<div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" id="start-print-modal" hx-preserve>
     <div class="relative top-10 mx-auto p-5 border w-11/12 md:w-5/6 lg:w-4/5 max-w-4xl shadow-lg rounded-md bg-white">
         <div class="mt-3">
             <div class="flex items-center justify-between pb-4 border-b">
@@ -17,12 +17,33 @@
             <form hx-post="/PrintTracking?handler=StartPrint" hx-target="#modal-container" hx-swap="innerHTML" class="mt-6 space-y-6">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="AddPowder" id="AddPowderHidden" value="@Model.AddPowder.ToString().ToLower()" />
+                <!-- Hidden canonical printer name used for POST binding (kept in sync with dropdown) -->
+                <input type="hidden" name="PrinterName" id="HiddenPrinterName" value="@Model.PrinterName" />
+                @if(Model.AssociatedScheduledJobId.HasValue){ <input type="hidden" name="AssociatedScheduledJobId" value="@Model.AssociatedScheduledJobId" /> }
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Printer</label>
-                        <input type="text" value="@Model.PrinterName" readonly class="mt-1 w-full rounded-md border-gray-300 bg-gray-100" />
-                        <input type="hidden" name="PrinterName" value="@Model.PrinterName" />
+                        <select name="printerName" id="PrinterNameSelect"
+                                class="mt-1 w-full rounded-md border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                                hx-get="/PrintTracking?handler=StartPrintModal"
+                                hx-target="#start-print-modal"
+                                hx-swap="outerHTML"
+                                hx-include="[name='printerName'],[name='AssociatedScheduledJobId']"
+                                hx-on:htmx:beforeRequest="this.disabled=true;"
+                                hx-on:htmx:afterOnLoad="this.disabled=false;"
+                                onchange="if(!window.htmx){reloadStartPrintModal(this.value);}" >
+                            <option value="">Select printer...</option>
+                            @if(Model.AvailablePrinters != null){
+                                foreach(var p in Model.AvailablePrinters){
+                                    if(string.Equals(p, Model.PrinterName, StringComparison.OrdinalIgnoreCase)){
+                                        @:<option value="@p" selected>@p</option>
+                                    } else {
+                                        @:<option value="@p">@p</option>
+                                    }
+                                }
+                            }
+                        </select>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Start Time</label>
@@ -108,12 +129,16 @@
 </div>
 
 <script>
-function closeModalSafely(){ if(window.closeJobModal) window.closeJobModal(); const m=document.getElementById('start-print-modal'); if(m) m.remove(); }
+function closeModalSafely(){ if(window.closeJobModal) window.closeJobModal(); const m=document.getElementById('start-print-modal'); if(m) m.remove(); try{ document.body.style.overflow=''; }catch{} }
 function updateDuration(){const s=new Date(document.querySelector('input[name=ActualStartTime]').value);const e=new Date(document.getElementById('EstimatedEndTime').value);if(e>s){const h=(e-s)/36e5;document.getElementById('CalculatedDuration').value=h.toFixed(2);} }
 function togglePrototypes(cb){const c=document.getElementById('prototypeContainer');const btn=document.getElementById('addPrototypeBtn'); if(cb.checked){c.classList.remove('hidden');btn.classList.remove('hidden'); if(!c.children.length) addPrototype();} else {c.classList.add('hidden');btn.classList.add('hidden');}}
-let protoIndex=0;function addPrototype(){const c=document.getElementById('prototypeContainer');const idx=protoIndex++;const div=document.createElement('div');div.className='border p-3 rounded bg-white';div.innerHTML=`<div class=\"grid grid-cols-5 gap-2 items-end\"><div class=\"col-span-2\"><label class=\"text-xs text-gray-600\">Part #</label><input name=\"PrototypeAdditions[${idx}].PartNumber\" required class=\"mt-1 w-full border-gray-300 rounded\" /></div><div><label class=\"text-xs text-gray-600\">Qty</label><input type=\"number\" min=\"1\" value=\"1\" name=\"PrototypeAdditions[${idx}].Quantity\" class=\"mt-1 w-full border-gray-300 rounded\" /></div><div class=\"col-span-2\"><label class=\"text-xs text-gray-600\">Notes</label><input name=\"PrototypeAdditions[${idx}].Notes\" class=\"mt-1 w-full border-gray-300 rounded\" /></div></div>`;c.appendChild(div);} 
+let protoIndex=0;function addPrototype(){const c=document.getElementById('prototypeContainer');const idx=protoIndex++;const div=document.createElement('div');div.className='border p-3 rounded bg-white';div.innerHTML=`<div class="grid grid-cols-5 gap-2 items-end"><div class="col-span-2"><label class=\"text-xs text-gray-600\">Part #</label><input name="PrototypeAdditions[${idx}].PartNumber" required class="mt-1 w-full border-gray-300 rounded" /></div><div><label class=\"text-xs text-gray-600\">Qty</label><input type=\"number\" min=\"1\" value=\"1\" name="PrototypeAdditions[${idx}].Quantity" class="mt-1 w-full border-gray-300 rounded" /></div><div class="col-span-2"><label class=\"text-xs text-gray-600\">Notes</label><input name="PrototypeAdditions[${idx}].Notes" class="mt-1 w-full border-gray-300 rounded" /></div></div>`;c.appendChild(div);} 
 function togglePowderInput(){const t=document.getElementById('AddPowderToggle');const input=document.getElementById('PowderAddedKg');const hint=document.getElementById('PowderDisabledHint');const hidden=document.getElementById('AddPowderHidden');if(t.checked){input.disabled=false;hint.classList.add('hidden');hidden.value='true';}else{input.disabled=true;input.value='';hint.classList.remove('hidden');hidden.value='false';}}
-// initialize
+// Sync hidden printer name on change (for POST)
+const printerSelect=document.getElementById('PrinterNameSelect');if(printerSelect){printerSelect.addEventListener('change',()=>{const h=document.getElementById('HiddenPrinterName'); if(h) h.value=printerSelect.value;});}
+// Fallback reload if HTMX not present
+function reloadStartPrintModal(printer){if(!printer) return; fetch(`/PrintTracking?handler=StartPrintModal&printerName=${encodeURIComponent(printer)}`,{headers:{'X-Requested-With':'XMLHttpRequest'}}).then(r=>r.text()).then(html=>{const modal=document.getElementById('start-print-modal'); if(modal){modal.outerHTML=html;}}).catch(err=>console.error('Reload start print modal failed',err));}
+// initialize state
 if(!document.getElementById('AddPowderToggle').checked){document.getElementById('PowderAddedKg').disabled=true;}
 updateDuration();
 </script>

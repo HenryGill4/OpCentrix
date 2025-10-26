@@ -85,6 +85,71 @@ namespace OpCentrix.Pages.PrintTracking
             [BindProperty] public double? RepeatEveryMachineHours { get; set; }
         }
 
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> OnPostUpdateMachineStatusAsync(string machineId, string status)
+        {
+            if (string.IsNullOrWhiteSpace(machineId) || string.IsNullOrWhiteSpace(status)) return BadRequest();
+            try
+            {
+                var input = machineId.Trim();
+
+                // Resolve by MachineId, Name, or MachineName to ensure we update the canonical row
+                var machine = await _context.Machines.FirstOrDefaultAsync(m => m.MachineId == input)
+                              ?? await _context.Machines.FirstOrDefaultAsync(m => m.Name == input || m.MachineName == input)
+                              ?? await _context.Machines.FirstOrDefaultAsync(m => m.MachineId.ToLower() == input.ToLower());
+                if (machine == null) return NotFound();
+
+                var normalizedStatus = NormalizeMachineStatus(status);
+                if (string.IsNullOrEmpty(normalizedStatus))
+                {
+                    return BadRequest($"Invalid status '{status}'");
+                }
+
+                // Attempt global update through service (handles caches/other stores)
+                try { await _machineManagementService.UpdateMachineStatusAsync(machine.MachineId, normalizedStatus); }
+                catch { /* non-fatal: fallback to direct DB update */ }
+
+                // Persist to canonical Machines table
+                machine.Status = normalizedStatus;
+                machine.LastModifiedDate = DateTime.UtcNow;
+                machine.LastModifiedBy = User.Identity?.Name ?? "PrintTracking";
+                await _context.SaveChangesAsync();
+                // Ask dashboard to refresh in background
+                Response.Headers["HX-Trigger"] =
+                    $"{{\"requestPrintTrackingRefresh\":true,\"machineStatusUpdated\":{{\"machineId\":\"{machine.MachineId}\",\"status\":\"{normalizedStatus}\"}}}}";
+                Response.Headers["HX-Trigger-Target"] = "body"; // dispatch on body so global listeners fire
+                return new EmptyResult();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to update machine {MachineId} status to {Status}", machineId, status);
+                return StatusCode(500);
+            }
+        }
+
+        // Canonicalize all incoming machine status values to a small, consistent set used system-wide
+        private static string NormalizeMachineStatus(string raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return string.Empty;
+            var s = raw.Trim();
+            var sl = s.ToLowerInvariant();
+            return sl switch
+            {
+                // Active
+                "started" or "start" or "running" or "building" or "printing" => "Printing",
+                // Transitional
+                "preheat" or "pre-heating" or "pre heating" or "preheating" => "Preheating",
+                "cool" or "cooling" => "Cooling",
+                // Inactive/alerts
+                "down" or "downtime" or "urgent" => "Urgent",
+                "maint" or "maintenance" => "Maintenance",
+                "idle" => "Idle",
+                "offline" => "Offline",
+                "error" or "fault" or "alarm" => "Error",
+                _ => string.Empty // invalid/unsupported
+            };
+        }
+
         // FIXED constructor
         public IndexModel(
             IPrintTrackingService printTrackingService,
@@ -191,6 +256,9 @@ namespace OpCentrix.Pages.PrintTracking
                 {
                     TempData["Warning"] = $"Page loaded with minor issues: {string.Join(", ", PageErrors)}";
                 }
+
+                // Expose admin/operator view to partials
+                ViewData["IsAdminView"] = IsAdminView;
 
                 return Page();
             }
@@ -366,6 +434,7 @@ namespace OpCentrix.Pages.PrintTracking
                 }
 
                 _logger.LogInformation("✅ [PRINT-TRACKING-{OperationId}] Dashboard refreshed successfully", operationId);
+                ViewData["IsAdminView"] = IsAdminView;
                 return Partial("_PrintTrackingDashboard", Dashboard);
             }
             catch (Exception ex)
@@ -647,17 +716,26 @@ namespace OpCentrix.Pages.PrintTracking
                     .OrderBy(m => m.Priority)
                     .ToList();
 
+                // Reconcile statuses with canonical DB values to avoid UI reversion after refresh
+                var ids = slsMachines.Select(m => m.MachineId).Where(id => !string.IsNullOrWhiteSpace(id)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                var dbMachines = await _context.Machines
+                    .AsNoTracking()
+                    .Where(x => ids.Contains(x.MachineId))
+                    .ToDictionaryAsync(x => x.MachineId, StringComparer.OrdinalIgnoreCase);
+
                 Dashboard.AvailableMachines = slsMachines.Select(m => new MachineInfo
                 {
                     MachineId = m.MachineId,
                     MachineName = m.Name,
                     MachineType = m.MachineType ?? "SLS",
-                    Status = m.Status ?? "Unknown",
+                    // Prefer DB status when available (latest write wins)
+                    Status = (dbMachines.TryGetValue(m.MachineId, out var dbm) ? dbm.Status : m.Status) ?? "Unknown",
                     IsActive = m.IsActive,
                     IsAvailableForScheduling = m.IsAvailableForScheduling,
                     Priority = m.Priority,
-                    CurrentMaterial = m.CurrentMaterial ?? "",
-                    Location = m.Location ?? "",
+                    // Prefer DB material/location if present
+                    CurrentMaterial = (dbMachines.TryGetValue(m.MachineId, out var dbm2) ? (dbm2.CurrentMaterial ?? m.CurrentMaterial) : m.CurrentMaterial) ?? "",
+                    Location = (dbMachines.TryGetValue(m.MachineId, out var dbm3) ? (dbm3.Location ?? m.Location) : m.Location) ?? "",
                     MaintenanceStatus = m.RequiresMaintenance ? "Due" : "OK",
                     LastMaintenanceDate = m.LastMaintenanceDate,
                     NextMaintenanceDate = m.NextMaintenanceDate
@@ -913,13 +991,34 @@ namespace OpCentrix.Pages.PrintTracking
 
         private async Task<PrintStartViewModel> CreateStartPrintViewModelAsync(string? printerName, int? jobId)
         {
+            // Load dynamic SLS printer list
+            List<string> slsPrinters;
+            try
+            {
+                var machines = await _context.Machines
+                    .Where(m => m.IsActive)
+                    .OrderBy(m => m.Priority)
+                    .ToListAsync();
+                slsPrinters = machines
+                    .Where(m => GetUnifiedMachineType(m) == "SLS")
+                    .Select(m => m.MachineId)
+                    .Distinct()
+                    .ToList();
+            }
+            catch
+            {
+                slsPrinters = new List<string>();
+            }
+            if (!slsPrinters.Any())
+                slsPrinters = new List<string> { "TI1", "TI2", "INC" }; // fallback
+
             var viewModel = new PrintStartViewModel
             {
                 PrinterName = printerName ?? "",
                 ActualStartTime = DateTime.Now,
                 OperatorName = User.Identity?.Name ?? "Unknown",
                 UserId = GetCurrentUserId(),
-                AvailablePrinters = new List<string> { "TI1", "TI2", "INC" },
+                AvailablePrinters = slsPrinters,
                 AddPowder = false // default off
             };
 
@@ -1037,14 +1136,13 @@ namespace OpCentrix.Pages.PrintTracking
 
             try
             {
-                // Active SLS printers list (fallback to defaults if none)
-                var activePrinters = await _context.Machines
-                    .Where(m => m.IsActive && (m.MachineType.Contains("SLS") || m.MachineType.Contains("Print") || m.MachineType == ""))
-                    .OrderBy(m => m.Priority)
+                // Dynamic SLS printers list
+                var machines = await _context.Machines.Where(m => m.IsActive).OrderBy(m => m.Priority).ToListAsync();
+                var activePrinters = machines.Where(m => GetUnifiedMachineType(m) == "SLS")
                     .Select(m => m.MachineId)
                     .Distinct()
-                    .ToListAsync();
-                if (!activePrinters.Any()) activePrinters = new List<string> { "TI1", "TI2", "INC" };
+                    .ToList();
+                if (!activePrinters.Any()) activePrinters = new List<string> { "TI1", "TI2", "INC" }; // fallback
                 viewModel.AvailablePrinters = activePrinters;
                 if (!string.IsNullOrWhiteSpace(printerName) && !viewModel.AvailablePrinters.Contains(printerName))
                     viewModel.AvailablePrinters.Insert(0, printerName); // ensure selection appears
@@ -1153,8 +1251,22 @@ namespace OpCentrix.Pages.PrintTracking
 
         private async Task PopulatePostPrintViewModelAsync(PostPrintViewModel model)
         {
-            // Populate dropdown options
-            model.AvailablePrinters = new List<string> { "TI1", "TI2", "INC" };
+            // Dynamic SLS printer list
+            try
+            {
+                var machines = await _context.Machines.Where(m => m.IsActive).OrderBy(m => m.Priority).ToListAsync();
+                model.AvailablePrinters = machines.Where(m => GetUnifiedMachineType(m) == "SLS")
+                    .Select(m => m.MachineId)
+                    .Distinct()
+                    .ToList();
+            }
+            catch
+            {
+                model.AvailablePrinters = new List<string>();
+            }
+            if (!model.AvailablePrinters.Any())
+                model.AvailablePrinters = new List<string> { "TI1", "TI2", "INC" }; // fallback
+
             model.AvailableParts = await _context.Parts.Where(p => p.IsActive).OrderBy(p => p.PartNumber).ToListAsync();
             
             // Ensure at least one part entry exists
