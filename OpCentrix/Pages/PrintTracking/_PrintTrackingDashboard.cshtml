@@ -160,7 +160,7 @@
         <div class="group relative overflow-hidden rounded-2xl bg-white shadow-sm border border-gray-200/70 p-6 hover-lift transition-all hover:shadow-lg">
             <div class="flex items-center gap-4">
                 <div class="h-12 w-12 flex items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 text-white group-hover:scale-110 transition-transform">
-                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m6-4a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m6-4a9 9 0 11-18 0 9 0 0118 0z"/></svg>
                 </div>
                 <div class="flex-1 min-w-0">
                     <div class="text-xs uppercase tracking-wide text-gray-500 font-bold">@(ViewBag.IsAdminView == true ? "Total Issues" : "Issues Today")</div>
@@ -211,79 +211,65 @@
                         var activeCount = Model.ActiveJobsByPrinter.GetValueOrDefault(machine.MachineId, 0);
                         var utilization = Model.UtilizationByMachine.GetValueOrDefault(machine.MachineId, 0);
                         var activeBuild = Model.ActiveBuilds.FirstOrDefault(b => b.PrinterName == machine.MachineId);
-                        // Auto-derive status:
-                        // - If there is an active build and progress <= 110%: Printing
-                        // - If active build and progress > 110%: Cooling until TI=60m / INC=120m since hitting 110%, then Urgent (downtime shows minutes after cooling window)
-                        // - If no active build: Cooling for TI/INC since last completion until window ends, then Urgent with downtime
-                        string derivedStatus = machine.Status ?? "Idle";
+                        // Manual override precedence
+                        var manualRaw = (machine.Status ?? "").Trim();
+                        var manualLower = manualRaw.ToLower();
+                        bool manualOverride = manualLower == "maintenance" || manualLower == "offline" || manualLower == "error";
+                        // Auto-derive status if no manual override
+                        string derivedStatus = manualOverride ? manualRaw : (machine.Status ?? "Idle");
                         double? downtimeMinutes = null;
                         Func<string,int> getCool = (id) => id != null && id.ToUpper().StartsWith("INC") ? 120 : (id != null && id.ToUpper().StartsWith("TI") ? 60 : 90);
                         var now = DateTime.Now;
-                        if (activeBuild != null)
+                        if (!manualOverride)
                         {
-                            // Compute estimated hours similar to progress card
-                            var elapsed = now - activeBuild.ActualStartTime;
-                            double? estOp = activeBuild.OperatorEstimatedHours.HasValue ? (double)activeBuild.OperatorEstimatedHours.Value : null;
-                            var hasScheduledWindow = activeBuild.ScheduledStartTime.HasValue && activeBuild.ScheduledEndTime.HasValue;
-                            var scheduledHours = hasScheduledWindow ? (activeBuild.ScheduledEndTime!.Value - activeBuild.ScheduledStartTime!.Value).TotalHours : 0.0;
-                            var partEstHours = activeBuild.Part?.EstimatedHours ?? 0.0;
-                            double estHours = (estOp.HasValue && estOp.Value > 0)
-                                ? estOp.Value
-                                : (scheduledHours > 0 ? scheduledHours
-                                    : (partEstHours > 0 ? partEstHours
-                                        : Math.Max(1.0, (elapsed.TotalHours > 0 ? elapsed.TotalHours * 1.25 : 4.0))));
+                            if (activeBuild != null)
+                            {
+                                // Compute estimated hours similar to progress card
+                                var elapsed = now - activeBuild.ActualStartTime;
+                                double? estOp = activeBuild.OperatorEstimatedHours.HasValue ? (double)activeBuild.OperatorEstimatedHours.Value : null;
+                                var hasScheduledWindow = activeBuild.ScheduledStartTime.HasValue && activeBuild.ScheduledEndTime.HasValue;
+                                var scheduledHours = hasScheduledWindow ? (activeBuild.ScheduledEndTime!.Value - activeBuild.ScheduledStartTime!.Value).TotalHours : 0.0;
+                                var partEstHours = activeBuild.Part?.EstimatedHours ?? 0.0;
+                                double estHours = (estOp.HasValue && estOp.Value > 0)
+                                    ? estOp.Value
+                                    : (scheduledHours > 0 ? scheduledHours
+                                        : (partEstHours > 0 ? partEstHours
+                                            : Math.Max(1.0, (elapsed.TotalHours > 0 ? elapsed.TotalHours : 1.0))));
 
-                            var pctElapsed = (elapsed.TotalHours > 0 && estHours > 0) ? (elapsed.TotalHours / estHours) * 100.0 : 0.0;
-                            var thresholdHours = estHours * 1.10; // 110%
-                            if (pctElapsed > 110.0)
-                            {
-                                // Treat as finished and in cooling phase, based on time since hitting 110%
-                                var minutesSince110 = Math.Max(0.0, elapsed.TotalMinutes - (thresholdHours * 60.0));
-                                var coolWindow = getCool(machine.MachineId);
-                                if (minutesSince110 < coolWindow)
-                                {
-                                    derivedStatus = "Cooling";
-                                }
-                                else
-                                {
-                                    derivedStatus = "Urgent";
-                                    downtimeMinutes = minutesSince110 - coolWindow;
-                                }
-                            }
-                            else
-                            {
+                                var pctElapsed = (elapsed.TotalHours > 0 && estHours > 0) ? (elapsed.TotalHours / estHours) * 100.0 : 0.0;
+                                // Always show Printing while active
                                 derivedStatus = "Printing";
                             }
-                        }
-                        else
-                        {
-                            var recent = Model.RecentCompletedBuilds
-                                .Where(b => b.PrinterName == machine.MachineId && b.CompletedAt.HasValue)
-                                .OrderByDescending(b => b.CompletedAt)
-                                .FirstOrDefault();
-                            if (recent != null)
+                            else
                             {
-                                var cool = getCool(machine.MachineId);
-                                var minsSince = (now - recent.CompletedAt!.Value).TotalMinutes;
-                                if (minsSince < cool)
+                                var recent = Model.RecentCompletedBuilds
+                                    .Where(b => b.PrinterName == machine.MachineId && b.CompletedAt.HasValue)
+                                    .OrderByDescending(b => b.CompletedAt)
+                                    .FirstOrDefault();
+                                if (recent != null)
                                 {
-                                    derivedStatus = "Cooling";
+                                    var cool = getCool(machine.MachineId);
+                                    var minsSince = (now - recent.CompletedAt!.Value).TotalMinutes;
+                                    if (minsSince < cool)
+                                    {
+                                        derivedStatus = "Cooling";
+                                    }
+                                    else
+                                    {
+                                        derivedStatus = "Urgent";
+                                        downtimeMinutes = minsSince - cool;
+                                    }
                                 }
                                 else
                                 {
-                                    derivedStatus = "Urgent";
-                                    downtimeMinutes = minsSince - cool;
-                                }
-                            }
-                            else
-                            {
-                                // Fallback to current persisted status
-                                var s = (machine.Status ?? "Idle").Trim();
-                                if (!string.IsNullOrEmpty(s))
-                                {
-                                    if (string.Equals(s, "Started", StringComparison.OrdinalIgnoreCase)) s = "Printing";
-                                    if (string.Equals(s, "Downtime", StringComparison.OrdinalIgnoreCase)) s = "Urgent";
-                                    derivedStatus = s;
+                                    // Fallback to current persisted status
+                                    var s = (machine.Status ?? "Idle").Trim();
+                                    if (!string.IsNullOrEmpty(s))
+                                    {
+                                        if (string.Equals(s, "Started", StringComparison.OrdinalIgnoreCase)) s = "Printing";
+                                        if (string.Equals(s, "Downtime", StringComparison.OrdinalIgnoreCase)) s = "Urgent";
+                                        derivedStatus = s;
+                                    }
                                 }
                             }
                         }
@@ -310,12 +296,12 @@
                                             <button type="button" class="status-badge @GetStatusBadgeClasses(derivedStatus) status-toggle" data-menu="status-menu-@machine.MachineId" aria-haspopup="true" aria-expanded="false">@derivedStatus</button>
                                             <div id="status-menu-@machine.MachineId" class="status-menu hidden absolute right-0 z-20 mt-2 w-40 origin-top-right rounded-xl border border-gray-200 bg-white shadow-lg">
                                                 <div class="py-1">
-                                                    <button class="w-full text-left px-3 py-2 text-sm hover:bg-amber-50 text-gray-800" data-status-value="Preheating" hx-post="?handler=UpdateMachineStatus" hx-include="#__afTokenSourcePT" hx-vals='{"machineId":"@machine.MachineId","status":"Preheating"}' hx-swap="none" hx-on:htmx:afterRequest="window.refreshDashboard && window.refreshDashboard()">Preheating</button>
-                                                    <button class="w-full text-left px-3 py-2 text-sm hover:bg-orange-50 text-gray-800" data-status-value="Printing" hx-post="?handler=UpdateMachineStatus" hx-include="#__afTokenSourcePT" hx-vals='{"machineId":"@machine.MachineId","status":"Printing"}' hx-swap="none" hx-on:htmx:afterRequest="window.refreshDashboard && window.refreshDashboard()">Printing</button>
-                                                    <button class="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 text-gray-800" data-status-value="Cooling" hx-post="?handler=UpdateMachineStatus" hx-include="#__afTokenSourcePT" hx-vals='{"machineId":"@machine.MachineId","status":"Cooling"}' hx-swap="none" hx-on:htmx:afterRequest="window.refreshDashboard && window.refreshDashboard()">Cooling</button>
-                                                    <button class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 text-gray-800" data-status-value="Idle" hx-post="?handler=UpdateMachineStatus" hx-include="#__afTokenSourcePT" hx-vals='{"machineId":"@machine.MachineId","status":"Idle"}' hx-swap="none" hx-on:htmx:afterRequest="window.refreshDashboard && window.refreshDashboard()">Idle</button>
-                                                    <button class="w-full text-left px-3 py-2 text-sm hover:bg-red-50 text-gray-800" data-status-value="Urgent" hx-post="?handler=UpdateMachineStatus" hx-include="#__afTokenSourcePT" hx-vals='{"machineId":"@machine.MachineId","status":"Urgent"}' hx-swap="none" hx-on:htmx:afterRequest="window.refreshDashboard && window.refreshDashboard()">Urgent</button>
-                                                    <button class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 text-gray-800" data-status-value="Maintenance" hx-post="?handler=UpdateMachineStatus" hx-include="#__afTokenSourcePT" hx-vals='{"machineId":"@machine.MachineId","status":"Maintenance"}' hx-swap="none" hx-on:htmx:afterRequest="window.refreshDashboard && window.refreshDashboard()">Maintenance</button>
+                                                    <button class="w-full text-left px-3 py-2 text-sm hover:bg-amber-50 text-gray-800" data-status-value="Preheating" hx-post="?handler=UpdateMachineStatus" hx-include="#__afTokenSourcePT" hx-vals='{"machineId":"@machine.MachineId","status":"Preheating"}' hx-swap="none">Preheating</button>
+                                                    <button class="w-full text-left px-3 py-2 text-sm hover:bg-orange-50 text-gray-800" data-status-value="Printing" hx-post="?handler=UpdateMachineStatus" hx-include="#__afTokenSourcePT" hx-vals='{"machineId":"@machine.MachineId","status":"Printing"}' hx-swap="none">Printing</button>
+                                                    <button class="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 text-gray-800" data-status-value="Cooling" hx-post="?handler=UpdateMachineStatus" hx-include="#__afTokenSourcePT" hx-vals='{"machineId":"@machine.MachineId","status":"Cooling"}' hx-swap="none">Cooling</button>
+                                                    <button class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 text-gray-800" data-status-value="Idle" hx-post="?handler=UpdateMachineStatus" hx-include="#__afTokenSourcePT" hx-vals='{"machineId":"@machine.MachineId","status":"Idle"}' hx-swap="none">Idle</button>
+                                                    <button class="w-full text-left px-3 py-2 text-sm hover:bg-red-50 text-gray-800" data-status-value="Urgent" hx-post="?handler=UpdateMachineStatus" hx-include="#__afTokenSourcePT" hx-vals='{"machineId":"@machine.MachineId","status":"Urgent"}' hx-swap="none">Urgent</button>
+                                                    <button class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 text-gray-800" data-status-value="Maintenance" hx-post="?handler=UpdateMachineStatus" hx-include="#__afTokenSourcePT" hx-vals='{"machineId":"@machine.MachineId","status":"Maintenance"}' hx-swap="none">Maintenance</button>
                                                 </div>
                                             </div>
                                         </div>
@@ -486,7 +472,7 @@
                                 @if (machine.MaintenanceStatus == "Due")
                                 { <div class="mb-4 px-3 py-2 bg-gradient-to-r from-red-100 to-red-200 text-red-800 rounded-xl text-sm flex items-center gap-2 border border-red-300"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5.07 19h13.86A2 2 0 0021 17.1L12.93 4.6a2 2 0 00-3.86 0L3 17.1A2 2 0 005.07 19z"/></svg><span class="font-bold">Maintenance Due</span></div>; }
                                 else if (machine.MaintenanceStatus == "Soon")
-                                { <div class="mb-4 px-3 py-2 bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 rounded-xl text-sm flex items-center gap-2 border border-yellow-300"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01m6-4a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span class="font-bold">Service Soon</span></div>; }
+                                { <div class="mb-4 px-3 py-2 bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 rounded-xl text-sm flex items-center gap-2 border border-yellow-300"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01m6-4a9 9 0 11-18 0 9 0 0118 0z"/></svg><span class="font-bold">Service Soon</span></div>; }
                                 <!-- Maintenance summary strip -->
                                 <div id="maint-strip-@machine.MachineId" class="mb-4" hx-get="/PrintTracking?handler=MaintenanceSummary&machineId=@machine.MachineId" hx-trigger="load" hx-swap="innerHTML">
                                     <div class="text-xs text-gray-400 animate-pulse">Loading maintenance...</div>
@@ -510,7 +496,7 @@
                 </div>
             }
             else
-            { <div class="text-center py-16 text-gray-500"><svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h2a2 2 0 002-2z"/></svg><div class="text-lg font-semibold text-gray-600 mb-2">No SLS Machines Available</div><div class="text-sm text-gray-500">Check back later or contact an administrator</div></div>; }
+            { <div class="text-center py-16 text-gray-500"><svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2h2a2 2 0 002-2z"/></svg><div class="text-lg font-semibold text-gray-600 mb-2">No SLS Machines Available</div><div class="text-sm text-gray-500">Check back later or contact an administrator</div></div>; }
         </div>
     </div>
 
@@ -572,7 +558,7 @@
         <div class="bg-white shadow-lg rounded-2xl border border-gray-200 overflow-hidden">
             <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-amber-50 to-amber-100">
                 <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
-                    <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m6-4a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m6-4a9 9 0 11-18 0 9 0 0118 0z"/></svg>
                     @(ViewBag.IsAdminView == true ? "Recent Issues" : "Today's Issues")
                 </h3>
             </div>
@@ -758,11 +744,18 @@
 
     window.PrintTracking = window.PrintTracking || {};
 
+    // prevent stacked intervals across swaps
+    window.PrintTracking.refreshTimer && clearInterval(window.PrintTracking.refreshTimer);
+    window.PrintTracking.refreshTimer = null;
+    window.PrintTracking.isRefreshing = false;
+    window.PrintTracking.lastRefreshTs = 0;
+
     window.PrintTracking.init = function() {
         setupPrintTrackingActions();
         setupAutoRefresh();
         setupSchedulerCommunication();
-        persistAutoStatuses();
+        // persistAutoStatuses disabled for demo to preserve manual status
+        // persistAutoStatuses();
         console.log('✅ [PRINT-TRACKING] Dashboard initialized');
     };
 
@@ -786,15 +779,14 @@
     }
 
     function setupAutoRefresh() {
-        const refreshInterval = 30000;
-        setInterval(function() {
+        const refreshInterval = 90000; // 90s to reduce chattiness
+        if (window.PrintTracking.refreshTimer) clearInterval(window.PrintTracking.refreshTimer);
+        window.PrintTracking.refreshTimer = setInterval(function() {
             // Do not refresh while any modal is open (including start/complete modals)
             if (document.getElementById('start-print-modal') || document.getElementById('post-print-modal')) return;
             const openModals = document.querySelectorAll('.modal:not(.hidden), [style*="display: flex"]');
             if (openModals.length > 0) return;
-            if (typeof htmx !== 'undefined') {
-                htmx.ajax('GET', '/PrintTracking?handler=RefreshDashboard', { target: '#dashboard-content', swap: 'innerHTML' });
-            }
+            refreshDashboardDebounced();
         }, refreshInterval);
     }
 
@@ -803,14 +795,14 @@
             if (e.origin !== window.location.origin) return;
             const data = e.data;
             if (data.type === 'schedulerJobUpdated') {
-                refreshDashboard();
+                refreshDashboardDebounced();
             } else if (data.type === 'requestPrintTrackingRefresh') {
-                refreshDashboard();
+                refreshDashboardDebounced();
             }
         });
         // Listen for HX-Trigger header events from server (htmx) to refresh dashboard
         document.body.addEventListener('requestPrintTrackingRefresh', function(){
-            refreshDashboard();
+            refreshDashboardDebounced();
         });
         // Lightweight card update when only a single machine status changes
         document.body.addEventListener('machineStatusUpdated', function(e){
@@ -907,38 +899,27 @@
     window.handleStartPrint = handleStartPrint;
     window.handleCompletePrint = handleCompletePrint;
 
+    function refreshDashboardDebounced(){
+        const now = Date.now();
+        if (window.PrintTracking.isRefreshing) return;
+        if (now - (window.PrintTracking.lastRefreshTs||0) < 5000) return; // 5s debounce
+        window.PrintTracking.lastRefreshTs = now;
+        window.refreshDashboard();
+    }
+
     window.refreshDashboard = function() {
+        if (window.PrintTracking.isRefreshing) return;
+        window.PrintTracking.isRefreshing = true;
         if (typeof htmx !== 'undefined') {
-            htmx.ajax('GET', '/PrintTracking?handler=RefreshDashboard', { target: '#dashboard-content', swap: 'innerHTML' });
+            htmx.ajax('GET', '/PrintTracking?handler=RefreshDashboard', { target: '#dashboard-content', swap: 'innerHTML' })
+                .finally(()=> { window.PrintTracking.isRefreshing = false; });
+        } else {
+            window.PrintTracking.isRefreshing = false;
         }
     }
 
-    // Persist derived statuses back to server so they don't revert on next refresh
-    function persistAutoStatuses(){
-        try{
-            const cards = document.querySelectorAll('.machine-card[data-machine-id][data-desired-status]');
-            const token = (document.getElementById('__afTokenSourcePT')?.querySelector('input[name="__RequestVerificationToken"]')?.value) || '';
-            cards.forEach(card => {
-                const id = card.getAttribute('data-machine-id');
-                const desired = card.getAttribute('data-desired-status') || '';
-                const current = card.getAttribute('data-current-status') || '';
-                if(!id || !desired) return;
-                // Only persist if they differ and desired is one of our canonical auto states
-                const d = desired.toLowerCase();
-                const auto = (d==='printing'||d==='cooling'||d==='urgent');
-                if(auto && desired !== current){
-                    fetch('/PrintTracking?handler=UpdateMachineStatus', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-                            'RequestVerificationToken': token
-                        },
-                        body: new URLSearchParams({ machineId: id, status: desired }).toString()
-                    }).catch(()=>{});
-                }
-            });
-        }catch(e){ console.warn('persistAutoStatuses error', e); }
-    }
+    // persistAutoStatuses disabled to avoid overriding manual demo statuses
+    function persistAutoStatuses(){ /* no-op for demo */ }
 
     // Minimal showModal helper to disable body scroll while modal is open
     function showModal(){ try { document.body.style.overflow = 'hidden'; } catch{} }
@@ -997,7 +978,7 @@
             body
         });
         if(!res.ok) throw new Error('Status POST failed: '+res.status);
-        refreshDashboard();
+        // Do not auto-refresh immediately; optimistic UI already updated
         return true;
     };
     window.PrintTrackingTest.setStatus = (machineId, status) => postStatus(machineId, status);
@@ -1009,15 +990,11 @@
     window.PrintTrackingTest.simulateUrgent = async (machineId, minutes) => {
         try {
             await postStatus(machineId, 'Urgent');
-            // Best-effort DOM hint until refresh completes
-            const card = document.querySelector(`.machine-card[data-status][data-machine-id="${machineId}"]`) || document.querySelector(`.machine-card[data-status] .font-bold:contains("${machineId}")`);
-            if(card){
-                card.setAttribute('data-status','urgent');
-            }
-            refreshDashboard();
+            const card = document.querySelector(`.machine-card[data-status][data-machine-id="${machineId}"]`);
+            if(card){ card.setAttribute('data-status','urgent'); }
         } catch(err){ console.error(err); }
     };
-    window.PrintTrackingTest.refresh = () => refreshDashboard();
+    window.PrintTrackingTest.refresh = () => refreshDashboardDebounced();
 })();
 
 // Ensure initialization runs so event listeners are attached

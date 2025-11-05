@@ -114,10 +114,11 @@ namespace OpCentrix.Pages.PrintTracking
                 machine.LastModifiedDate = DateTime.UtcNow;
                 machine.LastModifiedBy = User.Identity?.Name ?? "PrintTracking";
                 await _context.SaveChangesAsync();
-                // Ask dashboard to refresh in background
+
+                // Lightweight client update only (avoid immediate whole-dashboard refresh)
                 Response.Headers["HX-Trigger"] =
-                    $"{{\"requestPrintTrackingRefresh\":true,\"machineStatusUpdated\":{{\"machineId\":\"{machine.MachineId}\",\"status\":\"{normalizedStatus}\"}}}}";
-                Response.Headers["HX-Trigger-Target"] = "body"; // dispatch on body so global listeners fire
+                    $"{{\"machineStatusUpdated\":{{\"machineId\":\"{machine.MachineId}\",\"status\":\"{normalizedStatus}\"}}}}";
+                Response.Headers["HX-Trigger-Target"] = "body";
                 return new EmptyResult();
             }
             catch (Exception ex)
@@ -1145,7 +1146,9 @@ namespace OpCentrix.Pages.PrintTracking
                 if (!activePrinters.Any()) activePrinters = new List<string> { "TI1", "TI2", "INC" }; // fallback
                 viewModel.AvailablePrinters = activePrinters;
                 if (!string.IsNullOrWhiteSpace(printerName) && !viewModel.AvailablePrinters.Contains(printerName))
+                {
                     viewModel.AvailablePrinters.Insert(0, printerName); // ensure selection appears
+                }
 
                 // Load list of currently running jobs (Building / In Progress)
                 var runningJobsQry = _context.Jobs

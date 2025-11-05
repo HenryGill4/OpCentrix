@@ -72,6 +72,10 @@ namespace OpCentrix.Pages.Printing
             {
                 machineId = machineId.Trim();
                 var now = DateTime.UtcNow;
+
+                // Persisted machine (for manual overrides)
+                var machine = await _context.Machines.AsNoTracking().FirstOrDefaultAsync(m => m.MachineId == machineId);
+
                 // Active build on machine
                 var activeBuild = await _context.BuildJobs
                     .Include(b => b.Part)
@@ -79,10 +83,10 @@ namespace OpCentrix.Pages.Printing
                     .OrderByDescending(b => b.ActualStartTime)
                     .FirstOrDefaultAsync();
 
-                // Recently completed within last 2 hours to show completion state briefly
+                // Most recent completed build (no short time window)
                 var recentlyCompleted = await _context.BuildJobs
                     .Include(b => b.Part)
-                    .Where(b => b.PrinterName == machineId && b.Status == "Completed" && b.CompletedAt.HasValue && b.CompletedAt > now.AddHours(-2))
+                    .Where(b => b.PrinterName == machineId && b.Status == "Completed" && b.CompletedAt.HasValue)
                     .OrderByDescending(b => b.CompletedAt)
                     .FirstOrDefaultAsync();
 
@@ -107,95 +111,130 @@ namespace OpCentrix.Pages.Printing
                     }
                 }
 
-                // Determine status & progress
+                // Simplified, deterministic status & progress
                 string status;
                 double? progress = null;
                 int? coolingTotal = null;
                 int? coolingRemaining = null;
+                int? downtimeMinutes = null;
 
-                if (activeBuild != null)
+                // Manual overrides take precedence for demo (any canonical status)
+                var manualRaw = (machine?.Status ?? string.Empty).Trim();
+                var manualNorm = NormalizeStatus(manualRaw);
+                bool manualOverride = !string.IsNullOrEmpty(manualNorm);
+
+                if (manualOverride)
                 {
-                    // Policy: allow up to 110% of estimated duration before entering Cooling
-                    const double overrunFactor = 1.10;
-                    // Machine-specific cooling window: INC=120m, TI*=60m (fallback 90)
-                    int coolingDurationMinutes = DetermineCoolingMinutes(machineId);
-                    double? estHours = null;
-                    if (activeBuild.OperatorEstimatedHours.HasValue)
-                        estHours = (double)activeBuild.OperatorEstimatedHours.Value;
-                    else if (currentJob != null && currentJob.EstimatedHours > 0)
-                        estHours = currentJob.EstimatedHours;
-
-                    if (estHours.HasValue && estHours.Value > 0)
+                    status = manualNorm; // keep operator-selected state for demo
+                    // Still compute progress for display if an active build exists
+                    if (activeBuild != null)
                     {
-                        var elapsedHours = (now - activeBuild.ActualStartTime).TotalHours;
-                        // Cap progress at 110% for display/logic
-                        progress = Math.Max(0, Math.Min(110, elapsedHours / estHours.Value * 100.0));
-
-                        // Switch to Cooling only after 110% of estimate has elapsed
-                        var thresholdHours = estHours.Value * overrunFactor;
-                        if (elapsedHours >= thresholdHours)
+                        var elapsedHrs = (now - activeBuild.ActualStartTime).TotalHours;
+                        double estHrs = 0;
+                        if (activeBuild.OperatorEstimatedHours.HasValue && activeBuild.OperatorEstimatedHours.Value > 0)
                         {
-                            coolingTotal = coolingDurationMinutes;
-                            var overMinutes = (int)Math.Max(0, Math.Round((elapsedHours - thresholdHours) * 60.0));
-                            if (overMinutes < coolingTotal)
+                            estHrs = (double)activeBuild.OperatorEstimatedHours.Value;
+                        }
+                        else if (currentJob != null && currentJob.EstimatedHours > 0)
+                        {
+                            estHrs = currentJob.EstimatedHours;
+                        }
+                        else if (activeBuild.Part?.EstimatedHours > 0)
+                        {
+                            estHrs = activeBuild.Part.EstimatedHours;
+                        }
+                        else
+                        {
+                            estHrs = Math.Max(1.0, elapsedHrs);
+                        }
+                        if (estHrs > 0)
+                        {
+                            progress = Math.Min(110, Math.Max(0, (elapsedHrs / estHrs) * 100.0));
+                        }
+                    }
+
+                    // Ensure Cooling timer is available when manually set to Cooling
+                    if (string.Equals(status, "Cooling", StringComparison.OrdinalIgnoreCase))
+                    {
+                        coolingTotal = DetermineCoolingMinutes(machineId);
+                        if (recentlyCompleted?.CompletedAt.HasValue == true)
+                        {
+                            var minutesSinceComplete = (int)Math.Max(0, Math.Round((now - recentlyCompleted.CompletedAt.Value).TotalMinutes));
+                            if (minutesSinceComplete < coolingTotal)
                             {
-                                status = "Cooling";
-                                coolingRemaining = Math.Max(0, coolingTotal.GetValueOrDefault() - overMinutes);
+                                coolingRemaining = Math.Max(0, coolingTotal.Value - minutesSinceComplete);
                             }
                             else
                             {
-                                // Cooling complete -> Ready for changeover (Idle)
-                                status = "Idle";
+                                // Past cooling; treat as urgent
+                                status = "Urgent";
+                                var dt = minutesSinceComplete - coolingTotal.Value;
+                                downtimeMinutes = dt;
+                                await UpsertPostCooldownDowntimeAsync(
+                                    recentlyCompleted,
+                                    recentlyCompleted.CompletedAt.Value.AddMinutes((double)coolingTotal.Value),
+                                    now,
+                                    dt);
+                                coolingRemaining = 0;
                             }
                         }
                         else
                         {
-                            status = "Printing";
+                            // No completion time available; show full cooling as remaining to make timer visible
+                            coolingRemaining = coolingTotal;
                         }
+                    }
+                }
+                else if (activeBuild != null)
+                {
+                    status = "Printing";
+
+                    // Progress: elapsed / estimate (operator -> current job -> part -> elapsed)
+                    var elapsedHrs = (now - activeBuild.ActualStartTime).TotalHours;
+                    double estHrs = 0;
+                    if (activeBuild.OperatorEstimatedHours.HasValue && activeBuild.OperatorEstimatedHours.Value > 0)
+                    {
+                        estHrs = (double)activeBuild.OperatorEstimatedHours.Value;
+                    }
+                    else if (currentJob != null && currentJob.EstimatedHours > 0)
+                    {
+                        estHrs = currentJob.EstimatedHours;
+                    }
+                    else if (activeBuild.Part?.EstimatedHours > 0)
+                    {
+                        estHrs = activeBuild.Part.EstimatedHours;
                     }
                     else
                     {
-                        // No estimate available -> treat as Printing (unknown progress)
-                        status = "Printing";
+                        estHrs = Math.Max(1.0, elapsedHrs); // minimal safe fallback
+                    }
+                    if (estHrs > 0)
+                    {
+                        progress = Math.Min(110, Math.Max(0, (elapsedHrs / estHrs) * 100.0));
+                    }
+                }
+                else if (recentlyCompleted != null && recentlyCompleted.CompletedAt.HasValue)
+                {
+                    int machineCooling = DetermineCoolingMinutes(machineId);
+                    coolingTotal = machineCooling;
+                    var minutesSinceComplete = (int)Math.Max(0, Math.Round((now - recentlyCompleted.CompletedAt.Value).TotalMinutes));
+                    if (minutesSinceComplete < machineCooling)
+                    {
+                        status = "Cooling";
+                        coolingRemaining = Math.Max(0, machineCooling - minutesSinceComplete);
+                    }
+                    else
+                    {
+                        status = "Urgent";
+                        downtimeMinutes = minutesSinceComplete - machineCooling;
+                        // Persist/Upsert to DelayLog as Post-Cooldown Downtime against the completed build
+                        await UpsertPostCooldownDowntimeAsync(recentlyCompleted, recentlyCompleted.CompletedAt.Value.AddMinutes(machineCooling), now, downtimeMinutes.Value);
+                        coolingRemaining = 0;
                     }
                 }
                 else
                 {
-                    // When no active build: if something just completed, apply machine-specific cooling then mark Urgent after elapsed
-                    if (recentlyCompleted != null && recentlyCompleted.CompletedAt.HasValue)
-                    {
-                        int machineCooling = DetermineCoolingMinutes(machineId);
-                        coolingTotal = machineCooling;
-                        var minutesSinceComplete = (int)Math.Max(0, Math.Round((now - recentlyCompleted.CompletedAt.Value).TotalMinutes));
-                        if (minutesSinceComplete < machineCooling)
-                        {
-                            status = "Cooling";
-                            coolingRemaining = Math.Max(0, machineCooling - minutesSinceComplete);
-                        }
-                        else
-                        {
-                            // Cooling finished -> if no new build started, this is urgent downtime
-                            status = "Urgent";
-                            var downtime = minutesSinceComplete - machineCooling;
-                            // Persist/Upsert to DelayLog as Post-Cooldown Downtime against the completed build
-                            await UpsertPostCooldownDowntimeAsync(recentlyCompleted, recentlyCompleted.CompletedAt.Value.AddMinutes(machineCooling), now, downtime);
-                            coolingRemaining = 0;
-                            coolingTotal = machineCooling;
-                            // Attach downtime minutes to model later
-                        }
-                    }
-                    else
-                    {
-                        status = "Idle";
-                    }
-                }
-
-                // Compute downtime if status is Urgent (for display)
-                int? downtimeMinutes = null;
-                if (status == "Urgent" && recentlyCompleted?.CompletedAt != null)
-                {
-                    var machineCooling = DetermineCoolingMinutes(machineId);
-                    downtimeMinutes = (int)Math.Max(0, Math.Round((now - recentlyCompleted.CompletedAt.Value).TotalMinutes)) - machineCooling;
+                    status = "Idle";
                 }
 
                 var vm = new PrinterCardViewModel
@@ -229,6 +268,24 @@ namespace OpCentrix.Pages.Printing
             if (id.StartsWith("INC")) return 120; // 2 hours for Inconel machine
             if (id.StartsWith("TI")) return 60;   // 1 hour for Titanium machines
             return 90; // default fallback
+        }
+
+        private static string NormalizeStatus(string raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return string.Empty;
+            var sl = raw.Trim().ToLowerInvariant();
+            return sl switch
+            {
+                "started" or "start" or "running" or "building" or "printing" => "Printing",
+                "preheat" or "pre-heating" or "pre heating" or "preheating" => "Preheating",
+                "cool" or "cooling" => "Cooling",
+                "down" or "downtime" or "urgent" => "Urgent",
+                "maint" or "maintenance" => "Maintenance",
+                "idle" => "Idle",
+                "offline" => "Offline",
+                "error" or "fault" or "alarm" => "Error",
+                _ => string.Empty
+            };
         }
 
         private async Task UpsertPostCooldownDowntimeAsync(BuildJob completedBuild, DateTime downtimeStartUtc, DateTime nowUtc, int downtimeMinutes)
@@ -328,7 +385,6 @@ namespace OpCentrix.Pages.Printing
                 await _taskService.CreateAsync(task);
                 await LoadTaskSnapshotAsync();
 
-                // Signal front-end (htmx) to refresh and close modal (listeners already in modal script)
                 Response.Headers["HX-Trigger"] = "{\"taskCreated\":true}";
                 // Return empty content so the modal wrapper innerHTML becomes empty -> JS closes it
                 return Content(string.Empty, "text/html");

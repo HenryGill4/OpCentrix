@@ -9,6 +9,7 @@
         "urgent" => "bg-red-100 text-red-800",
         "maintenance" => "bg-amber-100 text-amber-800",
         "offline" => "bg-gray-200 text-gray-700",
+        "preheating" => "bg-amber-100 text-amber-800",
         _ => "bg-green-100 text-green-800" // idle
     };
 }
@@ -18,13 +19,19 @@
       <div class="text-lg font-bold text-gray-900">@Model.MachineId</div>
       <div class="text-xs text-gray-500">SLS</div>
     </div>
-    <span class="px-2 py-1 rounded-full text-xs font-bold @statusBadge">@Model.Status</span>
+    <div class="flex flex-col items-end gap-0.5">
+        <span class="px-2 py-1 rounded-full text-xs font-bold @statusBadge">@Model.Status</span>
+        @if (status == "cooling" && Model.CoolingMinutesRemaining.HasValue)
+        {
+            <span class="text-[10px] leading-tight text-purple-700 font-semibold">Cooling ~ @Model.CoolingMinutesRemaining.Value min remaining</span>
+        }
+    </div>
   </div>
 
   @if (Model.ActiveBuild != null)
   {
       var build = Model.ActiveBuild;
-      // Display progress capped at 110% with backup calculation if ProgressPercent is missing/unreliable
+      // Display server-provided progress only (no client-side recompute)
       double? pct = Model.ProgressPercent;
       bool pctInvalid = !pct.HasValue || double.IsNaN(pct.Value) || double.IsInfinity(pct.Value) || pct.Value <= 0 || pct.Value > 250;
       if (pctInvalid)
@@ -50,31 +57,17 @@
           }
           pct = estHrs > 0 ? (elapsedHrs / estHrs) * 100.0 : 0.0;
       }
-      var pctCapped = pct.HasValue ? Math.Clamp(Math.Round(pct.Value), 0, 110) : (double?)null;
+      var pctRounded = pct.HasValue ? Math.Round(pct.Value) : (double?)null; // no 110% cap
       <div class="mb-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
         <div class="flex items-center justify-between mb-1">
             <div class="font-semibold text-blue-900">Build #@build.BuildId</div>
-            @if (pctCapped.HasValue) { <div class="text-xs font-bold text-blue-800">@pctCapped.Value %</div> }
+            @if (pctRounded.HasValue) { <div class="text-xs font-bold text-blue-800">@pctRounded.Value %</div> }
         </div>
-        @if (pctCapped.HasValue)
+        @if (pctRounded.HasValue)
         {
             <div class="h-2.5 bg-blue-200 rounded-full overflow-hidden">
-                <div class="h-2.5 rounded-full transition-all @(pctCapped>100?"bg-gradient-to-r from-purple-500 to-purple-600":"bg-blue-600")" style="width:@Math.Min(100,pctCapped.Value)%"></div>
+                <div class="h-2.5 rounded-full transition-all @((pctRounded>100)?"bg-gradient-to-r from-purple-500 to-purple-600":"bg-blue-600")" style="width:@Math.Min(100,pctRounded.Value)%"></div>
             </div>
-            @if (status == "cooling" && Model.CoolingMinutesRemaining.HasValue)
-            {
-                <div class="mt-2 text-xs text-purple-800 font-semibold">Cooling ~ @Model.CoolingMinutesRemaining.Value min remaining</div>
-            }
-  @if (status == "urgent" && Model.DowntimeMinutes.HasValue)
-  {
-      <div class="mb-3 rounded-lg border border-red-200 bg-red-50 p-3">
-        <div class="flex items-center justify-between mb-1">
-            <div class="font-semibold text-red-900">Attention Required</div>
-            <div class="text-xs font-bold text-red-800">Urgent</div>
-        </div>
-        <div class="text-sm text-red-900">Cooldown elapsed. Downtime: <span class="font-bold">@Model.DowntimeMinutes.Value</span> min</div>
-      </div>
-  }
         }
         <div class="mt-2 text-xs text-blue-900 grid grid-cols-3 gap-2">
             <div><span class="font-semibold">Started:</span> @build.ActualStartTime.ToLocalTime().ToString("MM/dd HH:mm")</div>
@@ -97,11 +90,7 @@
             <div><span class="font-semibold">Parts:</span> @c.TotalPartsInBuild</div>
         </div>
       </div>
-      if (status == "cooling" && Model.CoolingMinutesRemaining.HasValue)
-      {
-          <div class="mt-2 text-xs text-purple-800 font-semibold">Cooling ~ @Model.CoolingMinutesRemaining.Value min remaining</div>
-      }
-      if (status == "urgent" && Model.DowntimeMinutes.HasValue)
+      @if (status == "urgent" && Model.DowntimeMinutes.HasValue)
       {
           <div class="mb-3 rounded-lg border border-red-200 bg-red-50 p-3">
             <div class="flex items-center justify-between mb-1">
