@@ -49,6 +49,10 @@ public class IndexModel : PageModel
     public List<CrmAccount> Accounts { get; set; } = new();
     public List<EnhancedTaskViewModel> Tasks { get; set; } = new();
     
+    // New: User cards with grouped tasks
+    public List<UserTaskCard> UserTaskCards { get; set; } = new();
+    public List<EnhancedTaskViewModel> UnassignedTasks { get; set; } = new();
+    
     // Statistics for dashboard-like view
     public TaskStatistics Statistics { get; set; } = new();
 
@@ -60,6 +64,7 @@ public class IndexModel : PageModel
         await LoadDropdownDataAsync(ct);
         await LoadTasksAsync(effectiveAssigneeFilter, ct);
         await LoadStatisticsAsync(ct);
+        await GroupTasksByUserAsync(ct);
         
         // Update AssigneeFilter to reflect the actual filter being used for UI consistency
         if (effectiveAssigneeFilter.HasValue)
@@ -170,6 +175,47 @@ public class IndexModel : PageModel
         }).ToList();
     }
 
+    private async Task GroupTasksByUserAsync(CancellationToken ct)
+    {
+        // Group tasks by assigned user
+        var assignedTasks = Tasks.Where(t => t.AssignedUser != null).ToList();
+        var unassignedTasks = Tasks.Where(t => t.AssignedUser == null).ToList();
+
+        // Create user cards
+        var userGroups = assignedTasks
+            .GroupBy(t => t.AssignedUser!.Id)
+            .Select(g => new UserTaskCard
+            {
+                User = g.First().AssignedUser!,
+                Tasks = g.OrderByDescending(t => t.Task.Priority)
+                         .ThenBy(t => t.Task.DueAt ?? DateTime.MaxValue)
+                         .ThenByDescending(t => t.Task.Id)
+                         .ToList(),
+                TaskCounts = new UserTaskCounts
+                {
+                    Total = g.Count(),
+                    Open = g.Count(t => t.Task.Status == "Open"),
+                    InProgress = g.Count(t => t.Task.Status == "InProgress"),
+                    Completed = g.Count(t => t.Task.Status == "Completed"),
+                    Overdue = g.Count(t => t.IsOverdue),
+                    HighPriority = g.Count(t => t.Task.Priority >= 4 && t.Task.Status != "Completed"),
+                    DueToday = g.Count(t => t.Task.DueAt.HasValue && 
+                                      t.Task.DueAt.Value.Date == DateTime.Now.Date && 
+                                      t.Task.Status != "Completed")
+                }
+            })
+            .OrderByDescending(u => u.TaskCounts.Total)
+            .ThenBy(u => u.User.FullName)
+            .ToList();
+
+        UserTaskCards = userGroups;
+        UnassignedTasks = unassignedTasks
+            .OrderByDescending(t => t.Task.Priority)
+            .ThenBy(t => t.Task.DueAt ?? DateTime.MaxValue)
+            .ThenByDescending(t => t.Task.Id)
+            .ToList();
+    }
+
     private async Task LoadStatisticsAsync(CancellationToken ct)
     {
         var now = DateTime.UtcNow;
@@ -251,4 +297,22 @@ public class TaskStatistics
     public int HighPriorityTasks { get; set; }
     public int TasksDueToday { get; set; }
     public int TasksDueThisWeek { get; set; }
+}
+
+public class UserTaskCard
+{
+    public User User { get; set; } = new();
+    public List<EnhancedTaskViewModel> Tasks { get; set; } = new();
+    public UserTaskCounts TaskCounts { get; set; } = new();
+}
+
+public class UserTaskCounts
+{
+    public int Total { get; set; }
+    public int Open { get; set; }
+    public int InProgress { get; set; }
+    public int Completed { get; set; }
+    public int Overdue { get; set; }
+    public int HighPriority { get; set; }
+    public int DueToday { get; set; }
 }

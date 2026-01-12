@@ -1,7 +1,7 @@
 @page
-@model OpCentrix.Pages.CRM.Accounts.CreateModel
+@model OpCentrix.Pages.CRM.Accounts.EditModel
 @{
-    ViewData["Title"] = "Create Account - OpCentrix CRM";
+    ViewData["Title"] = "Edit Account - " + (Model.Account?.Name ?? "Account");
     Layout = "~/Pages/Admin/Shared/_AdminLayout.cshtml";
 }
 
@@ -11,18 +11,23 @@
         <div class="px-6 py-5 border-b border-gray-200">
             <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                 <div class="min-w-0 flex-1">
-                    <h1 class="text-2xl font-bold text-gray-900 flex items-center">
-                        <i class="fa-solid fa-plus mr-3 text-green-600"></i>
-                        Create New Account
-                    </h1>
-                    <p class="mt-1 text-sm text-gray-600">Add a new customer account to your CRM system</p>
+                    <div class="flex items-center space-x-3 mb-2">
+                        <div class="w-10 h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-sm">
+                            <i class="fa-solid fa-edit text-white"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-900">Edit Account</h1>
+                            <p class="text-sm text-gray-600">Update information for @Model.Account?.Name</p>
+                        </div>
+                    </div>
                 </div>
+                
                 <div class="flex items-center space-x-3">
-                    <a class="btn btn-outline-secondary" href="/CRM/Accounts">
-                        <i class="fa-solid fa-arrow-left mr-2"></i>Back to Accounts
+                    <a class="btn btn-outline-secondary" href="/CRM/Accounts/Details?id=@Model.Id">
+                        <i class="fa-solid fa-arrow-left mr-2"></i>Back to Details
                     </a>
-                    <a class="btn btn-outline-primary" href="/CRM/Dashboard">
-                        <i class="fa-solid fa-tachometer-alt mr-2"></i>CRM Dashboard
+                    <a class="btn btn-outline-primary" href="/CRM/Accounts">
+                        <i class="fa-solid fa-list mr-2"></i>All Accounts
                     </a>
                 </div>
             </div>
@@ -42,7 +47,7 @@
 
     <!-- Main Form -->
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <!-- Left Column: Account Form -->
+        <!-- Left Column: Edit Form -->
         <div class="xl:col-span-2">
             <div class="bg-white border rounded-lg shadow-sm">
                 <div class="px-6 py-4 border-b border-gray-200">
@@ -50,12 +55,13 @@
                         <i class="fa-solid fa-building mr-2 text-blue-600"></i>
                         Account Information
                     </h3>
-                    <p class="mt-1 text-sm text-gray-600">Enter the basic details for this customer account</p>
+                    <p class="mt-1 text-sm text-gray-600">Update the account details below</p>
                 </div>
                 
                 <div class="px-6 py-6">
                     <form method="post" class="space-y-6">
                         @Html.AntiForgeryToken()
+                        <input type="hidden" asp-for="Id" />
 
                         <!-- Account Name -->
                         <div>
@@ -66,7 +72,6 @@
                                    placeholder="Enter the company or organization name..." 
                                    autocomplete="organization" />
                             <span class="text-danger text-sm" asp-validation-for="Input.Name"></span>
-                            <p class="mt-1 text-xs text-gray-500">This will be the primary identifier for this account</p>
                         </div>
 
                         <!-- Status Selection -->
@@ -74,7 +79,7 @@
                             <label class="block text-sm font-medium text-gray-700 mb-2">Account Status</label>
                             <select class="form-select" asp-for="Input.Status">
                                 <option value="">Select status...</option>
-                                <option value="Prospect" selected>Prospect</option>
+                                <option value="Prospect">Prospect</option>
                                 <option value="Active">Active Customer</option>
                                 <option value="Inactive">Inactive</option>
                                 <option value="Closed">Closed Account</option>
@@ -88,9 +93,9 @@
                                 Account Notes
                                 <span class="text-gray-500 font-normal">(optional)</span>
                             </label>
-                            <textarea class="form-control" asp-for="Input.Notes" rows="6" 
-                                      placeholder="Add any important notes about this account...&#10;&#10;Examples:&#10;- Company background and history&#10;- Key decision makers&#10;- Project requirements&#10;- Communication preferences&#10;- Previous interactions"></textarea>
-                            <p class="mt-1 text-xs text-gray-500">
+                            <textarea class="form-control" asp-for="Input.Notes" rows="8" 
+                                      placeholder="Add any important notes about this account..."></textarea>
+                            <p class="mt-1 text-xs text-gray-500" id="characterCount">
                                 @(2000 - (Model.Input.Notes?.Length ?? 0)) characters remaining
                             </p>
                         </div>
@@ -100,16 +105,16 @@
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center space-x-3">
                                     <button class="btn btn-primary" type="submit">
-                                        <i class="fa-solid fa-save mr-2"></i>Create Account
+                                        <i class="fa-solid fa-save mr-2"></i>Save Changes
                                     </button>
-                                    <a class="btn btn-outline-secondary" href="/CRM/Accounts">
+                                    <a class="btn btn-outline-secondary" href="/CRM/Accounts/Details?id=@Model.Id">
                                         <i class="fa-solid fa-times mr-2"></i>Cancel
                                     </a>
                                 </div>
                                 
                                 <div class="text-xs text-gray-500">
                                     <i class="fa-solid fa-info-circle mr-1"></i>
-                                    Account will be created and ready for contacts and tasks
+                                    Last modified: @(Model.Account?.CreatedDate.ToString("MMM dd, yyyy"))
                                 </div>
                             </div>
                         </div>
@@ -118,14 +123,42 @@
             </div>
         </div>
 
-        <!-- Right Column: Help & Tips -->
+        <!-- Right Column: Account Overview & Help -->
         <div class="space-y-6">
-            <!-- Account Tips -->
+            <!-- Current Account Summary -->
+            <div class="bg-white border rounded-lg shadow-sm">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                        <i class="fa-solid fa-info-circle mr-2 text-gray-600"></i>
+                        Account Overview
+                    </h3>
+                </div>
+                <div class="px-6 py-6 space-y-4">
+                    <div class="flex items-center justify-between py-2 border-b border-gray-100">
+                        <span class="text-sm text-gray-600">Account ID</span>
+                        <span class="text-sm font-medium text-gray-900">#@Model.Id</span>
+                    </div>
+                    <div class="flex items-center justify-between py-2 border-b border-gray-100">
+                        <span class="text-sm text-gray-600">Created</span>
+                        <span class="text-sm font-medium text-gray-900">@Model.Account?.CreatedDate.ToString("MMM dd, yyyy")</span>
+                    </div>
+                    <div class="flex items-center justify-between py-2 border-b border-gray-100">
+                        <span class="text-sm text-gray-600">Total Contacts</span>
+                        <span class="text-sm font-medium text-gray-900">@Model.ContactCount</span>
+                    </div>
+                    <div class="flex items-center justify-between py-2">
+                        <span class="text-sm text-gray-600">Total Tasks</span>
+                        <span class="text-sm font-medium text-gray-900">@Model.TaskCount</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Edit Tips -->
             <div class="bg-white border rounded-lg shadow-sm">
                 <div class="px-6 py-4 border-b border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-900 flex items-center">
                         <i class="fa-solid fa-lightbulb mr-2 text-yellow-600"></i>
-                        Account Tips
+                        Edit Tips
                     </h3>
                 </div>
                 <div class="px-6 py-6 space-y-4">
@@ -134,86 +167,51 @@
                             <i class="fa-solid fa-check text-blue-600 text-xs"></i>
                         </div>
                         <div>
-                            <h4 class="text-sm font-medium text-gray-900">Use Clear Names</h4>
-                            <p class="text-xs text-gray-600 mt-1">Use the full company name as it appears in official documents.</p>
+                            <h4 class="text-sm font-medium text-gray-900">Status Updates</h4>
+                            <p class="text-xs text-gray-600 mt-1">Change status to reflect current relationship with this account.</p>
                         </div>
                     </div>
                     
                     <div class="flex items-start space-x-3">
                         <div class="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <i class="fa-solid fa-users text-green-600 text-xs"></i>
+                            <i class="fa-solid fa-sticky-note text-green-600 text-xs"></i>
                         </div>
                         <div>
-                            <h4 class="text-sm font-medium text-gray-900">Set Proper Status</h4>
-                            <p class="text-xs text-gray-600 mt-1">Choose "Prospect" for potential customers, "Active" for current clients.</p>
+                            <h4 class="text-sm font-medium text-gray-900">Update Notes</h4>
+                            <p class="text-xs text-gray-600 mt-1">Add recent interactions, project updates, or important changes.</p>
                         </div>
                     </div>
                     
                     <div class="flex items-start space-x-3">
                         <div class="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <i class="fa-solid fa-sticky-note text-purple-600 text-xs"></i>
+                            <i class="fa-solid fa-history text-purple-600 text-xs"></i>
                         </div>
                         <div>
-                            <h4 class="text-sm font-medium text-gray-900">Add Context</h4>
-                            <p class="text-xs text-gray-600 mt-1">Include background info, key contacts, and special requirements.</p>
+                            <h4 class="text-sm font-medium text-gray-900">Keep History</h4>
+                            <p class="text-xs text-gray-600 mt-1">Existing contacts and tasks will remain unchanged after editing.</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Next Steps -->
+            <!-- Quick Actions -->
             <div class="bg-white border rounded-lg shadow-sm">
                 <div class="px-6 py-4 border-b border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-900 flex items-center">
-                        <i class="fa-solid fa-route mr-2 text-green-600"></i>
-                        Next Steps
+                        <i class="fa-solid fa-bolt mr-2 text-yellow-600"></i>
+                        Quick Actions
                     </h3>
                 </div>
                 <div class="px-6 py-6 space-y-3">
-                    <div class="flex items-center space-x-3 text-sm text-gray-700">
-                        <div class="w-6 h-6 bg-blue-50 border border-blue-200 rounded-full flex items-center justify-center flex-shrink-0">
-                            <span class="text-blue-600 text-xs font-bold">1</span>
-                        </div>
-                        <span>Create the account with basic information</span>
-                    </div>
-                    
-                    <div class="flex items-center space-x-3 text-sm text-gray-700">
-                        <div class="w-6 h-6 bg-purple-50 border border-purple-200 rounded-full flex items-center justify-center flex-shrink-0">
-                            <span class="text-purple-600 text-xs font-bold">2</span>
-                        </div>
-                        <span>Add primary contacts and decision makers</span>
-                    </div>
-                    
-                    <div class="flex items-center space-x-3 text-sm text-gray-700">
-                        <div class="w-6 h-6 bg-green-50 border border-green-200 rounded-full flex items-center justify-center flex-shrink-0">
-                            <span class="text-green-600 text-xs font-bold">3</span>
-                        </div>
-                        <span>Create tasks for follow-ups and projects</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Account Statistics -->
-            <div class="bg-white border rounded-lg shadow-sm">
-                <div class="px-6 py-4 border-b border-gray-200">
-                    <h3 class="text-lg font-semibold text-gray-900 flex items-center">
-                        <i class="fa-solid fa-chart-bar mr-2 text-gray-600"></i>
-                        Quick Stats
-                    </h3>
-                </div>
-                <div class="px-6 py-6 space-y-3">
-                    <div class="flex items-center justify-between text-sm">
-                        <span class="text-gray-600">Total Accounts:</span>
-                        <span class="font-semibold text-gray-900">@Model.TotalAccounts</span>
-                    </div>
-                    <div class="flex items-center justify-between text-sm">
-                        <span class="text-gray-600">Active Customers:</span>
-                        <span class="font-semibold text-green-700">@Model.ActiveAccounts</span>
-                    </div>
-                    <div class="flex items-center justify-between text-sm">
-                        <span class="text-gray-600">Prospects:</span>
-                        <span class="font-semibold text-blue-700">@Model.ProspectAccounts</span>
-                    </div>
+                    <a class="btn btn-outline-primary w-full justify-center" href="/CRM/Accounts/Details?id=@Model.Id">
+                        <i class="fa-solid fa-eye mr-2"></i>View Account Details
+                    </a>
+                    <a class="btn btn-outline-success w-full justify-center" href="/CRM/Contacts/Create?accountId=@Model.Id">
+                        <i class="fa-solid fa-user-plus mr-2"></i>Add Contact
+                    </a>
+                    <a class="btn btn-outline-info w-full justify-center" href="/CRM/Tasks/Create?accountId=@Model.Id">
+                        <i class="fa-solid fa-plus mr-2"></i>Create Task
+                    </a>
                 </div>
             </div>
         </div>
@@ -226,7 +224,7 @@
         // Character counter for notes
         document.addEventListener('DOMContentLoaded', function() {
             const notesTextarea = document.querySelector('textarea[name="Input.Notes"]');
-            const characterCountElement = document.querySelector('.text-xs.text-gray-500');
+            const characterCountElement = document.getElementById('characterCount');
             
             if (notesTextarea && characterCountElement) {
                 function updateCharacterCount() {

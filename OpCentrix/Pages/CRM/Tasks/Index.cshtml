@@ -179,42 +179,90 @@
         </div>
     </div>
 
-    <!-- Enhanced Tasks Display -->
-    <div class="bg-white border rounded-lg overflow-hidden">
-        <div class="px-6 py-4 border-b bg-gray-50">
-            <h3 class="text-lg font-semibold text-gray-900">
-                <i class="fa-solid fa-tasks mr-2"></i>Task List
-                @if (Model.Tasks.Any())
-                {
-                    <span class="inline-flex items-center ml-2 px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                        @Model.Tasks.Count task@(Model.Tasks.Count == 1 ? "" : "s") shown
-                    </span>
-                }
-            </h3>
-        </div>
-        
-        @if (Model.Tasks.Any())
+    <!-- Enhanced Tasks Display by User Cards -->
+    <div class="space-y-6">
+        @if (Model.UserTaskCards.Any() || Model.UnassignedTasks.Any())
         {
-            <div class="divide-y divide-gray-200">
-                @foreach (var taskViewModel in Model.Tasks)
-                {
-                    var task = taskViewModel.Task;
-                    <div class="p-6 hover:bg-gray-50 transition-colors @(taskViewModel.IsOverdue ? "border-l-4 border-red-500" : "")">
-                        <div class="flex items-start justify-between">
-                            <div class="flex-1">
-                                <!-- Task Header -->
-                                <div class="flex items-start justify-between mb-3">
-                                    <div class="flex-1">
+            <!-- User Task Cards -->
+            @foreach (var userCard in Model.UserTaskCards)
+            {
+                <div class="bg-white border rounded-lg overflow-hidden shadow-sm">
+                    <!-- User Card Header -->
+                    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-b px-6 py-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-4">
+                                <!-- User Avatar -->
+                                <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
+                                    <span class="text-white text-lg font-bold">
+                                        @{
+                                            var nameParts = userCard.User.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                                            var initials = nameParts.Length >= 2 
+                                                ? $"{nameParts[0].FirstOrDefault()}{nameParts[1].FirstOrDefault()}" 
+                                                : nameParts.FirstOrDefault()?.FirstOrDefault().ToString() ?? "U";
+                                        }
+                                        @initials
+                                    </span>
+                                </div>
+                                
+                                <!-- User Info -->
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-900">@userCard.User.FullName</h3>
+                                    <p class="text-sm text-gray-600">@userCard.User.Role</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Task Summary Badges -->
+                            <div class="flex items-center space-x-2">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    @userCard.TaskCounts.Total Total
+                                </span>
+                                @if (userCard.TaskCounts.Open > 0)
+                                {
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                        @userCard.TaskCounts.Open Open
+                                    </span>
+                                }
+                                @if (userCard.TaskCounts.InProgress > 0)
+                                {
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        @userCard.TaskCounts.InProgress In Progress
+                                    </span>
+                                }
+                                @if (userCard.TaskCounts.Overdue > 0)
+                                {
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                        @userCard.TaskCounts.Overdue Overdue
+                                    </span>
+                                }
+                                @if (userCard.TaskCounts.HighPriority > 0)
+                                {
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                        @userCard.TaskCounts.HighPriority High Priority
+                                    </span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tasks List for this User -->
+                    <div class="divide-y divide-gray-100">
+                        @foreach (var taskViewModel in userCard.Tasks)
+                        {
+                            var task = taskViewModel.Task;
+                            <div class="p-4 hover:bg-gray-50 transition-colors @(taskViewModel.IsOverdue ? "border-l-4 border-red-500" : "")">
+                                <div class="flex items-start justify-between">
+                                    <div class="flex-1 min-w-0">
+                                        <!-- Task Header -->
                                         <div class="flex items-center space-x-3 mb-2">
-                                            <h4 class="text-lg font-semibold text-gray-900">@task.Title</h4>
+                                            <h4 class="text-sm font-semibold text-gray-900 truncate">@task.Title</h4>
                                             
                                             <!-- Status Badge -->
-                                            <span class="inline-flex px-3 py-1 text-sm font-semibold rounded-full status-badge @(GetStatusBadgeClass(task.Status))">
+                                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full @(GetStatusBadgeClass(task.Status))">
                                                 @GetStatusDisplayName(task.Status)
                                             </span>
                                             
                                             <!-- Priority Badge -->
-                                            <span class="inline-flex items-center px-2 py-1 text-xs font-bold rounded-full priority-badge @(GetPriorityBadgeClass(task.Priority))">
+                                            <span class="inline-flex items-center px-2 py-1 text-xs font-bold rounded-full @(GetPriorityBadgeClass(task.Priority))">
                                                 @GetPriorityLabel(task.Priority)
                                             </span>
                                             
@@ -222,7 +270,7 @@
                                             @if (taskViewModel.CompletionPercentage.HasValue)
                                             {
                                                 <span class="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                                                    <i class="fa-solid fa-chart-line mr-1"></i>@taskViewModel.CompletionPercentage%
+                                                    @taskViewModel.CompletionPercentage%
                                                 </span>
                                             }
                                             
@@ -237,192 +285,219 @@
                                         
                                         @if (!string.IsNullOrEmpty(task.Description))
                                         {
-                                            <p class="text-gray-600 text-sm mb-3">@task.Description</p>
+                                            <p class="text-gray-600 text-sm mb-2 truncate">@task.Description</p>
                                         }
-                                    </div>
-                                </div>
-
-                                <!-- Task Details Grid -->
-                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                                    <!-- Assignee Info -->
-                                    <div class="bg-blue-50 rounded-lg p-3">
-                                        <div class="text-xs font-medium text-blue-700 mb-1">Assigned To</div>
-                                        @if (taskViewModel.AssignedUser != null)
-                                        {
-                                            <div class="flex items-center">
-                                                <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center mr-3 shadow-sm user-avatar">
-                                                    <span class="text-white text-xs font-bold">
-                                                        @{
-                                                            var nameParts = taskViewModel.AssignedUser.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                                                            var initials = nameParts.Length >= 2 
-                                                                ? $"{nameParts[0].FirstOrDefault()}{nameParts[1].FirstOrDefault()}" 
-                                                                : nameParts.FirstOrDefault()?.FirstOrDefault().ToString() ?? "U";
-                                                        }
-                                                        @initials
+                                        
+                                        <!-- Task Info Row -->
+                                        <div class="flex items-center space-x-4 text-xs text-gray-500">
+                                            @if (task.DueAt.HasValue)
+                                            {
+                                                <div class="flex items-center">
+                                                    <i class="fa-solid fa-calendar mr-1"></i>
+                                                    <span class="@(taskViewModel.IsOverdue ? "text-red-600 font-medium" : "")">
+                                                        Due @task.DueAt.Value.ToString("MMM dd, yyyy")
                                                     </span>
                                                 </div>
-                                                <div>
-                                                    <div class="text-sm font-medium text-blue-900">@taskViewModel.AssignedUser.FullName</div>
-                                                    <div class="text-xs text-blue-600">@taskViewModel.AssignedUser.Role</div>
+                                            }
+                                            
+                                            @if (task.Account != null)
+                                            {
+                                                <div class="flex items-center">
+                                                    <i class="fa-solid fa-building mr-1"></i>
+                                                    <span>@task.Account.Name</span>
                                                 </div>
-                                            </div>
-                                        }
-                                        else
-                                        {
+                                            }
+                                            
+                                            @if (taskViewModel.ProgressCount > 0)
+                                            {
+                                                <div class="flex items-center">
+                                                    <i class="fa-solid fa-comments mr-1"></i>
+                                                    <span>@taskViewModel.ProgressCount update@(taskViewModel.ProgressCount == 1 ? "" : "s")</span>
+                                                </div>
+                                            }
+                                            
                                             <div class="flex items-center">
-                                                <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center mr-3">
-                                                    <i class="fa-solid fa-user-slash text-gray-500 text-xs"></i>
-                                                </div>
-                                                <div class="text-sm text-blue-600 font-medium">Unassigned</div>
+                                                <i class="fa-solid fa-hashtag mr-1"></i>
+                                                <span>@task.Id</span>
                                             </div>
-                                        }
+                                        </div>
                                     </div>
-
-                                    <!-- Due Date Info -->
-                                    <div class="bg-purple-50 rounded-lg p-3">
-                                        <div class="text-xs font-medium text-purple-700 mb-1">Due Date</div>
-                                        @if (task.DueAt.HasValue)
+                                    
+                                    <!-- Action Buttons -->
+                                    <div class="flex items-center space-x-2 ml-4">
+                                        <a class="btn btn-sm btn-outline-primary" href="/CRM/Tasks/Details?id=@task.Id">
+                                            <i class="fa-solid fa-eye mr-1"></i>View
+                                        </a>
+                                        <a class="btn btn-sm btn-success" href="/CRM/Tasks/@task.Id/AddProgress">
+                                            <i class="fa-solid fa-plus mr-1"></i>Progress
+                                        </a>
+                                        @if (User.IsInRole("Admin"))
                                         {
-                                            <div class="text-sm font-medium @(taskViewModel.IsOverdue ? "text-red-600" : "text-purple-900")">
-                                                @task.DueAt.Value.ToString("MMM dd, yyyy")
-                                            </div>
-                                            <div class="text-xs @(taskViewModel.IsOverdue ? "text-red-500" : "text-purple-600")">
-                                                @if (taskViewModel.DaysUntilDue.HasValue)
-                                                {
-                                                    @if (taskViewModel.DaysUntilDue < 0)
-                                                    {
-                                                        <text>@Math.Abs(taskViewModel.DaysUntilDue.Value) days overdue</text>
-                                                    }
-                                                    else if (taskViewModel.DaysUntilDue == 0)
-                                                    {
-                                                        <text>Due today</text>
-                                                    }
-                                                    else
-                                                    {
-                                                        <text>@taskViewModel.DaysUntilDue days remaining</text>
-                                                    }
-                                                }
-                                            </div>
+                                            <form method="post" asp-page-handler="DeleteTask" class="inline"
+                                                  onsubmit="return confirm('Are you sure you want to permanently delete this task and all its progress entries? This action cannot be undone.')">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="DeleteTaskId" value="@task.Id" />
+                                                <input type="hidden" name="StatusFilter" value="@Model.StatusFilter" />
+                                                <input type="hidden" name="AssigneeFilter" value="@Model.AssigneeFilter" />
+                                                <input type="hidden" name="PriorityFilter" value="@Model.PriorityFilter" />
+                                                <input type="hidden" name="AccountFilter" value="@Model.AccountFilter" />
+                                                <input type="hidden" name="OverdueFilter" value="@Model.OverdueFilter" />
+                                                <button type="submit" class="btn btn-sm btn-danger">
+                                                    <i class="fa-solid fa-trash mr-1"></i>Delete
+                                                </button>
+                                            </form>
                                         }
-                                        else
-                                        {
-                                            <div class="text-sm text-purple-600">No due date set</div>
-                                        }
-                                    </div>
-
-                                    <!-- Account & Contact Info -->
-                                    <div class="bg-green-50 rounded-lg p-3">
-                                        <div class="text-xs font-medium text-green-700 mb-1">Account & Contact</div>
-                                        @if (task.Account != null)
-                                        {
-                                            <div class="text-sm font-medium text-green-900 mb-1">
-                                                <a href="/CRM/Accounts/Details?id=@task.Account.Id" class="hover:underline">
-                                                    <i class="fa-solid fa-building mr-1"></i>@task.Account.Name
-                                                </a>
-                                            </div>
-                                        }
-                                        @if (task.Contact != null)
-                                        {
-                                            <div class="text-xs text-green-600">
-                                                <i class="fa-solid fa-user mr-1"></i>@task.Contact.Name
-                                                @if (!string.IsNullOrEmpty(task.Contact.Email))
-                                                {
-                                                    <br><i class="fa-solid fa-envelope mr-1"></i>@task.Contact.Email
-                                                }
-                                            </div>
-                                        }
-                                        @if (task.Account == null && task.Contact == null)
-                                        {
-                                            <div class="text-sm text-green-600">No account/contact</div>
-                                        }
-                                    </div>
-
-                                    <!-- Progress & Activity Info -->
-                                    <div class="bg-orange-50 rounded-lg p-3">
-                                        <div class="text-xs font-medium text-orange-700 mb-1">Activity</div>
-                                        @if (taskViewModel.ProgressCount > 0)
-                                        {
-                                            <div class="text-sm font-medium text-orange-900 mb-1">
-                                                <i class="fa-solid fa-comments mr-1"></i>@taskViewModel.ProgressCount update@(taskViewModel.ProgressCount == 1 ? "" : "s")
-                                            </div>
-                                            @if (taskViewModel.LatestProgressDate.HasValue)
-                                            {
-                                                <div class="text-xs text-orange-600">
-                                                    Last: @taskViewModel.LatestProgressDate.Value.ToString("MM/dd h:mm tt")
-                                                </div>
-                                            }
-                                            @if (!string.IsNullOrEmpty(taskViewModel.LatestProgressNote))
-                                            {
-                                                <div class="text-xs text-orange-600 mt-1 truncate" title="@taskViewModel.LatestProgressNote">
-                                                    "@taskViewModel.LatestProgressNote"
-                                                </div>
-                                            }
-                                        }
-                                        else
-                                        {
-                                            <div class="text-sm text-orange-600">No progress updates</div>
-                                        }
-                                    </div>
-                                </div>
-
-                                <!-- Creator and Dates -->
-                                <div class="flex items-center justify-between text-xs text-gray-500 bg-gray-50 rounded px-3 py-2">
-                                    <div class="flex items-center space-x-4">
-                                        <span>
-                                            <i class="fa-solid fa-user-plus mr-1"></i>
-                                            Created by <strong>@(taskViewModel.CreatedByUser?.FullName ?? "Unknown")</strong>
-                                        </span>
-                                        <span>
-                                            <i class="fa-solid fa-calendar-plus mr-1"></i>
-                                            @task.CreatedDate.ToString("MMM dd, yyyy h:mm tt")
-                                        </span>
-                                        @if (task.CompletedAt.HasValue)
-                                        {
-                                            <span>
-                                                <i class="fa-solid fa-check-circle mr-1"></i>
-                                                Completed @task.CompletedAt.Value.ToString("MMM dd, yyyy h:mm tt")
-                                            </span>
-                                        }
-                                    </div>
-                                    <div>
-                                        Task #@task.Id
                                     </div>
                                 </div>
                             </div>
-
-                            <!-- Action Buttons -->
-                            <div class="ml-6 flex flex-col space-y-2">
-                                <a class="btn btn-primary btn-sm" href="/CRM/Tasks/Details?id=@task.Id">
-                                    <i class="fa-solid fa-eye mr-1"></i>View Details
-                                </a>
-                                <a class="btn btn-success btn-sm" href="/CRM/Tasks/@task.Id/AddProgress">
-                                    <i class="fa-solid fa-plus mr-1"></i>Add Progress
-                                </a>
-                                @if (User.IsInRole("Admin"))
-                                {
-                                    <form method="post" asp-page-handler="DeleteTask" class="inline"
-                                          onsubmit="return confirm('Are you sure you want to permanently delete this task and all its progress entries? This action cannot be undone.')">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="DeleteTaskId" value="@task.Id" />
-                                        <input type="hidden" name="StatusFilter" value="@Model.StatusFilter" />
-                                        <input type="hidden" name="AssigneeFilter" value="@Model.AssigneeFilter" />
-                                        <input type="hidden" name="PriorityFilter" value="@Model.PriorityFilter" />
-                                        <input type="hidden" name="AccountFilter" value="@Model.AccountFilter" />
-                                        <input type="hidden" name="OverdueFilter" value="@Model.OverdueFilter" />
-                                        <button type="submit" class="btn btn-danger btn-sm w-full">
-                                            <i class="fa-solid fa-trash mr-1"></i>Delete
-                                        </button>
-                                    </form>
-                                }
+                        }
+                    </div>
+                </div>
+            }
+            
+            <!-- Unassigned Tasks Card -->
+            @if (Model.UnassignedTasks.Any())
+            {
+                <div class="bg-white border rounded-lg overflow-hidden shadow-sm">
+                    <!-- Unassigned Header -->
+                    <div class="bg-gradient-to-r from-gray-50 to-slate-50 border-b px-6 py-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-4">
+                                <!-- Unassigned Icon -->
+                                <div class="w-12 h-12 bg-gradient-to-br from-gray-400 to-gray-500 rounded-full flex items-center justify-center shadow-lg">
+                                    <i class="fa-solid fa-user-slash text-white text-lg"></i>
+                                </div>
+                                
+                                <!-- Unassigned Info -->
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-900">Unassigned Tasks</h3>
+                                    <p class="text-sm text-gray-600">Tasks that need to be assigned to team members</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Task Count Badge -->
+                            <div class="flex items-center space-x-2">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                    @Model.UnassignedTasks.Count Total
+                                </span>
                             </div>
                         </div>
                     </div>
-                }
-            </div>
+                    
+                    <!-- Unassigned Tasks List -->
+                    <div class="divide-y divide-gray-100">
+                        @foreach (var taskViewModel in Model.UnassignedTasks)
+                        {
+                            var task = taskViewModel.Task;
+                            <div class="p-4 hover:bg-gray-50 transition-colors @(taskViewModel.IsOverdue ? "border-l-4 border-red-500" : "")">
+                                <div class="flex items-start justify-between">
+                                    <div class="flex-1 min-w-0">
+                                        <!-- Task Header -->
+                                        <div class="flex items-center space-x-3 mb-2">
+                                            <h4 class="text-sm font-semibold text-gray-900 truncate">@task.Title</h4>
+                                            
+                                            <!-- Status Badge -->
+                                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full @(GetStatusBadgeClass(task.Status))">
+                                                @GetStatusDisplayName(task.Status)
+                                            </span>
+                                            
+                                            <!-- Priority Badge -->
+                                            <span class="inline-flex items-center px-2 py-1 text-xs font-bold rounded-full @(GetPriorityBadgeClass(task.Priority))">
+                                                @GetPriorityLabel(task.Priority)
+                                            </span>
+                                            
+                                            <!-- Progress Percentage -->
+                                            @if (taskViewModel.CompletionPercentage.HasValue)
+                                            {
+                                                <span class="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                                                    @taskViewModel.CompletionPercentage%
+                                                </span>
+                                            }
+                                            
+                                            <!-- Overdue Warning -->
+                                            @if (taskViewModel.IsOverdue)
+                                            {
+                                                <span class="inline-flex items-center px-2 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800">
+                                                    <i class="fa-solid fa-exclamation-triangle mr-1"></i>OVERDUE
+                                                </span>
+                                            }
+                                        </div>
+                                        
+                                        @if (!string.IsNullOrEmpty(task.Description))
+                                        {
+                                            <p class="text-gray-600 text-sm mb-2 truncate">@task.Description</p>
+                                        }
+                                        
+                                        <!-- Task Info Row -->
+                                        <div class="flex items-center space-x-4 text-xs text-gray-500">
+                                            @if (task.DueAt.HasValue)
+                                            {
+                                                <div class="flex items-center">
+                                                    <i class="fa-solid fa-calendar mr-1"></i>
+                                                    <span class="@(taskViewModel.IsOverdue ? "text-red-600 font-medium" : "")">
+                                                        Due @task.DueAt.Value.ToString("MMM dd, yyyy")
+                                                    </span>
+                                                </div>
+                                            }
+                                            
+                                            @if (task.Account != null)
+                                            {
+                                                <div class="flex items-center">
+                                                    <i class="fa-solid fa-building mr-1"></i>
+                                                    <span>@task.Account.Name</span>
+                                                </div>
+                                            }
+                                            
+                                            @if (taskViewModel.CreatedByUser != null)
+                                            {
+                                                <div class="flex items-center">
+                                                    <i class="fa-solid fa-user-plus mr-1"></i>
+                                                    <span>Created by @taskViewModel.CreatedByUser.FullName</span>
+                                                </div>
+                                            }
+                                            
+                                            <div class="flex items-center">
+                                                <i class="fa-solid fa-hashtag mr-1"></i>
+                                                <span>@task.Id</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Action Buttons -->
+                                    <div class="flex items-center space-x-2 ml-4">
+                                        <a class="btn btn-sm btn-outline-primary" href="/CRM/Tasks/Details?id=@task.Id">
+                                            <i class="fa-solid fa-eye mr-1"></i>View
+                                        </a>
+                                        <a class="btn btn-sm btn-success" href="/CRM/Tasks/@task.Id/AddProgress">
+                                            <i class="fa-solid fa-plus mr-1"></i>Progress
+                                        </a>
+                                        @if (User.IsInRole("Admin"))
+                                        {
+                                            <form method="post" asp-page-handler="DeleteTask" class="inline"
+                                                  onsubmit="return confirm('Are you sure you want to permanently delete this task and all its progress entries? This action cannot be undone.')">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="DeleteTaskId" value="@task.Id" />
+                                                <input type="hidden" name="StatusFilter" value="@Model.StatusFilter" />
+                                                <input type="hidden" name="AssigneeFilter" value="@Model.AssigneeFilter" />
+                                                <input type="hidden" name="PriorityFilter" value="@Model.PriorityFilter" />
+                                                <input type="hidden" name="AccountFilter" value="@Model.AccountFilter" />
+                                                <input type="hidden" name="OverdueFilter" value="@Model.OverdueFilter" />
+                                                <button type="submit" class="btn btn-sm btn-danger">
+                                                    <i class="fa-solid fa-trash mr-1"></i>Delete
+                                                </button>
+                                            </form>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
         }
         else
         {
-            <div class="p-12 text-center">
+            <div class="bg-white border rounded-lg p-12 text-center">
                 <div class="text-gray-400 mb-4">
                     <i class="fa-solid fa-clipboard-list text-4xl mb-4"></i>
                     <h4 class="text-lg font-medium text-gray-900 mb-2">No tasks found</h4>
@@ -524,7 +599,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Add smooth transitions
-    const taskCards = document.querySelectorAll('.p-6.hover\\:bg-gray-50');
+    const taskCards = document.querySelectorAll('.user-task-item');
     taskCards.forEach(card => {
         card.style.transition = 'background-color 0.2s ease';
         
