@@ -259,6 +259,107 @@ public class CrmTaskService : ICrmTaskService
         await _context.SaveChangesAsync(ct);
     }
 
+    // Progress tracking methods
+    public async Task<CrmTaskProgress> AddProgressEntryAsync(
+        int taskId,
+        string progressNote,
+        int? percentComplete,
+        string? status,
+        int createdByUserId,
+        string progressType = "Update",
+        bool isVisibleToClient = true,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(progressNote))
+            throw new InvalidOperationException("Progress note is required.");
+
+        // Verify task exists
+        var taskExists = await _context.CrmTasks.AnyAsync(t => t.Id == taskId, ct);
+        if (!taskExists)
+            throw new InvalidOperationException("Task not found.");
+
+        // Verify user exists
+        var userExists = await _context.Users.AnyAsync(u => u.Id == createdByUserId, ct);
+        if (!userExists)
+            throw new InvalidOperationException("User not found.");
+
+        var progressEntry = new CrmTaskProgress
+        {
+            TaskId = taskId,
+            ProgressNote = progressNote.Trim(),
+            PercentComplete = percentComplete,
+            Status = string.IsNullOrWhiteSpace(status) ? null : status.Trim(),
+            CreatedByUserId = createdByUserId,
+            ProgressType = progressType,
+            IsVisibleToClient = isVisibleToClient,
+            CreatedDate = DateTime.UtcNow
+        };
+
+        _context.CrmTaskProgress.Add(progressEntry);
+        await _context.SaveChangesAsync(ct);
+
+        // If percentage is provided, update task's overall progress
+        if (percentComplete.HasValue)
+        {
+            var task = await _context.CrmTasks.FirstOrDefaultAsync(t => t.Id == taskId, ct);
+            if (task != null && percentComplete >= 100)
+            {
+                task.Status = "Completed";
+                task.CompletedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync(ct);
+            }
+        }
+
+        return progressEntry;
+    }
+
+    public async Task<List<CrmTaskProgress>> GetTaskProgressAsync(int taskId, CancellationToken ct = default)
+    {
+        return await _context.CrmTaskProgress
+            .Include(p => p.CreatedBy)
+            .Where(p => p.TaskId == taskId)
+            .OrderByDescending(p => p.CreatedDate)
+            .ToListAsync(ct);
+    }
+
+    public async Task<CrmTaskProgress?> GetProgressEntryAsync(int progressId, CancellationToken ct = default)
+    {
+        return await _context.CrmTaskProgress
+            .Include(p => p.CreatedBy)
+            .Include(p => p.Task)
+            .FirstOrDefaultAsync(p => p.Id == progressId, ct);
+    }
+
+    public async Task DeleteProgressEntryAsync(int progressId, CancellationToken ct = default)
+    {
+        var progressEntry = await _context.CrmTaskProgress.FirstOrDefaultAsync(p => p.Id == progressId, ct);
+        if (progressEntry == null)
+            throw new InvalidOperationException("Progress entry not found.");
+
+        _context.CrmTaskProgress.Remove(progressEntry);
+        await _context.SaveChangesAsync(ct);
+    }
+
+    public async Task DeleteTaskAsync(int taskId, CancellationToken ct = default)
+    {
+        var task = await _context.CrmTasks
+            .Include(t => t.ProgressEntries)
+            .FirstOrDefaultAsync(t => t.Id == taskId, ct);
+        
+        if (task == null)
+            throw new InvalidOperationException("Task not found.");
+
+        // Remove all progress entries first
+        if (task.ProgressEntries.Any())
+        {
+            _context.CrmTaskProgress.RemoveRange(task.ProgressEntries);
+        }
+
+        // Remove the task
+        _context.CrmTasks.Remove(task);
+        await _context.SaveChangesAsync(ct);
+    }
+
     private static string NormalizeStatus(string? status)
     {
         var s = (status ?? string.Empty).Trim();

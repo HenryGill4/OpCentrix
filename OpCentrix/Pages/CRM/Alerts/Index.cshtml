@@ -1,7 +1,7 @@
 @page "/CRM/Alerts"
 @model OpCentrix.Pages.CRM.Alerts.IndexModel
 @{
-    ViewData["Title"] = "CRM Alerts & Notifications";
+    ViewData["Title"] = "Alerts & Notifications";
     Layout = "~/Pages/Admin/Shared/_AdminLayout.cshtml";
 }
 
@@ -14,7 +14,7 @@
                     <i class="fa-solid fa-bell text-white text-xl"></i>
                 </div>
                 <div>
-                    <h1 class="text-2xl font-bold text-gray-900">CRM Alerts & Notifications</h1>
+                    <h1 class="text-2xl font-bold text-gray-900">Alerts & Notifications</h1>
                     <p class="text-gray-600 mt-1">Monitor task alerts, reminders, and notifications</p>
                 </div>
             </div>
@@ -28,6 +28,12 @@
                 <a class="btn btn-outline-secondary" href="/CRM/Tasks/Create">
                     <i class="fa-solid fa-plus mr-2"></i>New Task
                 </a>
+                @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
+                {
+                    <a class="btn btn-outline-success" href="/CRM/Tasks/Admin">
+                        <i class="fa-solid fa-users-gear mr-2"></i>Admin Dashboard
+                    </a>
+                }
                 <a class="btn btn-primary" href="/CRM/Tasks">
                     <i class="fa-solid fa-tasks mr-2"></i>Back to Tasks
                 </a>

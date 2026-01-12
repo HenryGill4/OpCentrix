@@ -30,6 +30,9 @@ public class CrmTask
     public CrmAccount? Account { get; set; }
     public CrmContact? Contact { get; set; }
 
+    // Progress tracking
+    public virtual List<CrmTaskProgress> ProgressEntries { get; set; } = new();
+
     // Reminder and notification settings
     public bool HasReminder { get; set; }
     public DateTime? ReminderDateTime { get; set; }

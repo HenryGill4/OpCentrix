@@ -48,4 +48,20 @@ public interface ICrmTaskService
         
     Task<List<CrmTask>> GetTasksDueForReminderAsync(CancellationToken ct = default);
     Task SetReminderAsync(int taskId, DateTime reminderDateTime, string reminderType = "Email", CancellationToken ct = default);
+
+    // Progress tracking methods
+    Task<CrmTaskProgress> AddProgressEntryAsync(
+        int taskId,
+        string progressNote,
+        int? percentComplete,
+        string? status,
+        int createdByUserId,
+        string progressType = "Update",
+        bool isVisibleToClient = true,
+        CancellationToken ct = default);
+
+    Task<List<CrmTaskProgress>> GetTaskProgressAsync(int taskId, CancellationToken ct = default);
+    Task<CrmTaskProgress?> GetProgressEntryAsync(int progressId, CancellationToken ct = default);
+    Task DeleteProgressEntryAsync(int progressId, CancellationToken ct = default);
+    Task DeleteTaskAsync(int taskId, CancellationToken ct = default);
 }

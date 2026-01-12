@@ -61,6 +61,8 @@
                 bool isMasterSchedule = path.StartsWith("/Scheduler/MasterSchedule", StringComparison.OrdinalIgnoreCase);
                 bool isCrmAccounts = path.StartsWith("/CRM/Accounts", StringComparison.OrdinalIgnoreCase);
                 bool isCrmTasks = path.StartsWith("/CRM/Tasks", StringComparison.OrdinalIgnoreCase);
+                bool isCrmTaskAdmin = path.StartsWith("/CRM/Tasks/Admin", StringComparison.OrdinalIgnoreCase);
+                bool isCrmTaskProgress = path.Contains("/AddProgress", StringComparison.OrdinalIgnoreCase);
                 bool isCrmAlerts = path.StartsWith("/CRM/Alerts", StringComparison.OrdinalIgnoreCase);
             }
 
@@ -99,13 +101,20 @@
                             <i class="fa-solid fa-building mr-3"></i>
                             Accounts
                         </a>
-                        <a href="/CRM/Tasks" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(isCrmTasks ? "bg-emerald-100 text-emerald-700" : "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50")">
+                        <a href="/CRM/Tasks" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(isCrmTasks && !isCrmTaskAdmin ? "bg-emerald-100 text-emerald-700" : "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50")">
                             <i class="fa-solid fa-list-check mr-3"></i>
                             Tasks
                         </a>
+                        @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
+                        {
+                            <a href="/CRM/Tasks/Admin" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(isCrmTaskAdmin ? "bg-emerald-100 text-emerald-700" : "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50")">
+                                <i class="fa-solid fa-users-gear mr-3"></i>
+                                Task Management
+                            </a>
+                        }
                         <a href="/CRM/Alerts" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(isCrmAlerts ? "bg-emerald-100 text-emerald-700" : "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50")">
                             <i class="fa-solid fa-bell mr-3"></i>
-                            Alerts
+                            Alerts & Notifications
                         </a>
                     </div>
                 </section>

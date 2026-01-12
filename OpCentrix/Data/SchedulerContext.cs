@@ -129,6 +129,7 @@ namespace OpCentrix.Data
         public DbSet<CrmContact> CrmContacts { get; set; }
         public DbSet<CrmTask> CrmTasks { get; set; }
         public DbSet<CrmAlert> CrmAlerts { get; set; }
+        public DbSet<CrmTaskProgress> CrmTaskProgress { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -234,6 +235,33 @@ namespace OpCentrix.Data
                 entity.HasIndex(e => e.IsDismissed);
                 entity.HasIndex(e => e.CreatedDate);
                 entity.HasIndex(e => new { e.IsDismissed, e.CreatedDate });
+            });
+
+            modelBuilder.Entity<CrmTaskProgress>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.ProgressNote).IsRequired().HasMaxLength(2000);
+                entity.Property(e => e.Status).HasMaxLength(50);
+                entity.Property(e => e.AttachmentPath).HasMaxLength(500);
+                entity.Property(e => e.ProgressType).HasMaxLength(50).HasDefaultValue("Update");
+                entity.Property(e => e.IsVisibleToClient).HasDefaultValue(true);
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+
+                entity.HasOne(e => e.Task)
+                      .WithMany(t => t.ProgressEntries)
+                      .HasForeignKey(e => e.TaskId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                // Fix: Explicitly map CreatedBy navigation property to CreatedByUserId foreign key
+                entity.HasOne(e => e.CreatedBy)
+                      .WithMany()
+                      .HasForeignKey(e => e.CreatedByUserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(e => e.TaskId);
+                entity.HasIndex(e => e.CreatedDate);
+                entity.HasIndex(e => e.CreatedByUserId);
+                entity.HasIndex(e => new { e.TaskId, e.CreatedDate });
             });
 
             // Maintenance module entities

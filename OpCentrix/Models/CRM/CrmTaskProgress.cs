@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using OpCentrix.Models;
 
 namespace OpCentrix.Models.CRM;
 

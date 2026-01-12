@@ -1,7 +1,7 @@
 @page
 @model OpCentrix.Pages.CRM.Tasks.DetailsModel
 @{
-    ViewData["Title"] = "CRM Task";
+    ViewData["Title"] = "Task Details";
     Layout = "~/Pages/Admin/Shared/_AdminLayout.cshtml";
 }
 
@@ -172,6 +172,25 @@
 
         <div class="flex gap-2">
             <button class="btn btn-primary" type="submit">Save</button>
+            <a class="btn btn-success" href="/CRM/Tasks/@Model.Id/AddProgress">
+                <i class="fa-solid fa-chart-line mr-2"></i>Add Progress
+            </a>
+            @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
+            {
+                <a class="btn btn-outline-primary" href="/CRM/Tasks/Admin">
+                    <i class="fa-solid fa-users-gear mr-2"></i>Admin Dashboard
+                </a>
+            }
+            @if (User.IsInRole("Admin"))
+            {
+                <form method="post" asp-page-handler="DeleteTask" class="inline"
+                      onsubmit="return confirm('Are you sure you want to permanently delete this task and all its progress entries? This action cannot be undone.')">
+                    @Html.AntiForgeryToken()
+                    <button class="btn btn-danger" type="submit">
+                        <i class="fa-solid fa-trash mr-2"></i>Delete Task
+                    </button>
+                </form>
+            }
         </div>
 
         @if (Model.TaskEntity?.CompletedAt != null)
@@ -205,6 +224,94 @@
             </div>
         }
     </form>
+</div>
+
+<!-- Progress History Section -->
+<div class="p-6 max-w-5xl space-y-6">
+    <div class="bg-white border rounded-lg">
+        <div class="border-b px-6 py-4 flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900">
+                <i class="fa-solid fa-chart-line mr-2"></i>Progress History
+            </h3>
+            <a class="btn btn-success" href="/CRM/Tasks/@Model.Id/AddProgress">
+                <i class="fa-solid fa-plus mr-2"></i>Add Progress
+            </a>
+        </div>
+        
+        <!-- Progress History Display -->
+        <div class="p-6">
+            @if (Model.ProgressEntries.Any())
+            {
+                <div class="space-y-4">
+                    @foreach (var progress in Model.ProgressEntries)
+                    {
+                        <div class="bg-gray-50 border rounded-lg p-4">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <div class="flex items-center space-x-2 mb-2">
+                                        <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
+                                            @progress.ProgressType
+                                        </span>
+                                        @if (progress.PercentComplete.HasValue)
+                                        {
+                                            <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium">
+                                                @progress.PercentComplete% Complete
+                                            </span>
+                                        }
+                                        @if (!string.IsNullOrEmpty(progress.Status))
+                                        {
+                                            <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full font-medium">
+                                                Status: @progress.Status
+                                            </span>
+                                        }
+                                        @if (!progress.IsVisibleToClient)
+                                        {
+                                            <span class="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full font-medium">
+                                                Internal Only
+                                            </span>
+                                        }
+                                    </div>
+                                    <p class="text-gray-800 mb-2">@progress.ProgressNote</p>
+                                    <div class="flex items-center text-sm text-gray-500">
+                                        <i class="fa-solid fa-user mr-1"></i>
+                                        <span class="mr-3">@(progress.CreatedBy?.FullName ?? "Unknown User")</span>
+                                        <i class="fa-solid fa-calendar mr-1"></i>
+                                        <span>@progress.CreatedDate.ToString("MMM d, yyyy 'at' h:mm tt")</span>
+                                    </div>
+                                </div>
+                                @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
+                                {
+                                    <div class="flex-shrink-0 ml-4">
+                                        <form method="post" asp-page-handler="DeleteProgress" class="inline"
+                                              onsubmit="return confirm('Are you sure you want to delete this progress entry? This action cannot be undone.')">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="DeleteProgressId" value="@progress.Id" />
+                                            <button type="submit" 
+                                                    class="inline-flex items-center px-2 py-1 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded hover:bg-red-100 transition-colors"
+                                                    title="Delete progress entry">
+                                                <i class="fa-solid fa-trash mr-1"></i>Delete
+                                            </button>
+                                        </form>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-8 text-gray-500">
+                    <i class="fa-solid fa-chart-line text-gray-300 text-3xl mb-4"></i>
+                    <h4 class="text-lg font-medium text-gray-900 mb-2">No Progress Entries Yet</h4>
+                    <p class="text-gray-600 mb-4">Progress updates will appear here as they are added.</p>
+                    <a class="btn btn-success" href="/CRM/Tasks/@Model.Id/AddProgress">
+                        <i class="fa-solid fa-plus mr-2"></i>Add First Progress Entry
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
 </div>
 
 @section Scripts {

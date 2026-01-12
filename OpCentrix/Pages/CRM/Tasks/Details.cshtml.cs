@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
@@ -14,18 +15,21 @@ public class DetailsModel : PageModel
     private readonly ICrmTaskService _taskService;
     private readonly ICrmNotificationService _notificationService;
     private readonly SchedulerContext _context;
+    private readonly ILogger<DetailsModel> _logger;
 
-    public DetailsModel(ICrmTaskService taskService, ICrmNotificationService notificationService, SchedulerContext context)
+    public DetailsModel(ICrmTaskService taskService, ICrmNotificationService notificationService, SchedulerContext context, ILogger<DetailsModel> logger)
     {
         _taskService = taskService;
         _notificationService = notificationService;
         _context = context;
+        _logger = logger;
     }
 
     [BindProperty(SupportsGet = true)]
     public int Id { get; set; }
 
     public CrmTask? TaskEntity { get; set; }
+    public List<CrmTaskProgress> ProgressEntries { get; set; } = new();
 
     public List<User> Users { get; set; } = new();
     public List<CrmAccount> Accounts { get; set; } = new();
@@ -64,6 +68,9 @@ public class DetailsModel : PageModel
     [BindProperty]
     public InputModel Input { get; set; } = new();
     
+    [BindProperty]
+    public int? DeleteProgressId { get; set; }
+    
     [TempData]
     public string? StatusMessage { get; set; }
 
@@ -72,6 +79,9 @@ public class DetailsModel : PageModel
         await LoadListsAsync(ct);
         TaskEntity = await _taskService.GetByIdAsync(Id, ct);
         if (TaskEntity == null) return NotFound();
+
+        // Load progress entries
+        ProgressEntries = await _taskService.GetTaskProgressAsync(Id, ct);
 
         Input = new InputModel
         {
@@ -137,6 +147,62 @@ public class DetailsModel : PageModel
         }
         return RedirectToPage(new { id = Id });
     }
+    
+    public async Task<IActionResult> OnPostDeleteProgressAsync(CancellationToken ct)
+    {
+        if (!User.IsInRole("Admin") && !User.IsInRole("Manager"))
+        {
+            return Forbid();
+        }
+
+        if (DeleteProgressId.HasValue)
+        {
+            try
+            {
+                var progressEntry = await _taskService.GetProgressEntryAsync(DeleteProgressId.Value, ct);
+                if (progressEntry != null && progressEntry.TaskId == Id)
+                {
+                    await _taskService.DeleteProgressEntryAsync(DeleteProgressId.Value, ct);
+                    StatusMessage = "Progress entry deleted successfully.";
+                }
+                else
+                {
+                    StatusMessage = "Progress entry not found.";
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting progress entry {ProgressId}", DeleteProgressId.Value);
+                StatusMessage = "Error deleting progress entry. Please try again.";
+            }
+        }
+
+        return RedirectToPage(new { id = Id });
+    }
+    
+    public async Task<IActionResult> OnPostDeleteTaskAsync(CancellationToken ct)
+    {
+        if (!User.IsInRole("Admin"))
+        {
+            return Forbid();
+        }
+
+        try
+        {
+            var task = await _taskService.GetByIdAsync(Id, ct);
+            var taskTitle = task?.Title ?? "Unknown Task";
+            
+            await _taskService.DeleteTaskAsync(Id, ct);
+            StatusMessage = $"Task '{taskTitle}' has been permanently deleted.";
+            return RedirectToPage("/CRM/Tasks/Index");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting task {TaskId}", Id);
+            StatusMessage = "Error deleting task. Please try again.";
+            return RedirectToPage(new { id = Id });
+        }
+    }
 
     private async Task LoadListsAsync(CancellationToken ct)
     {
@@ -150,5 +216,12 @@ public class DetailsModel : PageModel
             .OrderBy(a => a.Name)
             .Take(200)
             .ToListAsync(ct);
+    }
+
+    private int? GetCurrentUserId()
+    {
+        var userIdClaim = User.FindFirstValue("UserId");
+        if (int.TryParse(userIdClaim, out var id)) return id;
+        return null;
     }
 }
