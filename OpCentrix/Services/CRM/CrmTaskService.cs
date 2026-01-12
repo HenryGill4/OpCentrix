@@ -22,6 +22,9 @@ public class CrmTaskService : ICrmTaskService
         int? assignedToUserId,
         int? accountId,
         int? contactId,
+        bool hasReminder = false,
+        int reminderMinutesBefore = 15,
+        string reminderType = "Email",
         CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(title)) throw new InvalidOperationException("Title is required.");
@@ -58,7 +61,14 @@ public class CrmTaskService : ICrmTaskService
             CreatedByUserId = createdByUserId,
             AssignedToUserId = assignedToUserId,
             AccountId = accountId,
-            ContactId = contactId
+            ContactId = contactId,
+            HasReminder = hasReminder,
+            ReminderMinutesBefore = reminderMinutesBefore,
+            ReminderType = reminderType,
+            ReminderDateTime = hasReminder && dueAt.HasValue ? dueAt.Value.AddMinutes(-reminderMinutesBefore) : null,
+            NotifyOnStatusChange = true,
+            NotifyAssignee = true,
+            NotifyCreator = true
         };
 
         _context.CrmTasks.Add(entity);
@@ -76,6 +86,12 @@ public class CrmTaskService : ICrmTaskService
         int? assignedToUserId,
         int? accountId,
         int? contactId,
+        bool hasReminder = false,
+        int reminderMinutesBefore = 15,
+        string reminderType = "Email",
+        bool notifyOnStatusChange = true,
+        bool notifyAssignee = true,
+        bool notifyCreator = true,
         CancellationToken ct = default)
     {
         var entity = await _context.CrmTasks.FirstOrDefaultAsync(t => t.Id == id, ct);
@@ -123,11 +139,27 @@ public class CrmTaskService : ICrmTaskService
         if (contactId.HasValue)
         {
             var contactExists = await _context.CrmContacts.AnyAsync(c => c.Id == contactId.Value, ct);
-            entity.ContactId = contactExists ? contactId : null;
+        entity.ContactId = contactExists ? contactId : null;
         }
         else
         {
             entity.ContactId = null;
+        }
+
+        // Update reminder and notification settings
+        entity.HasReminder = hasReminder;
+        entity.ReminderMinutesBefore = reminderMinutesBefore;
+        entity.ReminderType = reminderType;
+        entity.ReminderDateTime = hasReminder && entity.DueAt.HasValue ? entity.DueAt.Value.AddMinutes(-reminderMinutesBefore) : null;
+        entity.NotifyOnStatusChange = notifyOnStatusChange;
+        entity.NotifyAssignee = notifyAssignee;
+        entity.NotifyCreator = notifyCreator;
+        
+        // Reset reminder sent flag if reminder settings changed
+        if (hasReminder && entity.ReminderDateTime != null)
+        {
+            entity.IsReminderSent = false;
+            entity.ReminderSentAt = null;
         }
 
         await _context.SaveChangesAsync(ct);
@@ -198,6 +230,33 @@ public class CrmTaskService : ICrmTaskService
             .ThenByDescending(t => t.Id)
             .Take(500)
             .ToListAsync(ct);
+    }
+
+    public async Task<List<CrmTask>> GetTasksDueForReminderAsync(CancellationToken ct = default)
+    {
+        var now = DateTime.UtcNow;
+        
+        return await _context.CrmTasks
+            .Where(t => t.HasReminder && 
+                       !t.IsReminderSent && 
+                       t.ReminderDateTime.HasValue && 
+                       t.ReminderDateTime.Value <= now &&
+                       t.Status != "Completed")
+            .ToListAsync(ct);
+    }
+
+    public async Task SetReminderAsync(int taskId, DateTime reminderDateTime, string reminderType = "Email", CancellationToken ct = default)
+    {
+        var entity = await _context.CrmTasks.FirstOrDefaultAsync(t => t.Id == taskId, ct);
+        if (entity == null) throw new InvalidOperationException("CRM task not found.");
+
+        entity.HasReminder = true;
+        entity.ReminderDateTime = reminderDateTime;
+        entity.ReminderType = reminderType;
+        entity.IsReminderSent = false;
+        entity.ReminderSentAt = null;
+
+        await _context.SaveChangesAsync(ct);
     }
 
     private static string NormalizeStatus(string? status)

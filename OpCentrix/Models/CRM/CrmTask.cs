@@ -30,6 +30,20 @@ public class CrmTask
     public CrmAccount? Account { get; set; }
     public CrmContact? Contact { get; set; }
 
+    // Reminder and notification settings
+    public bool HasReminder { get; set; }
+    public DateTime? ReminderDateTime { get; set; }
+    public int ReminderMinutesBefore { get; set; } = 15; // Default 15 minutes before due date
+    public string ReminderType { get; set; } = "Email"; // Email, Browser, Both
+    
+    public bool IsReminderSent { get; set; }
+    public DateTime? ReminderSentAt { get; set; }
+    
+    // Notification preferences
+    public bool NotifyOnStatusChange { get; set; } = true;
+    public bool NotifyAssignee { get; set; } = true;
+    public bool NotifyCreator { get; set; } = true;
+    
     public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
     public DateTime LastModifiedDate { get; set; } = DateTime.UtcNow;
 }

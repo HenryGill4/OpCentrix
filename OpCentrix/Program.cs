@@ -175,6 +175,7 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddScoped<OpCentrix.Services.CRM.ICrmAccountService, OpCentrix.Services.CRM.CrmAccountService>();
 builder.Services.AddScoped<OpCentrix.Services.CRM.ICrmContactService, OpCentrix.Services.CRM.CrmContactService>();
 builder.Services.AddScoped<OpCentrix.Services.CRM.ICrmTaskService, OpCentrix.Services.CRM.CrmTaskService>();
+builder.Services.AddScoped<OpCentrix.Services.CRM.ICrmNotificationService, OpCentrix.Services.CRM.CrmNotificationService>();
 
 // Register application services
 builder.Services.AddScoped<ISchedulerService, SchedulerService>();

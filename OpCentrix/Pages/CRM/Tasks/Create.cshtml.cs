@@ -40,6 +40,16 @@ public class CreateModel : PageModel
 
         public int? AssignedToUserId { get; set; }
         public int? AccountId { get; set; }
+
+        // Reminder settings
+        public bool HasReminder { get; set; }
+        public int ReminderMinutesBefore { get; set; } = 15;
+        public string ReminderType { get; set; } = "Email";
+
+        // Notification preferences
+        public bool NotifyOnStatusChange { get; set; } = true;
+        public bool NotifyAssignee { get; set; } = true;
+        public bool NotifyCreator { get; set; } = true;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -71,6 +81,9 @@ public class CreateModel : PageModel
             assignedToUserId: Input.AssignedToUserId,
             accountId: Input.AccountId,
             contactId: null,
+            hasReminder: Input.HasReminder,
+            reminderMinutesBefore: Input.ReminderMinutesBefore,
+            reminderType: Input.ReminderType,
             ct: ct);
 
         return RedirectToPage("/CRM/Tasks/Details", new { id = created.Id });
@@ -92,8 +105,8 @@ public class CreateModel : PageModel
 
     private int? GetCurrentUserId()
     {
-        var sub = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (int.TryParse(sub, out var id)) return id;
+        var userIdClaim = User.FindFirstValue("UserId");
+        if (int.TryParse(userIdClaim, out var id)) return id;
         return null;
     }
 }

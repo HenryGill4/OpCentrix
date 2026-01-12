@@ -59,6 +59,9 @@
                 bool isDashboard = path.Equals("/Admin", StringComparison.OrdinalIgnoreCase) || path.StartsWith("/Admin/Index", StringComparison.OrdinalIgnoreCase);
                 bool isScheduler = path.Equals("/Scheduler", StringComparison.OrdinalIgnoreCase) || path.StartsWith("/Scheduler/Index", StringComparison.OrdinalIgnoreCase);
                 bool isMasterSchedule = path.StartsWith("/Scheduler/MasterSchedule", StringComparison.OrdinalIgnoreCase);
+                bool isCrmAccounts = path.StartsWith("/CRM/Accounts", StringComparison.OrdinalIgnoreCase);
+                bool isCrmTasks = path.StartsWith("/CRM/Tasks", StringComparison.OrdinalIgnoreCase);
+                bool isCrmAlerts = path.StartsWith("/CRM/Alerts", StringComparison.OrdinalIgnoreCase);
             }
 
             <!-- Navigation Menu -->
@@ -92,15 +95,15 @@
                         <span class="chevron text-emerald-400"><i class="fa-solid fa-chevron-down"></i></span>
                     </button>
                     <div id="section-crm" class="nav-section-content space-y-1">
-                        <a href="/CRM/Accounts" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50">
+                        <a href="/CRM/Accounts" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(isCrmAccounts ? "bg-emerald-100 text-emerald-700" : "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50")">
                             <i class="fa-solid fa-building mr-3"></i>
                             Accounts
                         </a>
-                        <a href="/CRM/Tasks" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50">
+                        <a href="/CRM/Tasks" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(isCrmTasks ? "bg-emerald-100 text-emerald-700" : "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50")">
                             <i class="fa-solid fa-list-check mr-3"></i>
                             Tasks
                         </a>
-                        <a href="/CRM/Alerts" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50">
+                        <a href="/CRM/Alerts" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(isCrmAlerts ? "bg-emerald-100 text-emerald-700" : "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50")">
                             <i class="fa-solid fa-bell mr-3"></i>
                             Alerts
                         </a>

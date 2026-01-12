@@ -203,6 +203,25 @@ namespace OpCentrix.Data
                 entity.Property(e => e.Status).HasMaxLength(20).HasDefaultValue("Open");
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
                 entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
+                
+                // Enhanced properties for reminders and notifications
+                entity.Property(e => e.EnableReminders).HasDefaultValue(true);
+                entity.Property(e => e.ReminderMinutesBefore).HasDefaultValue(60);
+                entity.Property(e => e.EmailNotification).HasDefaultValue(true);
+                entity.Property(e => e.SystemNotification).HasDefaultValue(true);
+                entity.Property(e => e.SmsNotification).HasDefaultValue(false);
+                entity.Property(e => e.RemindersSentCount).HasDefaultValue(0);
+                entity.Property(e => e.ReminderProcessed).HasDefaultValue(false);
+                entity.Property(e => e.EnableEscalation).HasDefaultValue(false);
+                entity.Property(e => e.EscalationHoursAfterDue).HasDefaultValue(24);
+                entity.Property(e => e.EscalationProcessed).HasDefaultValue(false);
+                entity.Property(e => e.IsRecurring).HasDefaultValue(false);
+                entity.Property(e => e.RecurrencePattern).HasMaxLength(50);
+                entity.Property(e => e.CustomReminderMessage).HasMaxLength(500);
+                entity.Property(e => e.NotifyOnStatusChange).HasDefaultValue(true);
+                entity.Property(e => e.NotifyOnCompletion).HasDefaultValue(true);
+                entity.Property(e => e.NotifyAssignee).HasDefaultValue(true);
+                entity.Property(e => e.NotifyCreator).HasDefaultValue(true);
 
                 entity.HasOne(e => e.Account)
                       .WithMany(a => a.Tasks)
@@ -213,27 +232,69 @@ namespace OpCentrix.Data
                       .WithMany(c => c.Tasks)
                       .HasForeignKey(e => e.ContactId)
                       .OnDelete(DeleteBehavior.SetNull);
+                      
+                // Self-referencing for recurring tasks
+                entity.HasOne(e => e.ParentTask)
+                      .WithMany(t => t.ChildTasks)
+                      .HasForeignKey(e => e.ParentTaskId)
+                      .OnDelete(DeleteBehavior.SetNull);
 
                 entity.HasIndex(e => e.Status);
                 entity.HasIndex(e => e.DueAt);
                 entity.HasIndex(e => e.AssignedToUserId);
                 entity.HasIndex(e => e.AccountId);
+                entity.HasIndex(e => e.EnableReminders);
+                entity.HasIndex(e => e.ReminderProcessed);
+                entity.HasIndex(e => e.EscalationProcessed);
+                entity.HasIndex(e => e.IsRecurring);
+                entity.HasIndex(e => e.NextRecurrenceDate);
             });
 
+            // Configure CrmAlert entity
             modelBuilder.Entity<CrmAlert>(entity =>
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
                 entity.Property(e => e.Message).HasMaxLength(2000);
                 entity.Property(e => e.Severity).HasMaxLength(30).HasDefaultValue("Info");
+                entity.Property(e => e.AlertType).HasMaxLength(50).HasDefaultValue("General");
                 entity.Property(e => e.IsDismissed).HasDefaultValue(false);
+                entity.Property(e => e.IsRead).HasDefaultValue(false);
+                entity.Property(e => e.IsActionable).HasDefaultValue(false);
+                entity.Property(e => e.IsPersistent).HasDefaultValue(false);
+                entity.Property(e => e.ActionUrl).HasMaxLength(500);
+                entity.Property(e => e.ActionText).HasMaxLength(100);
+                entity.Property(e => e.IconClass).HasMaxLength(50).HasDefaultValue("fas fa-bell");
+                entity.Property(e => e.ColorClass).HasMaxLength(20);
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
                 entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
 
-                entity.HasIndex(e => e.Severity);
+                // Foreign key relationships
+                entity.HasOne(e => e.Task)
+                      .WithMany()
+                      .HasForeignKey(e => e.TaskId)
+                      .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.Account)
+                      .WithMany()
+                      .HasForeignKey(e => e.AccountId)
+                      .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.Contact)
+                      .WithMany()
+                      .HasForeignKey(e => e.ContactId)
+                      .OnDelete(DeleteBehavior.SetNull);
+
+                // Indexes for performance
+                entity.HasIndex(e => e.UserId);
                 entity.HasIndex(e => e.IsDismissed);
+                entity.HasIndex(e => e.IsRead);
+                entity.HasIndex(e => e.Severity);
+                entity.HasIndex(e => e.AlertType);
                 entity.HasIndex(e => e.CreatedDate);
-                entity.HasIndex(e => new { e.IsDismissed, e.CreatedDate });
+                entity.HasIndex(e => e.ExpiresAt);
+                entity.HasIndex(e => e.ScheduledFor);
+                entity.HasIndex(e => new { e.UserId, e.IsDismissed, e.IsRead });
             });
 
             // Maintenance module entities

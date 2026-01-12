@@ -2,6 +2,7 @@
 @model OpCentrix.Pages.CRM.Tasks.DetailsModel
 @{
     ViewData["Title"] = "CRM Task";
+    Layout = "~/Pages/Admin/Shared/_AdminLayout.cshtml";
 }
 
 <div class="p-6 max-w-3xl space-y-4">
@@ -9,9 +10,20 @@
         <h1 class="text-2xl font-bold">Task: @Model.TaskEntity?.Title</h1>
         <div class="flex gap-2">
             <a class="btn btn-light" href="/CRM/Tasks">Back</a>
+            <a class="btn btn-outline-secondary" href="/CRM/Alerts">View Alerts</a>
+            @if (Model.TaskEntity?.HasReminder == true && Model.TaskEntity?.Status != "Completed")
+            {
+                <form method="post" asp-page-handler="TestReminder" class="inline">
+                    @Html.AntiForgeryToken()
+                    <button class="btn btn-outline-info btn-sm" type="submit" title="Send a test reminder notification">
+                        <i class="fa-solid fa-bell mr-1"></i>Test Reminder
+                    </button>
+                </form>
+            }
             @if (Model.TaskEntity?.Status != "Completed")
             {
                 <form method="post" asp-page-handler="Complete">
+                    @Html.AntiForgeryToken()
                     <input type="hidden" name="id" value="@Model.Id" />
                     <button class="btn btn-success" type="submit">Mark Complete</button>
                 </form>
@@ -19,7 +31,18 @@
         </div>
     </div>
 
+    @if (!string.IsNullOrEmpty(Model.StatusMessage))
+    {
+        <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div class="flex items-center">
+                <i class="fa-solid fa-check-circle text-green-600 mr-2"></i>
+                <span class="text-green-800">@Model.StatusMessage</span>
+            </div>
+        </div>
+    }
+
     <form method="post" class="space-y-3">
+        @Html.AntiForgeryToken()
         <input type="hidden" asp-for="Id" />
 
         <div>
@@ -75,6 +98,78 @@
             </div>
         </div>
 
+        <!-- Reminder Settings Section -->
+        <div class="border rounded-lg p-4 bg-gray-50">
+            <h4 class="text-lg font-semibold text-gray-900 mb-4">
+                <i class="fa-solid fa-bell mr-2"></i>Reminder Settings
+            </h4>
+            
+            <div class="space-y-4">
+                <!-- Enable Reminder -->
+                <div class="flex items-center space-x-3">
+                    <input type="checkbox" asp-for="Input.HasReminder" class="form-check-input" id="hasReminder" />
+                    <label for="hasReminder" class="form-check-label font-medium">
+                        Enable reminder for this task
+                    </label>
+                </div>
+                
+                <!-- Reminder Configuration (shown when enabled) -->
+                <div id="reminderSettings" class="grid grid-cols-1 md:grid-cols-2 gap-4" style="@(Model.Input.HasReminder ? "" : "display: none;")">
+                    <div>
+                        <label class="form-label">Remind me</label>
+                        <select class="form-select" asp-for="Input.ReminderMinutesBefore">
+                            <option value="5">5 minutes before</option>
+                            <option value="15">15 minutes before</option>
+                            <option value="30">30 minutes before</option>
+                            <option value="60">1 hour before</option>
+                            <option value="120">2 hours before</option>
+                            <option value="240">4 hours before</option>
+                            <option value="480">8 hours before</option>
+                            <option value="1440">1 day before</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">Reminder Type</label>
+                        <select class="form-select" asp-for="Input.ReminderType">
+                            <option value="Email">Email</option>
+                            <option value="Browser">Browser Notification</option>
+                            <option value="Both">Email and Browser</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notification Preferences Section -->
+        <div class="border rounded-lg p-4 bg-gray-50">
+            <h4 class="text-lg font-semibold text-gray-900 mb-4">
+                <i class="fa-solid fa-envelope mr-2"></i>Notification Preferences
+            </h4>
+            
+            <div class="space-y-3">
+                <div class="flex items-center space-x-3">
+                    <input type="checkbox" asp-for="Input.NotifyOnStatusChange" class="form-check-input" id="notifyStatusChange" />
+                    <label for="notifyStatusChange" class="form-check-label">
+                        Notify when task status changes
+                    </label>
+                </div>
+                
+                <div class="flex items-center space-x-3">
+                    <input type="checkbox" asp-for="Input.NotifyAssignee" class="form-check-input" id="notifyAssignee" />
+                    <label for="notifyAssignee" class="form-check-label">
+                        Notify assignee when task is assigned or updated
+                    </label>
+                </div>
+                
+                <div class="flex items-center space-x-3">
+                    <input type="checkbox" asp-for="Input.NotifyCreator" class="form-check-input" id="notifyCreator" />
+                    <label for="notifyCreator" class="form-check-label">
+                        Notify task creator of important updates
+                    </label>
+                </div>
+            </div>
+        </div>
+
         <div class="flex gap-2">
             <button class="btn btn-primary" type="submit">Save</button>
         </div>
@@ -83,9 +178,56 @@
         {
             <div class="text-sm text-gray-600">Completed: @Model.TaskEntity.CompletedAt.Value.ToString("u")</div>
         }
+        
+        @if (Model.TaskEntity?.HasReminder == true)
+        {
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex items-center">
+                    <i class="fa-solid fa-bell text-blue-600 mr-2"></i>
+                    <div>
+                        <p class="text-blue-800 font-medium">Reminder Active</p>
+                        <p class="text-blue-600 text-sm">
+                            @if (Model.TaskEntity.IsReminderSent)
+                            {
+                                <span>Reminder sent @Model.TaskEntity.ReminderSentAt?.ToString("MMM d, yyyy 'at' h:mm tt")</span>
+                            }
+                            else if (Model.TaskEntity.ReminderDateTime.HasValue)
+                            {
+                                <span>Reminder scheduled for @Model.TaskEntity.ReminderDateTime.Value.ToString("MMM d, yyyy 'at' h:mm tt")</span>
+                            }
+                            else if (Model.TaskEntity.DueAt.HasValue)
+                            {
+                                <span>Will remind @Model.TaskEntity.ReminderMinutesBefore minutes before due date</span>
+                            }
+                        </p>
+                    </div>
+                </div>
+            </div>
+        }
     </form>
 </div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        // Show/hide reminder settings based on checkbox
+        document.addEventListener('DOMContentLoaded', function() {
+            const hasReminderCheckbox = document.getElementById('hasReminder');
+            const reminderSettings = document.getElementById('reminderSettings');
+            
+            function toggleReminderSettings() {
+                if (hasReminderCheckbox.checked) {
+                    reminderSettings.style.display = 'grid';
+                } else {
+                    reminderSettings.style.display = 'none';
+                }
+            }
+            
+            // Initial state
+            toggleReminderSettings();
+            
+            // Listen for changes
+            hasReminderCheckbox.addEventListener('change', toggleReminderSettings);
+        });
+    </script>
 }

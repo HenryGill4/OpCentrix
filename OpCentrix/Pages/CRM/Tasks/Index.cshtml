@@ -2,69 +2,170 @@
 @model OpCentrix.Pages.CRM.Tasks.IndexModel
 @{
     ViewData["Title"] = "CRM Tasks";
+    Layout = "~/Pages/Admin/Shared/_AdminLayout.cshtml";
 }
 
-<div class="p-6 space-y-4">
-    <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold">CRM Tasks</h1>
-        <a class="btn btn-primary" href="/CRM/Tasks/Create">New Task</a>
+<div class="p-6 space-y-6">
+    <!-- Header Section -->
+    <div class="bg-white border rounded-lg p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">CRM Tasks</h1>
+                <p class="text-gray-600 mt-1">Manage and track customer tasks and activities</p>
+            </div>
+            <a class="btn btn-primary" href="/CRM/Tasks/Create">
+                <i class="fa-solid fa-plus mr-2"></i>New Task
+            </a>
+        </div>
     </div>
 
-    <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-2 items-end">
-        <div>
-            <label class="form-label">Status</label>
-            <select class="form-select" name="status">
-                <option value="" selected="@(string.IsNullOrEmpty(Model.StatusFilter) ? "selected" : null)">All</option>
-                <option value="Open" selected="@(Model.StatusFilter=="Open" ? "selected" : null)">Open</option>
-                <option value="InProgress" selected="@(Model.StatusFilter=="InProgress" ? "selected" : null)">In Progress</option>
-                <option value="Completed" selected="@(Model.StatusFilter=="Completed" ? "selected" : null)">Completed</option>
-            </select>
-        </div>
-        <div>
-            <label class="form-label">Assignee</label>
-            <select class="form-select" name="assignee">
-                <option value="" selected="@(Model.AssigneeFilter == null ? "selected" : null)">All</option>
-                @foreach (var u in Model.Assignees)
-                {
-                    <option value="@u.Id" selected="@(Model.AssigneeFilter==u.Id ? "selected" : null)">@u.FullName (@u.Role)</option>
-                }
-            </select>
-        </div>
-        <div>
-            <button class="btn btn-secondary w-full" type="submit">Apply</button>
-        </div>
-        <div>
-            <a class="btn btn-light w-full" href="/CRM/Tasks">Clear</a>
-        </div>
-    </form>
+    <!-- Filters Section -->
+    <div class="bg-white border rounded-lg p-4">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                <select class="form-select" name="status">
+                    <option value="" selected="@(string.IsNullOrEmpty(Model.StatusFilter) ? "selected" : null)">All Statuses</option>
+                    <option value="Open" selected="@(Model.StatusFilter=="Open" ? "selected" : null)">Open</option>
+                    <option value="InProgress" selected="@(Model.StatusFilter=="InProgress" ? "selected" : null)">In Progress</option>
+                    <option value="Completed" selected="@(Model.StatusFilter=="Completed" ? "selected" : null)">Completed</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Assignee</label>
+                <select class="form-select" name="assignee">
+                    <option value="" selected="@(Model.AssigneeFilter == null ? "selected" : null)">All Assignees</option>
+                    @foreach (var u in Model.Assignees)
+                    {
+                        <option value="@u.Id" selected="@(Model.AssigneeFilter==u.Id ? "selected" : null)">@u.FullName (@u.Role)</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <button class="btn btn-secondary w-full" type="submit">
+                    <i class="fa-solid fa-filter mr-2"></i>Apply Filters
+                </button>
+            </div>
+            <div>
+                <a class="btn btn-light w-full" href="/CRM/Tasks">
+                    <i class="fa-solid fa-times mr-2"></i>Clear Filters
+                </a>
+            </div>
+        </form>
+    </div>
 
+    <!-- Tasks Table -->
     <div class="bg-white border rounded-lg overflow-hidden">
-        <table class="table mb-0">
-            <thead>
-                <tr>
-                    <th>Title</th>
-                    <th>Status</th>
-                    <th>Priority</th>
-                    <th>Due</th>
-                    <th>Account</th>
-                    <th style="width:120px;"></th>
-                </tr>
-            </thead>
-            <tbody>
-            @foreach (var t in Model.Tasks)
-            {
-                <tr>
-                    <td>@t.Title</td>
-                    <td>@t.Status</td>
-                    <td>@t.Priority</td>
-                    <td>@(t.DueAt.HasValue ? t.DueAt.Value.ToString("yyyy-MM-dd") : "")</td>
-                    <td>@t.Account?.Name</td>
-                    <td class="text-end">
-                        <a class="btn btn-sm btn-outline-primary" href="/CRM/Tasks/Details?id=@t.Id">Open</a>
-                    </td>
-                </tr>
-            }
-            </tbody>
-        </table>
+        <div class="px-6 py-4 border-b bg-gray-50">
+            <h3 class="text-lg font-semibold text-gray-900">Task List</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Account</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                @if (Model.Tasks.Any())
+                {
+                    @foreach (var t in Model.Tasks)
+                    {
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">@t.Title</div>
+                                @if (!string.IsNullOrEmpty(t.Description))
+                                {
+                                    <div class="text-xs text-gray-500">@(t.Description.Length > 50 ? t.Description.Substring(0, 50) + "..." : t.Description)</div>
+                                }
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full @(GetStatusBadgeClass(t.Status))">
+                                    @t.Status
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full @(GetPriorityBadgeClass(t.Priority))">
+                                    Priority @t.Priority
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                @if (t.DueAt.HasValue)
+                                {
+                                    <div class="@(t.DueAt.Value.Date < DateTime.Now.Date ? "text-red-600" : "")">
+                                        @t.DueAt.Value.ToString("MMM dd, yyyy")
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-gray-400">No due date</span>
+                                }
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                @if (t.Account != null)
+                                {
+                                    <a href="/CRM/Accounts/Details?id=@t.Account.Id" class="text-emerald-600 hover:text-emerald-700">
+                                        @t.Account.Name
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span class="text-gray-400">No account</span>
+                                }
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <a class="inline-flex items-center px-3 py-1 border border-emerald-300 text-emerald-700 bg-emerald-50 rounded-md hover:bg-emerald-100 text-xs" href="/CRM/Tasks/Details?id=@t.Id">
+                                    <i class="fa-solid fa-eye mr-1"></i>View
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="px-6 py-8 text-center">
+                            <div class="text-gray-400">
+                                <i class="fa-solid fa-inbox text-3xl mb-2"></i>
+                                <p>No tasks found</p>
+                                <p class="text-sm">Create your first task to get started</p>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
+
+@{
+    string GetStatusBadgeClass(string status)
+    {
+        return status switch
+        {
+            "Open" => "bg-yellow-100 text-yellow-800",
+            "InProgress" => "bg-blue-100 text-blue-800", 
+            "Completed" => "bg-green-100 text-green-800",
+            _ => "bg-gray-100 text-gray-800"
+        };
+    }
+
+    string GetPriorityBadgeClass(int priority)
+    {
+        return priority switch
+        {
+            1 => "bg-red-100 text-red-800",      // Priority 1 = Critical (Red)
+            2 => "bg-orange-100 text-orange-800", // Priority 2 = High (Orange)  
+            3 => "bg-yellow-100 text-yellow-800", // Priority 3 = Normal (Yellow)
+            4 => "bg-blue-100 text-blue-800",     // Priority 4 = Low (Blue)
+            5 => "bg-gray-100 text-gray-800",     // Priority 5 = Lowest (Gray)
+            _ => "bg-gray-100 text-gray-800"
+        };
+    }
+}

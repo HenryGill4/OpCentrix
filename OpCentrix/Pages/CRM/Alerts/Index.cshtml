@@ -1,0 +1,364 @@
+@page "/CRM/Alerts"
+@model OpCentrix.Pages.CRM.Alerts.IndexModel
+@{
+    ViewData["Title"] = "CRM Alerts & Notifications";
+    Layout = "~/Pages/Admin/Shared/_AdminLayout.cshtml";
+}
+
+<div class="p-6 space-y-6">
+    <!-- Header Section -->
+    <div class="bg-white border rounded-lg p-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <div class="w-12 h-12 bg-gradient-to-r from-red-500 to-pink-600 rounded-lg flex items-center justify-center mr-4">
+                    <i class="fa-solid fa-bell text-white text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">CRM Alerts & Notifications</h1>
+                    <p class="text-gray-600 mt-1">Monitor task alerts, reminders, and notifications</p>
+                </div>
+            </div>
+            <div class="flex space-x-3">
+                <form method="post" asp-page-handler="ProcessReminders" class="inline">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="fa-solid fa-sync mr-2"></i>Process Reminders
+                    </button>
+                </form>
+                <a class="btn btn-outline-secondary" href="/CRM/Tasks/Create">
+                    <i class="fa-solid fa-plus mr-2"></i>New Task
+                </a>
+                <a class="btn btn-primary" href="/CRM/Tasks">
+                    <i class="fa-solid fa-tasks mr-2"></i>Back to Tasks
+                </a>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.StatusMessage))
+    {
+        <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div class="flex items-center">
+                <i class="fa-solid fa-check-circle text-green-600 mr-2"></i>
+                <span class="text-green-800">@Model.StatusMessage</span>
+            </div>
+        </div>
+    }
+
+    <!-- Alert Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
+                    <i class="fa-solid fa-bell text-blue-600"></i>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Total Alerts</p>
+                    <p class="text-2xl font-bold text-gray-900">@Model.TotalActiveAlerts</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-4">
+                    <i class="fa-solid fa-exclamation-triangle text-red-600"></i>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Critical Alerts</p>
+                    <p class="text-2xl font-bold text-red-600">@Model.CriticalAlerts</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center mr-4">
+                    <i class="fa-solid fa-exclamation-circle text-yellow-600"></i>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Warning Alerts</p>
+                    <p class="text-2xl font-bold text-yellow-600">@Model.WarningAlerts</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-4">
+                    <i class="fa-solid fa-clock text-purple-600"></i>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Overdue Tasks</p>
+                    <p class="text-2xl font-bold text-purple-600">@Model.OverdueTasks.Count</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Active Alerts -->
+        <div class="bg-white border rounded-lg">
+            <div class="border-b px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-gray-900">
+                        <i class="fa-solid fa-bell mr-2"></i>Active Alerts
+                    </h3>
+                    @if (Model.Alerts.Any())
+                    {
+                        <form method="post" asp-page-handler="DismissAll" class="inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Are you sure you want to dismiss all alerts?')">
+                                <i class="fa-solid fa-times mr-1"></i>Dismiss All
+                            </button>
+                        </form>
+                    }
+                </div>
+            </div>
+            
+            <div class="max-h-96 overflow-y-auto">
+                @if (Model.Alerts.Any())
+                {
+                    @foreach (var alert in Model.Alerts.Take(20))
+                    {
+                        <div class="border-b px-6 py-4 hover:bg-gray-50 @GetAlertBorderClass(alert.Severity)">
+                            <div class="flex items-start justify-between">
+                                <div class="flex items-start space-x-3 flex-1">
+                                    <div class="@GetAlertIconClass(alert.Severity)">
+                                        <i class="@GetAlertIcon(alert.Severity)"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h4 class="text-sm font-medium text-gray-900">@alert.Title</h4>
+                                        <p class="text-sm text-gray-600 mt-1">@alert.Message</p>
+                                        <p class="text-xs text-gray-500 mt-2">@alert.CreatedDate.ToString("MMM d, yyyy 'at' h:mm tt")</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start space-x-2">
+                                    @if (IsTaskRelatedAlert(alert))
+                                    {
+                                        <a href="/CRM/Tasks/Details?id=@ExtractTaskIdFromAlert(alert)" 
+                                           class="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 hover:text-blue-700 transition-colors"
+                                           title="View related task">
+                                            <i class="fa-solid fa-external-link-alt mr-1"></i>View Task
+                                        </a>
+                                    }
+                                    <form method="post" asp-page-handler="Dismiss" class="inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="DismissAlertId" value="@alert.Id" />
+                                        <button type="submit" 
+                                                class="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                                                title="Dismiss alert">
+                                            <i class="fa-solid fa-times mr-1"></i>Dismiss
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="px-6 py-8 text-center">
+                        <i class="fa-solid fa-bell-slash text-gray-300 text-3xl mb-4"></i>
+                        <h4 class="text-lg font-medium text-gray-900 mb-2">No Active Alerts</h4>
+                        <p class="text-gray-600">All caught up! No alerts to display.</p>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Task Summaries -->
+        <div class="space-y-6">
+            <!-- Overdue Tasks -->
+            <div class="bg-white border rounded-lg">
+                <div class="border-b px-6 py-4">
+                    <h3 class="text-lg font-semibold text-gray-900 text-red-600">
+                        <i class="fa-solid fa-exclamation-triangle mr-2"></i>Overdue Tasks
+                    </h3>
+                </div>
+                
+                <div class="max-h-48 overflow-y-auto">
+                    @if (Model.OverdueTasks.Any())
+                    {
+                        @foreach (var task in Model.OverdueTasks)
+                        {
+                            <div class="border-b px-6 py-3 hover:bg-red-50">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex-1">
+                                        <h4 class="text-sm font-medium text-gray-900">@task.Title</h4>
+                                        <p class="text-xs text-red-600">Due: @task.DueAt?.ToString("MMM d, yyyy 'at' h:mm tt")</p>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
+                                            Priority @task.Priority
+                                        </span>
+                                        <div class="flex space-x-1">
+                                            <a href="/CRM/Tasks/Details?id=@task.Id" 
+                                               class="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 hover:text-blue-700 transition-colors"
+                                               title="View task details">
+                                                <i class="fa-solid fa-eye mr-1"></i>View
+                                            </a>
+                                            <a href="/CRM/Tasks/Details?id=@task.Id" 
+                                               class="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                                               title="Edit task">
+                                                <i class="fa-solid fa-edit mr-1"></i>Edit
+                                            </a>
+                                            <form method="post" asp-page-handler="CompleteTask" class="inline">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="CompleteTaskId" value="@task.Id" />
+                                                <button type="submit" 
+                                                        class="inline-flex items-center px-2 py-1 text-xs font-medium text-green-600 bg-green-50 border border-green-200 rounded hover:bg-green-100 hover:text-green-700 transition-colors"
+                                                        title="Mark as completed"
+                                                        onclick="return confirm('Mark this task as completed?')">
+                                                    <i class="fa-solid fa-check mr-1"></i>Complete
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="px-6 py-4 text-center text-gray-600">
+                            <i class="fa-solid fa-check-circle text-green-500 mb-2"></i>
+                            <p class="text-sm">No overdue tasks!</p>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Upcoming Tasks -->
+            <div class="bg-white border rounded-lg">
+                <div class="border-b px-6 py-4">
+                    <h3 class="text-lg font-semibold text-gray-900 text-blue-600">
+                        <i class="fa-solid fa-clock mr-2"></i>Due Soon (Next 24 Hours)
+                    </h3>
+                </div>
+                
+                <div class="max-h-48 overflow-y-auto">
+                    @if (Model.UpcomingTasks.Any())
+                    {
+                        @foreach (var task in Model.UpcomingTasks)
+                        {
+                            <div class="border-b px-6 py-3 hover:bg-blue-50">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex-1">
+                                        <h4 class="text-sm font-medium text-gray-900">@task.Title</h4>
+                                        <p class="text-xs text-blue-600">Due: @task.DueAt?.ToString("MMM d, yyyy 'at' h:mm tt")</p>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                            Priority @task.Priority
+                                        </span>
+                                        <div class="flex space-x-1">
+                                            <a href="/CRM/Tasks/Details?id=@task.Id" 
+                                               class="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 hover:text-blue-700 transition-colors"
+                                               title="View task details">
+                                                <i class="fa-solid fa-eye mr-1"></i>View
+                                            </a>
+                                            <a href="/CRM/Tasks/Details?id=@task.Id" 
+                                               class="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                                               title="Edit task">
+                                                <i class="fa-solid fa-edit mr-1"></i>Edit
+                                            </a>
+                                            <form method="post" asp-page-handler="CompleteTask" class="inline">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="CompleteTaskId" value="@task.Id" />
+                                                <button type="submit" 
+                                                        class="inline-flex items-center px-2 py-1 text-xs font-medium text-green-600 bg-green-50 border border-green-200 rounded hover:bg-green-100 hover:text-green-700 transition-colors"
+                                                        title="Mark as completed"
+                                                        onclick="return confirm('Mark this task as completed?')">
+                                                    <i class="fa-solid fa-check mr-1"></i>Complete
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="px-6 py-4 text-center text-gray-600">
+                            <i class="fa-solid fa-calendar-check text-green-500 mb-2"></i>
+                            <p class="text-sm">No tasks due soon!</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    string GetAlertBorderClass(string severity)
+    {
+        return severity switch
+        {
+            "Critical" => "border-l-4 border-l-red-500",
+            "Warning" => "border-l-4 border-l-yellow-500",
+            _ => "border-l-4 border-l-blue-500"
+        };
+    }
+
+    string GetAlertIconClass(string severity)
+    {
+        return severity switch
+        {
+            "Critical" => "w-8 h-8 bg-red-100 rounded-full flex items-center justify-center text-red-600",
+            "Warning" => "w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600",
+            _ => "w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600"
+        };
+    }
+
+    string GetAlertIcon(string severity)
+    {
+        return severity switch
+        {
+            "Critical" => "fa-solid fa-exclamation-triangle",
+            "Warning" => "fa-solid fa-exclamation-circle",
+            _ => "fa-solid fa-info-circle"
+        };
+    }
+
+    bool IsTaskRelatedAlert(OpCentrix.Models.CRM.CrmAlert alert)
+    {
+        if (alert?.Title == null || alert?.Message == null) return false;
+        
+        // Check if the alert is related to a task (contains task-related keywords)
+        var taskKeywords = new[] { "Task Reminder", "Task Assignment", "Task Status", "Task Overdue", "New Task", "Task:" };
+        return taskKeywords.Any(keyword => alert.Title.Contains(keyword, StringComparison.OrdinalIgnoreCase) || 
+                                          alert.Message.Contains(keyword, StringComparison.OrdinalIgnoreCase));
+    }
+
+    int? ExtractTaskIdFromAlert(OpCentrix.Models.CRM.CrmAlert alert)
+    {
+        if (alert?.Message == null) return null;
+        
+        // Try to extract task ID from the alert message
+        // This assumes the notification service includes task IDs in the message
+        // You might need to adjust this based on how your alerts are structured
+        
+        // Look for patterns like "Task ID: 123" or "task 123" or similar
+        var patterns = new[]
+        {
+            @"task\s+(\d+)",
+            @"ID:\s*(\d+)",
+            @"#(\d+)",
+        };
+        
+        foreach (var pattern in patterns)
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(alert.Message, pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (match.Success && int.TryParse(match.Groups[1].Value, out var taskId))
+            {
+                return taskId;
+            }
+        }
+        
+        return null;
+    }
+}

@@ -1,0 +1,53 @@
+            // Configure CrmTask entity
+            modelBuilder.Entity<CrmTask>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).ValueGeneratedOnAdd();
+
+                entity.Property(e => e.Title).HasMaxLength(200);
+                entity.Property(e => e.Description).HasMaxLength(4000);
+                entity.Property(e => e.Status).HasMaxLength(20);
+                entity.Property(e => e.ReminderType).HasMaxLength(20);
+
+                entity.Property(e => e.HasReminder).HasDefaultValue(false);
+                entity.Property(e => e.ReminderMinutesBefore).HasDefaultValue(15);
+                entity.Property(e => e.IsReminderSent).HasDefaultValue(false);
+                entity.Property(e => e.NotifyOnStatusChange).HasDefaultValue(true);
+                entity.Property(e => e.NotifyAssignee).HasDefaultValue(true);
+                entity.Property(e => e.NotifyCreator).HasDefaultValue(true);
+
+                entity.HasOne(e => e.Account)
+                      .WithMany(a => a.Tasks)
+                      .HasForeignKey(e => e.AccountId)
+                      .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.Contact)
+                      .WithMany(c => c.Tasks)
+                      .HasForeignKey(e => e.ContactId)
+                      .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasIndex(e => e.Status);
+                entity.HasIndex(e => e.DueAt);
+                entity.HasIndex(e => e.AssignedToUserId);
+                entity.HasIndex(e => e.AccountId);
+                entity.HasIndex(e => e.HasReminder);
+                entity.HasIndex(e => e.ReminderDateTime);
+                entity.HasIndex(e => e.IsReminderSent);
+            });
+
+            // Configure CrmAlert entity
+            modelBuilder.Entity<CrmAlert>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).ValueGeneratedOnAdd();
+
+                entity.Property(e => e.Title).HasMaxLength(200);
+                entity.Property(e => e.Message).HasMaxLength(2000);
+                entity.Property(e => e.Severity).HasMaxLength(30);
+
+                entity.Property(e => e.IsDismissed).HasDefaultValue(false);
+
+                entity.HasIndex(e => e.IsDismissed);
+                entity.HasIndex(e => e.Severity);
+                entity.HasIndex(e => e.CreatedDate);
+            });

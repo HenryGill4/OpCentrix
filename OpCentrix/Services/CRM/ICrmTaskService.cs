@@ -13,6 +13,9 @@ public interface ICrmTaskService
         int? assignedToUserId,
         int? accountId,
         int? contactId,
+        bool hasReminder = false,
+        int reminderMinutesBefore = 15,
+        string reminderType = "Email",
         CancellationToken ct = default);
 
     Task UpdateAsync(
@@ -25,6 +28,12 @@ public interface ICrmTaskService
         int? assignedToUserId,
         int? accountId,
         int? contactId,
+        bool hasReminder = false,
+        int reminderMinutesBefore = 15,
+        string reminderType = "Email",
+        bool notifyOnStatusChange = true,
+        bool notifyAssignee = true,
+        bool notifyCreator = true,
         CancellationToken ct = default);
 
     Task AssignAsync(int taskId, int? assignedToUserId, CancellationToken ct = default);
@@ -36,4 +45,7 @@ public interface ICrmTaskService
         int? assignedToUserId,
         int? accountId,
         CancellationToken ct = default);
+        
+    Task<List<CrmTask>> GetTasksDueForReminderAsync(CancellationToken ct = default);
+    Task SetReminderAsync(int taskId, DateTime reminderDateTime, string reminderType = "Email", CancellationToken ct = default);
 }

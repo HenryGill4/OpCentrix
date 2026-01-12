@@ -2,6 +2,7 @@
 @model OpCentrix.Pages.CRM.Contacts.CreateModel
 @{
     ViewData["Title"] = "Create CRM Contact";
+    Layout = "~/Pages/Admin/Shared/_AdminLayout.cshtml";
 }
 
 <div class="p-6 max-w-2xl space-y-4">
@@ -10,6 +11,7 @@
     <div class="text-sm text-gray-600">Account: <span class="font-semibold">@Model.AccountName</span></div>
 
     <form method="post" class="space-y-3">
+        @Html.AntiForgeryToken()
         <input type="hidden" asp-for="Input.AccountId" />
 
         <div>
