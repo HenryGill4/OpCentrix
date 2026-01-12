@@ -30,6 +30,7 @@
 
   <ItemGroup>
     <Folder Include="MigrationsBackup_20250801_171841\" />
+    <Folder Include="Pages\CRM\Alerts\" />
     <Folder Include="Pages\Maintenance\" />
   </ItemGroup>
 

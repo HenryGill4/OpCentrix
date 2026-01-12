@@ -1,0 +1,65 @@
+@page
+@model OpCentrix.Pages.CRM.Tasks.CreateModel
+@{
+    ViewData["Title"] = "Create CRM Task";
+}
+
+<div class="p-6 max-w-3xl space-y-4">
+    <h1 class="text-2xl font-bold">Create Task</h1>
+
+    <form method="post" class="space-y-3">
+        <div>
+            <label class="form-label">Title</label>
+            <input class="form-control" asp-for="Input.Title" />
+            <span class="text-danger" asp-validation-for="Input.Title"></span>
+        </div>
+
+        <div>
+            <label class="form-label">Description</label>
+            <textarea class="form-control" asp-for="Input.Description" rows="4"></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+                <label class="form-label">Priority (1-5)</label>
+                <input class="form-control" asp-for="Input.Priority" type="number" min="1" max="5" />
+            </div>
+            <div>
+                <label class="form-label">Due Date</label>
+                <input class="form-control" asp-for="Input.DueAt" type="date" />
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+                <label class="form-label">Account (optional)</label>
+                <select class="form-select" asp-for="Input.AccountId">
+                    <option value="">(none)</option>
+                    @foreach (var a in Model.Accounts)
+                    {
+                        <option value="@a.Id">@a.Name</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="form-label">Assign To (optional)</label>
+                <select class="form-select" asp-for="Input.AssignedToUserId">
+                    <option value="">(unassigned)</option>
+                    @foreach (var u in Model.Users)
+                    {
+                        <option value="@u.Id">@u.FullName (@u.Role)</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="flex gap-2">
+            <button class="btn btn-primary" type="submit">Create</button>
+            <a class="btn btn-light" href="/CRM/Tasks">Cancel</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

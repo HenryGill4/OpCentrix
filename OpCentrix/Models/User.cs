@@ -68,6 +68,7 @@ namespace OpCentrix.Models
     {
         public const string Admin = "Admin";
         public const string Manager = "Manager";
+        public const string Supervisor = "Supervisor";
         public const string Scheduler = "Scheduler";
         public const string Operator = "Operator";
         public const string CoatingSpecialist = "CoatingSpecialist";
@@ -81,7 +82,7 @@ namespace OpCentrix.Models
         
         public static readonly string[] AllRoles = 
         {
-            Admin, Manager, Scheduler, Operator, CoatingSpecialist,
+            Admin, Manager, Supervisor, Scheduler, Operator, CoatingSpecialist,
             ShippingSpecialist, EDMSpecialist, MachiningSpecialist,
             QCSpecialist, MediaSpecialist, PrintingSpecialist, Analyst
         };
@@ -90,6 +91,7 @@ namespace OpCentrix.Models
         {
             Admin => "System Administrator",
             Manager => "Production Manager",
+            Supervisor => "Supervisor",
             Scheduler => "Production Scheduler",
             Operator => "Machine Operator",
             CoatingSpecialist => "Coating Specialist",

@@ -1,0 +1,83 @@
+@page
+@model OpCentrix.Pages.CRM.Accounts.DetailsModel
+@{
+    ViewData["Title"] = "CRM Account";
+}
+
+<div class="p-6 space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold">@Model.Account?.Name</h1>
+            <div class="text-sm text-gray-600">Status: <span class="font-semibold">@Model.Account?.Status</span></div>
+        </div>
+        <div class="flex gap-2">
+            <a class="btn btn-light" href="/CRM/Accounts">Back</a>
+            <a class="btn btn-primary" href="/CRM/Contacts/Create?accountId=@Model.Account?.Id">Add Contact</a>
+            <a class="btn btn-primary" href="/CRM/Tasks/Create?accountId=@Model.Account?.Id">New Task</a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Account?.Notes))
+    {
+        <div class="bg-white border rounded-lg p-4">
+            <div class="font-semibold mb-2">Notes</div>
+            <div class="text-sm whitespace-pre-wrap">@Model.Account!.Notes</div>
+        </div>
+    }
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white border rounded-lg">
+            <div class="p-4 border-b font-semibold">Contacts</div>
+            <div class="p-4">
+                @if (Model.Contacts.Any())
+                {
+                    <ul class="list-disc ms-4">
+                        @foreach (var c in Model.Contacts)
+                        {
+                            <li>
+                                <span class="font-semibold">@c.Name</span>
+                                @if (!string.IsNullOrWhiteSpace(c.Title))
+                                {
+                                    <span class="text-gray-600">(@c.Title)</span>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(c.Email))
+                                {
+                                    <div class="text-sm text-gray-600">@c.Email</div>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <div class="text-sm text-gray-500">No contacts yet.</div>
+                }
+            </div>
+        </div>
+
+        <div class="bg-white border rounded-lg">
+            <div class="p-4 border-b font-semibold">Tasks</div>
+            <div class="p-4">
+                @if (Model.Tasks.Any())
+                {
+                    <div class="space-y-2">
+                        @foreach (var t in Model.Tasks.OrderByDescending(t => t.Id).Take(20))
+                        {
+                            <div class="flex items-center justify-between border rounded p-3">
+                                <div>
+                                    <div class="font-semibold">@t.Title</div>
+                                    <div class="text-xs text-gray-600">Status: @t.Status | Priority: @t.Priority</div>
+                                </div>
+                                <a class="btn btn-sm btn-outline-primary" href="/CRM/Tasks/Details?id=@t.Id">Open</a>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="text-sm text-gray-500">No tasks yet.</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

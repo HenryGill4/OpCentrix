@@ -1,0 +1,91 @@
+@page
+@model OpCentrix.Pages.CRM.Tasks.DetailsModel
+@{
+    ViewData["Title"] = "CRM Task";
+}
+
+<div class="p-6 max-w-3xl space-y-4">
+    <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold">Task: @Model.TaskEntity?.Title</h1>
+        <div class="flex gap-2">
+            <a class="btn btn-light" href="/CRM/Tasks">Back</a>
+            @if (Model.TaskEntity?.Status != "Completed")
+            {
+                <form method="post" asp-page-handler="Complete">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <button class="btn btn-success" type="submit">Mark Complete</button>
+                </form>
+            }
+        </div>
+    </div>
+
+    <form method="post" class="space-y-3">
+        <input type="hidden" asp-for="Id" />
+
+        <div>
+            <label class="form-label">Title</label>
+            <input class="form-control" asp-for="Input.Title" />
+            <span class="text-danger" asp-validation-for="Input.Title"></span>
+        </div>
+
+        <div>
+            <label class="form-label">Description</label>
+            <textarea class="form-control" asp-for="Input.Description" rows="4"></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+                <label class="form-label">Status</label>
+                <select class="form-select" asp-for="Input.Status">
+                    <option value="Open">Open</option>
+                    <option value="InProgress">In Progress</option>
+                    <option value="Completed">Completed</option>
+                </select>
+            </div>
+            <div>
+                <label class="form-label">Priority</label>
+                <input class="form-control" asp-for="Input.Priority" type="number" min="1" max="5" />
+            </div>
+            <div>
+                <label class="form-label">Due Date</label>
+                <input class="form-control" asp-for="Input.DueAt" type="date" />
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+                <label class="form-label">Account</label>
+                <select class="form-select" asp-for="Input.AccountId">
+                    <option value="">(none)</option>
+                    @foreach (var a in Model.Accounts)
+                    {
+                        <option value="@a.Id">@a.Name</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="form-label">Assignee</label>
+                <select class="form-select" asp-for="Input.AssignedToUserId">
+                    <option value="">(unassigned)</option>
+                    @foreach (var u in Model.Users)
+                    {
+                        <option value="@u.Id">@u.FullName (@u.Role)</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="flex gap-2">
+            <button class="btn btn-primary" type="submit">Save</button>
+        </div>
+
+        @if (Model.TaskEntity?.CompletedAt != null)
+        {
+            <div class="text-sm text-gray-600">Completed: @Model.TaskEntity.CompletedAt.Value.ToString("u")</div>
+        }
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

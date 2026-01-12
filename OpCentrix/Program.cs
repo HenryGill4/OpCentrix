@@ -73,6 +73,9 @@ builder.Services.AddRazorPages(options =>
     options.Conventions.AuthorizeFolder("/Admin", "AdminOnly");
     options.Conventions.AuthorizeFolder("/Scheduler", "SchedulerPolicy");
 
+    // CRM
+    options.Conventions.AuthorizeFolder("/CRM", "CrmAccess");
+
     // Operations Dashboard Authorization
     options.Conventions.AuthorizeFolder("/Operations", "OperatorAccess");
 
@@ -163,7 +166,15 @@ builder.Services.AddAuthorization(options =>
         policy.RequireRole("Admin", "Manager", "ComplianceSpecialist"));
 
     options.AddPolicy("MaintenanceAdmin", policy => policy.RequireRole("Admin","Manager"));
+
+    options.AddPolicy("CrmAccess", policy =>
+        policy.RequireRole("Admin", "Manager", "Supervisor"));
 });
+
+// CRM services
+builder.Services.AddScoped<OpCentrix.Services.CRM.ICrmAccountService, OpCentrix.Services.CRM.CrmAccountService>();
+builder.Services.AddScoped<OpCentrix.Services.CRM.ICrmContactService, OpCentrix.Services.CRM.CrmContactService>();
+builder.Services.AddScoped<OpCentrix.Services.CRM.ICrmTaskService, OpCentrix.Services.CRM.CrmTaskService>();
 
 // Register application services
 builder.Services.AddScoped<ISchedulerService, SchedulerService>();

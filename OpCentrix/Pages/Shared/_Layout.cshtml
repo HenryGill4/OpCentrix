@@ -79,6 +79,19 @@
                 </svg>
                 <span id="timeout-message">Your session will expire in <span id="timeout-countdown">5</span> minutes</span>
             </div>
+
+                    @* CRM (Management) *@
+                    @if (userRole is "Admin" or "Manager" or "Supervisor")
+                    {
+                        <div class="relative group">
+                            <a class="nav-link flex items-center px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-emerald-50" href="/CRM/Tasks">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18" />
+                                </svg>
+                                CRM
+                            </a>
+                        </div>
+                    }
             <button onclick="extendSession()" class="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200">
                 Extend Session
             </button>

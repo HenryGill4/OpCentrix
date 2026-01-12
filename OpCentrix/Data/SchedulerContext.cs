@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OpCentrix.Models;
+using OpCentrix.Models.CRM;
 using OpCentrix.Models.JobStaging;
 using OpCentrix.Models.Maintenance;
 
@@ -123,6 +124,11 @@ namespace OpCentrix.Data
         public DbSet<OpCentrix.Models.MaintenanceV2.MaintenanceCounterBaseline> MaintenanceCounterBaselines { get; set; }
         public DbSet<OpCentrix.Models.MaintenanceV2.OperationalTask> OperationalTasks { get; set; }
 
+        // CRM module entities
+        public DbSet<CrmAccount> CrmAccounts { get; set; }
+        public DbSet<CrmContact> CrmContacts { get; set; }
+        public DbSet<CrmTask> CrmTasks { get; set; }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             if (!optionsBuilder.IsConfigured)
@@ -156,6 +162,62 @@ namespace OpCentrix.Data
 
             // NEW: Configure Production Build System entities
             ConfigureProductionBuildEntities(modelBuilder);
+
+            // CRM module entities
+            modelBuilder.Entity<CrmAccount>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Status).HasMaxLength(50).HasDefaultValue("Active");
+                entity.Property(e => e.Notes).HasMaxLength(2000);
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
+                entity.HasIndex(e => e.Name);
+            });
+
+            modelBuilder.Entity<CrmContact>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Email).HasMaxLength(200);
+                entity.Property(e => e.Phone).HasMaxLength(50);
+                entity.Property(e => e.Title).HasMaxLength(100);
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
+
+                entity.HasOne(e => e.Account)
+                      .WithMany(a => a.Contacts)
+                      .HasForeignKey(e => e.AccountId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => e.AccountId);
+                entity.HasIndex(e => e.Name);
+            });
+
+            modelBuilder.Entity<CrmTask>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Description).HasMaxLength(4000);
+                entity.Property(e => e.Status).HasMaxLength(20).HasDefaultValue("Open");
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
+
+                entity.HasOne(e => e.Account)
+                      .WithMany(a => a.Tasks)
+                      .HasForeignKey(e => e.AccountId)
+                      .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.Contact)
+                      .WithMany(c => c.Tasks)
+                      .HasForeignKey(e => e.ContactId)
+                      .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasIndex(e => e.Status);
+                entity.HasIndex(e => e.DueAt);
+                entity.HasIndex(e => e.AssignedToUserId);
+                entity.HasIndex(e => e.AccountId);
+            });
 
             // Maintenance module entities
             modelBuilder.Entity<MaintenanceRule>(entity =>

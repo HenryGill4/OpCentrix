@@ -1,0 +1,70 @@
+@page
+@model OpCentrix.Pages.CRM.Tasks.IndexModel
+@{
+    ViewData["Title"] = "CRM Tasks";
+}
+
+<div class="p-6 space-y-4">
+    <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold">CRM Tasks</h1>
+        <a class="btn btn-primary" href="/CRM/Tasks/Create">New Task</a>
+    </div>
+
+    <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-2 items-end">
+        <div>
+            <label class="form-label">Status</label>
+            <select class="form-select" name="status">
+                <option value="" selected="@(string.IsNullOrEmpty(Model.StatusFilter) ? "selected" : null)">All</option>
+                <option value="Open" selected="@(Model.StatusFilter=="Open" ? "selected" : null)">Open</option>
+                <option value="InProgress" selected="@(Model.StatusFilter=="InProgress" ? "selected" : null)">In Progress</option>
+                <option value="Completed" selected="@(Model.StatusFilter=="Completed" ? "selected" : null)">Completed</option>
+            </select>
+        </div>
+        <div>
+            <label class="form-label">Assignee</label>
+            <select class="form-select" name="assignee">
+                <option value="" selected="@(Model.AssigneeFilter == null ? "selected" : null)">All</option>
+                @foreach (var u in Model.Assignees)
+                {
+                    <option value="@u.Id" selected="@(Model.AssigneeFilter==u.Id ? "selected" : null)">@u.FullName (@u.Role)</option>
+                }
+            </select>
+        </div>
+        <div>
+            <button class="btn btn-secondary w-full" type="submit">Apply</button>
+        </div>
+        <div>
+            <a class="btn btn-light w-full" href="/CRM/Tasks">Clear</a>
+        </div>
+    </form>
+
+    <div class="bg-white border rounded-lg overflow-hidden">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Status</th>
+                    <th>Priority</th>
+                    <th>Due</th>
+                    <th>Account</th>
+                    <th style="width:120px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var t in Model.Tasks)
+            {
+                <tr>
+                    <td>@t.Title</td>
+                    <td>@t.Status</td>
+                    <td>@t.Priority</td>
+                    <td>@(t.DueAt.HasValue ? t.DueAt.Value.ToString("yyyy-MM-dd") : "")</td>
+                    <td>@t.Account?.Name</td>
+                    <td class="text-end">
+                        <a class="btn btn-sm btn-outline-primary" href="/CRM/Tasks/Details?id=@t.Id">Open</a>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>

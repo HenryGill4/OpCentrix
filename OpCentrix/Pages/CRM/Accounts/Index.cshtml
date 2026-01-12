@@ -1,0 +1,42 @@
+@page
+@model OpCentrix.Pages.CRM.Accounts.IndexModel
+@{
+    ViewData["Title"] = "CRM Accounts";
+}
+
+<div class="p-6 space-y-4">
+    <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold">CRM Accounts</h1>
+        <a class="btn btn-primary" href="/CRM/Accounts/Create">New Account</a>
+    </div>
+
+    <form method="get" class="flex gap-2">
+        <input class="form-control" type="text" name="q" value="@Model.Query" placeholder="Search accounts..." />
+        <button class="btn btn-secondary" type="submit">Search</button>
+        <a class="btn btn-light" href="/CRM/Accounts">Clear</a>
+    </form>
+
+    <div class="bg-white border rounded-lg overflow-hidden">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th style="width:160px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var a in Model.Accounts)
+            {
+                <tr>
+                    <td>@a.Name</td>
+                    <td>@a.Status</td>
+                    <td class="text-end">
+                        <a class="btn btn-sm btn-outline-primary" href="/CRM/Accounts/Details?id=@a.Id">Open</a>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>

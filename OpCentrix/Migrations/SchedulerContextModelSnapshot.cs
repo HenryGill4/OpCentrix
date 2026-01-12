@@ -16,7 +16,7395 @@ namespace OpCentrix.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.11");
-            // NOTE: Snapshot intentionally trimmed; regenerate with `dotnet ef migrations add RebaselineSchema` if needed.
+
+            modelBuilder.Entity("OpCentrix.Models.AdminAlert", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AlertName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BusinessDays")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<TimeSpan>("BusinessHoursEnd")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("BusinessHoursOnly")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<TimeSpan>("BusinessHoursStart")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CooldownMinutes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EmailRecipients")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EmailSubject")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EmailTemplate")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EscalationRules")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("LastDailyReset")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastTriggered")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("MaxAlertsPerDay")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("SendBrowserNotification")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("SendSms")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SeverityLevel")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SmsRecipients")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SmsTemplate")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TriggerConditions")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TriggerCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TriggerType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TriggersToday")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AdminAlerts", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.ArchivedJob", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("ActualEnd")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("ActualPowderUsageKg")
+                        .HasColumnType("REAL");
+
+                    b.Property<DateTime?>("ActualStart")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ArchiveReason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ArchivedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ArchivedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("ArgonCostPerHour")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime?>("CustomerDueDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CustomerOrderNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DefectQuantity")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double>("DensityPercentage")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("EstimatedHours")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("EstimatedPowderUsageKg")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("HoldReason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("LaborCostPerHour")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<double>("LaserPowerWatts")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("LayerThicknessMicrons")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("MachineId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("MachineOperatingCostPerHour")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("MaterialCostPerKg")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Operator")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OriginalCreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("OriginalCreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("OriginalJobId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("OriginalLastModifiedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("OriginalLastModifiedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PartDescription")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PartId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PartNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PowderLotNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ProcessParameters")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ProducedQuantity")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("QualityCheckpoints")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("QualityInspector")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ReworkQuantity")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double>("ScanSpeedMmPerSec")
+                        .HasColumnType("REAL");
+
+                    b.Property<DateTime>("ScheduledEnd")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ScheduledStart")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SlsMaterial")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Supervisor")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("SurfaceRoughnessRa")
+                        .HasColumnType("REAL");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ArchivedJobs", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.AssemblyComponent", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ComponentDescription")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ComponentPartNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ComponentType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("InspectionNotes")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool?>("InspectionPassed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("InspectionRequired")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("LeadTimeDays")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("OrderDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PrototypeJobId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("QuantityRequired")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("QuantityUsed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("ReceivedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Supplier")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SupplierPartNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("TotalCost")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal?>("UnitCost")
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<DateTime?>("UsedDate")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PrototypeJobId");
+
+                    b.ToTable("AssemblyComponents", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.BugReport", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ActualBehavior")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("AdditionalNotes")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<DateTime?>("AssignedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AssignedTo")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("AttachedFiles")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("BrowserName")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("BrowserVersion")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("BugId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("General");
+
+                    b.Property<string>("ConsoleErrors")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<decimal?>("CpuUsage")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<string>("CustomMetadata")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("{}");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DuplicateOf")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("ErrorMessage")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("ErrorType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("ExpectedBehavior")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("FormData")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("IpAddress")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsPublic")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("IsReproduced")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<string>("LastViewedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<DateTime?>("LastViewedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("MemoryUsage")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NetworkRequests")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<bool>("NotifyReporter")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("OperatingSystem")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("OperationId")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("PageAction")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("PageArea")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("PageController")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<decimal?>("PageLoadTime")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PageName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PageUrl")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PerformanceImpact")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("None");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Medium");
+
+                    b.Property<string>("RelatedBugIds")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("ReportedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ReportedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<string>("ReproducedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<DateTime?>("ReproducedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ResolutionNotes")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("ResolutionType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("ResolvedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<DateTime?>("ResolvedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ScreenResolution")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Medium");
+
+                    b.Property<string>("StackTrace")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("New");
+
+                    b.Property<string>("StepsToReproduce")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("Tags")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserAgent")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("UserEmail")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("UserRole")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<int>("ViewCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0);
+
+                    b.Property<int>("VoteCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0);
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignedTo");
+
+                    b.HasIndex("BugId")
+                        .IsUnique();
+
+                    b.HasIndex("Category");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("IsPublic");
+
+                    b.HasIndex("OperationId");
+
+                    b.HasIndex("PageArea");
+
+                    b.HasIndex("Priority");
+
+                    b.HasIndex("ReportedBy");
+
+                    b.HasIndex("ReportedDate");
+
+                    b.HasIndex("ResolvedDate");
+
+                    b.HasIndex("Severity");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("PageArea", "Status");
+
+                    b.HasIndex("ReportedDate", "Status");
+
+                    b.HasIndex("Severity", "Priority");
+
+                    b.ToTable("BugReports", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.BuildCohort", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("BuildJobId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("BuildNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("CompletedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Material")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PartCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BuildJobId");
+
+                    b.ToTable("BuildCohorts", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.BuildJob", b =>
+                {
+                    b.Property<int>("BuildId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("ActualEndTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ActualStartTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("AssociatedScheduledJobId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("BuildFileHash")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("BuildHeight")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("DefectCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<float?>("GasUsed_L")
+                        .HasColumnType("REAL");
+
+                    b.Property<bool>("IsLearningBuild")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal?>("LaserOnTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LaserRunTime")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("LayerCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LessonsLearned")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MachinePerformanceNotes")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("OperatorActualHours")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OperatorBuildAssessment")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("OperatorEstimatedHours")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("PartId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PartOrientations")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PostProcessingNeeded")
+                        .HasColumnType("TEXT");
+
+                    b.Property<float?>("PowderUsed_L")
+                        .HasColumnType("REAL");
+
+                    b.Property<decimal?>("PowerConsumption")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PrinterName")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReasonForEnd")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ScheduledEndTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ScheduledStartTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SetupNotes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SupportComplexity")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TimeFactors")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TotalPartsInBuild")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("BuildId");
+
+                    b.HasIndex("PartId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("BuildJobs", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.BuildJobPart", b =>
+                {
+                    b.Property<int>("PartEntryId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BuildId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("BuildJobBuildId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("EstimatedHours")
+                        .HasColumnType("REAL");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Material")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PartNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("PartEntryId");
+
+                    b.HasIndex("BuildJobBuildId");
+
+                    b.ToTable("BuildJobParts", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.BuildTimeLearningData", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("ActualHours")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BuildFileHash")
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("BuildHeight")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("BuildJobId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("DefectCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("LayerCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("MachineId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("OperatorEstimatedHours")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PartOrientations")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("QualityScore")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("RecordedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SupportComplexity")
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TimeFactors")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TotalParts")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("VariancePercent")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BuildJobId");
+
+                    b.ToTable("BuildTimeLearningData", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.ComplianceCategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("System");
+
+                    b.Property<string>("CreatedDate")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("System");
+
+                    b.Property<string>("LastModifiedDate")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RegulatoryLevel")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("RequiresSpecialHandling")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
+                    b.Property<int>("SortOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(100);
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.HasIndex("RegulatoryLevel");
+
+                    b.HasIndex("RegulatoryLevel", "SortOrder");
+
+                    b.ToTable("ComplianceCategories", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.ComplianceDocument", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("AccessCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ApprovalComments")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ApprovalDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ApprovalDateInternal")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ApprovalNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ApprovedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ArchiveDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ArchiveLocation")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AssociatedJobNumbers")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AssociatedPartNumbers")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AssociatedSerialNumbers")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AuditNotes")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ComplianceCategory")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("ComplianceRequirementId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Customer")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("DisposalDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DisposalMethod")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DocumentClassification")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DocumentContent")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("DocumentDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DocumentNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DocumentTitle")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DocumentType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("EffectiveDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("EmailNotificationSent")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("ExpirationDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FileHash")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FileName")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FilePath")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("FileSizeMB")
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<string>("FileType")
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FormNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsDisposed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("JobId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LastAccessedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastAccessedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastNotificationDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("NextReminderDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NotificationRecipients")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("PartId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PreparedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReferenceNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RegulatoryAuthority")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("RenewalReminderDays")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresRenewal")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("RetentionEndDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RetentionPeriod")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReviewComments")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ReviewDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReviewedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("SerialNumberId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("SubmissionDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Vendor")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ComplianceRequirementId");
+
+                    b.HasIndex("JobId");
+
+                    b.HasIndex("PartId");
+
+                    b.HasIndex("SerialNumberId");
+
+                    b.ToTable("ComplianceDocuments", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.ComplianceRequirement", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AdditionalNotes")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ApplicableIndustries")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ApplicablePartTypes")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ApplicableProcesses")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("AppliesToDistribution")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("AppliesToExport")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("AppliesToImport")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("AppliesToManufacturing")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ComplianceType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ContactInformation")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DocumentationRequired")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("EffectiveDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EnforcementLevel")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("EstimatedImplementationCost")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<double>("EstimatedImplementationHours")
+                        .HasColumnType("REAL");
+
+                    b.Property<DateTime?>("ExpirationDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FormsRequired")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ImplementationSteps")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsCurrentVersion")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("MaxPenaltyAmount")
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<int>("MaxPenaltyDays")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("NextReviewDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("PartClassificationId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PenaltyDescription")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PenaltyType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RecordKeepingRequirements")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReferenceDocuments")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RegulatoryAuthority")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("RenewalIntervalMonths")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RenewalProcess")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequiredCertifications")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequiredTraining")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequirementCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequirementDetails")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequirementName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("RequiresInspection")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresRenewal")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SystemRequirements")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("WebResources")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PartClassificationId");
+
+                    b.ToTable("ComplianceRequirements", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.ComponentType", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("System");
+
+                    b.Property<string>("CreatedDate")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("System");
+
+                    b.Property<string>("LastModifiedDate")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SortOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(100);
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.HasIndex("SortOrder");
+
+                    b.ToTable("ComponentTypes", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.DefectCategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ApplicableProcesses")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("AverageResolutionTimeMinutes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CategoryGroup")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("General");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ColorCode")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(7)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("#6B7280");
+
+                    b.Property<string>("CostImpact")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Medium");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("System");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Icon")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("exclamation-triangle");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("System");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PreventionMethods")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("RequiresImmediateNotification")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SeverityLevel")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("StandardCorrectiveActions")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryGroup");
+
+                    b.HasIndex("Code");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("Name");
+
+                    b.HasIndex("SeverityLevel");
+
+                    b.ToTable("DefectCategories", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.DelayLog", b =>
+                {
+                    b.Property<int>("DelayId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BuildId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("BuildJobBuildId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DelayDuration")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("DelayReason")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("DelayId");
+
+                    b.HasIndex("BuildJobBuildId");
+
+                    b.ToTable("DelayLogs", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.EDMLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EndTime")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LogDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LogNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MachineUsed")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Measurement1")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Measurement2")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Measurements")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OperatorInitials")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OperatorName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("PartId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PartNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProcessParameters")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProcessType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("QualityNotes")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresReview")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ReviewNotes")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReviewedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ReviewedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ScrapIssues")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Shift")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StartTime")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ToleranceStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TotalTime")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PartId");
+
+                    b.ToTable("EDMLogs", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.FeatureToggle", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Configuration")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Conflicts")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Dependencies")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Environment")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FeatureName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("IntroducedInVersion")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastUsed")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PerformanceNotes")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PlannedRemovalVersion")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequiredRole")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("RequiresRestart")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("RolloutPercentage")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SecurityNotes")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("StartDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("UsageCount")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("FeatureToggles", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.InspectionCheckpoint", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AcceptanceCriteria")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Quality");
+
+                    b.Property<string>("CheckpointName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<int?>("DefectCategoryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("DefectCategoryId1")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("EstimatedMinutes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("FailureAction")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Hold for review");
+
+                    b.Property<string>("InspectionType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Visual");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsRequired")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<double?>("LowerTolerance")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("MeasurementMethod")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<int>("PartId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ReferenceDocuments")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequiredEquipment")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequiredSkills")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SampleSize")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SamplingMethod")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("All");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double?>("TargetValue")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<double?>("UpperTolerance")
+                        .HasColumnType("REAL");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DefectCategoryId");
+
+                    b.HasIndex("DefectCategoryId1");
+
+                    b.HasIndex("InspectionType");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("IsRequired");
+
+                    b.HasIndex("PartId");
+
+                    b.HasIndex("PartId", "SortOrder");
+
+                    b.ToTable("InspectionCheckpoints", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.Job", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("ActualEnd")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("ActualPowderUsageKg")
+                        .HasColumnType("REAL");
+
+                    b.Property<DateTime?>("ActualStart")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("ActualUnitsPlanned")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("ArgonCostPerHour")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<double>("ArgonPurityPercent")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("REAL")
+                        .HasDefaultValue(99.5);
+
+                    b.Property<int?>("BuildCohortId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("BuildFileCreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BuildFileName")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BuildFilePath")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("BuildFileSizeBytes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BuildLayerNumber")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("BuildPlatformId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("BuildTemperatureCelsius")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("REAL")
+                        .HasDefaultValue(180.0);
+
+                    b.Property<double>("BuildTimeMinutes")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("ChangeoverTimeMinutes")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("CoolingTimeMinutes")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<double>("CurrentArgonFlowRate")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("CurrentBuildTemperature")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("CurrentLaserPowerWatts")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("CurrentOxygenLevel")
+                        .HasColumnType("REAL");
+
+                    b.Property<DateTime?>("CustomerDueDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CustomerOrderNumber")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<int>("DefectQuantity")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double>("DensityPercentage")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("EnergyConsumptionKwh")
+                        .HasColumnType("REAL");
+
+                    b.Property<TimeSpan>("EstimatedDuration")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("EstimatedHours")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("EstimatedPowderUsageKg")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("REAL")
+                        .HasDefaultValue(0.5);
+
+                    b.Property<double>("HatchSpacingMicrons")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("REAL")
+                        .HasDefaultValue(120.0);
+
+                    b.Property<string>("HoldReason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsRushJob")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("LaborCostPerHour")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<double>("LaserPowerWatts")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("REAL")
+                        .HasDefaultValue(170.0);
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<DateTime?>("LastStatusChangeUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("LayerThicknessMicrons")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("REAL")
+                        .HasDefaultValue(30.0);
+
+                    b.Property<string>("MachineId")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("MachineOperatingCostPerHour")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<double>("MachineUtilizationPercent")
+                        .HasColumnType("REAL");
+
+                    b.Property<int?>("MasterPartId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("MaterialCostPerKg")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("OpcUaBuildProgress")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("OpcUaErrorMessages")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OpcUaJobId")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("OpcUaLastUpdate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OpcUaStatus")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Operator")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("OperatorUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double>("OxygenContentPpm")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("REAL")
+                        .HasDefaultValue(50.0);
+
+                    b.Property<int>("PartId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PartNumber")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("PartsPerBuild")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("PlannedEndUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double?>("PlannedStackDurationHours")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("PostProcessingTimeMinutes")
+                        .HasColumnType("REAL");
+
+                    b.Property<decimal?>("PowderAddedKg")
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<double>("PowderChangeoverTimeMinutes")
+                        .HasColumnType("REAL");
+
+                    b.Property<DateTime?>("PowderExpirationDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PowderLotNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PowderMaterial")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("PowderRecyclePercentage")
+                        .HasColumnType("REAL");
+
+                    b.Property<decimal>("PowerCostPerKwh")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<int?>("PredecessorJobId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double>("PreheatingTimeMinutes")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("PreviousJobPartNumber")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Priority")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(3);
+
+                    b.Property<string>("ProcessParameters")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ProducedQuantity")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("PrototypeUnitsPlanned")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("QualityCheckpoints")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("QualityInspector")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RequiredMaterials")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequiredSkills")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequiredTooling")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("RequiresArgonPurge")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresPostProcessing")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresPowderSieving")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresPreheating")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ReworkQuantity")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double>("ScanSpeedMmPerSec")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("REAL")
+                        .HasDefaultValue(1000.0);
+
+                    b.Property<DateTime>("ScheduledEnd")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ScheduledStart")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("SetupTimeMinutes")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("SlsMaterial")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SpecialInstructions")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte?>("StackLevel")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("StageOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Supervisor")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("SurfaceRoughnessRa")
+                        .HasColumnType("REAL");
+
+                    b.Property<int?>("TotalStages")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double>("UltimateTensileStrengthMPa")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("WorkflowStage")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BuildCohortId");
+
+                    b.HasIndex("MasterPartId");
+
+                    b.HasIndex("OperatorUserId");
+
+                    b.HasIndex("PartId");
+
+                    b.HasIndex("PartNumber");
+
+                    b.HasIndex("PredecessorJobId");
+
+                    b.HasIndex("Priority");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("MachineId", "ScheduledStart");
+
+                    b.ToTable("Jobs", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.JobLogEntry", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MachineId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Operator")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PartNumber")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("JobLogEntries", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.JobNote", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("System");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("JobId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("System");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<string>("Note")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NoteType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Info");
+
+                    b.Property<int?>("PartId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Priority")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(3);
+
+                    b.Property<string>("Step")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("StepTime")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsCompleted");
+
+                    b.HasIndex("JobId");
+
+                    b.HasIndex("PartId");
+
+                    b.HasIndex("Priority");
+
+                    b.HasIndex("JobId", "Step");
+
+                    b.ToTable("JobNotes", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.JobStageHistory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("JobId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("MachineId")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Operator")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("ProductionStageId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("QualityResult")
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<double?>("StageHours")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("StageName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("JobId");
+
+                    b.HasIndex("ProductionStageId");
+
+                    b.ToTable("JobStageHistories", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.JobStaging.JobStage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal?>("ActualCost")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ActualEnd")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ActualStart")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("AllowParallel")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AssignedOperator")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("CanStart")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double>("CooldownTimeHours")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("System");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<string>("Department")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("EstimatedCost")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("EstimatedDurationHours")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("REAL")
+                        .HasDefaultValue(1.0);
+
+                    b.Property<int>("ExecutionOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsBlocking")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("JobId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("System");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<string>("MachineId")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("MachineId1")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Priority")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(3);
+
+                    b.Property<double>("ProgressPercent")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("QualityRequirements")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequiredMaterials")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequiredTooling")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ScheduledEnd")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ScheduledStart")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("SetupTimeHours")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("StageName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StageType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Scheduled");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Department");
+
+                    b.HasIndex("JobId");
+
+                    b.HasIndex("MachineId");
+
+                    b.HasIndex("MachineId1");
+
+                    b.HasIndex("ScheduledEnd");
+
+                    b.HasIndex("ScheduledStart");
+
+                    b.HasIndex("StageType");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("JobId", "ExecutionOrder");
+
+                    b.ToTable("JobStages", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.JobStaging.JobStageDependency", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<string>("DependencyType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("FinishToStart");
+
+                    b.Property<int>("DependentStageId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsMandatory")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double>("LagTimeHours")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("RequiredStageId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DependencyType");
+
+                    b.HasIndex("DependentStageId");
+
+                    b.HasIndex("RequiredStageId");
+
+                    b.ToTable("StageDependencies", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_JobStageDependency_NoSelfReference", "DependentStageId != RequiredStageId");
+                        });
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.JobStaging.StageNote", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("System");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<bool>("IsPublic")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Note")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NoteType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Info");
+
+                    b.Property<int>("Priority")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(3);
+
+                    b.Property<int>("StageId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedDate");
+
+                    b.HasIndex("NoteType");
+
+                    b.HasIndex("Priority");
+
+                    b.HasIndex("StageId");
+
+                    b.ToTable("StageNotes", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.LegacyFlagToStageMap", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("DefaultSetupMinutes")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(30);
+
+                    b.Property<int>("DefaultTeardownMinutes")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0);
+
+                    b.Property<int>("ExecutionOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(1);
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("LegacyFieldName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProductionStageName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExecutionOrder");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("LegacyFieldName")
+                        .IsUnique();
+
+                    b.HasIndex("ProductionStageName");
+
+                    b.ToTable("LegacyFlagToStageMaps", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.Machine", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double>("AverageUtilizationPercent")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("BuildHeightMm")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("BuildLengthMm")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("BuildWidthMm")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("ColorHex")
+                        .HasMaxLength(9)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CommunicationSettings")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("System");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<int?>("CurrentJobId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CurrentMaterial")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Department")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("HoursSinceLastMaintenance")
+                        .HasColumnType("REAL");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsAvailableForScheduling")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("LastMaintenanceDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("System");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<DateTime>("LastStatusUpdate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Location")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MachineId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MachineModel")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MachineName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MachineType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("MaintenanceIntervalHours")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("MaintenanceNotes")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("MaxLaserPowerWatts")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("MaxLayerThicknessMicrons")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("MaxScanSpeedMmPerSec")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("MinLayerThicknessMicrons")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("NextMaintenanceDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("OpcUaEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("OpcUaEndpointUrl")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OperatorNotes")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SerialNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Idle");
+
+                    b.Property<string>("SupportedMaterials")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TechnicalSpecifications")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("TotalOperatingHours")
+                        .HasColumnType("REAL");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CurrentJobId");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("MachineId")
+                        .IsUnique();
+
+                    b.HasIndex("MachineType");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("Machines", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.MachineCapability", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CapabilityName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CapabilityType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CapabilityValue")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("System");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<bool>("IsAvailable")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("System");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<int>("MachineId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double?>("MaxValue")
+                        .HasColumnType("REAL");
+
+                    b.Property<double?>("MinValue")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<int>("Priority")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(3);
+
+                    b.Property<string>("RequiredCertification")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CapabilityType");
+
+                    b.HasIndex("IsAvailable");
+
+                    b.HasIndex("MachineId");
+
+                    b.HasIndex("MachineId", "CapabilityType");
+
+                    b.ToTable("MachineCapabilities", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.MachineOperatorAssignment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("System");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<DateTime?>("EffectiveFrom")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("EffectiveTo")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("System");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<string>("MachineId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("MachineId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("MachineId", "IsPrimary");
+
+                    b.HasIndex("UserId", "IsActive");
+
+                    b.ToTable("MachineOperatorAssignments", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Assignment_DateRange", "(EffectiveTo IS NULL) OR (EffectiveFrom IS NULL) OR (EffectiveTo >= EffectiveFrom)");
+                        });
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.MasterPart", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("AllowStacking")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("System");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<double?>("DoubleStackDurationHours")
+                        .HasColumnType("REAL");
+
+                    b.Property<bool>("EnableDoubleStack")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("EnableTripleStack")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("System");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<string>("ManufacturingApproach")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("SLS-Based");
+
+                    b.Property<string>("Material")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("MaxStackCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PartNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("PartsPerBuildDouble")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("PartsPerBuildSingle")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("PartsPerBuildTriple")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RequiredStages")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("[]");
+
+                    b.Property<double?>("SingleStackDurationHours")
+                        .HasColumnType("REAL");
+
+                    b.Property<double?>("StageEstimateSingle")
+                        .HasColumnType("REAL");
+
+                    b.Property<double?>("TripleStackDurationHours")
+                        .HasColumnType("REAL");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("ManufacturingApproach");
+
+                    b.HasIndex("PartNumber")
+                        .IsUnique();
+
+                    b.ToTable("MasterParts", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.Material", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CompatibleMachineTypes")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("CostPerGram")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("DefaultLaserPowerPercent")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("DefaultLayerThicknessMicrons")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("DefaultScanSpeedMmPerSec")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("Density")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MaterialCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MaterialName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MaterialProperties")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MaterialType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("MeltingPointC")
+                        .HasColumnType("REAL");
+
+                    b.Property<decimal>("QuantityOnHandKg")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SafetyNotes")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Materials", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.OperatingShift", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("System");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<int>("DayOfWeek")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<TimeSpan>("EndTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsHoliday")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("System");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<string>("MachineId")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("SpecificDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<TimeSpan>("StartTime")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DayOfWeek");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("IsHoliday");
+
+                    b.HasIndex("SpecificDate");
+
+                    b.HasIndex("DayOfWeek", "IsActive");
+
+                    b.HasIndex("MachineId", "DayOfWeek");
+
+                    b.ToTable("OperatingShifts", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.OperatorEstimateLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BuildJobId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("EstimatedHours")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LoggedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OperatorNotes")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TimeFactors")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BuildJobId");
+
+                    b.ToTable("OperatorEstimateLogs", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.Part", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ATFClassification")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<double?>("AdminEstimatedHoursOverride")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("AdminOverrideBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<DateTime?>("AdminOverrideDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AdminOverrideReason")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<bool>("AllowStacking")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Application")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("AppliedTemplateId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ApprovalWorkflow")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("ArgonCostPerHour")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<double>("AverageActualHours")
+                        .HasColumnType("REAL");
+
+                    b.Property<decimal>("AverageCostPerUnit")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<double>("AverageDefectRate")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("AverageEfficiencyPercent")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("AveragePowderUtilization")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("AverageQualityScore")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("AvgDuration")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("8h 0m");
+
+                    b.Property<int>("AvgDurationDays")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double?>("BTBackPressurePSI")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("BTBafflePosition")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BTCaliberCompatibility")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BTComponentType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("General");
+
+                    b.Property<string>("BTFirearmCategory")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("BTLicensingCost")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("BTQualitySpecification")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BTQualityStandards")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("BTRegulatoryNotes")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<double?>("BTSoundReductionDB")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("BTSuppressorType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BTTestingProtocol")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BTTestingRequirements")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("BTThreadPitch")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BatchControlMethod")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BuildFileTemplate")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("CadFilePath")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("CadFileVersion")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("ChildComponents")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("ComplianceCategoryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("ComplianceCost")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<int?>("ComponentTypeId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ConsumableMaterials")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Argon Gas,Build Platform Coating");
+
+                    b.Property<double>("CoolingTimeMinutes")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<string>("CustomerPartNumber")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Dimensions")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<decimal>("DocumentationCost")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<double?>("DoubleStackDurationHours")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("EARClassification")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("EstimatedHours")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("ExportClassification")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("ExportControlNotes")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FFLRequirements")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FirearmType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<double>("HeightMm")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("ITARCategory")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Industry")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsAssemblyComponent")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsControlledItem")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsEARControlled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsLegacyForm")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsSubAssembly")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<DateTime?>("LastProduced")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("LengthMm")
+                        .HasColumnType("REAL");
+
+                    b.Property<decimal>("MachineOperatingCostPerHour")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("ManufacturingStage")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Material")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("MaterialCostPerKg")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<int>("MaxBatchSize")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double>("MaxOxygenContent")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("MaxSurfaceRoughnessRa")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ParentComponents")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PartCategory")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Prototype");
+
+                    b.Property<string>("PartClass")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("B");
+
+                    b.Property<int?>("PartClassificationId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PartNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("PostProcessingCost")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<double>("PostProcessingTimeMinutes")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("PowderChangeoverTimeMinutes")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("PowderRequirementKg")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("PowderSpecification")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("15-45 micron particle size");
+
+                    b.Property<string>("PreferredMachines")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("TI1,TI2");
+
+                    b.Property<double>("PreheatingTimeMinutes")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("ProcessParameters")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("{}");
+
+                    b.Property<string>("ProcessType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("SLS Metal");
+
+                    b.Property<double?>("ProofTestPressure")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("QualityCheckpoints")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("{}");
+
+                    b.Property<decimal>("QualityInspectionCost")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("QualityStandards")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("ASTM F3001, ISO 17296");
+
+                    b.Property<double>("RecommendedBuildTemperature")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("RecommendedHatchSpacing")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("RecommendedLaserPower")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("RecommendedLayerThickness")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("RecommendedScanSpeed")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("RequiredArgonPurity")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("RequiredCertifications")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("SLS Operation Certification");
+
+                    b.Property<string>("RequiredMachineType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("TruPrint 3000");
+
+                    b.Property<string>("RequiredSkills")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("SLS Operation,Powder Handling");
+
+                    b.Property<string>("RequiredTooling")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Build Platform,Powder Sieve");
+
+                    b.Property<bool>("RequiresAS9100")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresATFCompliance")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresATFForm1")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresATFForm4")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresAssembly")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresBTProofTesting")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresBackPressureTesting")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresCNCMachining")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresCertification")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresComplianceApproval")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresDimensionalVerification")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresEDMOperations")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresEngineeringApproval")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresExportLicense")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresFDA")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresFFLTracking")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresFinishing")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresITARCompliance")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresInspection")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresMaterialCertification")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresNADCAP")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresPressureTesting")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresProofTesting")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresQualityApproval")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresSLSPrinting")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresSerialization")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresSoundTesting")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresSupports")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresSurfaceFinishVerification")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresTaxStamp")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresThreadVerification")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresTraceabilityDocuments")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresUniqueSerialNumber")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SerialNumberFormat")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("SetupCost")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<double>("SetupTimeMinutes")
+                        .HasColumnType("REAL");
+
+                    b.Property<double?>("SingleStackDurationHours")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("SlsMaterial")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StageDetails")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("StageOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("StandardLaborCostPerHour")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("StandardSellingPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<double>("SupportRemovalTimeMinutes")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("SupportStrategy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Minimal supports on overhangs > 45°");
+
+                    b.Property<string>("SurfaceFinishRequirement")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("As-built");
+
+                    b.Property<decimal?>("TaxStampAmount")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("TestingCost")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("ToleranceRequirements")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("+/-0.1mm typical");
+
+                    b.Property<int>("TotalJobsCompleted")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TotalUnitsProduced")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double?>("TripleStackDurationHours")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("VolumeMm3")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("WeightGrams")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("WidthMm")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("WorkflowTemplate")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AppliedTemplateId");
+
+                    b.HasIndex("BTComponentType");
+
+                    b.HasIndex("ComplianceCategoryId");
+
+                    b.HasIndex("ComponentTypeId");
+
+                    b.HasIndex("CreatedDate");
+
+                    b.HasIndex("CustomerPartNumber");
+
+                    b.HasIndex("FirearmType");
+
+                    b.HasIndex("Industry");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("IsLegacyForm");
+
+                    b.HasIndex("Material");
+
+                    b.HasIndex("Name");
+
+                    b.HasIndex("PartCategory");
+
+                    b.HasIndex("PartClassificationId");
+
+                    b.HasIndex("PartNumber")
+                        .IsUnique();
+
+                    b.HasIndex("ProcessType");
+
+                    b.HasIndex("RequiredMachineType");
+
+                    b.HasIndex("RequiresATFCompliance");
+
+                    b.HasIndex("RequiresITARCompliance");
+
+                    b.HasIndex("RequiresSerialization");
+
+                    b.HasIndex("SlsMaterial");
+
+                    b.ToTable("Parts", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.PartAssetLink", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AssetType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("3DModel");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("System");
+
+                    b.Property<string>("CreatedDate")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("LastCheckedUtc")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PartId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Upload");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssetType");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("PartId");
+
+                    b.ToTable("PartAssetLinks", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.PartBatch", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("BatchNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<string>("CurrentStage")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("SLS");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ProductionBuildId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("QualityStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Good");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BatchNumber");
+
+                    b.HasIndex("CreatedDate");
+
+                    b.HasIndex("CurrentStage");
+
+                    b.HasIndex("ProductionBuildId");
+
+                    b.HasIndex("QualityStatus");
+
+                    b.ToTable("PartBatches", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.PartClassification", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AlternativeMaterials")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BafflePosition")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ClassificationCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ClassificationName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ComplexityLevel")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ComponentCategory")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExportClassification")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FirearmType")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("IndustryType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsBarrelComponent")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsControlledItem")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsEARControlled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsEndCap")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsFurniture")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsInternalComponent")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsMountingHardware")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsOperatingSystem")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsReceiver")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsSafetyComponent")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsThreadMount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsTriggerComponent")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsTubeHousing")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MaterialGrade")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PostProcessingRequired")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("QualityStandards")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RecommendedMaterial")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RegulatoryNotes")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequiredProcess")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("RequiresATFCompliance")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresDimensionalVerification")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresFFLTracking")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresITARCompliance")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresMaterialCertification")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresPressureTesting")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresProofTesting")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresSerialization")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresSpecialHandling")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresSurfaceFinishVerification")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SpecialInstructions")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SuppressorType")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TestingRequirements")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PartClassifications", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.PartCompletionLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BuildJobId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CompletedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DefectiveParts")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("GoodParts")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("InspectionNotes")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PartNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("QualityRate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ReworkParts")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BuildJobId");
+
+                    b.ToTable("PartCompletionLogs", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.PartStageRequirement", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("AllowParallelExecution")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AssignedMachineId")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CustomFieldValues")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("EstimatedCost")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<double?>("EstimatedHours")
+                        .HasColumnType("REAL");
+
+                    b.Property<int>("ExecutionOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal?>("HourlyRateOverride")
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsBlocking")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsRequired")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("MaterialCost")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<int>("PartId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PreferredMachineIds")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ProductionStageId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("QualityRequirements")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequiredMaterials")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequiredTooling")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequirementNotes")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("RequiresSpecificMachine")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("SetupTimeMinutes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SpecialInstructions")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StageParameters")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("StageTemplateId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("WorkflowTemplateId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PartId");
+
+                    b.HasIndex("ProductionStageId");
+
+                    b.HasIndex("StageTemplateId");
+
+                    b.ToTable("PartStageRequirements", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.ProductionBuild", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("ActualEndTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ActualStartTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("AddedPowder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("BuildNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("BuildQuantity")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("CompletedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CompletionNotes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<int>("MasterPartId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("MaterialBatch")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("PowderAmountKg")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PowderLot")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("PrinterName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ScheduledEndTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ScheduledStartTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SetupNotes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("StackLevel")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Planned");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BuildNumber")
+                        .IsUnique();
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("CreatedDate");
+
+                    b.HasIndex("MasterPartId");
+
+                    b.HasIndex("PrinterName");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("ProductionBuilds", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.ProductionStage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("AllowParallelExecution")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("AllowSkip")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AssignedMachineIds")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CustomFieldsConfig")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("DefaultDurationHours")
+                        .HasColumnType("REAL");
+
+                    b.Property<decimal>("DefaultHourlyRate")
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<string>("DefaultMachineId")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("DefaultMaterialCost")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<int>("DefaultSetupMinutes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Department")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsOptional")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequiredRole")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("RequiresApproval")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresMachineAssignment")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequiresQualityCheck")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("StageColor")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StageIcon")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ProductionStages", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.ProductionStageExecution", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal?>("ActualCost")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime?>("ActualEndTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("ActualHours")
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<DateTime?>("ActualStartTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ApprovedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("CompletionDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("EstimatedCost")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal?>("EstimatedHours")
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<string>("ExecutedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Improvements")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Issues")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("JobId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal?>("LaborCost")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastModifiedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("MaterialCost")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("OperatorName")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("OverheadCost")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("ProcessParameters")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ProductionStageId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("PrototypeJobId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("QualityCheckBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("QualityCheckDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool?>("QualityCheckPassed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("QualityCheckRequired")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("QualityNotes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReviewedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("RunHours")
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<decimal?>("SetupHours")
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<DateTime?>("StartDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("WorkflowTemplateId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("JobId");
+
+                    b.HasIndex("ProductionStageId");
+
+                    b.HasIndex("PrototypeJobId");
+
+                    b.ToTable("ProductionStageExecutions", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.PrototypeJob", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AdminReviewBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("AdminReviewDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AdminReviewNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AdminReviewStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("CompletionDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("CostVariancePercent")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CustomerOrderNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("LeadTimeDays")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("PartId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PrototypeNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("RequestDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequestedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("StartDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("TimeVariancePercent")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<decimal>("TotalActualCost")
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<decimal>("TotalActualHours")
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<decimal>("TotalEstimatedCost")
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<decimal>("TotalEstimatedHours")
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PartId");
+
+                    b.ToTable("PrototypeJobs", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.PrototypeTimeLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ActivityDescription")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ActivityType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("ElapsedMinutes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Employee")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("EndTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ImprovementSuggestions")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("IssuesEncountered")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LogDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ProductionStageExecutionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ResolutionNotes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("StartTime")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductionStageExecutionId");
+
+                    b.ToTable("PrototypeTimeLogs", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.ResourcePool", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AssignmentCriteria")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("AutoAssign")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("MaxConcurrentAllocations")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ResourceConfiguration")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ResourceType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ResourcePools", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.RolePermission", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("General");
+
+                    b.Property<string>("Constraints")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("{}");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("System");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("HasPermission")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("System");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<string>("PermissionKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PermissionLevel")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Read");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RoleName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Category");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("PermissionKey");
+
+                    b.HasIndex("RoleName");
+
+                    b.HasIndex("RoleName", "PermissionKey")
+                        .IsUnique();
+
+                    b.ToTable("RolePermissions", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.SerialNumber", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("ATFApprovalDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ATFClassification")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ATFComplianceStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ATFFormNumbers")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ATFFormSubmissionDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ActualDestructionDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AssemblyComponents")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("AssignedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AssignedJobId")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BatchNumber")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BuildPlatformId")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("CompletedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("ComplianceRequirementId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ComponentGenealogy")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ComponentName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ComponentType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DestinationCountry")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DestructionMethod")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("DimensionalTestPassed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("EndUser")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExportClassification")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExportLicense")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ExportLicenseExpiration")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("ExportPermitObtained")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("FFLDealer")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FFLNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsDestructionScheduled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsEARControlled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsITARControlled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsLocked")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("JobId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MachineUsed")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ManufacturedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ManufacturerCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ManufacturingHistory")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ManufacturingMethod")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MaterialLotNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("MaterialTestPassed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("MaterialUsed")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Operator")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("PartId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PartNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("PressureTestPassed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("ProofTestPassed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("QualityCertificateNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("QualityInspectionDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("QualityInspector")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("QualityNotes")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("QualityStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("RequiresExportPermit")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("ScheduledDestructionDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SerialNumberFormat")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SerialNumberValue")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TaxStampNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TestResultsSummary")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("TransferDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TransferDocument")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TransferNotes")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TransferStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TransferTo")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ComplianceRequirementId");
+
+                    b.HasIndex("JobId");
+
+                    b.HasIndex("PartId");
+
+                    b.ToTable("SerialNumbers", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.StageDefinition", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("CanSkip")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double>("EstimatedHoursPerPart")
+                        .HasColumnType("REAL");
+
+                    b.Property<int>("ExecutionOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsRequired")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MasterPartId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PreferredMachines")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("QualityRequirements")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequiredMachineType")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SetupMinutes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("StageConfiguration")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("{}");
+
+                    b.Property<string>("StageName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TeardownMinutes")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExecutionOrder");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("MasterPartId");
+
+                    b.HasIndex("StageName");
+
+                    b.HasIndex("MasterPartId", "ExecutionOrder");
+
+                    b.ToTable("StageDefinitions", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.StageDependency", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Condition")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DelayHours")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("DependencyType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DependentStageId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsOptional")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PrerequisiteStageId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DependentStageId");
+
+                    b.HasIndex("PrerequisiteStageId");
+
+                    b.ToTable("ProductionStageDependencies", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.StageExecution", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal?>("ActualCost")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<double?>("ActualHours")
+                        .HasColumnType("REAL");
+
+                    b.Property<DateTime?>("CompletedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<int>("DefectCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("EndTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ExecutionOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal?>("LaborCost")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MachineUsed")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("MaterialCost")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OperatorNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("OperatorUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("PassedQuality")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ProductionBuildId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("QualityNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("QuantityIn")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("QuantityOut")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ReworkCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("StageData")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(5000)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("{}");
+
+                    b.Property<int>("StageDefinitionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("StageName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("StartTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("NotStarted");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OperatorUserId");
+
+                    b.HasIndex("ProductionBuildId");
+
+                    b.HasIndex("StageDefinitionId");
+
+                    b.HasIndex("StageName");
+
+                    b.HasIndex("StartTime");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("ProductionBuildId", "ExecutionOrder");
+
+                    b.ToTable("StageExecutions", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.StageTemplate", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ComplexityLevel")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Medium");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("System");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("EstimatedTotalCost")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("EstimatedTotalHours")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Industry")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("General");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsDefault")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("System");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<DateTime?>("LastUsedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MaterialType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Metal");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SortOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(100);
+
+                    b.Property<int?>("StageTemplateCategoryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TemplateConfiguration")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("{}");
+
+                    b.Property<int>("UsageCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0);
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ComplexityLevel");
+
+                    b.HasIndex("Industry");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("MaterialType");
+
+                    b.HasIndex("Name");
+
+                    b.HasIndex("StageTemplateCategoryId");
+
+                    b.HasIndex("UsageCount");
+
+                    b.HasIndex("Industry", "MaterialType", "ComplexityLevel");
+
+                    b.ToTable("StageTemplates", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.StageTemplateCategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ColorCode")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(7)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("#007bff");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("Icon")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("fas fa-cogs");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SortOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(100);
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.HasIndex("SortOrder");
+
+                    b.ToTable("StageTemplateCategories", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.StageTemplateStep", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double>("EstimatedHours")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(8, 2)
+                        .HasColumnType("REAL")
+                        .HasDefaultValue(1.0);
+
+                    b.Property<int>("ExecutionOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(1);
+
+                    b.Property<decimal>("HourlyRate")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(8, 2)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue(85m);
+
+                    b.Property<bool>("IsParallel")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("IsRequired")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
+
+                    b.Property<decimal>("MaterialCost")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue(0m);
+
+                    b.Property<int>("ProductionStageId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("QualityRequirements")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<int>("SetupTimeMinutes")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(30);
+
+                    b.Property<string>("SpecialInstructions")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("StageConfiguration")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("{}");
+
+                    b.Property<int>("StageTemplateId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TeardownTimeMinutes")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0);
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductionStageId");
+
+                    b.HasIndex("StageTemplateId");
+
+                    b.HasIndex("StageTemplateId", "ExecutionOrder");
+
+                    b.HasIndex("StageTemplateId", "ProductionStageId")
+                        .IsUnique();
+
+                    b.ToTable("StageTemplateSteps", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.SystemSetting", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("General");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("System");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<string>("DataType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("String");
+
+                    b.Property<string>("DefaultValue")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsReadOnly")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("System");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<bool>("RequiresRestart")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SettingKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SettingValue")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ValidationRules")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Category");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("SettingKey")
+                        .IsUnique();
+
+                    b.HasIndex("Category", "DisplayOrder");
+
+                    b.ToTable("SystemSettings", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.User", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Department")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("LastLoginDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Users", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.UserSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("BrowserNotifications")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DefaultPage")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("EmailNotifications")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ItemsPerPage")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SchedulerOrientation")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SessionTimeoutMinutes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Theme")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TimeZone")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("UserSettings", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.WorkflowTemplate", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Category")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Complexity")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("EstimatedCost")
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<double>("EstimatedDurationHours")
+                        .HasColumnType("REAL");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LastModifiedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StageConfiguration")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("WorkflowTemplates", (string)null);
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.AssemblyComponent", b =>
+                {
+                    b.HasOne("OpCentrix.Models.PrototypeJob", "PrototypeJob")
+                        .WithMany("AssemblyComponents")
+                        .HasForeignKey("PrototypeJobId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PrototypeJob");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.BuildCohort", b =>
+                {
+                    b.HasOne("OpCentrix.Models.BuildJob", "BuildJob")
+                        .WithMany()
+                        .HasForeignKey("BuildJobId");
+
+                    b.Navigation("BuildJob");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.BuildJob", b =>
+                {
+                    b.HasOne("OpCentrix.Models.Part", "Part")
+                        .WithMany()
+                        .HasForeignKey("PartId");
+
+                    b.HasOne("OpCentrix.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Part");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.BuildJobPart", b =>
+                {
+                    b.HasOne("OpCentrix.Models.BuildJob", "BuildJob")
+                        .WithMany("BuildJobParts")
+                        .HasForeignKey("BuildJobBuildId");
+
+                    b.Navigation("BuildJob");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.BuildTimeLearningData", b =>
+                {
+                    b.HasOne("OpCentrix.Models.BuildJob", "BuildJob")
+                        .WithMany()
+                        .HasForeignKey("BuildJobId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("BuildJob");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.ComplianceDocument", b =>
+                {
+                    b.HasOne("OpCentrix.Models.ComplianceRequirement", "ComplianceRequirement")
+                        .WithMany("ComplianceDocuments")
+                        .HasForeignKey("ComplianceRequirementId");
+
+                    b.HasOne("OpCentrix.Models.Job", "Job")
+                        .WithMany()
+                        .HasForeignKey("JobId");
+
+                    b.HasOne("OpCentrix.Models.Part", "Part")
+                        .WithMany("ComplianceDocuments")
+                        .HasForeignKey("PartId");
+
+                    b.HasOne("OpCentrix.Models.SerialNumber", "SerialNumber")
+                        .WithMany("ComplianceDocuments")
+                        .HasForeignKey("SerialNumberId");
+
+                    b.Navigation("ComplianceRequirement");
+
+                    b.Navigation("Job");
+
+                    b.Navigation("Part");
+
+                    b.Navigation("SerialNumber");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.ComplianceRequirement", b =>
+                {
+                    b.HasOne("OpCentrix.Models.PartClassification", "PartClassification")
+                        .WithMany("ComplianceRequirements")
+                        .HasForeignKey("PartClassificationId");
+
+                    b.Navigation("PartClassification");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.DelayLog", b =>
+                {
+                    b.HasOne("OpCentrix.Models.BuildJob", "BuildJob")
+                        .WithMany("DelayLogs")
+                        .HasForeignKey("BuildJobBuildId");
+
+                    b.Navigation("BuildJob");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.EDMLog", b =>
+                {
+                    b.HasOne("OpCentrix.Models.Part", "Part")
+                        .WithMany()
+                        .HasForeignKey("PartId");
+
+                    b.Navigation("Part");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.InspectionCheckpoint", b =>
+                {
+                    b.HasOne("OpCentrix.Models.DefectCategory", "DefectCategory")
+                        .WithMany()
+                        .HasForeignKey("DefectCategoryId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("OpCentrix.Models.DefectCategory", null)
+                        .WithMany("InspectionCheckpoints")
+                        .HasForeignKey("DefectCategoryId1");
+
+                    b.HasOne("OpCentrix.Models.Part", "Part")
+                        .WithMany("InspectionCheckpoints")
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DefectCategory");
+
+                    b.Navigation("Part");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.Job", b =>
+                {
+                    b.HasOne("OpCentrix.Models.BuildCohort", null)
+                        .WithMany("Jobs")
+                        .HasForeignKey("BuildCohortId");
+
+                    b.HasOne("OpCentrix.Models.MasterPart", "MasterPart")
+                        .WithMany("Jobs")
+                        .HasForeignKey("MasterPartId");
+
+                    b.HasOne("OpCentrix.Models.User", "OperatorUser")
+                        .WithMany()
+                        .HasForeignKey("OperatorUserId");
+
+                    b.HasOne("OpCentrix.Models.Part", "Part")
+                        .WithMany("Jobs")
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("OpCentrix.Models.Job", "PredecessorJob")
+                        .WithMany()
+                        .HasForeignKey("PredecessorJobId");
+
+                    b.Navigation("MasterPart");
+
+                    b.Navigation("OperatorUser");
+
+                    b.Navigation("Part");
+
+                    b.Navigation("PredecessorJob");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.JobNote", b =>
+                {
+                    b.HasOne("OpCentrix.Models.Job", "Job")
+                        .WithMany("JobNotes")
+                        .HasForeignKey("JobId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("OpCentrix.Models.Part", "Part")
+                        .WithMany("JobNotes")
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Job");
+
+                    b.Navigation("Part");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.JobStageHistory", b =>
+                {
+                    b.HasOne("OpCentrix.Models.Job", "Job")
+                        .WithMany()
+                        .HasForeignKey("JobId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("OpCentrix.Models.ProductionStage", "ProductionStage")
+                        .WithMany()
+                        .HasForeignKey("ProductionStageId");
+
+                    b.Navigation("Job");
+
+                    b.Navigation("ProductionStage");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.JobStaging.JobStage", b =>
+                {
+                    b.HasOne("OpCentrix.Models.Job", "Job")
+                        .WithMany("JobStages")
+                        .HasForeignKey("JobId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("OpCentrix.Models.Machine", "Machine")
+                        .WithMany()
+                        .HasForeignKey("MachineId1");
+
+                    b.Navigation("Job");
+
+                    b.Navigation("Machine");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.JobStaging.JobStageDependency", b =>
+                {
+                    b.HasOne("OpCentrix.Models.JobStaging.JobStage", "DependentStage")
+                        .WithMany("Dependencies")
+                        .HasForeignKey("DependentStageId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("OpCentrix.Models.JobStaging.JobStage", "RequiredStage")
+                        .WithMany("Dependents")
+                        .HasForeignKey("RequiredStageId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("DependentStage");
+
+                    b.Navigation("RequiredStage");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.JobStaging.StageNote", b =>
+                {
+                    b.HasOne("OpCentrix.Models.JobStaging.JobStage", "Stage")
+                        .WithMany("StageNotes")
+                        .HasForeignKey("StageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Stage");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.Machine", b =>
+                {
+                    b.HasOne("OpCentrix.Models.Job", "CurrentJob")
+                        .WithMany()
+                        .HasForeignKey("CurrentJobId");
+
+                    b.Navigation("CurrentJob");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.MachineCapability", b =>
+                {
+                    b.HasOne("OpCentrix.Models.Machine", "Machine")
+                        .WithMany("Capabilities")
+                        .HasForeignKey("MachineId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Machine");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.MachineOperatorAssignment", b =>
+                {
+                    b.HasOne("OpCentrix.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.OperatorEstimateLog", b =>
+                {
+                    b.HasOne("OpCentrix.Models.BuildJob", "BuildJob")
+                        .WithMany()
+                        .HasForeignKey("BuildJobId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("BuildJob");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.Part", b =>
+                {
+                    b.HasOne("OpCentrix.Models.StageTemplate", null)
+                        .WithMany()
+                        .HasForeignKey("AppliedTemplateId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("OpCentrix.Models.ComplianceCategory", "ComplianceCategory")
+                        .WithMany("Parts")
+                        .HasForeignKey("ComplianceCategoryId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("OpCentrix.Models.ComponentType", "ComponentType")
+                        .WithMany("Parts")
+                        .HasForeignKey("ComponentTypeId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("OpCentrix.Models.PartClassification", "PartClassification")
+                        .WithMany("Parts")
+                        .HasForeignKey("PartClassificationId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("ComplianceCategory");
+
+                    b.Navigation("ComponentType");
+
+                    b.Navigation("PartClassification");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.PartAssetLink", b =>
+                {
+                    b.HasOne("OpCentrix.Models.Part", "Part")
+                        .WithMany("AssetLinks")
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Part");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.PartBatch", b =>
+                {
+                    b.HasOne("OpCentrix.Models.ProductionBuild", "ProductionBuild")
+                        .WithMany("PartBatches")
+                        .HasForeignKey("ProductionBuildId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ProductionBuild");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.PartCompletionLog", b =>
+                {
+                    b.HasOne("OpCentrix.Models.BuildJob", "BuildJob")
+                        .WithMany()
+                        .HasForeignKey("BuildJobId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("BuildJob");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.PartStageRequirement", b =>
+                {
+                    b.HasOne("OpCentrix.Models.Part", "Part")
+                        .WithMany("PartStageRequirements")
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("OpCentrix.Models.ProductionStage", "ProductionStage")
+                        .WithMany("PartStageRequirements")
+                        .HasForeignKey("ProductionStageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("OpCentrix.Models.StageTemplate", null)
+                        .WithMany("PartStageRequirements")
+                        .HasForeignKey("StageTemplateId");
+
+                    b.Navigation("Part");
+
+                    b.Navigation("ProductionStage");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.ProductionBuild", b =>
+                {
+                    b.HasOne("OpCentrix.Models.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("OpCentrix.Models.MasterPart", "MasterPart")
+                        .WithMany("ProductionBuilds")
+                        .HasForeignKey("MasterPartId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("MasterPart");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.ProductionStageExecution", b =>
+                {
+                    b.HasOne("OpCentrix.Models.Job", "Job")
+                        .WithMany()
+                        .HasForeignKey("JobId");
+
+                    b.HasOne("OpCentrix.Models.ProductionStage", "ProductionStage")
+                        .WithMany("StageExecutions")
+                        .HasForeignKey("ProductionStageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("OpCentrix.Models.PrototypeJob", "PrototypeJob")
+                        .WithMany("StageExecutions")
+                        .HasForeignKey("PrototypeJobId");
+
+                    b.Navigation("Job");
+
+                    b.Navigation("ProductionStage");
+
+                    b.Navigation("PrototypeJob");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.PrototypeJob", b =>
+                {
+                    b.HasOne("OpCentrix.Models.Part", "Part")
+                        .WithMany()
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Part");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.PrototypeTimeLog", b =>
+                {
+                    b.HasOne("OpCentrix.Models.ProductionStageExecution", "ProductionStageExecution")
+                        .WithMany("TimeLogs")
+                        .HasForeignKey("ProductionStageExecutionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ProductionStageExecution");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.SerialNumber", b =>
+                {
+                    b.HasOne("OpCentrix.Models.ComplianceRequirement", "ComplianceRequirement")
+                        .WithMany("SerialNumbers")
+                        .HasForeignKey("ComplianceRequirementId");
+
+                    b.HasOne("OpCentrix.Models.Job", "Job")
+                        .WithMany()
+                        .HasForeignKey("JobId");
+
+                    b.HasOne("OpCentrix.Models.Part", "Part")
+                        .WithMany("SerialNumbers")
+                        .HasForeignKey("PartId");
+
+                    b.Navigation("ComplianceRequirement");
+
+                    b.Navigation("Job");
+
+                    b.Navigation("Part");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.StageDefinition", b =>
+                {
+                    b.HasOne("OpCentrix.Models.MasterPart", "MasterPart")
+                        .WithMany("StageDefinitions")
+                        .HasForeignKey("MasterPartId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("MasterPart");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.StageDependency", b =>
+                {
+                    b.HasOne("OpCentrix.Models.ProductionStage", "DependentStage")
+                        .WithMany()
+                        .HasForeignKey("DependentStageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("OpCentrix.Models.ProductionStage", "PrerequisiteStage")
+                        .WithMany()
+                        .HasForeignKey("PrerequisiteStageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DependentStage");
+
+                    b.Navigation("PrerequisiteStage");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.StageExecution", b =>
+                {
+                    b.HasOne("OpCentrix.Models.User", "OperatorUser")
+                        .WithMany()
+                        .HasForeignKey("OperatorUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("OpCentrix.Models.ProductionBuild", "ProductionBuild")
+                        .WithMany("StageExecutions")
+                        .HasForeignKey("ProductionBuildId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("OpCentrix.Models.StageDefinition", "StageDefinition")
+                        .WithMany()
+                        .HasForeignKey("StageDefinitionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("OperatorUser");
+
+                    b.Navigation("ProductionBuild");
+
+                    b.Navigation("StageDefinition");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.StageTemplate", b =>
+                {
+                    b.HasOne("OpCentrix.Models.StageTemplateCategory", null)
+                        .WithMany("StageTemplates")
+                        .HasForeignKey("StageTemplateCategoryId");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.StageTemplateStep", b =>
+                {
+                    b.HasOne("OpCentrix.Models.ProductionStage", "ProductionStage")
+                        .WithMany()
+                        .HasForeignKey("ProductionStageId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("OpCentrix.Models.StageTemplate", "StageTemplate")
+                        .WithMany("TemplateSteps")
+                        .HasForeignKey("StageTemplateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ProductionStage");
+
+                    b.Navigation("StageTemplate");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.UserSettings", b =>
+                {
+                    b.HasOne("OpCentrix.Models.User", "User")
+                        .WithOne("Settings")
+                        .HasForeignKey("OpCentrix.Models.UserSettings", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.BuildCohort", b =>
+                {
+                    b.Navigation("Jobs");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.BuildJob", b =>
+                {
+                    b.Navigation("BuildJobParts");
+
+                    b.Navigation("DelayLogs");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.ComplianceCategory", b =>
+                {
+                    b.Navigation("Parts");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.ComplianceRequirement", b =>
+                {
+                    b.Navigation("ComplianceDocuments");
+
+                    b.Navigation("SerialNumbers");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.ComponentType", b =>
+                {
+                    b.Navigation("Parts");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.DefectCategory", b =>
+                {
+                    b.Navigation("InspectionCheckpoints");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.Job", b =>
+                {
+                    b.Navigation("JobNotes");
+
+                    b.Navigation("JobStages");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.JobStaging.JobStage", b =>
+                {
+                    b.Navigation("Dependencies");
+
+                    b.Navigation("Dependents");
+
+                    b.Navigation("StageNotes");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.Machine", b =>
+                {
+                    b.Navigation("Capabilities");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.MasterPart", b =>
+                {
+                    b.Navigation("Jobs");
+
+                    b.Navigation("ProductionBuilds");
+
+                    b.Navigation("StageDefinitions");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.Part", b =>
+                {
+                    b.Navigation("AssetLinks");
+
+                    b.Navigation("ComplianceDocuments");
+
+                    b.Navigation("InspectionCheckpoints");
+
+                    b.Navigation("JobNotes");
+
+                    b.Navigation("Jobs");
+
+                    b.Navigation("PartStageRequirements");
+
+                    b.Navigation("SerialNumbers");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.PartClassification", b =>
+                {
+                    b.Navigation("ComplianceRequirements");
+
+                    b.Navigation("Parts");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.ProductionBuild", b =>
+                {
+                    b.Navigation("PartBatches");
+
+                    b.Navigation("StageExecutions");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.ProductionStage", b =>
+                {
+                    b.Navigation("PartStageRequirements");
+
+                    b.Navigation("StageExecutions");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.ProductionStageExecution", b =>
+                {
+                    b.Navigation("TimeLogs");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.PrototypeJob", b =>
+                {
+                    b.Navigation("AssemblyComponents");
+
+                    b.Navigation("StageExecutions");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.SerialNumber", b =>
+                {
+                    b.Navigation("ComplianceDocuments");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.StageTemplate", b =>
+                {
+                    b.Navigation("PartStageRequirements");
+
+                    b.Navigation("TemplateSteps");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.StageTemplateCategory", b =>
+                {
+                    b.Navigation("StageTemplates");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.User", b =>
+                {
+                    b.Navigation("Settings");
+                });
 #pragma warning restore 612, 618
         }
     }
