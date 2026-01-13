@@ -7,11 +7,11 @@
 
 <div class="space-y-6">
     <!-- Welcome Section -->
-    <div class="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-lg text-white p-6">
+    <div class="bg-gradient-to-r from-blue-600 to-indigo-700 dark:from-blue-800 dark:to-indigo-900 rounded-lg text-white p-6 transition-all duration-300">
         <div class="flex items-center justify-between">
             <div>
                 <h1 class="text-2xl font-bold mb-2">Welcome back, @Model.UserName! 👋</h1>
-                <p class="text-blue-100">
+                <p class="text-blue-100 dark:text-blue-200">
                     @DateTime.Now.ToString("dddd, MMMM dd, yyyy") • 
                     @(Model.UserRole == "PrintingSpecialist" ? "SLS Printing Specialist" :
                       Model.UserRole == "EDMSpecialist" ? "EDM Operations Specialist" :
@@ -38,7 +38,7 @@
                         _ => "👤"
                     })
                 </div>
-                <div class="text-sm text-blue-200">@DateTime.Now.ToString("h:mm tt")</div>
+                <div class="text-sm text-blue-200 dark:text-blue-300">@DateTime.Now.ToString("h:mm tt")</div>
             </div>
         </div>
     </div>
@@ -46,53 +46,53 @@
     <!-- Quick Stats -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <!-- My Tasks -->
-        <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 transition-all duration-300">
             <div class="flex items-center">
-                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                    <i class="fas fa-tasks text-blue-600"></i>
+                <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center mr-3">
+                    <i class="fas fa-tasks text-blue-600 dark:text-blue-400"></i>
                 </div>
                 <div>
-                    <div class="text-2xl font-bold text-gray-900">@Model.Dashboard.ActiveTasks</div>
-                    <div class="text-sm text-gray-500">Active Tasks</div>
+                    <div class="text-2xl font-bold text-gray-900 dark:text-gray-100">@Model.Dashboard.ActiveTasks</div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400">Active Tasks</div>
                 </div>
             </div>
         </div>
 
         <!-- Due Today -->
-        <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 transition-all duration-300">
             <div class="flex items-center">
-                <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
-                    <i class="fas fa-calendar-day text-orange-600"></i>
+                <div class="w-10 h-10 bg-orange-100 dark:bg-orange-900 rounded-lg flex items-center justify-center mr-3">
+                    <i class="fas fa-calendar-day text-orange-600 dark:text-orange-400"></i>
                 </div>
                 <div>
-                    <div class="text-2xl font-bold text-gray-900">@Model.Dashboard.TasksDueToday</div>
-                    <div class="text-sm text-gray-500">Due Today</div>
+                    <div class="text-2xl font-bold text-gray-900 dark:text-gray-100">@Model.Dashboard.TasksDueToday</div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400">Due Today</div>
                 </div>
             </div>
         </div>
 
         <!-- Overdue -->
-        <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 transition-all duration-300">
             <div class="flex items-center">
-                <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-3">
-                    <i class="fas fa-exclamation-triangle text-red-600"></i>
+                <div class="w-10 h-10 bg-red-100 dark:bg-red-900 rounded-lg flex items-center justify-center mr-3">
+                    <i class="fas fa-exclamation-triangle text-red-600 dark:text-red-400"></i>
                 </div>
                 <div>
-                    <div class="text-2xl font-bold text-gray-900">@Model.Dashboard.OverdueTasks</div>
-                    <div class="text-sm text-gray-500">Overdue</div>
+                    <div class="text-2xl font-bold text-gray-900 dark:text-gray-100">@Model.Dashboard.OverdueTasks</div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400">Overdue</div>
                 </div>
             </div>
         </div>
 
         <!-- Completed -->
-        <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 transition-all duration-300">
             <div class="flex items-center">
-                <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-                    <i class="fas fa-check-circle text-green-600"></i>
+                <div class="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center mr-3">
+                    <i class="fas fa-check-circle text-green-600 dark:text-green-400"></i>
                 </div>
                 <div>
-                    <div class="text-2xl font-bold text-gray-900">@Model.Dashboard.CompletedTasks</div>
-                    <div class="text-sm text-gray-500">Completed</div>
+                    <div class="text-2xl font-bold text-gray-900 dark:text-gray-100">@Model.Dashboard.CompletedTasks</div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400">Completed</div>
                 </div>
             </div>
         </div>
@@ -101,23 +101,23 @@
     <!-- Team Overview (Management Only) -->
     @if (Model.UserRole is "Admin" or "Manager" or "Supervisor")
     {
-        <div class="bg-white rounded-lg border border-gray-200 p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <i class="fas fa-users text-purple-600 mr-2"></i>
+        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 transition-all duration-300">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+                <i class="fas fa-users text-purple-600 dark:text-purple-400 mr-2"></i>
                 Team Overview
             </h3>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="text-center p-4 bg-gray-50 rounded-lg">
-                    <div class="text-2xl font-bold text-purple-600">@Model.Dashboard.TeamActiveTasks</div>
-                    <div class="text-sm text-gray-600">Team Active Tasks</div>
+                <div class="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg transition-all duration-300">
+                    <div class="text-2xl font-bold text-purple-600 dark:text-purple-400">@Model.Dashboard.TeamActiveTasks</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400">Team Active Tasks</div>
                 </div>
-                <div class="text-center p-4 bg-gray-50 rounded-lg">
-                    <div class="text-2xl font-bold text-red-600">@Model.Dashboard.TeamOverdueTasks</div>
-                    <div class="text-sm text-gray-600">Team Overdue</div>
+                <div class="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg transition-all duration-300">
+                    <div class="text-2xl font-bold text-red-600 dark:text-red-400">@Model.Dashboard.TeamOverdueTasks</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400">Team Overdue</div>
                 </div>
-                <div class="text-center p-4 bg-gray-50 rounded-lg">
-                    <div class="text-2xl font-bold text-blue-600">@Model.Dashboard.TeamTotalTasks</div>
-                    <div class="text-sm text-gray-600">Total Tasks</div>
+                <div class="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg transition-all duration-300">
+                    <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">@Model.Dashboard.TeamTotalTasks</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400">Total Tasks</div>
                 </div>
             </div>
         </div>
@@ -125,13 +125,13 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Recent Tasks -->
-        <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 transition-all duration-300">
             <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
-                    <i class="fas fa-clock text-blue-600 mr-2"></i>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                    <i class="fas fa-clock text-blue-600 dark:text-blue-400 mr-2"></i>
                     Priority Tasks
                 </h3>
-                <a href="/Tasks/MyTasks" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                <a href="/Tasks/MyTasks" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium transition-colors duration-200">
                     View All →
                 </a>
             </div>
@@ -141,31 +141,31 @@
                 <div class="space-y-3">
                     @foreach (var task in Model.Dashboard.RecentTasks)
                     {
-                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200">
                             <div class="flex-1">
                                 <div class="flex items-center space-x-2 mb-1">
-                                    <h4 class="font-medium text-gray-900 text-sm">@task.Title</h4>
+                                    <h4 class="font-medium text-gray-900 dark:text-gray-100 text-sm">@task.Title</h4>
                                     @if (task.Priority >= 4)
                                     {
-                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200">
                                             High Priority
                                         </span>
                                     }
                                     @if (task.DueAt.HasValue && task.DueAt < DateTime.UtcNow)
                                     {
-                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200">
                                             <i class="fas fa-exclamation-triangle mr-1"></i>Overdue
                                         </span>
                                     }
                                 </div>
                                 @if (task.DueAt.HasValue)
                                 {
-                                    <p class="text-xs text-gray-500">
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">
                                         Due: @task.DueAt.Value.ToString("MMM dd, yyyy 'at' h:mm tt")
                                     </p>
                                 }
                             </div>
-                            <a href="/Tasks/@task.Id/AddProgress" class="btn btn-sm btn-outline-primary ml-3">
+                            <a href="/Tasks/@task.Id/AddProgress" class="btn btn-sm btn-outline-primary ml-3 text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-500 transition-colors duration-200">
                                 <i class="fas fa-plus text-xs mr-1"></i>Update
                             </a>
                         </div>
@@ -175,40 +175,40 @@
             else
             {
                 <div class="text-center py-8">
-                    <div class="text-gray-400 mb-2">
+                    <div class="text-gray-400 dark:text-gray-500 mb-2">
                         <i class="fas fa-check-circle text-4xl"></i>
                     </div>
-                    <p class="text-gray-500">All caught up! No active tasks.</p>
+                    <p class="text-gray-500 dark:text-gray-400">All caught up! No active tasks.</p>
                 </div>
             }
         </div>
 
         <!-- Quick Actions -->
-        <div class="bg-white rounded-lg border border-gray-200 p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <i class="fas fa-bolt text-yellow-600 mr-2"></i>
+        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 transition-all duration-300">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+                <i class="fas fa-bolt text-yellow-600 dark:text-yellow-400 mr-2"></i>
                 Quick Actions
             </h3>
             
             <div class="grid grid-cols-1 gap-3">
                 <!-- Common Actions for All Users -->
-                <a href="/Tasks/MyTasks" class="flex items-center p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
-                    <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center mr-3">
+                <a href="/Tasks/MyTasks" class="flex items-center p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors duration-200">
+                    <div class="w-8 h-8 bg-blue-600 dark:bg-blue-500 rounded-lg flex items-center justify-center mr-3">
                         <i class="fas fa-user-check text-white text-sm"></i>
                     </div>
                     <div>
-                        <div class="font-medium text-blue-900">My Tasks</div>
-                        <div class="text-sm text-blue-700">View and manage your assigned tasks</div>
+                        <div class="font-medium text-blue-900 dark:text-blue-100">My Tasks</div>
+                        <div class="text-sm text-blue-700 dark:text-blue-300">View and manage your assigned tasks</div>
                     </div>
                 </a>
 
-                <a href="/Tasks/Progress" class="flex items-center p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
-                    <div class="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center mr-3">
+                <a href="/Tasks/Progress" class="flex items-center p-3 bg-green-50 dark:bg-green-900/30 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors duration-200">
+                    <div class="w-8 h-8 bg-green-600 dark:bg-green-500 rounded-lg flex items-center justify-center mr-3">
                         <i class="fas fa-chart-line text-white text-sm"></i>
                     </div>
                     <div>
-                        <div class="font-medium text-green-900">Add Progress</div>
-                        <div class="text-sm text-green-700">Update task progress and status</div>
+                        <div class="font-medium text-green-900 dark:text-green-100">Add Progress</div>
+                        <div class="text-sm text-green-700 dark:text-green-300">Update task progress and status</div>
                     </div>
                 </a>
 

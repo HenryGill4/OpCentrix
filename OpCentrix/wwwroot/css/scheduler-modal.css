@@ -1,5 +1,6 @@
 /* Enhanced modal and UI styles for scheduler - Base styles only
  * All responsive @media queries moved to responsive-master.css
+ * INCLUDES COMPREHENSIVE DARK MODE SUPPORT
  */
 
 .modal-container {
@@ -35,6 +36,14 @@
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
+/* Dark Mode for Modal Content */
+:root.dark .modal-content,
+html.dark .modal-content {
+    background: #1f2937 !important;
+    color: #f9fafb !important;
+    border: 1px solid #374151 !important;
+}
+
 .modal-header {
     display: flex;
     justify-content: space-between;
@@ -43,11 +52,23 @@
     border-bottom: 1px solid #e5e7eb;
 }
 
+/* Dark Mode for Modal Header */
+:root.dark .modal-header,
+html.dark .modal-header {
+    border-bottom-color: #374151 !important;
+}
+
 .modal-title {
     font-size: 1.5rem;
     font-weight: 700;
     color: #111827;
     margin: 0;
+}
+
+/* Dark Mode for Modal Title */
+:root.dark .modal-title,
+html.dark .modal-title {
+    color: #f9fafb !important;
 }
 
 .modal-close-btn {
@@ -64,6 +85,17 @@
         color: #4b5563;
     }
 
+/* Dark Mode for Modal Close Button */
+:root.dark .modal-close-btn,
+html.dark .modal-close-btn {
+    color: #d1d5db !important;
+}
+
+:root.dark .modal-close-btn:hover,
+html.dark .modal-close-btn:hover {
+    color: #f9fafb !important;
+}
+
 .modal-body {
     padding: 1.5rem;
 }
@@ -75,6 +107,13 @@
     padding: 1rem 1.5rem 1.5rem 1.5rem;
     border-top: 1px solid #e5e7eb;
     background: #f9fafb;
+}
+
+/* Dark Mode for Modal Footer */
+:root.dark .modal-footer,
+html.dark .modal-footer {
+    background: #374151 !important;
+    border-top-color: #4b5563 !important;
 }
 
 .footer-left {
@@ -110,6 +149,13 @@
     margin-bottom: 0.5rem;
 }
 
+/* Dark Mode for Form Section Title */
+:root.dark .form-section-title,
+html.dark .form-section-title {
+    color: #f9fafb !important;
+    border-bottom-color: #4b5563 !important;
+}
+
 .form-group {
     display: flex;
     flex-direction: column;
@@ -133,6 +179,12 @@
         color: #ef4444;
     }
 
+/* Dark Mode for Form Labels */
+:root.dark .form-label,
+html.dark .form-label {
+    color: #d1d5db !important;
+}
+
 .form-input, .form-select, .form-textarea {
     width: 100%;
     padding: 0.75rem;
@@ -147,6 +199,28 @@
         border-color: #3b82f6;
         box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     }
+
+/* Dark Mode for Form Inputs */
+:root.dark .form-input,
+html.dark .form-input,
+:root.dark .form-select,
+html.dark .form-select,
+:root.dark .form-textarea,
+html.dark .form-textarea {
+    background-color: #374151 !important;
+    border-color: #4b5563 !important;
+    color: #f9fafb !important;
+}
+
+:root.dark .form-input:focus,
+html.dark .form-input:focus,
+:root.dark .form-select:focus,
+html.dark .form-select:focus,
+:root.dark .form-textarea:focus,
+html.dark .form-textarea:focus {
+    border-color: #60a5fa !important;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1) !important;
+}
 
 .form-checkbox {
     display: flex;
@@ -165,9 +239,22 @@
         box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
     }
 
+/* Dark Mode for Checkboxes */
+:root.dark .checkbox-input,
+html.dark .checkbox-input {
+    background-color: #374151 !important;
+    border-color: #4b5563 !important;
+}
+
 .checkbox-label {
     font-size: 0.875rem;
     color: #374151;
+}
+
+/* Dark Mode for Checkbox Labels */
+:root.dark .checkbox-label,
+html.dark .checkbox-label {
+    color: #d1d5db !important;
 }
 
 .btn {
@@ -201,6 +288,18 @@
         background: #d1d5db;
     }
 
+/* Dark Mode for Secondary Buttons */
+:root.dark .btn-secondary,
+html.dark .btn-secondary {
+    background: #4b5563 !important;
+    color: #f9fafb !important;
+}
+
+:root.dark .btn-secondary:hover,
+html.dark .btn-secondary:hover {
+    background: #6b7280 !important;
+}
+
 .btn-danger {
     background: #ef4444;
     color: white;
@@ -225,6 +324,14 @@
     border-radius: 0.5rem;
 }
 
+/* Dark Mode for Error Container */
+:root.dark .error-container,
+html.dark .error-container {
+    background: #7f1d1d !important;
+    border-color: #991b1b !important;
+    color: #fecaca !important;
+}
+
 .error-header {
     display: flex;
     align-items: center;
@@ -237,11 +344,23 @@
     color: #991b1b;
 }
 
+/* Dark Mode for Error Title */
+:root.dark .error-title,
+html.dark .error-title {
+    color: #fecaca !important;
+}
+
 .error-list {
     font-size: 0.875rem;
     color: #b91c1c;
     list-style: disc;
     list-style-position: inside;
+}
+
+/* Dark Mode for Error List */
+:root.dark .error-list,
+html.dark .error-list {
+    color: #fca5a5 !important;
 }
 
 .loading-indicator {
@@ -266,6 +385,14 @@
     font-weight: 500;
 }
 
+/* Dark Mode for Loading Content */
+:root.dark .loading-content,
+html.dark .loading-content {
+    background: #1f2937 !important;
+    border-color: #374151 !important;
+    color: #e5e7eb !important;
+}
+
 .empty-state {
     display: flex;
     align-items: center;
@@ -273,6 +400,13 @@
     padding: 4rem;
     background: white;
     border-radius: 0.75rem;
+}
+
+/* Dark Mode for Empty State */
+:root.dark .empty-state,
+html.dark .empty-state {
+    background: #1f2937 !important;
+    color: #e5e7eb !important;
 }
 
 .empty-state-content {
@@ -287,6 +421,12 @@
     color: #d1d5db;
 }
 
+/* Dark Mode for Empty State Icon */
+:root.dark .empty-state-icon,
+html.dark .empty-state-icon {
+    color: #6b7280 !important;
+}
+
 .empty-state-title {
     font-size: 1.125rem;
     font-weight: 600;
@@ -294,9 +434,21 @@
     margin-bottom: 0.5rem;
 }
 
+/* Dark Mode for Empty State Title */
+:root.dark .empty-state-title,
+html.dark .empty-state-title {
+    color: #f9fafb !important;
+}
+
 .empty-state-text {
     color: #6b7280;
     margin-bottom: 1rem;
+}
+
+/* Dark Mode for Empty State Text */
+:root.dark .empty-state-text,
+html.dark .empty-state-text {
+    color: #9ca3af !important;
 }
 
 .notification-container {
@@ -317,6 +469,13 @@
     background: white;
     border-radius: 0.75rem;
     box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+/* Dark Mode for Scheduler Main Content */
+:root.dark .scheduler-main-content,
+html.dark .scheduler-main-content {
+    background: #1f2937 !important;
+    border: 1px solid #374151 !important;
 }
 
 /* Notification styling */
@@ -376,6 +535,12 @@
     z-index: 25;
 }
 
+/* Dark Mode for Scroll Position Indicator */
+:root.dark .scroll-position-indicator,
+html.dark .scroll-position-indicator {
+    background: rgba(75, 85, 99, 0.5) !important;
+}
+
 .scroll-position-thumb {
     height: 100%;
     background: #3b82f6;
@@ -396,6 +561,13 @@
     border-radius: 0.5rem;
     padding: 0.25rem;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Dark Mode for Time Nav Shortcuts */
+:root.dark .time-nav-shortcuts,
+html.dark .time-nav-shortcuts {
+    background: rgba(31, 41, 55, 0.95) !important;
+    border: 1px solid #374151 !important;
 }
 
 .time-nav-btn {
@@ -419,6 +591,18 @@
         color: white;
         border-color: #3b82f6;
     }
+
+/* Dark Mode for Time Nav Buttons */
+:root.dark .time-nav-btn,
+html.dark .time-nav-btn {
+    color: #9ca3af !important;
+}
+
+:root.dark .time-nav-btn:hover,
+html.dark .time-nav-btn:hover {
+    background: #4b5563 !important;
+    color: #f9fafb !important;
+}
 
 /* Enhanced scrolling experience for mobile devices */
 .scheduler-main-content {

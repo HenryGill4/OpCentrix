@@ -61,8 +61,85 @@
     @* Render Styles section *@
     @await RenderSectionAsync("Styles", required: false)
     
+    <!-- Enhanced Dark Mode System - Responds to both system settings and user preference -->
+    <script>
+        // Dark mode initialization - Must run before page renders
+        (function() {
+            // Enhanced theme detection that respects both system and user preference
+            const getTheme = () => {
+                const stored = localStorage.getItem('theme');
+                if (stored && (stored === 'dark' || stored === 'light')) {
+                    return stored;
+                }
+                // Only fall back to system preference if no user preference is stored
+                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            };
+            
+            const setTheme = (theme) => {
+                // Validate theme value
+                if (theme !== 'dark' && theme !== 'light') {
+                    theme = 'light';
+                }
+                
+                localStorage.setItem('theme', theme);
+                
+                if (theme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+                
+                // Dispatch custom event for components that need to react to theme changes
+                window.dispatchEvent(new CustomEvent('themeChanged', { 
+                    detail: { theme } 
+                }));
+            };
+            
+            // Set initial theme
+            setTheme(getTheme());
+            
+            // Enhanced system theme change listener - only applies if user hasn't manually set a preference
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+                const userPreference = localStorage.getItem('theme');
+                // Only auto-switch if user hasn't explicitly set a preference
+                if (!userPreference) {
+                    setTheme(e.matches ? 'dark' : 'light');
+                }
+            });
+            
+            // Enhanced theme toggle with user preference override
+            window.toggleTheme = () => {
+                const current = getTheme();
+                const newTheme = current === 'dark' ? 'light' : 'dark';
+                setTheme(newTheme);
+                
+                // Provide user feedback
+                console.log(`Theme switched to ${newTheme} mode`);
+            };
+            
+            // Get current theme state
+            window.getCurrentTheme = getTheme;
+            
+            // Reset to system preference
+            window.resetToSystemTheme = () => {
+                localStorage.removeItem('theme');
+                const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                setTheme(systemTheme);
+            };
+            
+            // Force theme (for testing or admin controls)
+            window.forceTheme = (theme) => {
+                if (theme === 'dark' || theme === 'light') {
+                    setTheme(theme);
+                }
+            };
+        })();
+    </script>
+    
     <style>
-        /* Sidebar styles */
+        /* Enhanced Sidebar styles - Responds to both system and user preference */
         .sidebar {
             transition: transform 0.3s ease-in-out;
         }
@@ -92,26 +169,80 @@
             }
         }
         
-        /* Enhanced scrollbar */
+        /* Enhanced scrollbar - Class-based dark mode only */
         .sidebar::-webkit-scrollbar {
             width: 4px;
+            transition: all 0.3s ease;
         }
         
         .sidebar::-webkit-scrollbar-track {
             background: #f1f5f9;
+            transition: background 0.3s ease;
+        }
+        
+        /* Class-based dark mode - NOT media query */
+        :root.dark .sidebar::-webkit-scrollbar-track,
+        html.dark .sidebar::-webkit-scrollbar-track {
+            background: #1e293b;
         }
         
         .sidebar::-webkit-scrollbar-thumb {
             background: #cbd5e1;
             border-radius: 2px;
+            transition: background 0.3s ease;
+        }
+        
+        /* Class-based dark mode - NOT media query */
+        :root.dark .sidebar::-webkit-scrollbar-thumb,
+        html.dark .sidebar::-webkit-scrollbar-thumb {
+            background: #475569;
         }
         
         .sidebar::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
         }
+        
+        /* Class-based dark mode - NOT media query */
+        :root.dark .sidebar::-webkit-scrollbar-thumb:hover,
+        html.dark .sidebar::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+        
+        /* Enhanced theme indicator for debugging */
+        .theme-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 4px 8px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border-radius: 4px;
+            font-size: 10px;
+            z-index: 9999;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        /* Show theme indicator in development mode */
+        .debug-mode .theme-indicator {
+            opacity: 1;
+        }
+        
+        /* Enhanced body background with better transition support */
+        body {
+            background-color: #f9fafb;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        
+        /* Class-based dark mode for body - ensures it responds to user preference */
+        :root.dark body,
+        html.dark body {
+            background-color: #111827 !important;
+        }
     </style>
 </head>
-<body class="bg-gray-50">
+<body class="bg-gray-50 dark:bg-gray-900 transition-colors duration-300" data-theme-responsive="true">
     @{
         var user = Context.User;
         var isAuthenticated = user.Identity?.IsAuthenticated ?? false;
@@ -124,12 +255,12 @@
     @if (isAuthenticated)
     {
         <!-- Sidebar Navigation -->
-        <div id="sidebar" class="sidebar fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg border-r border-gray-200 overflow-y-auto">
+        <div id="sidebar" class="sidebar fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 shadow-lg border-r border-gray-200 dark:border-gray-700 overflow-y-auto transition-colors duration-300">
             <!-- Logo and Header -->
-            <div class="sidebar-header flex items-center h-16 px-6 border-b border-gray-200">
+            <div class="sidebar-header flex items-center h-16 px-6 border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
                 <div class="flex items-center">
-                    <div class="w-8 h-8 bg-white rounded-lg flex items-center justify-center mr-3 shadow-md">
-                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="w-8 h-8 bg-white dark:bg-gray-700 rounded-lg flex items-center justify-center mr-3 shadow-md">
+                        <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
                         </svg>
                     </div>
@@ -143,15 +274,28 @@
             </div>
 
             <!-- User Info Card -->
-            <div class="user-info-card p-4 border-b border-gray-200">
+            <div class="user-info-card p-4 border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
                 <div class="flex items-center space-x-3">
                     <div class="user-avatar w-10 h-10 rounded-full flex items-center justify-center shadow-md">
                         <span class="text-white font-semibold text-sm">@(userName.FirstOrDefault())</span>
                     </div>
                     <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium text-gray-900 truncate">@userName</p>
-                        <p class="text-xs text-gray-600">@userRole</p>
+                        <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate transition-colors duration-300">@userName</p>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 transition-colors duration-300">@userRole</p>
                     </div>
+                </div>
+                
+                <!-- Dark Mode Toggle -->
+                <div class="mt-3 flex items-center justify-between">
+                    <span class="text-xs text-gray-600 dark:text-gray-400">Theme</span>
+                    <button onclick="toggleTheme()" class="theme-toggle-btn p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200">
+                        <svg class="w-4 h-4 text-gray-600 dark:text-gray-300 dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                        </svg>
+                        <svg class="w-4 h-4 text-gray-300 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                        </svg>
+                    </button>
                 </div>
             </div>
 
@@ -346,7 +490,7 @@
             </nav>
 
             <!-- Footer Actions -->
-            <div class="p-4 border-t border-gray-200 bg-gray-50">
+            <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 transition-colors duration-300">
                 <button onclick="performLogout()" class="logout-btn w-full text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center">
                     <i class="fas fa-sign-out-alt mr-2"></i>
                     Logout
@@ -363,41 +507,44 @@
         @if (isAuthenticated)
         {
             <!-- Top bar -->
-            <div class="sticky top-0 z-40 bg-white shadow-sm border-b border-gray-200">
+            <div class="sticky top-0 z-40 bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
                 <div class="flex items-center justify-between h-14 px-4">
-                    <button id="sidebar-toggle" class="text-gray-500 hover:text-gray-700 md:hidden">
+                    <button id="sidebar-toggle" class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 md:hidden transition-colors duration-200">
                         <i class="fas fa-bars text-xl"></i>
                     </button>
                     
                     <div class="hidden md:flex items-center">
-                        <button id="sidebar-collapse" class="text-gray-500 hover:text-gray-700 mr-4">
+                        <button id="sidebar-collapse" class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 mr-4 transition-colors duration-200">
                             <i class="fas fa-angle-double-left text-lg"></i>
                         </button>
-                        <h1 class="text-lg font-semibold text-gray-900">@ViewData["Title"]</h1>
+                        <h1 class="text-lg font-semibold text-gray-900 dark:text-gray-100 transition-colors duration-300">@ViewData["Title"]</h1>
                     </div>
                     
                     <!-- Page title for mobile -->
-                    <h1 class="text-lg font-semibold text-gray-900 md:hidden">@ViewData["Title"]</h1>
+                    <h1 class="text-lg font-semibold text-gray-900 dark:text-gray-100 md:hidden transition-colors duration-300">@ViewData["Title"]</h1>
                     
                     <!-- Right side actions -->
                     <div class="flex items-center space-x-3">
                         @if (userRole != "Admin" && userRole != "Manager")
                         {
-                            <!-- Quick Task Actions for Employees -->
-                            <div class="relative">
-                                <button id="quick-tasks-btn" class="text-gray-500 hover:text-gray-700 relative">
+                            <!-- Quick Task Notifications for Employees - Clean Bell Icon -->
+                            <div class="relative" id="quick-tasks-container">
+                                <div class="relative cursor-pointer text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors duration-200" 
+                                     id="quick-tasks-bell" 
+                                     onclick="toggleQuickTasksDropdown()">
                                     <i class="fas fa-bell text-lg"></i>
                                     <span id="task-notification-count" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center hidden">0</span>
-                                </button>
+                                </div>
+                                
                                 <!-- Quick task dropdown will be populated via HTMX -->
-                                <div id="quick-tasks-dropdown" class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 hidden">
-                                    <!-- Content loaded via HTMX -->
+                                <div id="quick-tasks-dropdown" class="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 hidden transition-colors duration-300">
+                                    <!-- Content loaded dynamically -->
                                 </div>
                             </div>
                         }
                         
                         <!-- User menu -->
-                        <div class="flex items-center text-sm text-gray-600">
+                        <div class="flex items-center text-sm text-gray-600 dark:text-gray-400 transition-colors duration-300">
                             <span class="hidden sm:block">@userName</span>
                         </div>
                     </div>
@@ -421,11 +568,11 @@
         </div>
 
         <!-- Main Content -->
-        <main class="@(isAuthenticated ? "p-6 min-h-screen" : "min-h-screen")">
+        <main class="@(isAuthenticated ? "p-6 min-h-screen" : "min-h-screen") transition-colors duration-300">
             @if (!isAuthenticated)
             {
-                <!-- Login page styling -->
-                <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <!-- Login page styling -->
+                <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900 dark:to-indigo-900 transition-colors duration-300">
                     @RenderBody()
                 </div>
             }
@@ -440,7 +587,7 @@
     @await Html.PartialAsync("_BugReportTool")
 
     <!-- Enhanced Footer -->
-    <footer class="@(isAuthenticated ? "ml-64" : "") bg-white border-t border-gray-200 mt-auto">
+    <footer class="@(isAuthenticated ? "ml-64" : "") bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 mt-auto transition-colors duration-300">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <div class="flex flex-col md:flex-row justify-between items-center">
                 <div class="flex items-center space-x-4">
@@ -450,8 +597,8 @@
                         </svg>
                     </div>
                     <div>
-                        <p class="text-sm font-medium text-gray-900">&copy; @DateTime.Now.Year OpCentrix</p>
-                        <p class="text-xs text-gray-500">Stage-Aware Manufacturing Execution System</p>
+                        <p class="text-sm font-medium text-gray-900 dark:text-gray-100 transition-colors duration-300">&copy; @DateTime.Now.Year OpCentrix</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 transition-colors duration-300">Stage-Aware Manufacturing Execution System</p>
                     </div>
                 </div>
                 <div class="mt-4 md:mt-0">
@@ -459,7 +606,7 @@
                         <div class="flex items-center space-x-2">
                             <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                         </div>
-                        <p class="text-xs text-gray-500">Last updated: @DateTime.Now.ToString("MMM dd, yyyy HH:mm")</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 transition-colors duration-300">Last updated: @DateTime.Now.ToString("MMM dd, yyyy HH:mm")</p>
                     </div>
                 </div>
             </div>
@@ -557,18 +704,122 @@
             
             // Refresh task notifications every 60 seconds
             setInterval(loadUserTaskNotifications, 60000);
+            
+            // Test notification bell functionality
+            console.log('🔔 Initializing notification bell for user role:', '@userRole');
+            console.log('🔔 User role check: userRole != "Admin" && userRole != "Manager":', ('@userRole' != 'Admin' && '@userRole' != 'Manager'));
+            
+            const bellElement = document.getElementById('quick-tasks-bell');
+            const dropdownElement = document.getElementById('quick-tasks-dropdown');
+            
+            if (bellElement) {
+                console.log('🔔 Bell element found and ready');
+                
+                // Test click handler
+                bellElement.addEventListener('click', function(e) {
+                    console.log('🔔 Bell clicked via event listener');
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+            } else {
+                console.log('🔔 Bell element not found - user role:', '@userRole');
+                console.log('🔔 Bell should be visible for roles other than Admin/Manager');
+                
+                // Show what roles would see the bell
+                const allowedRoles = ['PrintingSpecialist', 'Operator', 'EDMSpecialist', 'CoatingSpecialist', 'QualityInspector', 'QCSpecialist', 'ShippingSpecialist', 'BTSpecialist'];
+                console.log('🔔 Roles that should see the bell:', allowedRoles);
+            }
+            
+            if (dropdownElement) {
+                console.log('🔔 Dropdown element found and ready');
+            } else {
+                console.log('🔔 Dropdown element not found');
+            }
+            
+            // Enhanced Dark Mode Debug and Monitoring
+            if (window.location.search.includes('debug=theme')) {
+                // Add debug indicator
+                const debugIndicator = document.createElement('div');
+                debugIndicator.className = 'theme-indicator';
+                debugIndicator.textContent = `Theme: ${getCurrentTheme()}`;
+                document.body.appendChild(debugIndicator);
+                document.body.classList.add('debug-mode');
+                
+                // Update indicator when theme changes
+                window.addEventListener('themeChanged', (e) => {
+                    debugIndicator.textContent = `Theme: ${e.detail.theme}`;
+                });
+                
+                console.log('🎨 Dark Mode Debug Info:', {
+                    currentTheme: getCurrentTheme(),
+                    storedPreference: localStorage.getItem('theme'),
+                    systemPreference: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+                    htmlClasses: document.documentElement.className,
+                    dataTheme: document.documentElement.getAttribute('data-theme')
+                });
+            }
+            
+            // Monitor for theme inconsistencies
+            window.addEventListener('themeChanged', (e) => {
+                const htmlHasDark = document.documentElement.classList.contains('dark');
+                const expectedDark = e.detail.theme === 'dark';
+                
+                if (htmlHasDark !== expectedDark) {
+                    console.warn('🚨 Theme inconsistency detected! Fixing...', {
+                        expected: expectedDark,
+                        actual: htmlHasDark,
+                        theme: e.detail.theme
+                    });
+                    
+                    // Force correction
+                    if (expectedDark) {
+                        document.documentElement.classList.add('dark');
+                    } else {
+                        document.documentElement.classList.remove('dark');
+                    }
+                }
+            });
         });
         
         // Function to load user task notifications
         function loadUserTaskNotifications() {
-            fetch(`/api/tasks/user-notifications`)
-                .then(response => response.json())
-                .then(data => {
-                    updateTaskBadges(data);
-                })
-                .catch(error => {
-                    console.error('Error loading task notifications:', error);
-                });
+            console.log('🔔 Loading user task notifications...');
+            
+            fetch('/api/tasks/user-notifications', {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => {
+                console.log('🔔 Notifications API response status:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('🔔 Notifications data received:', data);
+                updateTaskBadges(data);
+            })
+            .catch(error => {
+                console.error('🔔 Error loading task notifications:', error);
+                
+                // Show fallback data for testing
+                const fallbackData = {
+                    myTasksCount: 0,
+                    urgentTasksCount: 0,
+                    taskPriorities: {
+                        critical: 0,
+                        urgent: 0,
+                        high: 0,
+                        normal: 0,
+                        low: 0
+                    }
+                };
+                updateTaskBadges(fallbackData);
+            });
         }
         
         // Function to get priority class based on task data
@@ -612,34 +863,113 @@
                 }
             }
             
-            // Update notification count in top bar
+            // Update notification count in top bar with animations - Updated for new structure
             const notificationCount = document.getElementById('task-notification-count');
+            const bellIcon = document.querySelector('#quick-tasks-bell .fas.fa-bell');
+            
             if (notificationCount && data && data.urgentTasksCount !== undefined) {
                 notificationCount.textContent = data.urgentTasksCount;
                 notificationCount.style.display = data.urgentTasksCount > 0 ? 'flex' : 'none';
+                
+                // Apply bell animations based on urgency
+                if (bellIcon) {
+                    // Remove existing animation classes
+                    bellIcon.classList.remove('bell-notification', 'bell-urgent');
+                    
+                    if (data.urgentTasksCount > 0) {
+                        // Check if we have critical or urgent tasks
+                        if (data.taskPriorities && (data.taskPriorities.critical > 0 || data.taskPriorities.urgent > 3)) {
+                            bellIcon.classList.add('bell-urgent');
+                        } else if (data.urgentTasksCount > 0) {
+                            bellIcon.classList.add('bell-notification');
+                        }
+                    }
+                }
             }
         }
         
-        // Quick tasks dropdown toggle
-        document.addEventListener('click', function(e) {
-            const quickTasksBtn = document.getElementById('quick-tasks-btn');
-            const quickTasksDropdown = document.getElementById('quick-tasks-dropdown');
+        // Enhanced Quick tasks dropdown toggle for new structure
+        function toggleQuickTasksDropdown() {
+            console.log('🔔 Toggle quick tasks dropdown called');
+            const dropdown = document.getElementById('quick-tasks-dropdown');
+            const bell = document.getElementById('quick-tasks-bell');
             
-            if (quickTasksBtn && quickTasksBtn.contains(e.target)) {
-                e.preventDefault();
-                quickTasksDropdown.classList.toggle('hidden');
+            if (!dropdown) {
+                console.error('🔔 Dropdown element not found');
+                return;
+            }
+            
+            if (!bell) {
+                console.error('🔔 Bell element not found');
+                return;
+            }
+            
+            const isHidden = dropdown.classList.contains('hidden');
+            console.log(`🔔 Dropdown is currently ${isHidden ? 'hidden' : 'visible'}`);
+            
+            if (isHidden) {
+                // Show dropdown
+                dropdown.classList.remove('hidden');
+                console.log('🔔 Showing dropdown');
                 
                 // Load quick tasks content if not already loaded
-                if (!quickTasksDropdown.dataset.loaded) {
-                    fetch(`/api/tasks/quick-dropdown`)
-                        .then(response => response.text())
-                        .then(html => {
-                            quickTasksDropdown.innerHTML = html;
-                            quickTasksDropdown.dataset.loaded = 'true';
-                        });
+                if (!dropdown.dataset.loaded) {
+                    console.log('🔔 Loading tasks content...');
+                    dropdown.innerHTML = '<div class="p-4 text-center text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>Loading tasks...</div>';
+                    
+                    fetch('/api/tasks/quick-dropdown', {
+                        method: 'GET',
+                        credentials: 'same-origin',
+                        headers: {
+                            'Accept': 'text/html'
+                        }
+                    })
+                    .then(response => {
+                        console.log('🔔 API response status:', response.status);
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
+                        return response.text();
+                    })
+                    .then(html => {
+                        console.log('🔔 Tasks content loaded successfully');
+                        dropdown.innerHTML = html;
+                        dropdown.dataset.loaded = 'true';
+                    })
+                    .catch(err => {
+                        console.error('🔔 Failed to load quick tasks:', err);
+                        dropdown.innerHTML = '<div class="p-4 text-red-600 text-sm text-center">Error loading tasks. Please try again.</div>';
+                    });
                 }
-            } else if (quickTasksDropdown && !quickTasksDropdown.contains(e.target)) {
+            } else {
+                // Hide dropdown
+                dropdown.classList.add('hidden');
+                console.log('🔔 Hiding dropdown');
+            }
+        }
+        
+        // Global function to make it accessible from onclick
+        window.toggleQuickTasksDropdown = toggleQuickTasksDropdown;
+        
+        // Updated click handler for new structure
+        document.addEventListener('click', function(e) {
+            const quickTasksBell = document.getElementById('quick-tasks-bell');
+            const quickTasksDropdown = document.getElementById('quick-tasks-dropdown');
+            
+            // Don't hide dropdown if click was inside it
+            if (quickTasksDropdown && quickTasksDropdown.contains(e.target)) {
+                return;
+            }
+            
+            // If click was on the bell, let the onclick handler deal with it
+            if (quickTasksBell && (quickTasksBell.contains(e.target) || e.target === quickTasksBell)) {
+                return;
+            }
+            
+            // Hide dropdown if click was outside
+            if (quickTasksDropdown && !quickTasksDropdown.classList.contains('hidden')) {
                 quickTasksDropdown.classList.add('hidden');
+                console.log('🔔 Hiding dropdown due to outside click');
             }
         });
     </script>
@@ -742,7 +1072,7 @@
         </script>
     }
 
-    <!-- Custom CSS for sidebar navigation -->
+    <!-- Custom CSS for sidebar navigation with Dark Mode -->
     <style>
         .nav-item {
             display: flex;
@@ -755,6 +1085,11 @@
             border-radius: 0.75rem;
             position: relative;
             overflow: hidden;
+            transition: all 0.2s ease;
+        }
+        
+        .dark .nav-item {
+            color: #d1d5db;
         }
         
         .nav-item:hover {
@@ -765,11 +1100,24 @@
             box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
         }
         
+        .dark .nav-item:hover {
+            background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+            color: #e5e7eb;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+        }
+        
         .nav-item-active {
             background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
             color: #1d4ed8;
             box-shadow: 0 2px 12px rgba(59, 130, 246, 0.2);
             border: 1px solid rgba(59, 130, 246, 0.15);
+        }
+        
+        .dark .nav-item-active {
+            background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
+            color: #bfdbfe;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            box-shadow: 0 2px 12px rgba(59, 130, 246, 0.3);
         }
         
         .nav-item-active::before {
@@ -789,6 +1137,7 @@
             font-size: 16px;
         }
         
+        /* Enhanced Section Headers - Class-based Dark Mode */
         .nav-section-header {
             display: flex;
             align-items: center;
@@ -800,8 +1149,16 @@
             color: #6b7280;
             text-transform: uppercase;
             letter-spacing: 0.05em;
+            transition: color 0.3s ease;
         }
         
+        /* Class-based dark mode for section headers */
+        :root.dark .nav-section-header,
+        html.dark .nav-section-header {
+            color: #9ca3af;
+        }
+        
+        /* Enhanced Group Toggle - Class-based Dark Mode */
         .nav-group-toggle {
             display: flex;
             align-items: center;
@@ -815,6 +1172,13 @@
             background: none;
             border: none;
             border-radius: 0.75rem;
+            transition: all 0.2s ease;
+        }
+        
+        /* Class-based dark mode for group toggle */
+        :root.dark .nav-group-toggle,
+        html.dark .nav-group-toggle {
+            color: #d1d5db;
         }
         
         .nav-group-toggle:hover {
@@ -822,6 +1186,14 @@
             color: #1e293b;
             transform: translateX(2px);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+        
+        /* Class-based dark mode for group toggle hover */
+        :root.dark .nav-group-toggle:hover,
+        html.dark .nav-group-toggle:hover {
+            background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+            color: #e5e7eb;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
         
         .nav-group-content {
@@ -832,6 +1204,11 @@
             gap: 0.25rem;
             padding-left: 1rem;
             border-left: 2px solid #e2e8f0;
+            transition: border-color 0.3s ease;
+        }
+        
+        .dark .nav-group-content {
+            border-left-color: #4b5563;
         }
         
         .nav-subitem {
@@ -844,6 +1221,11 @@
             color: #64748b;
             border-radius: 0.6rem;
             text-decoration: none;
+            transition: all 0.2s ease;
+        }
+        
+        .dark .nav-subitem {
+            color: #9ca3af;
         }
         
         .nav-subitem:hover {
@@ -853,13 +1235,18 @@
             transform: translateX(1px);
         }
         
+        .dark .nav-subitem:hover {
+            background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+            color: #d1d5db;
+        }
+        
         .nav-subitem i {
             width: 16px;
             margin-right: 10px;
             font-size: 14px;
         }
         
-        /* Task Badge Styling with Priority Colors - No Animations */
+        /* Task Badge Styling with Priority Colors - With Animations */
         .task-badge {
             font-size: 0.6875rem;
             font-weight: 600;
@@ -870,62 +1257,66 @@
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
         
-        /* Priority-based colors - No animations */
+        /* Priority-based colors with subtle animations */
         .task-badge-low {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-            animation: pulse-subtle-low 4s ease-in-out infinite;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+            color: white !important;
+            animation: pulse-gentle 4s ease-in-out infinite;
         }
         
         .task-badge-normal {
-            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-            color: white;
-            animation: pulse-subtle-normal 3.5s ease-in-out infinite;
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
+            color: white !important;
+            animation: pulse-normal 3s ease-in-out infinite;
         }
         
         .task-badge-high {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            color: white;
-            animation: pulse-subtle-high 3s ease-in-out infinite;
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+            color: white !important;
+            animation: pulse-attention 2.5s ease-in-out infinite;
         }
         
         .task-badge-urgent {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            color: white;
-            animation: pulse-subtle-urgent 2.5s ease-in-out infinite;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+            color: white !important;
+            animation: pulse-urgent 2s ease-in-out infinite;
         }
         
         .task-badge-critical {
-            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
-            color: white;
-            animation: pulse-subtle-critical 2s ease-in-out infinite;
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%) !important;
+            color: white !important;
+            animation: pulse-critical 1.5s ease-in-out infinite;
         }
         
-        /* Subtle pulse animations - Much more professional */
-        @@keyframes pulse-subtle-low {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.9; }
-        }
-        
-        @@keyframes pulse-subtle-normal {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.85; }
-        }
-        
-        @@keyframes pulse-subtle-high {
-            0%, 100% { opacity: 1; }
+        /* Notification pulse animations */
+        @@keyframes pulse-gentle {
+            0%, 100% { opacity: 1; transform: scale(1); }
             50% { opacity: 0.8; }
         }
         
-        @@keyframes pulse-subtle-urgent {
-            0%, 100% { opacity: 1; }
+        @@keyframes pulse-normal {
+            0%, 100% { opacity: 1; transform: scale(1); }
             50% { opacity: 0.75; }
         }
         
-        @@keyframes pulse-subtle-critical {
-            0%, 100% { opacity: 1; }
+        @@keyframes pulse-attention {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.05); }
+        }
+        
+        @@keyframes pulse-urgent {
+            0%, 100% { opacity: 1; transform: scale(1); }
             25% { opacity: 0.9; }
-            75% { opacity: 0.7; }
+            50% { opacity: 0.6; transform: scale(1.1); }
+            75% { opacity: 0.9; }
+        }
+        
+        @@keyframes pulse-critical {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            20% { opacity: 0.8; transform: scale(1.1); }
+            40% { opacity: 0.5; transform: scale(1.15); }
+            60% { opacity: 0.8; transform: scale(1.05); }
+            80% { opacity: 0.9; }
         }
         
         .nav-badge {
@@ -935,6 +1326,12 @@
             color: #1e40af;
             border-radius: 9999px;
             font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .dark .nav-badge {
+            background-color: #1e3a8a;
+            color: #bfdbfe;
         }
         
         .stage-badge {
@@ -956,16 +1353,27 @@
             width: 1rem;
             height: 1rem;
             color: #9ca3af;
+            transition: color 0.3s ease;
+        }
+        
+        .dark .nav-chevron {
+            color: #6b7280;
         }
         
         .rotate-180 {
             transform: rotate(180deg);
         }
         
-        /* Enhanced User Info Card */
+        /* Enhanced User Info Card - Dark Mode */
         .user-info-card {
             background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
             border-bottom: 1px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+        
+        .dark .user-info-card {
+            background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+            border-bottom: 1px solid #4b5563;
         }
         
         .user-avatar {
@@ -973,13 +1381,13 @@
             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
         }
         
-        /* Enhanced Sidebar Header */
+        /* Enhanced Sidebar Header - Dark Mode */
         .sidebar-header {
             background: linear-gradient(135deg, #1e40af 0%, #3730a3 100%);
             box-shadow: 0 4px 12px rgba(30, 64, 175, 0.3);
         }
         
-        /* Session Timeout Warning */
+        /* Session Timeout Warning - Dark Mode */
         .session-timeout-warning {
             position: fixed;
             top: 0;
@@ -993,9 +1401,10 @@
             box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4);
         }
         
-        /* Enhanced Logout Button */
+        /* Enhanced Logout Button - Dark Mode */
         .logout-btn {
             background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            transition: all 0.2s ease;
         }
         
         .logout-btn:hover {
@@ -1003,7 +1412,87 @@
             box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
         }
         
-        /* Smooth scrollbar for sidebar */
+        /* Theme Toggle Button */
+        .theme-toggle-btn {
+            transition: all 0.2s ease;
+        }
+        
+        /* Bell Notification Animation */
+        .bell-notification {
+            animation: bell-ring 2s ease-in-out infinite;
+            transform-origin: 50% 0%;
+        }
+        
+        .bell-urgent {
+            animation: bell-urgent 1.5s ease-in-out infinite;
+            transform-origin: 50% 0%;
+        }
+        
+        /* Quick Tasks Dropdown Styling */
+        #quick-tasks-dropdown {
+            min-height: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+            z-index: 9999 !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+        }
+        
+        .dark #quick-tasks-dropdown {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2) !important;
+        }
+        
+        /* Quick tasks dropdown scrollbar */
+        #quick-tasks-dropdown::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        #quick-tasks-dropdown::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 3px;
+        }
+        
+        .dark #quick-tasks-dropdown::-webkit-scrollbar-track {
+            background: #374151;
+        }
+        
+        #quick-tasks-dropdown::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        
+        .dark #quick-tasks-dropdown::-webkit-scrollbar-thumb {
+            background: #6b7280;
+        }
+        
+        #quick-tasks-dropdown::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        
+        .dark #quick-tasks-dropdown::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+        
+        @@keyframes bell-ring {
+            0%, 100% { transform: rotate(0deg); }
+            10% { transform: rotate(10deg); }
+            20% { transform: rotate(-10deg); }
+            30% { transform: rotate(8deg); }
+            40% { transform: rotate(-8deg); }
+            50% { transform: rotate(0deg); }
+        }
+        
+        @@keyframes bell-urgent {
+            0%, 100% { transform: rotate(0deg) scale(1); }
+            5% { transform: rotate(15deg) scale(1.1); }
+            10% { transform: rotate(-15deg) scale(1.1); }
+            15% { transform: rotate(12deg) scale(1.05); }
+            20% { transform: rotate(-12deg) scale(1.05); }
+            25% { transform: rotate(8deg) scale(1.02); }
+            30% { transform: rotate(-8deg) scale(1.02); }
+            35% { transform: rotate(0deg) scale(1); }
+        }
+        
+        /* Smooth scrollbar for sidebar - Dark Mode */
         .sidebar::-webkit-scrollbar {
             width: 6px;
         }
@@ -1013,13 +1502,983 @@
             border-radius: 3px;
         }
         
+        .dark .sidebar::-webkit-scrollbar-track {
+            background: linear-gradient(to bottom, #374151, #4b5563);
+        }
+        
         .sidebar::-webkit-scrollbar-thumb {
             background: linear-gradient(to bottom, #cbd5e1, #94a3b8);
             border-radius: 3px;
         }
         
+        .dark .sidebar::-webkit-scrollbar-thumb {
+            background: linear-gradient(to bottom, #6b7280, #9ca3af);
+        }
+        
         .sidebar::-webkit-scrollbar-thumb:hover {
             background: linear-gradient(to bottom, #94a3b8, #64748b);
+        }
+        
+        .dark .sidebar::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(to bottom, #9ca3af, #d1d5db);
+        }
+        
+        /* Enhanced Dark Mode Override Protection - Class-based only (responds to user preference) */
+        /* Prevents external styles from breaking dark mode and ensures user preference is respected */
+        
+        /* Body and primary backgrounds - Class-based approach */
+        :root.dark body,
+        html.dark body,
+        :root.dark .bg-white,
+        html.dark .bg-white,
+        :root.dark [class*="bg-white"],
+        html.dark [class*="bg-white"] {
+            background-color: #1f2937 !important;
+            background: #1f2937 !important;
+        }
+        
+        :root.dark .bg-gray-50,
+        html.dark .bg-gray-50,
+        :root.dark [class*="bg-gray-50"],
+        html.dark [class*="bg-gray-50"] {
+            background-color: #111827 !important;
+            background: #111827 !important;
+        }
+        
+        /* Text colors - Class-based approach */
+        :root.dark .text-gray-900,
+        html.dark .text-gray-900,
+        :root.dark [class*="text-gray-900"],
+        html.dark [class*="text-gray-900"] {
+            color: #f9fafb !important;
+        }
+        
+        :root.dark .text-gray-800,
+        html.dark .text-gray-800,
+        :root.dark [class*="text-gray-800"],
+        html.dark [class*="text-gray-800"] {
+            color: #e5e7eb !important;
+        }
+        
+        :root.dark .text-gray-600,
+        html.dark .text-gray-600,
+        :root.dark [class*="text-gray-600"],
+        html.dark [class*="text-gray-600"] {
+            color: #9ca3af !important;
+        }
+        
+        :root.dark .text-gray-500,
+        html.dark .text-gray-500,
+        :root.dark [class*="text-gray-500"],
+        html.dark [class*="text-gray-500"] {
+            color: #6b7280 !important;
+        }
+        
+        /* Border colors - Class-based approach */
+        :root.dark .border-gray-200,
+        html.dark .border-gray-200,
+        :root.dark [class*="border-gray-200"],
+        html.dark [class*="border-gray-200"] {
+            border-color: #374151 !important;
+        }
+        
+        :root.dark .border-gray-300,
+        html.dark .border-gray-300,
+        :root.dark [class*="border-gray-300"],
+        html.dark [class*="border-gray-300"] {
+            border-color: #4b5563 !important;
+        }
+        
+        /* Sidebar Dark Mode Protection - Class-based */
+        :root.dark #sidebar,
+        html.dark #sidebar,
+        :root.dark .sidebar,
+        html.dark .sidebar {
+            background-color: #1f2937 !important;
+            background: #1f2937 !important;
+            border-right-color: #374151 !important;
+        }
+        
+        /* Navigation Dark Mode Protection - Class-based */
+        :root.dark .nav-item,
+        html.dark .nav-item,
+        :root.dark .nav-group-toggle,
+        html.dark .nav-group-toggle,
+        :root.dark .nav-subitem,
+        html.dark .nav-subitem {
+            color: #d1d5db !important;
+        }
+        
+        :root.dark .nav-item:hover,
+        html.dark .nav-item:hover,
+        :root.dark .nav-group-toggle:hover,
+        html.dark .nav-group-toggle:hover,
+        :root.dark .nav-subitem:hover,
+        html.dark .nav-subitem:hover {
+            background: linear-gradient(135deg, #374151 0%, #4b5563 100%) !important;
+            color: #e5e7eb !important;
+        }
+        
+        :root.dark .nav-item-active,
+        html.dark .nav-item-active {
+            background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%) !important;
+            color: #bfdbfe !important;
+            border-color: rgba(59, 130, 246, 0.3) !important;
+        }
+        
+        /* Top Bar Dark Mode Protection - Class-based */
+        :root.dark .sticky.top-0,
+        html.dark .sticky.top-0,
+        :root.dark [class*="sticky"][class*="top-0"],
+        html.dark [class*="sticky"][class*="top-0"] {
+            background-color: #1f2937 !important;
+            background: #1f2937 !important;
+            border-bottom-color: #374151 !important;
+        }
+        
+        /* Footer Dark Mode Protection - Class-based */
+        :root.dark footer,
+        html.dark footer {
+            background-color: #1f2937 !important;
+            background: #1f2937 !important;
+            border-top-color: #374151 !important;
+        }
+        
+        /* Cards and Panels Dark Mode Protection - Class-based */
+        :root.dark .bg-white.rounded-lg,
+        html.dark .bg-white.rounded-lg,
+        :root.dark [class*="bg-white"][class*="rounded"],
+        html.dark [class*="bg-white"][class*="rounded"] {
+            background-color: #1f2937 !important;
+            background: #1f2937 !important;
+            border-color: #374151 !important;
+        }
+        
+        :root.dark .bg-gray-50.rounded-lg,
+        html.dark .bg-gray-50.rounded-lg,
+        :root.dark [class*="bg-gray-50"][class*="rounded"],
+        html.dark [class*="bg-gray-50"][class*="rounded"] {
+            background-color: #374151 !important;
+            background: #374151 !important;
+        }
+        
+        /* Button and Link Dark Mode Protection - Class-based */
+        :root.dark .text-blue-600:not(.task-badge):not([class*="task-badge"]),
+        html.dark .text-blue-600:not(.task-badge):not([class*="task-badge"]) {
+            color: #60a5fa !important;
+        }
+        
+        :root.dark .text-blue-600:hover:not(.task-badge):not([class*="task-badge"]),
+        html.dark .text-blue-600:hover:not(.task-badge):not([class*="task-badge"]) {
+            color: #93c5fd !important;
+        }
+        
+        /* Form and Input Dark Mode Protection - Class-based */
+        :root.dark input,
+        html.dark input,
+        :root.dark textarea,
+        html.dark textarea,
+        :root.dark select,
+        html.dark select {
+            background-color: #374151 !important;
+            background: #374151 !important;
+            border-color: #4b5563 !important;
+            color: #f9fafb !important;
+        }
+        
+        :root.dark input:focus,
+        html.dark input:focus,
+        :root.dark textarea:focus,
+        html.dark textarea:focus,
+        :root.dark select:focus,
+        html.dark select:focus {
+            border-color: #60a5fa !important;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+        }
+        
+        /* Bootstrap Override Protection - Class-based */
+        :root.dark .btn:not(.logout-btn):not(.theme-toggle-btn),
+        html.dark .btn:not(.logout-btn):not(.theme-toggle-btn) {
+            background-color: #374151 !important;
+            background: #374151 !important;
+            border-color: #4b5563 !important;
+            color: #f9fafb !important;
+        }
+        
+        :root.dark .btn-primary,
+        html.dark .btn-primary {
+            background-color: #1d4ed8 !important;
+            background: #1d4ed8 !important;
+            border-color: #1d4ed8 !important;
+        }
+        
+        :root.dark .btn-secondary,
+        html.dark .btn-secondary {
+            background-color: #4b5563 !important;
+            background: #4b5563 !important;
+            border-color: #4b5563 !important;
+        }
+        
+        /* Table Dark Mode Protection - Class-based */
+        :root.dark table,
+        html.dark table,
+        :root.dark .table,
+        html.dark .table {
+            background-color: #1f2937 !important;
+            background: #1f2937 !important;
+            color: #f9fafb !important;
+        }
+        
+        :root.dark table th,
+        html.dark table th,
+        :root.dark .table th,
+        html.dark .table th {
+            background-color: #374151 !important;
+            background: #374151 !important;
+            border-color: #4b5563 !important;
+            color: #f9fafb !important;
+        }
+        
+        :root.dark table td,
+        html.dark table td,
+        :root.dark .table td,
+        html.dark .table td {
+            border-color: #4b5563 !important;
+            color: #e5e7eb !important;
+        }
+        
+        /* Modal and Dropdown Dark Mode Protection - Class-based */
+        :root.dark .modal-content,
+        html.dark .modal-content,
+        :root.dark .dropdown-menu,
+        html.dark .dropdown-menu {
+            background-color: #1f2937 !important;
+            background: #1f2937 !important;
+            border-color: #374151 !important;
+            color: #f9fafb !important;
+        }
+        
+        :root.dark .modal-header,
+        html.dark .modal-header,
+        :root.dark .modal-footer,
+        html.dark .modal-footer {
+            border-color: #374151 !important;
+        }
+        
+        /* Alert Dark Mode Protection - Class-based */
+        :root.dark .alert,
+        html.dark .alert {
+            background-color: #374151 !important;
+            background: #374151 !important;
+            border-color: #4b5563 !important;
+            color: #f9fafb !important;
+        }
+        
+        :root.dark .alert-primary,
+        html.dark .alert-primary {
+            background-color: #1e3a8a !important;
+            background: #1e3a8a !important;
+            border-color: #1d4ed8 !important;
+            color: #bfdbfe !important;
+        }
+        
+        :root.dark .alert-success,
+        html.dark .alert-success {
+            background-color: #064e3b !important;
+            background: #064e3b !important;
+            border-color: #059669 !important;
+            color: #a7f3d0 !important;
+        }
+        
+        :root.dark .alert-warning,
+        html.dark .alert-warning {
+            background-color: #92400e !important;
+            background: #92400e !important;
+            border-color: #d97706 !important;
+            color: #fde68a !important;
+        }
+        
+        :root.dark .alert-danger,
+        html.dark .alert-danger {
+            background-color: #991b1b !important;
+            background: #991b1b !important;
+            border-color: #dc2626 !important;
+            color: #fecaca !important;
+        }
+        
+        /* Comprehensive Background Color Dark Mode Support */
+        /* Blue Backgrounds */
+        :root.dark .bg-blue-50,
+        html.dark .bg-blue-50,
+        :root.dark [class*="bg-blue-50"],
+        html.dark [class*="bg-blue-50"] {
+            background-color: #1e3a8a !important;
+            background: #1e3a8a !important;
+        }
+        
+        :root.dark .bg-blue-100,
+        html.dark .bg-blue-100,
+        :root.dark [class*="bg-blue-100"],
+        html.dark [class*="bg-blue-100"] {
+            background-color: #1e40af !important;
+            background: #1e40af !important;
+        }
+        
+        :root.dark .bg-blue-200,
+        html.dark .bg-blue-200,
+        :root.dark [class*="bg-blue-200"],
+        html.dark [class*="bg-blue-200"] {
+            background-color: #1d4ed8 !important;
+            background: #1d4ed8 !important;
+        }
+        
+        /* Green Backgrounds */
+        :root.dark .bg-green-50,
+        html.dark .bg-green-50,
+        :root.dark [class*="bg-green-50"],
+        html.dark [class*="bg-green-50"] {
+            background-color: #064e3b !important;
+            background: #064e3b !important;
+        }
+        
+        :root.dark .bg-green-100,
+        html.dark .bg-green-100,
+        :root.dark [class*="bg-green-100"],
+        html.dark [class*="bg-green-100"] {
+            background-color: #065f46 !important;
+            background: #065f46 !important;
+        }
+        
+        :root.dark .bg-green-200,
+        html.dark .bg-green-200,
+        :root.dark [class*="bg-green-200"],
+        html.dark [class*="bg-green-200"] {
+            background-color: #047857 !important;
+            background: #047857 !important;
+        }
+        
+        /* Red Backgrounds */
+        :root.dark .bg-red-50,
+        html.dark .bg-red-50,
+        :root.dark [class*="bg-red-50"],
+        html.dark [class*="bg-red-50"] {
+            background-color: #991b1b !important;
+            background: #991b1b !important;
+        }
+        
+        :root.dark .bg-red-100,
+        html.dark .bg-red-100,
+        :root.dark [class*="bg-red-100"],
+        html.dark [class*="bg-red-100"] {
+            background-color: #b91c1c !important;
+            background: #b91c1c !important;
+        }
+        
+        :root.dark .bg-red-200,
+        html.dark .bg-red-200,
+        :root.dark [class*="bg-red-200"],
+        html.dark [class*="bg-red-200"] {
+            background-color: #dc2626 !important;
+            background: #dc2626 !important;
+        }
+        
+        /* Yellow/Amber Backgrounds */
+        :root.dark .bg-yellow-50,
+        html.dark .bg-yellow-50,
+        :root.dark .bg-amber-50,
+        html.dark .bg-amber-50,
+        :root.dark [class*="bg-yellow-50"],
+        html.dark [class*="bg-yellow-50"],
+        :root.dark [class*="bg-amber-50"],
+        html.dark [class*="bg-amber-50"] {
+            background-color: #92400e !important;
+            background: #92400e !important;
+        }
+        
+        :root.dark .bg-yellow-100,
+        html.dark .bg-yellow-100,
+        :root.dark .bg-amber-100,
+        html.dark .bg-amber-100,
+        :root.dark [class*="bg-yellow-100"],
+        html.dark [class*="bg-yellow-100"],
+        :root.dark [class*="bg-amber-100"],
+        html.dark [class*="bg-amber-100"] {
+            background-color: #a16207 !important;
+            background: #a16207 !important;
+        }
+        
+        :root.dark .bg-yellow-200,
+        html.dark .bg-yellow-200,
+        :root.dark .bg-amber-200,
+        html.dark .bg-amber-200,
+        :root.dark [class*="bg-yellow-200"],
+        html.dark [class*="bg-yellow-200"],
+        :root.dark [class*="bg-amber-200"],
+        html.dark [class*="bg-amber-200"] {
+            background-color: #ca8a04 !important;
+            background: #ca8a04 !important;
+        }
+        
+        /* Purple/Indigo Backgrounds */
+        :root.dark .bg-purple-50,
+        html.dark .bg-purple-50,
+        :root.dark .bg-indigo-50,
+        html.dark .bg-indigo-50,
+        :root.dark [class*="bg-purple-50"],
+        html.dark [class*="bg-purple-50"],
+        :root.dark [class*="bg-indigo-50"],
+        html.dark [class*="bg-indigo-50"] {
+            background-color: #581c87 !important;
+            background: #581c87 !important;
+        }
+        
+        :root.dark .bg-purple-100,
+        html.dark .bg-purple-100,
+        :root.dark .bg-indigo-100,
+        html.dark .bg-indigo-100,
+        :root.dark [class*="bg-purple-100"],
+        html.dark [class*="bg-purple-100"],
+        :root.dark [class*="bg-indigo-100"],
+        html.dark [class*="bg-indigo-100"] {
+            background-color: #6b21a8 !important;
+            background: #6b21a8 !important;
+        }
+        
+        :root.dark .bg-purple-200,
+        html.dark .bg-purple-200,
+        :root.dark .bg-indigo-200,
+        html.dark .bg-indigo-200,
+        :root.dark [class*="bg-purple-200"],
+        html.dark [class*="bg-purple-200"],
+        :root.dark [class*="bg-indigo-200"],
+        html.dark [class*="bg-indigo-200"] {
+            background-color: #7c3aed !important;
+            background: #7c3aed !important;
+        }
+        
+        /* Gradient Dark Mode Overrides */
+        :root.dark .bg-gradient-to-br,
+        html.dark .bg-gradient-to-br,
+        :root.dark [class*="bg-gradient"],
+        html.dark [class*="bg-gradient"] {
+            background-image: linear-gradient(to bottom right, var(--tw-gradient-stops)) !important;
+        }
+        
+        /* Text Color Dark Mode Support */
+        /* Red Text Colors */
+        :root.dark .text-red-600,
+        html.dark .text-red-600,
+        :root.dark .text-red-700,
+        html.dark .text-red-700,
+        :root.dark .text-red-800,
+        html.dark .text-red-800,
+        :root.dark .text-red-900,
+        html.dark .text-red-900,
+        :root.dark [class*="text-red-6"],
+        html.dark [class*="text-red-6"],
+        :root.dark [class*="text-red-7"],
+        html.dark [class*="text-red-7"],
+        :root.dark [class*="text-red-8"],
+        html.dark [class*="text-red-8"],
+        :root.dark [class*="text-red-9"],
+        html.dark [class*="text-red-9"] {
+            color: #fca5a5 !important;
+        }
+        
+        /* Green Text Colors */
+        :root.dark .text-green-600,
+        html.dark .text-green-600,
+        :root.dark .text-green-700,
+        html.dark .text-green-700,
+        :root.dark .text-green-800,
+        html.dark .text-green-800,
+        :root.dark .text-green-900,
+        html.dark .text-green-900,
+        :root.dark [class*="text-green-6"],
+        html.dark [class*="text-green-6"],
+        :root.dark [class*="text-green-7"],
+        html.dark [class*="text-green-7"],
+        :root.dark [class*="text-green-8"],
+        html.dark [class*="text-green-8"],
+        :root.dark [class*="text-green-9"],
+        html.dark [class*="text-green-9"] {
+            color: #a7f3d0 !important;
+        }
+        
+        /* Blue Text Colors */
+        :root.dark .text-blue-700,
+        html.dark .text-blue-700,
+        :root.dark .text-blue-800,
+        html.dark .text-blue-800,
+        :root.dark .text-blue-900,
+        html.dark .text-blue-900,
+        :root.dark [class*="text-blue-7"],
+        html.dark [class*="text-blue-7"],
+        :root.dark [class*="text-blue-8"],
+        html.dark [class*="text-blue-8"],
+        :root.dark [class*="text-blue-9"],
+        html.dark [class*="text-blue-9"] {
+            color: #93c5fd !important;
+        }
+        
+        /* Yellow/Amber Text Colors */
+        :root.dark .text-yellow-600,
+        html.dark .text-yellow-600,
+        :root.dark .text-yellow-700,
+        html.dark .text-yellow-700,
+        :root.dark .text-yellow-800,
+        html.dark .text-yellow-800,
+        :root.dark .text-yellow-900,
+        html.dark .text-yellow-900,
+        :root.dark .text-amber-600,
+        html.dark .text-amber-600,
+        :root.dark .text-amber-700,
+        html.dark .text-amber-700,
+        :root.dark .text-amber-800,
+        html.dark .text-amber-800,
+        :root.dark .text-amber-900,
+        html.dark .text-amber-900,
+        :root.dark [class*="text-yellow-6"],
+        html.dark [class*="text-yellow-6"],
+        :root.dark [class*="text-yellow-7"],
+        html.dark [class*="text-yellow-7"],
+        :root.dark [class*="text-yellow-8"],
+        html.dark [class*="text-yellow-8"],
+        :root.dark [class*="text-yellow-9"],
+        html.dark [class*="text-yellow-9"],
+        :root.dark [class*="text-amber-6"],
+        html.dark [class*="text-amber-6"],
+        :root.dark [class*="text-amber-7"],
+        html.dark [class*="text-amber-7"],
+        :root.dark [class*="text-amber-8"],
+        html.dark [class*="text-amber-8"],
+        :root.dark [class*="text-amber-9"],
+        html.dark [class*="text-amber-9"] {
+            color: #fde68a !important;
+        }
+        
+        /* Purple Text Colors */
+        :root.dark .text-purple-600,
+        html.dark .text-purple-600,
+        :root.dark .text-purple-700,
+        html.dark .text-purple-700,
+        :root.dark .text-purple-800,
+        html.dark .text-purple-800,
+        :root.dark .text-purple-900,
+        html.dark .text-purple-900,
+        :root.dark [class*="text-purple-6"],
+        html.dark [class*="text-purple-6"],
+        :root.dark [class*="text-purple-7"],
+        html.dark [class*="text-purple-7"],
+        :root.dark [class*="text-purple-8"],
+        html.dark [class*="text-purple-8"],
+        :root.dark [class*="text-purple-9"],
+        html.dark [class*="text-purple-9"] {
+            color: #d8b4fe !important;
+        }
+        
+        /* Border Color Dark Mode Support */
+        :root.dark .border-green-200,
+        html.dark .border-green-200,
+        :root.dark .border-green-300,
+        html.dark .border-green-300,
+        :root.dark .border-green-400,
+        html.dark .border-green-400,
+        :root.dark [class*="border-green-2"],
+        html.dark [class*="border-green-2"],
+        :root.dark [class*="border-green-3"],
+        html.dark [class*="border-green-3"],
+        :root.dark [class*="border-green-4"],
+        html.dark [class*="border-green-4"] {
+            border-color: #047857 !important;
+        }
+        
+        :root.dark .border-red-200,
+        html.dark .border-red-200,
+        :root.dark .border-red-300,
+        html.dark .border-red-300,
+        :root.dark .border-red-400,
+        html.dark .border-red-400,
+        :root.dark [class*="border-red-2"],
+        html.dark [class*="border-red-2"],
+        :root.dark [class*="border-red-3"],
+        html.dark [class*="border-red-3"],
+        :root.dark [class*="border-red-4"],
+        html.dark [class*="border-red-4"] {
+            border-color: #dc2626 !important;
+        }
+        
+        :root.dark .border-blue-200,
+        html.dark .border-blue-200,
+        :root.dark .border-blue-300,
+        html.dark .border-blue-300,
+        :root.dark .border-blue-400,
+        html.dark .border-blue-400,
+        :root.dark [class*="border-blue-2"],
+        html.dark [class*="border-blue-2"],
+        :root.dark [class*="border-blue-3"],
+        html.dark [class*="border-blue-3"],
+        :root.dark [class*="border-blue-4"],
+        html.dark [class*="border-blue-4"] {
+            border-color: #1d4ed8 !important;
+        }
+        
+        :root.dark .border-amber-200,
+        html.dark .border-amber-200,
+        :root.dark .border-amber-300,
+        html.dark .border-amber-300,
+        :root.dark .border-amber-400,
+        html.dark .border-amber-400,
+        :root.dark .border-yellow-200,
+        html.dark .border-yellow-200,
+        :root.dark .border-yellow-300,
+        html.dark .border-yellow-300,
+        :root.dark .border-yellow-400,
+        html.dark .border-yellow-400,
+        :root.dark [class*="border-amber-2"],
+        html.dark [class*="border-amber-2"],
+        :root.dark [class*="border-amber-3"],
+        html.dark [class*="border-amber-3"],
+        :root.dark [class*="border-amber-4"],
+        html.dark [class*="border-amber-4"],
+        :root.dark [class*="border-yellow-2"],
+        html.dark [class*="border-yellow-2"],
+        :root.dark [class*="border-yellow-3"],
+        html.dark [class*="border-yellow-3"],
+        :root.dark [class*="border-yellow-4"],
+        html.dark [class*="border-yellow-4"] {
+            border-color: #ca8a04 !important;
+        }
+        
+        /* COMPREHENSIVE GRAY BACKGROUND DARK MODE SUPPORT */
+        /* All Gray 100 backgrounds */
+        :root.dark .bg-gray-100,
+        html.dark .bg-gray-100,
+        :root.dark [class*="bg-gray-100"],
+        html.dark [class*="bg-gray-100"] {
+            background-color: #374151 !important;
+            background: #374151 !important;
+        }
+        
+        /* All Gray 200 backgrounds */
+        :root.dark .bg-gray-200,
+        html.dark .bg-gray-200,
+        :root.dark [class*="bg-gray-200"],
+        html.dark [class*="bg-gray-200"] {
+            background-color: #4b5563 !important;
+            background: #4b5563 !important;
+        }
+        
+        /* All Gray 300 backgrounds */
+        :root.dark .bg-gray-300,
+        html.dark .bg-gray-300,
+        :root.dark [class*="bg-gray-300"],
+        html.dark [class*="bg-gray-300"] {
+            background-color: #6b7280 !important;
+            background: #6b7280 !important;
+        }
+        
+        /* All Gray 400 backgrounds */
+        :root.dark .bg-gray-400,
+        html.dark .bg-gray-400,
+        :root.dark [class*="bg-gray-400"],
+        html.dark [class*="bg-gray-400"] {
+            background-color: #9ca3af !important;
+            background: #9ca3af !important;
+        }
+        
+        /* Additional Gray variants for comprehensive coverage */
+        :root.dark .bg-gray-25,
+        html.dark .bg-gray-25,
+        :root.dark [class*="bg-gray-25"],
+        html.dark [class*="bg-gray-25"] {
+            background-color: #1f2937 !important;
+            background: #1f2937 !important;
+        }
+        
+        :root.dark .bg-gray-75,
+        html.dark .bg-gray-75,
+        :root.dark [class*="bg-gray-75"],
+        html.dark [class*="bg-gray-75"] {
+            background-color: #374151 !important;
+            background: #374151 !important;
+        }
+        
+        /* CSS Custom Properties (CSS Variables) Support */
+        :root.dark [style*="background-color: #f3f4f6"],
+        html.dark [style*="background-color: #f3f4f6"],
+        :root.dark [style*="background-color:#f3f4f6"],
+        html.dark [style*="background-color:#f3f4f6"],
+        :root.dark [style*="background: #f3f4f6"],
+        html.dark [style*="background: #f3f4f6"],
+        :root.dark [style*="background:#f3f4f6"],
+        html.dark [style*="background:#f3f4f6"] {
+            background-color: #374151 !important;
+            background: #374151 !important;
+        }
+        
+        :root.dark [style*="background-color: #e5e7eb"],
+        html.dark [style*="background-color: #e5e7eb"],
+        :root.dark [style*="background-color:#e5e7eb"],
+        html.dark [style*="background-color:#e5e7eb"],
+        :root.dark [style*="background: #e5e7eb"],
+        html.dark [style*="background: #e5e7eb"],
+        :root.dark [style*="background:#e5e7eb"],
+        html.dark [style*="background:#e5e7eb"] {
+            background-color: #4b5563 !important;
+            background: #4b5563 !important;
+        }
+        
+        :root.dark [style*="background-color: #d1d5db"],
+        html.dark [style*="background-color: #d1d5db"],
+        :root.dark [style*="background-color:#d1d5db"],
+        html.dark [style*="background-color:#d1d5db"],
+        :root.dark [style*="background: #d1d5db"],
+        html.dark [style*="background: #d1d5db"],
+        :root.dark [style*="background:#d1d5db"],
+        html.dark [style*="background:#d1d5db"] {
+            background-color: #6b7280 !important;
+            background: #6b7280 !important;
+        }
+        
+        :root.dark [style*="background-color: #9ca3af"],
+        html.dark [style*="background-color: #9ca3af"],
+        :root.dark [style*="background-color:#9ca3af"],
+        html.dark [style*="background-color:#9ca3af"],
+        :root.dark [style*="background: #9ca3af"],
+        html.dark [style*="background: #9ca3af"],
+        :root.dark [style*="background:#9ca3af"],
+        html.dark [style*="background:#9ca3af"] {
+            background-color: #9ca3af !important;
+            background: #9ca3af !important;
+        }
+        
+        /* Scheduler-specific Gray Background Support */
+        :root.dark .scheduler-main-content,
+        html.dark .scheduler-main-content {
+            background-color: #1f2937 !important;
+            background: #1f2937 !important;
+        }
+        
+        :root.dark .modal-content,
+        html.dark .modal-content {
+            background-color: #1f2937 !important;
+            background: #1f2937 !important;
+        }
+        
+        :root.dark .modal-footer,
+        html.dark .modal-footer {
+            background-color: #374151 !important;
+            background: #374151 !important;
+        }
+        
+        :root.dark .loading-content,
+        html.dark .loading-content {
+            background-color: #1f2937 !important;
+            background: #1f2937 !important;
+            color: #e5e7eb !important;
+        }
+        
+        :root.dark .empty-state,
+        html.dark .empty-state {
+            background-color: #1f2937 !important;
+            background: #1f2937 !important;
+        }
+        
+        :root.dark .time-nav-shortcuts,
+        html.dark .time-nav-shortcuts {
+            background: rgba(31, 41, 55, 0.95) !important;
+        }
+        
+        /* Form Elements Dark Mode Support */
+        :root.dark .form-input,
+        html.dark .form-input,
+        :root.dark .form-select,
+        html.dark .form-select,
+        :root.dark .form-textarea,
+        html.dark .form-textarea {
+            background-color: #374151 !important;
+            background: #374151 !important;
+            border-color: #4b5563 !important;
+            color: #f9fafb !important;
+        }
+        
+        /* Button Dark Mode Overrides */
+        :root.dark .btn-secondary,
+        html.dark .btn-secondary {
+            background-color: #4b5563 !important;
+            background: #4b5563 !important;
+            color: #f9fafb !important;
+            border-color: #6b7280 !important;
+        }
+        
+        :root.dark .btn-secondary:hover,
+        html.dark .btn-secondary:hover {
+            background-color: #6b7280 !important;
+            background: #6b7280 !important;
+            border-color: #9ca3af !important;
+        }
+        
+        /* Error State Dark Mode Support */
+        :root.dark .error-container,
+        html.dark .error-container {
+            background-color: #7f1d1d !important;
+            background: #7f1d1d !important;
+            border-color: #991b1b !important;
+            color: #fecaca !important;
+        }
+        
+        /* Notification Dark Mode Support */
+        :root.dark .notification-container,
+        html.dark .notification-container {
+            background-color: #1f2937 !important;
+            background: #1f2937 !important;
+        }
+        
+        /* Opcentrix Custom Classes Dark Mode Support */
+        :root.dark .opcentrix-card,
+        html.dark .opcentrix-card {
+            background-color: #1f2937 !important;
+            background: #1f2937 !important;
+            border-color: #374151 !important;
+        }
+        
+        :root.dark .opcentrix-gradient-subtle,
+        html.dark .opcentrix-gradient-subtle {
+            background: linear-gradient(to bottom right, #374151 0%, #1f2937 100%) !important;
+        }
+        
+        /* OpCentrix Background Variables Support */
+        :root.dark [style*="var(--opcentrix-gray-100)"],
+        html.dark [style*="var(--opcentrix-gray-100)"] {
+            background-color: #374151 !important;
+            background: #374151 !important;
+        }
+        
+        :root.dark [style*="var(--opcentrix-gray-200)"],
+        html.dark [style*="var(--opcentrix-gray-200)"] {
+            background-color: #4b5563 !important;
+            background: #4b5563 !important;
+        }
+        
+        :root.dark [style*="var(--opcentrix-bg-secondary)"],
+        html.dark [style*="var(--opcentrix-bg-secondary)"] {
+            background-color: #1f2937 !important;
+            background: #1f2937 !important;
+        }
+        
+        :root.dark [style*="var(--opcentrix-bg-tertiary)"],
+        html.dark [style*="var(--opcentrix-bg-tertiary)"] {
+            background-color: #374151 !important;
+            background: #374151 !important;
+        }
+        
+        /* Tailwind Utility Combinations Support */
+        :root.dark .bg-gray-100\.rounded-lg,
+        html.dark .bg-gray-100\.rounded-lg,
+        :root.dark [class*="bg-gray-100"][class*="rounded"],
+        html.dark [class*="bg-gray-100"][class*="rounded"] {
+            background-color: #374151 !important;
+            background: #374151 !important;
+        }
+        
+        :root.dark .bg-gray-200\.shadow,
+        html.dark .bg-gray-200\.shadow,
+        :root.dark [class*="bg-gray-200"][class*="shadow"],
+        html.dark [class*="bg-gray-200"][class*="shadow"] {
+            background-color: #4b5563 !important;
+            background: #4b5563 !important;
+        }
+        
+        /* Hover and Focus State Dark Mode Support */
+        :root.dark .bg-gray-100:hover,
+        html.dark .bg-gray-100:hover,
+        :root.dark [class*="bg-gray-100"]:hover,
+        html.dark [class*="bg-gray-100"]:hover {
+            background-color: #4b5563 !important;
+            background: #4b5563 !important;
+        }
+        
+        :root.dark .bg-gray-200:hover,
+        html.dark .bg-gray-200:hover,
+        :root.dark [class*="bg-gray-200"]:hover,
+        html.dark [class*="bg-gray-200"]:hover {
+            background-color: #6b7280 !important;
+            background: #6b7280 !important;
+        }
+        
+        /* Responsive Dark Mode Support */
+        @@media (max-width: 768px) {
+            :root.dark .bg-gray-100,
+            html.dark .bg-gray-100,
+            :root.dark [class*="bg-gray-100"],
+            html.dark [class*="bg-gray-100"] {
+                background-color: #374151 !important;
+                background: #374151 !important;
+            }
+            
+            :root.dark .bg-gray-200,
+            html.dark .bg-gray-200,
+            :root.dark [class*="bg-gray-200"],
+            html.dark [class*="bg-gray-200"] {
+                background-color: #4b5563 !important;
+                background: #4b5563 !important;
+            }
+        }
+        
+        /* Print Mode Dark Adjustments */
+        @@media print {
+            :root.dark .bg-gray-100,
+            html.dark .bg-gray-100,
+            :root.dark [class*="bg-gray-100"],
+            html.dark [class*="bg-gray-100"],
+            :root.dark .bg-gray-200,
+            html.dark .bg-gray-200,
+            :root.dark [class*="bg-gray-200"],
+            html.dark [class*="bg-gray-200"] {
+                background: white !important;
+                color: black !important;
+            }
+        }
+        
+        /* Legacy Browser Support - Dark Mode Fallbacks */
+        .no-js :root.dark .bg-gray-100,
+        .no-js html.dark .bg-gray-100 {
+            background-color: #374151 !important;
+        }
+        
+        .no-js :root.dark .bg-gray-200,
+        .no-js html.dark .bg-gray-200 {
+            background-color: #4b5563 !important;
+        }
+        
+        /* Enhanced Generic Dark Mode Catch-All - Class-based */
+        :root.dark *,
+        html.dark * {
+            scrollbar-width: thin !important;
+            scrollbar-color: #6b7280 #374151 !important;
+        }
+        
+        :root.dark ::-webkit-scrollbar,
+        html.dark ::-webkit-scrollbar {
+            width: 8px !important;
+            height: 8px !important;
+        }
+        
+        :root.dark ::-webkit-scrollbar-track,
+        html.dark ::-webkit-scrollbar-track {
+            background: #374151 !important;
+        }
+        
+        :root.dark ::-webkit-scrollbar-thumb,
+        html.dark ::-webkit-scrollbar-thumb {
+            background: #6b7280 !important;
+            border-radius: 4px !important;
+        }
+        
+        :root.dark ::-webkit-scrollbar-thumb:hover,
+        html.dark ::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af !important;
         }
     </style>
 

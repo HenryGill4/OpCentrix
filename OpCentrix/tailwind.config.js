@@ -6,6 +6,7 @@ module.exports = {
     './wwwroot/js/**/*.js',
     './Models/**/*.cs'
   ],
+  darkMode: 'class', // Enable class-based dark mode
   theme: {
     extend: {
       colors: {

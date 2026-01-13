@@ -7,19 +7,19 @@
 
 <div class="space-y-6">
     <!-- Header Section -->
-    <div class="bg-white border rounded-lg p-6">
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 transition-colors duration-300">
         <div class="flex items-center justify-between mb-4">
             <div>
-                <h1 class="text-2xl font-bold text-gray-900 flex items-center">
-                    <i class="fas fa-user-check text-blue-600 mr-3"></i>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center transition-colors duration-300">
+                    <i class="fas fa-user-check text-blue-600 dark:text-blue-400 mr-3"></i>
                     My Tasks
                 </h1>
-                <p class="text-gray-600 mt-1">
+                <p class="text-gray-600 dark:text-gray-400 mt-1 transition-colors duration-300">
                     Your assigned tasks and responsibilities
                 </p>
             </div>
             <div class="flex space-x-3">
-                <a class="btn btn-outline-primary" href="/Tasks/Progress">
+                <a class="btn btn-outline-primary bg-transparent border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-500 dark:hover:text-white transition-all duration-200" href="/Tasks/Progress">
                     <i class="fa-solid fa-chart-line mr-2"></i>My Progress
                 </a>
             </div>
@@ -27,34 +27,34 @@
 
         <!-- Quick Stats -->
         <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div class="stat-card bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-                <div class="text-2xl font-bold text-blue-600">@Model.Statistics.Total</div>
-                <div class="text-sm text-blue-700">Total Tasks</div>
+            <div class="stat-card bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-lg p-4 text-center transition-colors duration-300">
+                <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">@Model.Statistics.Total</div>
+                <div class="text-sm text-blue-700 dark:text-blue-300">Total Tasks</div>
             </div>
-            <div class="stat-card bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
-                <div class="text-2xl font-bold text-yellow-600">@Model.Statistics.Open</div>
-                <div class="text-sm text-yellow-700">Open</div>
+            <div class="stat-card bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4 text-center transition-colors duration-300">
+                <div class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">@Model.Statistics.Open</div>
+                <div class="text-sm text-yellow-700 dark:text-yellow-300">Open</div>
             </div>
-            <div class="stat-card bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-                <div class="text-2xl font-bold text-green-600">@Model.Statistics.InProgress</div>
-                <div class="text-sm text-green-700">Active</div>
+            <div class="stat-card bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 rounded-lg p-4 text-center transition-colors duration-300">
+                <div class="text-2xl font-bold text-green-600 dark:text-green-400">@Model.Statistics.InProgress</div>
+                <div class="text-sm text-green-700 dark:text-green-300">Active</div>
             </div>
-            <div class="stat-card bg-emerald-50 border border-emerald-200 rounded-lg p-4 text-center">
-                <div class="text-2xl font-bold text-emerald-600">@Model.Statistics.Completed</div>
-                <div class="text-sm text-emerald-700">Completed</div>
+            <div class="stat-card bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700 rounded-lg p-4 text-center transition-colors duration-300">
+                <div class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">@Model.Statistics.Completed</div>
+                <div class="text-sm text-emerald-700 dark:text-emerald-300">Completed</div>
             </div>
-            <div class="stat-card bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-                <div class="text-2xl font-bold text-red-600">@Model.Statistics.Overdue</div>
-                <div class="text-sm text-red-700">Overdue</div>
+            <div class="stat-card bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-lg p-4 text-center transition-colors duration-300">
+                <div class="text-2xl font-bold text-red-600 dark:text-red-400">@Model.Statistics.Overdue</div>
+                <div class="text-sm text-red-700 dark:text-red-300">Overdue</div>
             </div>
         </div>
     </div>
 
     <!-- Filter Section -->
-    <div class="bg-white border rounded-lg p-4">
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 transition-colors duration-300">
         <form method="get" class="flex items-center space-x-4">
             <div class="flex-1">
-                <select name="status" class="form-select">
+                <select name="status" class="form-select bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:border-blue-500 dark:focus:border-blue-400 rounded-md transition-colors duration-200">
                     <option value="">All Statuses</option>
                     <option value="Open" selected="@(Model.StatusFilter == "Open" ? "selected" : null)">Open</option>
                     <option value="InProgress" selected="@(Model.StatusFilter == "InProgress" ? "selected" : null)">In Progress</option>
@@ -63,11 +63,11 @@
             </div>
             <div>
                 <label class="inline-flex items-center">
-                    <input type="checkbox" name="overdue" value="true" @(Model.OverdueOnly ? "checked" : "") class="form-check-input mr-2">
-                    <span class="text-sm">Overdue Only</span>
+                    <input type="checkbox" name="overdue" value="true" @(Model.OverdueOnly ? "checked" : "") class="form-check-input mr-2 rounded border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 focus:ring-blue-500 dark:focus:ring-blue-400">
+                    <span class="text-sm text-gray-900 dark:text-gray-100 transition-colors duration-300">Overdue Only</span>
                 </label>
             </div>
-            <button type="submit" class="btn btn-primary">
+            <button type="submit" class="btn btn-primary bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white border-blue-600 dark:border-blue-500 transition-all duration-200">
                 <i class="fa-solid fa-search mr-2"></i>Filter
             </button>
         </form>
@@ -84,28 +84,28 @@
         <!-- Active Tasks Section -->
         @if (activeTasks.Any())
         {
-            <div class="bg-white border rounded-lg overflow-hidden">
-                <div class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-4">
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden transition-colors duration-300">
+                <div class="bg-gradient-to-r from-blue-500 to-indigo-600 dark:from-blue-600 dark:to-indigo-700 text-white p-4">
                     <h2 class="text-lg font-semibold flex items-center">
                         <i class="fas fa-tasks mr-2"></i>
                         Active Tasks (@activeTasks.Count)
                     </h2>
-                    <p class="text-blue-100 text-sm mt-1">Tasks that need your attention</p>
+                    <p class="text-blue-100 dark:text-blue-200 text-sm mt-1">Tasks that need your attention</p>
                 </div>
                 
-                <div class="divide-y divide-gray-100">
+                <div class="divide-y divide-gray-100 dark:divide-gray-700">
                     @foreach (var taskViewModel in activeTasks)
                     {
                         var task = taskViewModel.Task;
                         var progressId = "progress-" + task.Id;
                         
-                        <div class="p-6 hover:bg-gray-50 transition-colors @(taskViewModel.IsOverdue ? "border-l-4 border-red-500" : "") task-card">
+                        <div class="p-6 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 @(taskViewModel.IsOverdue ? "border-l-4 border-red-500 dark:border-red-400" : "") task-card">
                             <div class="space-y-4">
                                 <!-- Task Header -->
                                 <div class="flex items-start justify-between">
                                     <div class="flex-1 min-w-0">
                                         <div class="flex items-center space-x-3 mb-2">
-                                            <h3 class="text-lg font-semibold text-gray-900">@task.Title</h3>
+                                            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 transition-colors duration-300">@task.Title</h3>
                                             
                                             <!-- Status Badge -->
                                             <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full @(GetStatusBadgeClass(task.Status))">
@@ -120,7 +120,7 @@
                                             <!-- Overdue Warning -->
                                             @if (taskViewModel.IsOverdue)
                                             {
-                                                <span class="inline-flex items-center px-2 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800">
+                                                <span class="inline-flex items-center px-2 py-1 text-xs font-bold rounded-full bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200 border border-red-300 dark:border-red-600">
                                                     <i class="fa-solid fa-exclamation-triangle mr-1"></i>OVERDUE
                                                 </span>
                                             }
@@ -128,34 +128,34 @@
                                         
                                         @if (!string.IsNullOrEmpty(task.Description))
                                         {
-                                            <p class="text-gray-700 mb-3">@task.Description</p>
+                                            <p class="text-gray-700 dark:text-gray-300 mb-3 transition-colors duration-300">@task.Description</p>
                                         }
                                     </div>
                                     
                                     <!-- Action Buttons -->
                                     <div class="flex items-center space-x-2 ml-4">
-                                        <a class="btn btn-sm btn-success" href="/Tasks/@task.Id/AddProgress">
+                                        <a class="btn btn-sm btn-success bg-green-600 dark:bg-green-500 hover:bg-green-700 dark:hover:bg-green-600 text-white border-green-600 dark:border-green-500 transition-all duration-200" href="/Tasks/@task.Id/AddProgress">
                                             <i class="fa-solid fa-plus mr-1"></i>Add Progress
                                         </a>
-                                        <a class="btn btn-sm btn-outline-primary" href="/Tasks/Progress">
+                                        <a class="btn btn-sm btn-outline-primary bg-transparent border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-500 transition-all duration-200" href="/Tasks/Progress">
                                             <i class="fa-solid fa-chart-line mr-1"></i>Progress
                                         </a>
                                     </div>
                                 </div>
 
                                 <!-- Progress Bar and Info -->
-                                <div class="bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg p-4">
+                                <div class="bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-700 dark:to-blue-900/30 rounded-lg p-4 transition-colors duration-300">
                                     <div class="flex items-center justify-between mb-3">
-                                        <div class="text-sm font-medium text-gray-700">Task Progress</div>
+                                        <div class="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-300">Task Progress</div>
                                         <div class="flex items-center space-x-4">
                                             @if (taskViewModel.CompletionPercentage.HasValue)
                                             {
-                                                <span class="text-lg font-bold text-blue-600">@taskViewModel.CompletionPercentage%</span>
+                                                <span class="text-lg font-bold text-blue-600 dark:text-blue-400">@taskViewModel.CompletionPercentage%</span>
                                             }
                                             @if (taskViewModel.ProgressCount > 0)
                                             {
                                                 <button type="button" 
-                                                        class="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center transition-colors progress-toggle"
+                                                        class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 font-medium flex items-center transition-colors progress-toggle"
                                                         onclick="toggleProgress('@progressId')"
                                                         id="toggle-@progressId">
                                                     <i class="fa-solid fa-chevron-down mr-2 transition-transform" id="icon-@progressId"></i>
@@ -166,8 +166,8 @@
                                     </div>
                                     
                                     <!-- Progress Bar -->
-                                    <div class="w-full bg-gray-200 rounded-full h-4 mb-3">
-                                        <div class="bg-gradient-to-r from-blue-500 to-blue-600 h-4 rounded-full transition-all duration-700 ease-out" 
+                                    <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-4 mb-3 transition-colors duration-300">
+                                        <div class="bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-400 dark:to-blue-500 h-4 rounded-full transition-all duration-700 ease-out" 
                                              style="width: @(taskViewModel.CompletionPercentage ?? 0)%"></div>
                                     </div>
                                     
@@ -176,8 +176,8 @@
                                         @if (task.DueAt.HasValue)
                                         {
                                             <div class="flex items-center">
-                                                <i class="fa-solid fa-calendar text-gray-500 mr-2"></i>
-                                                <span class="@(taskViewModel.IsOverdue ? "text-red-600 font-semibold" : "text-gray-600")">
+                                                <i class="fa-solid fa-calendar text-gray-500 dark:text-gray-400 mr-2"></i>
+                                                <span class="@(taskViewModel.IsOverdue ? "text-red-600 dark:text-red-400 font-semibold" : "text-gray-600 dark:text-gray-400") transition-colors duration-300">
                                                     Due @task.DueAt.Value.ToString("MMM dd, yyyy")
                                                 </span>
                                             </div>
@@ -186,19 +186,19 @@
                                         @if (task.Account != null)
                                         {
                                             <div class="flex items-center">
-                                                <i class="fa-solid fa-building text-gray-500 mr-2"></i>
-                                                <span class="text-gray-600">@task.Account.Name</span>
+                                                <i class="fa-solid fa-building text-gray-500 dark:text-gray-400 mr-2"></i>
+                                                <span class="text-gray-600 dark:text-gray-400 transition-colors duration-300">@task.Account.Name</span>
                                             </div>
                                         }
                                         
                                         <div class="flex items-center">
-                                            <i class="fa-solid fa-clock text-gray-500 mr-2"></i>
-                                            <span class="text-gray-600">Created @task.CreatedDate.ToString("MMM dd")</span>
+                                            <i class="fa-solid fa-clock text-gray-500 dark:text-gray-400 mr-2"></i>
+                                            <span class="text-gray-600 dark:text-gray-400 transition-colors duration-300">Created @task.CreatedDate.ToString("MMM dd")</span>
                                         </div>
                                         
                                         <div class="flex items-center">
-                                            <i class="fa-solid fa-hashtag text-gray-500 mr-2"></i>
-                                            <span class="text-gray-600">Task #@task.Id</span>
+                                            <i class="fa-solid fa-hashtag text-gray-500 dark:text-gray-400 mr-2"></i>
+                                            <span class="text-gray-600 dark:text-gray-400 transition-colors duration-300">Task #@task.Id</span>
                                         </div>
                                     </div>
                                 </div>
@@ -207,20 +207,20 @@
                                 @if (taskViewModel.ProgressCount > 0)
                                 {
                                     <div id="@progressId" class="progress-entries hidden">
-                                        <div class="bg-white border border-gray-200 rounded-lg p-4">
-                                            <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                                        <div class="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4 transition-colors duration-300">
+                                            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center transition-colors duration-300">
                                                 <i class="fa-solid fa-history mr-2"></i>Progress History
                                             </h4>
                                             <div class="space-y-3 max-h-60 overflow-y-auto">
                                                 @foreach (var progress in task.ProgressEntries.OrderByDescending(p => p.CreatedDate))
                                                 {
-                                                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                                                    <div class="bg-gray-50 dark:bg-gray-600 border border-gray-200 dark:border-gray-500 rounded-lg p-3 transition-colors duration-300">
                                                         <div class="flex items-start justify-between">
                                                             <div class="flex-1">
                                                                 <div class="flex items-center space-x-2 mb-2">
                                                                     @if (progress.PercentComplete.HasValue)
                                                                     {
-                                                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200">
                                                                             @progress.PercentComplete%
                                                                         </span>
                                                                     }
@@ -230,10 +230,10 @@
                                                                             @progress.Status
                                                                         </span>
                                                                     }
-                                                                    <span class="text-xs font-semibold text-indigo-600 bg-indigo-100 px-2 py-1 rounded">@progress.ProgressType</span>
+                                                                    <span class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-900/50 px-2 py-1 rounded">@progress.ProgressType</span>
                                                                 </div>
-                                                                <p class="text-sm text-gray-800 mb-2">@progress.ProgressNote</p>
-                                                                <div class="flex items-center text-xs text-gray-500">
+                                                                <p class="text-sm text-gray-800 dark:text-gray-200 mb-2 transition-colors duration-300">@progress.ProgressNote</p>
+                                                                <div class="flex items-center text-xs text-gray-500 dark:text-gray-400 transition-colors duration-300">
                                                                     <i class="fa-solid fa-clock mr-1"></i>
                                                                     <span>@progress.CreatedDate.ToString("MMM dd, yyyy HH:mm")</span>
                                                                     @if (progress.CreatedBy != null)
@@ -260,8 +260,8 @@
         <!-- Completed Tasks Section -->
         @if (completedTasks.Any())
         {
-            <div class="bg-white border rounded-lg overflow-hidden">
-                <div class="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-4">
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden transition-colors duration-300">
+                <div class="bg-gradient-to-r from-green-500 to-emerald-600 dark:from-green-600 dark:to-emerald-700 text-white p-4">
                     <button type="button" 
                             class="w-full text-left flex items-center justify-between"
                             onclick="toggleCompletedTasks()"
@@ -271,35 +271,35 @@
                                 <i class="fas fa-check-circle mr-2"></i>
                                 Completed Tasks (@completedTasks.Count)
                             </h2>
-                            <p class="text-green-100 text-sm mt-1">Tasks you've successfully completed</p>
+                            <p class="text-green-100 dark:text-green-200 text-sm mt-1">Tasks you've successfully completed</p>
                         </div>
                         <i class="fas fa-chevron-down text-white transition-transform" id="completed-chevron"></i>
                     </button>
                 </div>
                 
-                <div id="completed-tasks" class="divide-y divide-gray-100 hidden">
+                <div id="completed-tasks" class="divide-y divide-gray-100 dark:divide-gray-700 hidden">
                     @foreach (var taskViewModel in completedTasks)
                     {
                         var task = taskViewModel.Task;
                         var progressId = "completed-progress-" + task.Id;
                         
-                        <div class="p-6 bg-green-50 hover:bg-green-100 transition-colors task-card">
+                        <div class="p-6 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors task-card">
                             <div class="space-y-4">
                                 <!-- Task Header -->
                                 <div class="flex items-start justify-between">
                                     <div class="flex-1 min-w-0">
                                         <div class="flex items-center space-x-3 mb-2">
-                                            <h3 class="text-lg font-medium text-gray-800">@task.Title</h3>
+                                            <h3 class="text-lg font-medium text-gray-800 dark:text-gray-200 transition-colors duration-300">@task.Title</h3>
                                             
                                             <!-- Status Badge -->
-                                            <span class="inline-flex items-center px-3 py-1 text-sm font-semibold rounded-full bg-green-100 text-green-800 border border-green-300">
+                                            <span class="inline-flex items-center px-3 py-1 text-sm font-semibold rounded-full bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 border border-green-300 dark:border-green-600">
                                                 <i class="fas fa-check mr-1"></i>Completed
                                             </span>
                                             
                                             <!-- Completion Date -->
                                             @if (task.CompletedAt.HasValue)
                                             {
-                                                <span class="inline-flex items-center px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-700">
+                                                <span class="inline-flex items-center px-2 py-1 text-xs rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600">
                                                     <i class="fas fa-calendar-check mr-1"></i>
                                                     Completed @task.CompletedAt.Value.ToString("MMM dd, yyyy")
                                                 </span>
@@ -308,7 +308,7 @@
                                         
                                         @if (!string.IsNullOrEmpty(task.Description))
                                         {
-                                            <p class="text-gray-600 mb-3">@task.Description</p>
+                                            <p class="text-gray-600 dark:text-gray-400 mb-3 transition-colors duration-300">@task.Description</p>
                                         }
                                     </div>
                                     
@@ -317,7 +317,7 @@
                                     {
                                         <div class="ml-4">
                                             <button type="button" 
-                                                    class="btn btn-sm btn-outline-success progress-toggle"
+                                                    class="btn btn-sm btn-outline-success bg-transparent border-green-600 dark:border-green-400 text-green-600 dark:text-green-400 hover:bg-green-600 hover:text-white dark:hover:bg-green-500 progress-toggle transition-all duration-200"
                                                     onclick="toggleProgress('@progressId')"
                                                     id="toggle-@progressId">
                                                 <i class="fa-solid fa-history mr-2 transition-transform" id="icon-@progressId"></i>
@@ -328,13 +328,13 @@
                                 </div>
 
                                 <!-- Task Details -->
-                                <div class="bg-white rounded-lg p-3">
+                                <div class="bg-white dark:bg-gray-800 rounded-lg p-3 transition-colors duration-300">
                                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                                         @if (task.DueAt.HasValue)
                                         {
                                             <div class="flex items-center">
-                                                <i class="fa-solid fa-calendar text-gray-500 mr-2"></i>
-                                                <span class="text-gray-600">
+                                                <i class="fa-solid fa-calendar text-gray-500 dark:text-gray-400 mr-2"></i>
+                                                <span class="text-gray-600 dark:text-gray-400 transition-colors duration-300">
                                                     Due @task.DueAt.Value.ToString("MMM dd, yyyy")
                                                 </span>
                                             </div>
@@ -343,19 +343,19 @@
                                         @if (task.Account != null)
                                         {
                                             <div class="flex items-center">
-                                                <i class="fa-solid fa-building text-gray-500 mr-2"></i>
-                                                <span class="text-gray-600">@task.Account.Name</span>
+                                                <i class="fa-solid fa-building text-gray-500 dark:text-gray-400 mr-2"></i>
+                                                <span class="text-gray-600 dark:text-gray-400 transition-colors duration-300">@task.Account.Name</span>
                                             </div>
                                         }
                                         
                                         <div class="flex items-center">
-                                            <i class="fa-solid fa-clock text-gray-500 mr-2"></i>
-                                            <span class="text-gray-600">Created @task.CreatedDate.ToString("MMM dd")</span>
+                                            <i class="fa-solid fa-clock text-gray-500 dark:text-gray-400 mr-2"></i>
+                                            <span class="text-gray-600 dark:text-gray-400 transition-colors duration-300">Created @task.CreatedDate.ToString("MMM dd")</span>
                                         </div>
                                         
                                         <div class="flex items-center">
-                                            <i class="fa-solid fa-hashtag text-gray-500 mr-2"></i>
-                                            <span class="text-gray-600">Task #@task.Id</span>
+                                            <i class="fa-solid fa-hashtag text-gray-500 dark:text-gray-400 mr-2"></i>
+                                            <span class="text-gray-600 dark:text-gray-400 transition-colors duration-300">Task #@task.Id</span>
                                         </div>
                                     </div>
                                 </div>
@@ -364,20 +364,20 @@
                                 @if (taskViewModel.ProgressCount > 0)
                                 {
                                     <div id="@progressId" class="progress-entries hidden">
-                                        <div class="bg-white border border-gray-200 rounded-lg p-4">
-                                            <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                                        <div class="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4 transition-colors duration-300">
+                                            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center transition-colors duration-300">
                                                 <i class="fa-solid fa-history mr-2"></i>Complete Progress History
                                             </h4>
                                             <div class="space-y-3 max-h-60 overflow-y-auto">
                                                 @foreach (var progress in task.ProgressEntries.OrderByDescending(p => p.CreatedDate))
                                                 {
-                                                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                                                    <div class="bg-gray-50 dark:bg-gray-600 border border-gray-200 dark:border-gray-500 rounded-lg p-3 transition-colors duration-300">
                                                         <div class="flex items-start justify-between">
                                                             <div class="flex-1">
                                                                 <div class="flex items-center space-x-2 mb-2">
                                                                     @if (progress.PercentComplete.HasValue)
                                                                     {
-                                                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200">
                                                                             @progress.PercentComplete%
                                                                         </span>
                                                                     }
@@ -387,10 +387,10 @@
                                                                             @progress.Status
                                                                         </span>
                                                                     }
-                                                                    <span class="text-xs font-semibold text-indigo-600 bg-indigo-100 px-2 py-1 rounded">@progress.ProgressType</span>
+                                                                    <span class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-900/50 px-2 py-1 rounded">@progress.ProgressType</span>
                                                                 </div>
-                                                                <p class="text-sm text-gray-800 mb-2">@progress.ProgressNote</p>
-                                                                <div class="flex items-center text-xs text-gray-500">
+                                                                <p class="text-sm text-gray-800 dark:text-gray-200 mb-2 transition-colors duration-300">@progress.ProgressNote</p>
+                                                                <div class="flex items-center text-xs text-gray-500 dark:text-gray-400 transition-colors duration-300">
                                                                     <i class="fa-solid fa-clock mr-1"></i>
                                                                     <span>@progress.CreatedDate.ToString("MMM dd, yyyy HH:mm")</span>
                                                                     @if (progress.CreatedBy != null)
@@ -416,11 +416,11 @@
     }
         else
         {
-            <div class="bg-white border rounded-lg p-12 text-center">
-                <div class="text-gray-400 mb-4">
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-12 text-center transition-colors duration-300">
+                <div class="text-gray-400 dark:text-gray-500 mb-4">
                     <i class="fa-solid fa-tasks text-6xl mb-4"></i>
-                    <h3 class="text-lg font-medium text-gray-900 mb-2">No tasks assigned</h3>
-                    <p>You don't have any tasks assigned to you at the moment.</p>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2 transition-colors duration-300">No tasks assigned</h3>
+                    <p class="text-gray-600 dark:text-gray-400 transition-colors duration-300">You don't have any tasks assigned to you at the moment.</p>
                 </div>
             </div>
         }
@@ -432,10 +432,10 @@
     {
         return status switch
         {
-            "Open" => "bg-yellow-100 text-yellow-800 border border-yellow-300",
-            "InProgress" => "bg-blue-100 text-blue-800 border border-blue-300", 
-            "Completed" => "bg-green-100 text-green-800 border border-green-300",
-            _ => "bg-gray-100 text-gray-800 border border-gray-300"
+            "Open" => "bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200 border border-yellow-300 dark:border-yellow-600",
+            "InProgress" => "bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 border border-blue-300 dark:border-blue-600", 
+            "Completed" => "bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 border border-green-300 dark:border-green-600",
+            _ => "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600"
         };
     }
 
@@ -443,12 +443,12 @@
     {
         return priority switch
         {
-            1 => "bg-gray-100 text-gray-800 border border-gray-300",
-            2 => "bg-blue-100 text-blue-800 border border-blue-300",
-            3 => "bg-yellow-100 text-yellow-800 border border-yellow-300",
-            4 => "bg-orange-100 text-orange-800 border border-orange-300",
-            5 => "bg-red-100 text-red-800 border border-red-300",
-            _ => "bg-gray-100 text-gray-800 border border-gray-300"
+            1 => "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600",
+            2 => "bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 border border-blue-300 dark:border-blue-600",
+            3 => "bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200 border border-yellow-300 dark:border-yellow-600",
+            4 => "bg-orange-100 dark:bg-orange-900/50 text-orange-800 dark:text-orange-200 border border-orange-300 dark:border-orange-600",
+            5 => "bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200 border border-red-300 dark:border-red-600",
+            _ => "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600"
         };
     }
 
@@ -554,6 +554,10 @@ document.addEventListener('DOMContentLoaded', function() {
     box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.1);
 }
 
+.dark .task-card:hover {
+    box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.3);
+}
+
 .progress-entries {
     animation: slideDown 0.3s ease-out;
 }
@@ -576,5 +580,53 @@ document.addEventListener('DOMContentLoaded', function() {
 .stat-card:hover {
     box-shadow: 0 4px 8px -2px rgba(0, 0, 0, 0.1);
     transform: translateY(-1px);
+}
+
+.dark .stat-card:hover {
+    box-shadow: 0 4px 8px -2px rgba(0, 0, 0, 0.3);
+}
+
+/* Form controls dark mode support */
+.dark .form-select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+}
+
+.dark .form-check-input:checked {
+    background-color: #3b82f6;
+    border-color: #3b82f6;
+}
+
+.dark .form-check-input:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.25);
+}
+
+/* Scrollbar dark mode */
+.dark ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.dark ::-webkit-scrollbar-track {
+    background: #374151;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    background: #6b7280;
+    border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* Button hover effects in dark mode */
+.dark .btn:hover {
+    transform: translateY(-1px);
+}
+
+.dark .btn-outline-primary:hover,
+.dark .btn-outline-success:hover {
+    box-shadow: 0 4px 8px -2px rgba(0, 0, 0, 0.2);
 }
 </style>

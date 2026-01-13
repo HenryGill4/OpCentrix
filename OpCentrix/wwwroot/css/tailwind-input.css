@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* OpCentrix Custom Components and Utilities */
+/* OpCentrix Custom Components and Utilities with Comprehensive Dark Mode Support */
 @layer components {
   .opcentrix-gradient {
     @apply bg-gradient-to-br from-opcentrix-primary to-opcentrix-secondary;
@@ -12,8 +12,18 @@
     @apply bg-gradient-to-br from-opcentrix-gray-50 to-white;
   }
   
+  /* Dark mode for gradient subtle */
+  .dark .opcentrix-gradient-subtle {
+    @apply bg-gradient-to-br from-gray-700 to-gray-800;
+  }
+  
   .opcentrix-card {
     @apply bg-white rounded-opcentrix shadow-opcentrix border border-opcentrix-gray-200 transition-all duration-200 ease-in-out;
+  }
+  
+  /* Dark mode for cards */
+  .dark .opcentrix-card {
+    @apply bg-gray-800 border-gray-600 shadow-gray-900/50;
   }
   
   .opcentrix-card:hover {
@@ -44,8 +54,18 @@
     @apply bg-opcentrix-gray-200 text-opcentrix-gray-700;
   }
   
+  /* Dark mode for secondary buttons */
+  .dark .opcentrix-button-secondary {
+    @apply bg-gray-600 text-gray-200;
+  }
+  
   .opcentrix-button-secondary:hover {
     @apply bg-opcentrix-gray-300 text-opcentrix-gray-800;
+  }
+  
+  /* Dark mode for secondary button hover */
+  .dark .opcentrix-button-secondary:hover {
+    @apply bg-gray-500 text-gray-100;
   }
   
   .opcentrix-button-success {
@@ -68,16 +88,36 @@
     @apply w-full px-4 py-3 border-2 border-opcentrix-gray-200 rounded-opcentrix-sm text-sm transition-all duration-200 ease-in-out bg-white;
   }
   
+  /* Dark mode for inputs */
+  .dark .opcentrix-input {
+    @apply bg-gray-700 border-gray-600 text-gray-100;
+  }
+  
   .opcentrix-input:focus {
     @apply outline-none border-opcentrix-primary ring-4 ring-opcentrix-primary ring-opacity-10;
+  }
+  
+  /* Dark mode for input focus */
+  .dark .opcentrix-input:focus {
+    @apply border-blue-400 ring-blue-500 ring-opacity-20;
   }
   
   .opcentrix-select {
     @apply w-full px-4 py-3 border-2 border-opcentrix-gray-200 rounded-opcentrix-sm text-sm bg-white cursor-pointer transition-all duration-200 ease-in-out;
   }
   
+  /* Dark mode for selects */
+  .dark .opcentrix-select {
+    @apply bg-gray-700 border-gray-600 text-gray-100;
+  }
+  
   .opcentrix-select:focus {
     @apply outline-none border-opcentrix-primary ring-4 ring-opcentrix-primary ring-opacity-10;
+  }
+  
+  /* Dark mode for select focus */
+  .dark .opcentrix-select:focus {
+    @apply border-blue-400 ring-blue-500 ring-opacity-20;
   }
   
   .nav-item {
@@ -90,6 +130,11 @@
   
   .nav-item:hover:not(.nav-item-active) {
     @apply bg-opcentrix-primary bg-opacity-5 text-opcentrix-primary;
+  }
+  
+  /* Dark mode for nav item hover */
+  .dark .nav-item:hover:not(.nav-item-active) {
+    @apply bg-gray-700 bg-opacity-50 text-blue-400;
   }
 }
 
@@ -114,12 +159,62 @@
     @apply bg-opcentrix-gray-100 rounded;
   }
   
+  /* Dark mode for scrollbar track */
+  .dark .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-gray-700;
+  }
+  
   .custom-scrollbar::-webkit-scrollbar-thumb {
     @apply bg-opcentrix-gray-300 rounded;
   }
   
+  /* Dark mode for scrollbar thumb */
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-gray-500;
+  }
+  
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     @apply bg-opcentrix-gray-400;
+  }
+  
+  /* Dark mode for scrollbar thumb hover */
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400;
+  }
+  
+  /* Comprehensive Gray Background Dark Mode Support */
+  .dark .bg-gray-100 {
+    @apply !bg-gray-700;
+  }
+  
+  .dark .bg-gray-200 {
+    @apply !bg-gray-600;
+  }
+  
+  .dark .bg-gray-300 {
+    @apply !bg-gray-500;
+  }
+  
+  .dark .bg-gray-400 {
+    @apply !bg-gray-400; /* Keep same for contrast */
+  }
+  
+  /* White backgrounds to dark */
+  .dark .bg-white {
+    @apply !bg-gray-800;
+  }
+  
+  /* Additional background support */
+  .dark .bg-gray-50 {
+    @apply !bg-gray-900;
+  }
+  
+  .dark .bg-gray-75 {
+    @apply !bg-gray-800;
+  }
+  
+  .dark .bg-gray-25 {
+    @apply !bg-gray-900;
   }
 }
 
@@ -170,6 +265,12 @@
   overflow: hidden;
 }
 
+/* Dark mode for scheduler main grid */
+.dark .scheduler-main-grid {
+  background: theme('colors.gray.800');
+  border-color: theme('colors.gray.600');
+}
+
 .scheduler-grid-container {
   display: grid;
   background: white;
@@ -177,11 +278,22 @@
   overflow: hidden;
 }
 
+/* Dark mode for scheduler grid container */
+.dark .scheduler-grid-container {
+  background: theme('colors.gray.800');
+}
+
 .scheduler-header-row {
   display: grid;
   grid-template-columns: var(--machine-label-width) 1fr;
   background: theme('colors.opcentrix.gray.50');
   border-bottom: 2px solid theme('colors.opcentrix.gray.200');
+}
+
+/* Dark mode for scheduler header row */
+.dark .scheduler-header-row {
+  background: theme('colors.gray.700');
+  border-bottom-color: theme('colors.gray.600');
 }
 
 .scheduler-date-headers {
@@ -194,6 +306,11 @@
 .scheduler-grid-header {
   @apply bg-gradient-to-br from-opcentrix-gray-50 to-white border-b-2 border-opcentrix-gray-200 border-r border-opcentrix-gray-200 p-3 text-xs font-semibold text-opcentrix-gray-700 text-center flex items-center justify-center relative;
   min-height: 60px;
+}
+
+/* Dark mode for scheduler grid header */
+.dark .scheduler-grid-header {
+  @apply bg-gradient-to-br from-gray-700 to-gray-800 border-gray-600 text-gray-200;
 }
 
 .scheduler-grid-header:last-child {
@@ -211,9 +328,19 @@
   min-height: 80px;
 }
 
+/* Dark mode for machine row */
+.dark .machine-row {
+  border-bottom-color: theme('colors.gray.600');
+}
+
 .scheduler-machine-label {
   @apply bg-gradient-to-br from-opcentrix-gray-100 to-opcentrix-gray-200 border-r-2 border-opcentrix-gray-300 border-b border-opcentrix-gray-200 p-4 font-bold text-opcentrix-gray-800 flex items-center justify-center text-center text-sm;
   min-height: 80px;
+}
+
+/* Dark mode for scheduler machine label */
+.dark .scheduler-machine-label {
+  @apply bg-gradient-to-br from-gray-600 to-gray-700 border-gray-500 text-gray-200;
 }
 
 /* Machine-specific colors */
@@ -222,14 +349,32 @@
   @apply bg-gradient-to-br from-yellow-100 to-yellow-200 text-yellow-800 border-yellow-500;
 }
 
+/* Dark mode for machine-specific colors */
+.dark .scheduler-machine-label[data-machine*="TI1"],
+.dark .machine-label.ti1 {
+  @apply bg-gradient-to-br from-yellow-700 to-yellow-600 text-yellow-200 border-yellow-500;
+}
+
 .scheduler-machine-label[data-machine*="TI2"],
 .machine-label.ti2 {
   @apply bg-gradient-to-br from-blue-100 to-blue-200 text-blue-800 border-blue-500;
 }
 
+/* Dark mode for TI2 */
+.dark .scheduler-machine-label[data-machine*="TI2"],
+.dark .machine-label.ti2 {
+  @apply bg-gradient-to-br from-blue-700 to-blue-600 text-blue-200 border-blue-500;
+}
+
 .scheduler-machine-label[data-machine*="INC"],
 .machine-label.inc {
   @apply bg-gradient-to-br from-green-100 to-green-200 text-green-800 border-green-500;
+}
+
+/* Dark mode for INC */
+.dark .scheduler-machine-label[data-machine*="INC"],
+.dark .machine-label.inc {
+  @apply bg-gradient-to-br from-green-700 to-green-600 text-green-200 border-green-500;
 }
 
 .time-slots-container {
@@ -240,13 +385,28 @@
   background: theme('colors.opcentrix.gray.50');
 }
 
+/* Dark mode for time slots container */
+.dark .time-slots-container {
+  background: theme('colors.gray.700');
+}
+
 .scheduler-grid-cell {
   @apply bg-white border-r border-opcentrix-gray-100 border-b border-opcentrix-gray-100 relative transition-all duration-200 ease-in-out cursor-pointer;
   min-height: 80px;
 }
 
+/* Dark mode for scheduler grid cell */
+.dark .scheduler-grid-cell {
+  @apply bg-gray-800 border-gray-600;
+}
+
 .scheduler-grid-cell:hover {
   @apply bg-opcentrix-primary bg-opacity-5 border-opcentrix-primary border-opacity-20;
+}
+
+/* Dark mode for scheduler grid cell hover */
+.dark .scheduler-grid-cell:hover {
+  @apply bg-blue-900 bg-opacity-30 border-blue-600 border-opacity-40;
 }
 
 .scheduler-grid-cell:last-child {
@@ -258,8 +418,18 @@
   min-height: 80px;
 }
 
+/* Dark mode for time slot */
+.dark .time-slot {
+  @apply bg-gray-800 border-gray-600;
+}
+
 .time-slot:hover {
   @apply bg-opcentrix-gray-50;
+}
+
+/* Dark mode for time slot hover */
+.dark .time-slot:hover {
+  @apply bg-gray-700;
 }
 
 .scheduler-grid-cell.current-time,
@@ -267,14 +437,32 @@
   @apply bg-opcentrix-primary bg-opacity-10 border-opcentrix-primary border-opacity-30;
 }
 
+/* Dark mode for current time */
+.dark .scheduler-grid-cell.current-time,
+.dark .time-slot.current-time {
+  @apply bg-blue-800 bg-opacity-30 border-blue-500 border-opacity-50;
+}
+
 .scheduler-grid-cell.weekend,
 .time-slot.weekend {
   @apply bg-gray-500 bg-opacity-5;
 }
 
+/* Dark mode for weekend */
+.dark .scheduler-grid-cell.weekend,
+.dark .time-slot.weekend {
+  @apply bg-gray-600 bg-opacity-20;
+}
+
 .scheduler-grid-cell.off-hours,
 .time-slot.off-hours {
   @apply bg-gray-500 bg-opacity-3;
+}
+
+/* Dark mode for off hours */
+.dark .scheduler-grid-cell.off-hours,
+.dark .time-slot.off-hours {
+  @apply bg-gray-600 bg-opacity-10;
 }
 
 .job-block {
@@ -326,6 +514,11 @@
 
 .job-block.status-cancelled {
   @apply bg-gradient-to-br from-opcentrix-gray-400 to-opcentrix-gray-500;
+}
+
+/* Dark mode for cancelled status */
+.dark .job-block.status-cancelled {
+  @apply bg-gradient-to-br from-gray-500 to-gray-600;
 }
 
 .job-block.status-on-hold {
@@ -408,9 +601,19 @@
   @apply bg-white rounded-opcentrix shadow-opcentrix overflow-hidden;
 }
 
+/* Dark mode for scheduler container */
+.dark .scheduler-container {
+  @apply bg-gray-800;
+}
+
 .machine-label {
   @apply bg-gradient-to-br from-opcentrix-gray-100 to-opcentrix-gray-200 p-4 border-r-2 border-opcentrix-gray-200 font-bold text-opcentrix-gray-800 flex items-center justify-center text-center;
   min-height: 80px;
+}
+
+/* Dark mode for machine label */
+.dark .machine-label {
+  @apply bg-gradient-to-br from-gray-600 to-gray-700 border-gray-500 text-gray-200;
 }
 
 .schedule-grid {
@@ -422,6 +625,11 @@
   min-height: 80px;
 }
 
+/* Dark mode for schedule grid */
+.dark .schedule-grid {
+  @apply bg-gray-700;
+}
+
 /* Modal styles */
 .modal-overlay {
   @apply bg-black bg-opacity-50;
@@ -430,6 +638,11 @@
 
 .modal-content {
   @apply bg-white rounded-opcentrix-lg shadow-opcentrix-xl max-h-screen overflow-y-auto;
+}
+
+/* Dark mode for modal content */
+.dark .modal-content {
+  @apply bg-gray-800 border border-gray-600;
 }
 
 /* Notification styles */
@@ -473,6 +686,11 @@
   backdrop-filter: blur(2px);
 }
 
+/* Dark mode for htmx request overlay */
+.dark .htmx-request::after {
+  @apply bg-gray-800 bg-opacity-80;
+}
+
 /* Print styles */
 @media print {
   .no-print {
@@ -502,6 +720,11 @@
 
 .focus\:ring:focus {
   @apply ring-4 ring-opcentrix-primary ring-opacity-50;
+}
+
+/* Dark mode for focus ring */
+.dark .focus\:ring:focus {
+  @apply ring-blue-500 ring-opacity-50;
 }
 
 .sr-only {
