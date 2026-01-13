@@ -147,6 +147,260 @@
             background-color: rgba(255, 255, 255, 0.15);
         }
         
+        /* TAILWIND GRADIENT DARK MODE FIXES */
+        
+        /* Fix bg-gradient-to-r and other gradient utilities for dark mode */
+        .dark .bg-gradient-to-r {
+            background-image: linear-gradient(to right, var(--gradient-from-color), var(--gradient-to-color)) !important;
+        }
+        
+        .dark .from-blue-600 {
+            --gradient-from-color: #1e40af;
+            --gradient-color-stops: var(--gradient-from-color), var(--gradient-to-color, rgba(30, 64, 175, 0));
+        }
+        
+        .dark .to-indigo-600 {
+            --gradient-to-color: #4338ca;
+            --gradient-color-stops: var(--gradient-from-color, rgba(67, 56, 202, 0)), var(--gradient-to-color);
+        }
+        
+        /* User avatar gradient fix for dark mode */
+        .dark .bg-gradient-to-br {
+            background-image: linear-gradient(to bottom right, var(--gradient-from-color), var(--gradient-to-color)) !important;
+        }
+        
+        .dark .from-blue-500 {
+            --gradient-from-color: #1d4ed8;
+            --gradient-color-stops: var(--gradient-from-color), var(--gradient-to-color, rgba(29, 78, 216, 0));
+        }
+        
+        /* Additional gradient directions for comprehensive support */
+        .dark .bg-gradient-to-l {
+            background-image: linear-gradient(to left, var(--gradient-from-color), var(--gradient-to-color)) !important;
+        }
+        
+        .dark .bg-gradient-to-t {
+            background-image: linear-gradient(to top, var(--gradient-from-color), var(--gradient-to-color)) !important;
+        }
+        
+        .dark .bg-gradient-to-b {
+            background-image: linear-gradient(to bottom, var(--gradient-from-color), var(--gradient-to-color)) !important;
+        }
+        
+        .dark .bg-gradient-to-tr {
+            background-image: linear-gradient(to top right, var(--gradient-from-color), var(--gradient-to-color)) !important;
+        }
+        
+        .dark .bg-gradient-to-tl {
+            background-image: linear-gradient(to top left, var(--gradient-from-color), var(--gradient-to-color)) !important;
+        }
+        
+        .dark .bg-gradient-to-bl {
+            background-image: linear-gradient(to bottom left, var(--gradient-from-color), var(--gradient-to-color)) !important;
+        }
+        
+        /* Common gradient color combinations for dark mode */
+        .dark .from-gray-600 {
+            --gradient-from-color: #374151;
+            --gradient-color-stops: var(--gradient-from-color), var(--gradient-to-color, rgba(55, 65, 81, 0));
+        }
+        
+        .dark .to-gray-800 {
+            --gradient-to-color: #1f2937;
+            --gradient-color-stops: var(--gradient-from-color, rgba(31, 41, 55, 0)), var(--gradient-to-color);
+        }
+        
+        .dark .from-purple-600 {
+            --gradient-from-color: #7c3aed;
+            --gradient-color-stops: var(--gradient-from-color), var(--gradient-to-color, rgba(124, 58, 237, 0));
+        }
+        
+        .dark .to-purple-800 {
+            --gradient-to-color: #5b21b6;
+            --gradient-color-stops: var(--gradient-from-color, rgba(91, 33, 182, 0)), var(--gradient-to-color);
+        }
+        
+        /* Ensure gradients maintain visibility and contrast in dark mode */
+        .dark .bg-gradient-to-r.from-blue-600.to-indigo-600 {
+            background-image: linear-gradient(to right, #1e40af, #4338ca) !important;
+        }
+        
+        /* Fix for the specific header gradient to maintain brand colors but ensure visibility */
+        .dark div.bg-gradient-to-r.from-blue-600.to-indigo-600 {
+            background-image: linear-gradient(to right, #1e3a8a, #3730a3) !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Additional common Tailwind gradient combinations for dark mode */
+        .dark .from-red-500 {
+            --gradient-from-color: #dc2626;
+            --gradient-color-stops: var(--gradient-from-color), var(--gradient-to-color, rgba(220, 38, 38, 0));
+        }
+        
+        .dark .to-red-700 {
+            --gradient-to-color: #b91c1c;
+            --gradient-color-stops: var(--gradient-from-color, rgba(185, 28, 28, 0)), var(--gradient-to-color);
+        }
+        
+        .dark .from-green-500 {
+            --gradient-from-color: #10b981;
+            --gradient-color-stops: var(--gradient-from-color), var(--gradient-to-color, rgba(16, 185, 129, 0));
+        }
+        
+        .dark .to-green-700 {
+            --gradient-to-color: #047857;
+            --gradient-color-stops: var(--gradient-from-color, rgba(4, 120, 87, 0)), var(--gradient-to-color);
+        }
+        
+        .dark .from-yellow-400 {
+            --gradient-from-color: #fbbf24;
+            --gradient-color-stops: var(--gradient-from-color), var(--gradient-to-color, rgba(251, 191, 36, 0));
+        }
+        
+        .dark .to-orange-500 {
+            --gradient-to-color: #f97316;
+            --gradient-color-stops: var(--gradient-from-color, rgba(249, 115, 22, 0)), var(--gradient-to-color);
+        }
+        
+        /* Comprehensive Tailwind Gradient Classes Override for Dark Mode */
+        .dark [class*="bg-gradient-"] {
+            background-image: var(--gradient-image, none);
+        }
+        
+        /* Override specific problematic gradients that may not work in dark mode */
+        .dark .bg-gradient-to-r.from-transparent {
+            background-image: linear-gradient(to right, transparent, var(--gradient-to-color)) !important;
+        }
+        
+        .dark .bg-gradient-to-r.to-transparent {
+            background-image: linear-gradient(to right, var(--gradient-from-color), transparent) !important;
+        }
+        
+        /* Fix any opacity-based gradients that might not show up in dark mode */
+        .dark .bg-opacity-20 {
+            --tw-bg-opacity: 0.3;
+        }
+        
+        .dark .bg-opacity-10 {
+            --tw-bg-opacity: 0.15;
+        }
+        
+        /* Ensure via utilities work in dark mode */
+        .dark .via-blue-500 {
+            --gradient-via-color: #1d4ed8;
+            --gradient-color-stops: var(--gradient-from-color), var(--gradient-via-color), var(--gradient-to-color);
+        }
+        
+        .dark .via-purple-500 {
+            --gradient-via-color: #7c3aed;
+            --gradient-color-stops: var(--gradient-from-color), var(--gradient-via-color), var(--gradient-to-color);
+        }
+        
+        /* COMPREHENSIVE TAILWIND GRADIENT FIX FOR ALL DIRECTION UTILITIES */
+        
+        /* Critical Tailwind gradient direction utility overrides */
+        .dark .bg-gradient-to-r {
+            background-image: linear-gradient(to right, var(--tw-gradient-from, transparent), var(--tw-gradient-to, transparent)) !important;
+            --tw-gradient-from: var(--gradient-from-color, #3b82f6);
+            --tw-gradient-to: var(--gradient-to-color, #1d4ed8);
+        }
+        
+        .dark .bg-gradient-to-l {
+            background-image: linear-gradient(to left, var(--tw-gradient-from, transparent), var(--tw-gradient-to, transparent)) !important;
+            --tw-gradient-from: var(--gradient-from-color, #3b82f6);
+            --tw-gradient-to: var(--gradient-to-color, #1d4ed8);
+        }
+        
+        .dark .bg-gradient-to-t {
+            background-image: linear-gradient(to top, var(--tw-gradient-from, transparent), var(--tw-gradient-to, transparent)) !important;
+            --tw-gradient-from: var(--gradient-from-color, #3b82f6);
+            --tw-gradient-to: var(--gradient-to-color, #1d4ed8);
+        }
+        
+        .dark .bg-gradient-to-b {
+            background-image: linear-gradient(to bottom, var(--tw-gradient-from, transparent), var(--tw-gradient-to, transparent)) !important;
+            --tw-gradient-from: var(--gradient-from-color, #3b82f6);
+            --tw-gradient-to: var(--gradient-to-color, #1d4ed8);
+        }
+        
+        .dark .bg-gradient-to-tr {
+            background-image: linear-gradient(to top right, var(--tw-gradient-from, transparent), var(--tw-gradient-to, transparent)) !important;
+            --tw-gradient-from: var(--gradient-from-color, #3b82f6);
+            --tw-gradient-to: var(--gradient-to-color, #1d4ed8);
+        }
+        
+        .dark .bg-gradient-to-tl {
+            background-image: linear-gradient(to top left, var(--tw-gradient-from, transparent), var(--tw-gradient-to, transparent)) !important;
+            --tw-gradient-from: var(--gradient-from-color, #3b82f6);
+            --tw-gradient-to: var(--gradient-to-color, #1d4ed8);
+        }
+        
+        .dark .bg-gradient-to-br {
+            background-image: linear-gradient(to bottom right, var(--tw-gradient-from, transparent), var(--tw-gradient-to, transparent)) !important;
+            --tw-gradient-from: var(--gradient-from-color, #3b82f6);
+            --tw-gradient-to: var(--gradient-to-color, #1d4ed8);
+        }
+        
+        .dark .bg-gradient-to-bl {
+            background-image: linear-gradient(to bottom left, var(--tw-gradient-from, transparent), var(--tw-gradient-to, transparent)) !important;
+            --tw-gradient-from: var(--gradient-from-color, #3b82f6);
+            --tw-gradient-to: var(--gradient-to-color, #1d4ed8);
+        }
+        
+        /* Tailwind gradient color stop utilities for dark mode */
+        .dark .from-transparent { --gradient-from-color: transparent; }
+        .dark .to-transparent { --gradient-to-color: transparent; }
+        .dark .via-transparent { --gradient-via-color: transparent; }
+        
+        /* Ensure all color stops work in dark mode */
+        .dark [class*="from-"] { --tw-gradient-from: var(--gradient-from-color); }
+        .dark [class*="to-"] { --tw-gradient-to: var(--gradient-to-color); }
+        .dark [class*="via-"] { --tw-gradient-via: var(--gradient-via-color); }
+        
+        /* Force proper gradient rendering in dark mode */
+        .dark [class*="bg-gradient-"] {
+            background-color: transparent !important;
+        }
+        
+        /* SPECIFIC LOGO/BRAND GRADIENT FIX */
+        /* Override the specific blue to indigo gradient used in the header */
+        .dark .bg-gradient-to-r.from-blue-600.to-indigo-600 {
+            background: linear-gradient(to right, #1e3a8a, #3730a3) !important;
+            --tw-gradient-from: #1e3a8a !important;
+            --tw-gradient-to: #3730a3 !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
+        
+        /* User avatar gradient fix */
+        .dark .bg-gradient-to-br.from-blue-500.to-indigo-600 {
+            background: linear-gradient(to bottom right, #1d4ed8, #3730a3) !important;
+            --tw-gradient-from: #1d4ed8 !important;
+            --tw-gradient-to: #3730a3 !important;
+        }
+        
+        /* Ensure all Tailwind gradient utilities work properly */
+        .dark .from-blue-600 { --gradient-from-color: #1e3a8a !important; }
+        .dark .to-indigo-600 { --gradient-to-color: #3730a3 !important; }
+        .dark .from-blue-500 { --gradient-from-color: #1d4ed8 !important; }
+        
+        /* Navigation item active gradient fix */
+        .dark .nav-item-active {
+            background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%) !important;
+            color: #e0e7ff !important;
+        }
+        
+        /* Ensure gradients maintain contrast in dark mode */
+        .dark .bg-gradient-to-r, 
+        .dark .bg-gradient-to-br,
+        .dark .bg-gradient-to-l,
+        .dark .bg-gradient-to-t,
+        .dark .bg-gradient-to-b,
+        .dark .bg-gradient-to-tr,
+        .dark .bg-gradient-to-tl,
+        .dark .bg-gradient-to-bl {
+            background-color: transparent !important;
+        }
+        
         /* Modal and Loading Indicator Dark Mode */
         .dark #modal-container {
             background-color: rgba(0, 0, 0, 0.75);
@@ -238,6 +492,223 @@
         .dark button:not(.theme-toggle-btn):not([class*="bg-"]):hover {
             background-color: #4b5563;
         }
+        
+        /* Critical Background and Hover Overrides */
+        .dark .bg-gray-50 {
+            background-color: #1f2937 !important;
+        }
+        
+        .dark .hover\:bg-gray-50:hover {
+            background-color: #374151 !important;
+        }
+        
+        .dark .hover\:bg-gray-100:hover {
+            background-color: #374151 !important;
+        }
+        
+        .dark .bg-gray-100 {
+            background-color: #374151 !important;
+        }
+        
+        .dark .hover\:bg-blue-50:hover {
+            background-color: #1e3a8a !important;
+        }
+        
+        .dark .bg-blue-50 {
+            background-color: #1e3a8a !important;
+        }
+        
+        .dark .hover\:bg-blue-100:hover {
+            background-color: #1e40af !important;
+        }
+        
+        .dark .hover\:bg-emerald-50:hover {
+            background-color: #064e3b !important;
+        }
+        
+        .dark .bg-emerald-50 {
+            background-color: #064e3b !important;
+        }
+        
+        .dark .hover\:bg-emerald-100:hover {
+            background-color: #065f46 !important;
+        }
+        
+        .dark .bg-emerald-100 {
+            background-color: #065f46 !important;
+        }
+        
+        .dark .hover\:bg-red-50:hover {
+            background-color: #7f1d1d !important;
+        }
+        
+        .dark .bg-red-50 {
+            background-color: #7f1d1d !important;
+        }
+        
+        .dark .hover\:bg-red-100:hover {
+            background-color: #991b1b !important;
+        }
+        
+        .dark .bg-red-100 {
+            background-color: #991b1b !important;
+        }
+        
+        .dark .hover\:bg-indigo-50:hover {
+            background-color: #312e81 !important;
+        }
+        
+        .dark .bg-indigo-50 {
+            background-color: #312e81 !important;
+        }
+        
+        .dark .hover\:bg-indigo-100:hover {
+            background-color: #3730a3 !important;
+        }
+        
+        .dark .bg-indigo-100 {
+            background-color: #3730a3 !important;
+        }
+        
+        .dark .hover\:bg-green-50:hover {
+            background-color: #14532d !important;
+        }
+        
+        .dark .bg-green-50 {
+            background-color: #14532d !important;
+        }
+        
+        .dark .hover\:bg-green-100:hover {
+            background-color: #166534 !important;
+        }
+        
+        .dark .hover\:bg-amber-50:hover {
+            background-color: #451a03 !important;
+        }
+        
+        .dark .bg-amber-50 {
+            background-color: #451a03 !important;
+        }
+        
+        .dark .hover\:bg-amber-100:hover {
+            background-color: #78350f !important;
+        }
+        
+        .dark .bg-amber-100 {
+            background-color: #78350f !important;
+        }
+        
+        .dark .hover\:bg-purple-50:hover {
+            background-color: #581c87 !important;
+        }
+        
+        .dark .bg-purple-50 {
+            background-color: #581c87 !important;
+        }
+        
+        .dark .hover\:bg-purple-100:hover {
+            background-color: #6b21a8 !important;
+        }
+        
+        .dark .hover\:bg-orange-50:hover {
+            background-color: #7c2d12 !important;
+        }
+        
+        .dark .bg-orange-50 {
+            background-color: #7c2d12 !important;
+        }
+        
+        .dark .hover\:bg-orange-100:hover {
+            background-color: #9a3412 !important;
+        }
+        
+        .dark .bg-orange-100 {
+            background-color: #9a3412 !important;
+        }
+        
+        /* Global Page Content Dark Mode */
+        .dark .opcentrix-card {
+            background-color: #1f2937 !important;
+            border-color: #374151 !important;
+        }
+        
+        .dark .hover\:shadow-lg:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.25) !important;
+        }
+        
+        /* Text color overrides for better contrast */
+        .dark .text-gray-400 {
+            color: #9ca3af !important;
+        }
+        
+        .dark .text-gray-300 {
+            color: #d1d5db !important;
+        }
+        
+        /* Loading indicator dark mode */
+        .dark #loading-indicator > div {
+            background-color: #1f2937 !important;
+            color: #e5e7eb !important;
+            border-color: #374151 !important;
+        }
+        
+        /* Additional comprehensive dark mode overrides */
+        .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+            color: #f9fafb !important;
+        }
+        
+        .dark p {
+            color: #e5e7eb !important;
+        }
+        
+        .dark .table {
+            color: #e5e7eb !important;
+            background-color: #1f2937 !important;
+        }
+        
+        .dark .table th {
+            color: #f9fafb !important;
+            background-color: #374151 !important;
+            border-color: #4b5563 !important;
+        }
+        
+        .dark .table td {
+            border-color: #4b5563 !important;
+            background-color: #1f2937 !important;
+        }
+        
+        .dark .table-striped > tbody > tr:nth-of-type(odd) > td {
+            background-color: #2d3748 !important;
+        }
+        
+        .dark .btn-outline-primary {
+            color: #60a5fa !important;
+            border-color: #3b82f6 !important;
+        }
+        
+        .dark .btn-outline-primary:hover {
+            background-color: #3b82f6 !important;
+            border-color: #3b82f6 !important;
+            color: #ffffff !important;
+        }
+        
+        .dark .badge {
+            background-color: #374151 !important;
+            color: #e5e7eb !important;
+        }
+        
+        /* Fix any remaining issues with specific utility classes */
+        .dark .shadow {
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.5), 0 1px 2px 0 rgba(0, 0, 0, 0.25) !important;
+        }
+        
+        .dark .shadow-lg {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.25) !important;
+        }
+        
+        .dark .shadow-xl {
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.25) !important;
+        }
     </style>
     
     @await RenderSectionAsync("Styles", required: false)
@@ -250,7 +721,7 @@
             <div class="flex items-center justify-between h-16 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
                 <div class="flex items-center">
                     <div class="w-8 h-8 bg-white bg-opacity-20 rounded-lg flex items-center justify-center mr-3 opcentrix-logo-container">
-                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
                         </svg>
                     </div>
@@ -260,10 +731,10 @@
                     </div>
                 </div>
                 <!-- Expand/Collapse All -->
-                <div class="hidden md:flex items-center gap-1 text-white opacity-90">
+                @* <div class="hidden md:flex items-center gap-1 text-white opacity-90 ">
                     <button id="expandAllBtn" class="px-2 py-1 text-xs bg-white/10 hover:bg-white/20 rounded" title="Expand all sections">Expand</button>
                     <button id="collapseAllBtn" class="px-2 py-1 text-xs bg-white/10 hover:bg-white/20 rounded" title="Collapse all sections">Collapse</button>
-                </div>
+                </div> *@
             </div>
 
             <!-- User Profile Section -->

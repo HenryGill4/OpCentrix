@@ -3,6 +3,7 @@
  * FIXED: All styling moved from embedded styles to proper CSS
  * FIXED: Z-index hierarchy to prevent job block hover overlap issues
  * ENHANCED: Custom classes replace Bootstrap and improved mobile styling
+ * DARK MODE: Comprehensive dark mode support for entire scheduler
  */
 
 :root {
@@ -55,6 +56,34 @@
     --job-tooltip-bg: #0f172a;
     --job-tooltip-border: rgba(255,255,255,0.08);
     --job-tooltip-shadow: 0 8px 24px -4px rgba(0,0,0,.45),0 2px 6px -2px rgba(0,0,0,.4);
+    
+    /* DARK MODE COLOR VARIABLES */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;
+    --bg-tertiary: #f1f5f9;
+    --text-primary: #111827;
+    --text-secondary: #374151;
+    --text-tertiary: #6b7280;
+    --border-primary: #e5e7eb;
+    --border-secondary: #d1d5db;
+    --shadow-light: rgba(0, 0, 0, 0.1);
+    --shadow-medium: rgba(0, 0, 0, 0.25);
+}
+
+/* DARK MODE THEME VARIABLES */
+.dark {
+    --bg-primary: #1f2937;
+    --bg-secondary: #111827;
+    --bg-tertiary: #374151;
+    --text-primary: #f9fafb;
+    --text-secondary: #e5e7eb;
+    --text-tertiary: #d1d5db;
+    --border-primary: #374151;
+    --border-secondary: #4b5563;
+    --shadow-light: rgba(0, 0, 0, 0.3);
+    --shadow-medium: rgba(0, 0, 0, 0.5);
+    --job-tooltip-bg: #0f172a;
+    --job-tooltip-border: rgba(255,255,255,0.12);
 }
 
 /* ==============================================
@@ -64,10 +93,10 @@
 /* Replace Bootstrap .p-5 with custom machine info classes */
 .machine-info-container {
     padding: 1.5rem;
-    background: rgba(255, 255, 255, 0.98);
+    background: var(--bg-primary);
     border-radius: 1rem;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    border: 1px solid var(--border-primary);
+    box-shadow: 0 4px 16px var(--shadow-light);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
@@ -86,7 +115,7 @@
 
 .machine-info-container:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 8px 24px var(--shadow-medium);
 }
 
 .machine-info-header {
@@ -107,7 +136,7 @@
 .machine-name {
     font-size: 1.125rem;
     font-weight: 700;
-    color: #1f2937;
+    color: var(--text-primary);
     line-height: 1.3;
 }
 
@@ -121,16 +150,16 @@
 .machine-stat-item {
     text-align: center;
     padding: 0.75rem;
-    background: #f8fafc;
+    background: var(--bg-secondary);
     border-radius: 0.5rem;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border-primary);
 }
 
 .machine-stat-value {
     display: block;
     font-size: 1.25rem;
     font-weight: 700;
-    color: #1f2937;
+    color: var(--text-primary);
     line-height: 1;
 }
 
@@ -138,7 +167,7 @@
     display: block;
     font-size: 0.75rem;
     font-weight: 500;
-    color: #6b7280;
+    color: var(--text-tertiary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin-top: 0.25rem;
@@ -160,14 +189,29 @@
     color: #166534;
 }
 
+.dark .machine-status-indicator.status-active {
+    background: #14532d;
+    color: #bbf7d0;
+}
+
 .machine-status-indicator.status-idle {
     background: #f3f4f6;
     color: #374151;
 }
 
+.dark .machine-status-indicator.status-idle {
+    background: #4b5563;
+    color: #e5e7eb;
+}
+
 .machine-status-indicator.status-error {
     background: #fee2e2;
     color: #991b1b;
+}
+
+.dark .machine-status-indicator.status-error {
+    background: #7f1d1d;
+    color: #fca5a5;
 }
 
 .machine-status-dot {
@@ -180,7 +224,38 @@
 
 /* ================== JOB TOOLTIP SYSTEM ================== */
 .job-block{position:relative;}
-.job-tooltip{position:absolute;inset:auto auto calc(100% + 6px) 0;background:var(--job-tooltip-bg);color:#e2e8f0;padding:6px 8px 8px 8px;border-radius:10px;min-width:180px;max-width:260px;font-size:10px;line-height:1.25;display:flex;flex-direction:column;gap:2px;opacity:0;pointer-events:none;transform:translateY(4px) scale(.94);border:1px solid var(--job-tooltip-border);box-shadow:var(--job-tooltip-shadow);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);transition:opacity .18s ease,transform .22s cubic-bezier(.32,.72,.33,1);z-index:400;}
+.job-tooltip{
+    position:absolute;
+    inset:auto auto calc(100% + 6px) 0;
+    background:var(--job-tooltip-bg);
+    color:#e2e8f0;
+    padding:6px 8px 8px 8px;
+    border-radius:10px;
+    min-width:180px;
+    max-width:260px;
+    font-size:10px;
+    line-height:1.25;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    opacity:0;
+    pointer-events:none;
+    transform:translateY(4px) scale(.94);
+    border:1px solid var(--job-tooltip-border);
+    box-shadow:var(--job-tooltip-shadow);
+    backdrop-filter:blur(6px);
+    -webkit-backdrop-filter:blur(6px);
+    transition:opacity .18s ease,transform .22s cubic-bezier(.32,.72,.33,1);
+    z-index:400;
+}
+
+.dark .job-tooltip {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-color: rgba(255,255,255,0.15);
+    box-shadow: 0 10px 28px -4px rgba(0,0,0,.65), 0 3px 8px -2px rgba(0,0,0,.5);
+}
+
 .job-tooltip .jt-line{display:flex;flex-wrap:wrap;gap:4px;align-items:baseline;}
 .job-tooltip .jt-line.dim{opacity:.65;font-weight:500;}
 .job-tooltip .jt-part{font-size:11px;letter-spacing:.3px;}
@@ -196,7 +271,8 @@
 
 /* High contrast preference */
 @media (prefers-contrast: more){
-  .job-tooltip{border-color:#94a3b8;background:#0f172a;}
+  .job-tooltip{border-color:#94a3b8;}
+  .dark .job-tooltip{border-color:#e5e7eb;}
 }
 
 /* Reduce motion */
@@ -571,12 +647,12 @@
     width: 100%;
     overflow-x: auto;
     overflow-y: visible;
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
     border-radius: 12px;
     padding: 0;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    box-shadow: 0 4px 25px rgba(0, 0, 0, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 25px var(--shadow-light);
+    border: 1px solid var(--border-primary);
     /* ENHANCED: Smooth horizontal scrolling */
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
@@ -585,7 +661,7 @@
     min-width: 100%;
     /* ENHANCED: Always show horizontal scrollbar when needed */
     scrollbar-width: thin;
-    scrollbar-color: #cbd5e1 #f1f5f9;
+    scrollbar-color: var(--border-secondary) var(--bg-tertiary);
 }
 
     /* ENHANCED: Custom scrollbar styling for better UX */
@@ -594,19 +670,33 @@
     }
 
     .scheduler-horizontal-container::-webkit-scrollbar-track {
-        background: #f1f5f9;
+        background: var(--bg-tertiary);
         border-radius: 6px;
     }
 
     .scheduler-horizontal-container::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
+        background: var(--border-secondary);
         border-radius: 6px;
-        border: 2px solid #f1f5f9;
+        border: 2px solid var(--bg-tertiary);
     }
 
         .scheduler-horizontal-container::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
+            background: var(--text-tertiary);
         }
+
+/* Dark mode scrollbar adjustments */
+.dark .scheduler-horizontal-container::-webkit-scrollbar-track {
+    background: #374151;
+}
+
+.dark .scheduler-horizontal-container::-webkit-scrollbar-thumb {
+    background: #6b7280;
+    border: 2px solid #374151;
+}
+
+.dark .scheduler-horizontal-container::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
 
 /* ENHANCED: Professional Grid Layout with Superior Horizontal Scrolling */
 .scheduler-main-grid {
@@ -614,7 +704,7 @@
     width: 100%;
     min-width: max-content;
     grid-gap: 0;
-    background: white;
+    background: var(--bg-primary);
     border-radius: 12px;
     overflow: hidden;
     overflow-x: auto;
@@ -632,19 +722,19 @@
     left: 0 !important;
     top: 0 !important;
     z-index: 20 !important;
-    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-    border-bottom: 1px solid #e2e8f0;
-    border-right: 1px solid #e2e8f0;
+    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+    border-bottom: 1px solid var(--border-primary);
+    border-right: 1px solid var(--border-primary);
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 600;
-    color: #374151;
+    color: var(--text-secondary);
     padding: 16px 12px;
     min-height: 64px;
     font-size: 13px;
     letter-spacing: 0.025em;
-    box-shadow: 2px 0 6px rgba(0, 0, 0, 0.05);
+    box-shadow: 2px 0 6px var(--shadow-light);
 }
 
 /* iOS-STYLE: Time Header Hierarchy */
@@ -652,8 +742,8 @@
     position: sticky !important;
     top: 0 !important;
     z-index: 15 !important;
-    border-bottom: 1px solid #e2e8f0;
-    border-right: 1px solid #f3f4f6;
+    border-bottom: 1px solid var(--border-primary);
+    border-right: 1px solid var(--border-secondary);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -667,12 +757,12 @@
 
     /* iOS-STYLE: Date Headers (Primary) - ENHANCED for wider scrolling */
     .scheduler-time-header.date-header {
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        color: #1f2937;
+        background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+        color: var(--text-primary);
         font-weight: 600;
         min-width: 80px; /* INCREASED: Better with wider slot system */
-        border-right: 2px solid #e5e7eb;
-        box-shadow: 1px 0 3px rgba(0, 0, 0, 0.05);
+        border-right: 2px solid var(--border-primary);
+        box-shadow: 1px 0 3px var(--shadow-light);
     }
 
         .scheduler-time-header.date-header.today {
@@ -704,11 +794,11 @@
 
     /* iOS-STYLE: Hour Headers (Secondary) - ENHANCED for wider scrolling */
     .scheduler-time-header.hour-header {
-        background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
-        color: #374151;
+        background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+        color: var(--text-secondary);
         font-weight: 600;
         min-width: 80px; /* INCREASED: Better with wider slot system */
-        border-left: 2px solid #e5e7eb;
+        border-left: 2px solid var(--border-primary);
         font-size: 12px;
     }
 
@@ -720,8 +810,8 @@
 
     /* iOS-STYLE: Half Hour Headers (Tertiary) - ENHANCED for wider scrolling */
     .scheduler-time-header.half-hour-header {
-        background: linear-gradient(135deg, #fafafa 0%, #f3f4f6 100%);
-        color: #6b7280;
+        background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+        color: var(--text-tertiary);
         font-weight: 500;
         min-width: 60px; /* INCREASED: Better proportions for wider system */
         font-size: 10px;
@@ -736,8 +826,8 @@
 
     /* iOS-STYLE: Quarter Hour Headers (Minimal) - ENHANCED for wider scrolling */
     .scheduler-time-header.quarter-hour-header {
-        background: linear-gradient(135deg, #fefefe 0%, #fafafa 100%);
-        color: #9ca3af;
+        background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+        color: var(--text-tertiary);
         font-weight: 400;
         min-width: 50px; /* INCREASED: Better proportions for wider system */
         font-size: 9px;
@@ -757,35 +847,35 @@
     position: sticky !important;
     left: 0 !important;
     z-index: 10 !important;
-    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-    border-bottom: 1px solid #f3f4f6;
-    border-right: 1px solid #e5e7eb;
+    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+    border-bottom: 1px solid var(--border-secondary);
+    border-right: 1px solid var(--border-primary);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: 16px 12px;
-    box-shadow: 1px 0 3px rgba(0, 0, 0, 0.03);
+    box-shadow: 1px 0 3px var(--shadow-light);
     transition: all 0.2s ease;
     font-family: inherit;
     position: relative;
 }
 
     .scheduler-machine-label:hover {
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
         transform: translateX(1px);
     }
 
     .scheduler-machine-label .machine-name {
         font-size: 15px;
         font-weight: 700;
-        color: #1f2937;
+        color: var(--text-primary);
         margin-bottom: 4px;
     }
 
     .scheduler-machine-label .machine-stats {
         font-size: 11px;
-        color: #6b7280;
+        color: var(--text-tertiary);
         text-align: center;
         line-height: 1.3;
     }
@@ -796,7 +886,7 @@
 
     .scheduler-machine-label .utilization {
         font-size: 10px;
-        color: #9ca3af;
+        color: var(--text-tertiary);
     }
 
     .scheduler-machine-label .machine-status {
@@ -873,12 +963,12 @@
 /* PROFESSIONAL: Grid Cells with JOB BLOCK SUPPORT */
 .scheduler-grid-cell {
     position: relative !important; /* CRITICAL: Must be positioned for z-index children */
-    border-bottom: 1px solid #f3f4f6;
-    border-right: 1px solid #f8fafc;
+    border-bottom: 1px solid var(--border-secondary);
+    border-right: 1px solid var(--border-secondary);
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: visible; /* CRITICAL: Allow job blocks to overflow for proper display */
-    background: linear-gradient(135deg, #ffffff 0%, #fefefe 100%);
+    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-primary) 100%);
     /* ENHANCED: Ensure job blocks can extend beyond cell boundaries */
     contain: none; /* Allow job blocks to escape containment */
 }
@@ -886,8 +976,12 @@
     .scheduler-grid-cell:hover {
         background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%) !important;
         border-left: 2px solid var(--ios-blue) !important;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+        box-shadow: 0 2px 8px var(--shadow-medium);
         overflow: visible !important;
+    }
+
+    .dark .scheduler-grid-cell:hover {
+        background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%) !important;
     }
 
     .scheduler-grid-cell:has(.job-block:hover) {

@@ -32,8 +32,8 @@
                     </svg>
                 </div>
                 <div>
-                    <h1 class="text-3xl font-bold text-gray-900">Master Schedule</h1>
-                    <p class="text-sm text-gray-500">
+                    <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Master Schedule</h1>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
                         Comprehensive production visibility and analytics
                     </p>
                 </div>
@@ -62,18 +62,18 @@
         <div class="filters-panel" id="filters-panel">
             <form method="post" asp-page-handler="ApplyFilters" class="filters-grid">
                 <div>
-                    <label asp-for="Input.StartDate" class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-                    <input asp-for="Input.StartDate" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <label asp-for="Input.StartDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+                    <input asp-for="Input.StartDate" type="date" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 
                 <div>
-                    <label asp-for="Input.EndDate" class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-                    <input asp-for="Input.EndDate" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <label asp-for="Input.EndDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
+                    <input asp-for="Input.EndDate" type="date" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 
                 <div>
-                    <label asp-for="Input.ViewMode" class="block text-sm font-medium text-gray-700 mb-1">View Mode</label>
-                    <select asp-for="Input.ViewMode" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <label asp-for="Input.ViewMode" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">View Mode</label>
+                    <select asp-for="Input.ViewMode" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <option value="daily">Daily View</option>
                         <option value="weekly">Weekly View</option>
                         <option value="monthly">Monthly View</option>
@@ -81,8 +81,8 @@
                 </div>
                 
                 <div>
-                    <label asp-for="Input.Department" class="block text-sm font-medium text-gray-700 mb-1">Department</label>
-                    <select asp-for="Input.Department" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <label asp-for="Input.Department" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Department</label>
+                    <select asp-for="Input.Department" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <option value="all">All Departments</option>
                         @foreach (var dept in viewModel.Departments)
                         {
@@ -92,8 +92,8 @@
                 </div>
                 
                 <div>
-                    <label asp-for="Input.Status" class="block text sm font-medium text-gray-700 mb-1">Status</label>
-                    <select asp-for="Input.Status" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <label asp-for="Input.Status" class="block text sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                    <select asp-for="Input.Status" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <option value="all">All Statuses</option>
                         @foreach (var status in viewModel.Statuses)
                         {
@@ -103,10 +103,10 @@
                 </div>
                 
                 <div>
-                    <label asp-for="Input.SearchTerm" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+                    <label asp-for="Input.SearchTerm" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Search</label>
                     <div class="relative">
                         <input asp-for="Input.SearchTerm" type="text" placeholder="Search jobs, parts, machines..." 
-                               class="w-full px-3 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                               class="w-full px-3 py-2 pl-10 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
                         <svg class="w-4 h-4 absolute left-3 top-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                         </svg>
@@ -117,7 +117,7 @@
                     <button type="submit" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
                         Apply Filters
                     </button>
-                    <a href="/Scheduler/MasterSchedule" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors">
+                    <a href="/Scheduler/MasterSchedule" class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors">
                         Clear
                     </a>
                 </div>
@@ -147,9 +147,9 @@
                 <!-- Timeline View -->
                 <div class="timeline-container" id="timeline-container">
                     <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-semibold text-gray-900">Production Timeline</h3>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Production Timeline</h3>
                         <div class="flex items-center space-x-2">
-                            <button onclick="refreshTimeline()" class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors">
+                            <button onclick="refreshTimeline()" class="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
                                 <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                                 </svg>
@@ -163,9 +163,9 @@
                 <!-- Resource Utilization -->
                 <div class="timeline-container" id="utilization-container">
                     <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-semibold text-gray-900">Resource Utilization</h3>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Resource Utilization</h3>
                         <div class="flex items-center space-x-2">
-                            <button onclick="refreshUtilization()" class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors">
+                            <button onclick="refreshUtilization()" class="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
                                 <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                                 </svg>
@@ -183,11 +183,11 @@
                 <!-- Active Alerts -->
                 <div class="timeline-container" id="alerts-container">
                     <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-semibold text-gray-900">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
                             Active Alerts
-                            <span class="ml-2 px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-bold">@alerts.Count</span>
+                            <span class="ml-2 px-2 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-full text-xs font-bold">@alerts.Count</span>
                         </h3>
-                        <button onclick="refreshAlerts()" class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors">
+                        <button onclick="refreshAlerts()" class="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
                             <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                             </svg>
@@ -199,7 +199,7 @@
                 
                 <!-- Machine Status Overview -->
                 <div class="timeline-container">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Machine Status</h3>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Machine Status</h3>
                     <div class="machine-status-grid">
                         @foreach (var machine in machines.Take(6))
                         {
@@ -209,20 +209,20 @@
                                     <div class="machine-status status-@machine.Status.ToLower()">@machine.Status</div>
                                 </div>
                                 
-                                <div class="text-sm text-gray-600 mb-2">
+                                <div class="text-sm text-gray-600 dark:text-gray-400 mb-2">
                                     Utilization: @machine.UtilizationPercent.ToString("F1")%
                                 </div>
                                 <div class="utilization-bar">
                                     <div class="utilization-fill" style="width: @Math.Min(100, machine.UtilizationPercent)%"></div>
                                 </div>
                                 
-                                <div class="text-xs text-gray-500 mt-2">
+                                <div class="text-xs text-gray-500 dark:text-gray-400 mt-2">
                                     Active: @machine.ActiveJobs | Queued: @machine.QueuedJobs
                                 </div>
                                 
                                 @if (!string.IsNullOrEmpty(machine.CurrentJobPartNumber))
                                 {
-                                    <div class="text-xs text-blue-600 mt-1 font-medium">
+                                    <div class="text-xs text-blue-600 dark:text-blue-400 mt-1 font-medium">
                                         Current: @machine.CurrentJobPartNumber
                                     </div>
                                 }
@@ -233,7 +233,7 @@
                 
                 <!-- Quick Actions -->
                 <div class="timeline-container">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Quick Actions</h3>
                     <div class="space-y-2">
                         <a href="/Scheduler" class="block w-full px-4 py-2 bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 transition-colors text-center">
                             <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

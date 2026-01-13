@@ -147,8 +147,14 @@
     <link rel="stylesheet" href="~/css/responsive-master.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/scheduler-header.css" asp-append-version="true" />
     <style>
+        /* Scheduler Header and UI Styles with Dark Mode Support */
         .scheduler-sticky-header{position:sticky;top:0;z-index:50;background:#fff;box-shadow:0 2px 4px -2px rgba(0,0,0,.08);} 
         .scheduler-sticky-sub{position:sticky;top:calc(var(--scheduler-header-height,72px));z-index:50;background:#fff;box-shadow:0 1px 3px -2px rgba(0,0,0,.06);} 
+        
+        /* Dark Mode for Sticky Elements */
+        .dark .scheduler-sticky-header{background:#1f2937 !important;box-shadow:0 2px 4px -2px rgba(0,0,0,.25) !important;}
+        .dark .scheduler-sticky-sub{background:#1f2937 !important;box-shadow:0 1px 3px -2px rgba(0,0,0,.25) !important;}
+        
         .job-block.select-mode{cursor:pointer;outline:2px solid transparent;outline-offset:0;position:relative;} 
         .job-block.select-mode:hover{outline-color:#6366f1;} 
         .job-block.selected{outline-color:#dc2626!important;box-shadow:0 0 0 3px rgba(220,38,38,.35);}  
@@ -158,7 +164,32 @@
         .scheduler-horizontal-container .scheduler-machine-header,
         .scheduler-horizontal-container .scheduler-time-header{position:sticky;top:calc(var(--scheduler-header-height,72px) + var(--scheduler-subbar-height,48px));z-index:60;background:#fff;} 
 
- 
+        /* Dark Mode for Headers in Container */
+        .dark .scheduler-horizontal-container .scheduler-machine-header,
+        .dark .scheduler-horizontal-container .scheduler-time-header{background:#1f2937 !important;}
+
+        /* Loading Overlay Dark Mode */
+        .dark #loading-indicator.oc-overlay{background:rgba(31,41,55,.55);}
+        .dark .oc-overlay-box{background:rgba(17,24,39,.92);color:#e2e8f0;}
+        .dark .oc-overlay-spinner{border-color:rgba(255,255,255,.2);border-top-color:#818cf8;}
+        .dark .oc-overlay-text{color:#f1f5f9;}
+
+        /* OpCentrix Card Dark Mode */
+        .dark .opcentrix-card{background:#1f2937 !important;border-color:#374151 !important;}
+        
+        /* Secondary Button Dark Mode */
+        .dark .secondary-btn{background:#374151 !important;color:#e5e7eb !important;border-color:#4b5563 !important;}
+        .dark .secondary-btn:hover{background:#4b5563 !important;}
+        
+        /* Mini Pills Dark Mode */
+        .dark .mini-pill.bg-green-100{background:#14532d !important;}
+        .dark .mini-pill.text-green-700{color:#bbf7d0 !important;}
+        .dark .mini-pill.bg-blue-100{background:#1e3a8a !important;}
+        .dark .mini-pill.text-blue-700{color:#bfdbfe !important;}
+        
+        /* Danger Button Dark Mode */
+        .dark .oc-btn-danger{background:#dc2626 !important;color:#ffffff !important;}
+        .dark .oc-btn-danger:hover{background:#b91c1c !important;}
         </style>
 }
 
