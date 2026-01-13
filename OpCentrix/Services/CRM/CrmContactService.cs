@@ -32,6 +32,13 @@ public class CrmContactService : ICrmContactService
         return entity;
     }
 
+    public async Task<CrmContact?> GetByIdAsync(int id, CancellationToken ct = default)
+    {
+        return await _context.CrmContacts
+            .Include(c => c.Account)
+            .FirstOrDefaultAsync(c => c.Id == id, ct);
+    }
+
     public async Task UpdateAsync(int id, string name, string? email, string? phone, string? title, CancellationToken ct = default)
     {
         var entity = await _context.CrmContacts.FirstOrDefaultAsync(c => c.Id == id, ct);
@@ -43,6 +50,16 @@ public class CrmContactService : ICrmContactService
         entity.Title = string.IsNullOrWhiteSpace(title) ? null : title.Trim();
 
         await _context.SaveChangesAsync(ct);
+    }
+
+    public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
+    {
+        var entity = await _context.CrmContacts.FirstOrDefaultAsync(c => c.Id == id, ct);
+        if (entity == null) return false;
+
+        _context.CrmContacts.Remove(entity);
+        await _context.SaveChangesAsync(ct);
+        return true;
     }
 
     public Task<List<CrmContact>> GetByAccountIdAsync(int accountId, CancellationToken ct = default)

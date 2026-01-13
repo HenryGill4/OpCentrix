@@ -336,6 +336,25 @@
                                             </div>
                                         }
                                     </div>
+                                    <div class="flex flex-col gap-1">
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-primary" 
+                                                onclick="editContact(@contact.Id)"
+                                                title="Edit Contact">
+                                            <i class="fa-solid fa-edit"></i>
+                                        </button>
+                                        <form method="post" asp-page-handler="DeleteContact" class="inline" 
+                                              onsubmit="return confirmDeleteContact('@contact.Name')">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="contactId" value="@contact.Id" />
+                                            <input type="hidden" name="Id" value="@Model.Id" />
+                                            <button type="submit" 
+                                                    class="btn btn-sm btn-outline-danger" 
+                                                    title="Delete Contact">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
                                 </div>
                             }
                         </div>
@@ -456,3 +475,125 @@
         _ => "Normal"
     };
 }
+
+<!-- Contact Edit Modal -->
+<div class="modal fade" id="contactModal" tabindex="-1" aria-labelledby="contactModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" id="contactModalContent">
+            <!-- Modal content loaded dynamically -->
+        </div>
+    </div>
+</div>
+
+<!-- Include HTMX -->
+<script src="https://unpkg.com/htmx.org@1.9.10" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC" crossorigin="anonymous"></script>
+
+<script>
+    function editContact(contactId) {
+        // Show loading state
+        const loadingHtml = `
+            <div class='modal-header bg-purple-50 border-b'>
+                <h5 class='modal-title text-lg font-semibold text-purple-800 flex items-center'>
+                    <div class='spinner-border spinner-border-sm me-2' role='status'>
+                        <span class='visually-hidden'>Loading...</span>
+                    </div>
+                    Loading Contact...
+                </h5>
+                <button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'></button>
+            </div>
+            <div class='modal-body p-6 text-center'>
+                <div class='spinner-border text-purple-600 mb-3' role='status'>
+                    <span class='visually-hidden'>Loading...</span>
+                </div>
+                <p class='text-gray-600'>Loading contact details...</p>
+            </div>
+        `;
+        
+        document.getElementById('contactModalContent').innerHTML = loadingHtml;
+        const modal = new bootstrap.Modal(document.getElementById('contactModal'));
+        modal.show();
+
+        // Load the edit contact modal
+        fetch(`/CRM/Accounts/Details?handler=EditContactModal&contactId=${contactId}&id=@Model.Id`, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.text();
+        })
+        .then(html => {
+            document.getElementById('contactModalContent').innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Error loading edit modal:', error);
+            document.getElementById('contactModalContent').innerHTML = `
+                <div class='modal-header bg-red-50 border-b'>
+                    <h5 class='modal-title text-lg font-semibold text-red-800 flex items-center'>
+                        <i class='fa-solid fa-exclamation-triangle me-2'></i>
+                        Error
+                    </h5>
+                    <button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'></button>
+                </div>
+                <div class='modal-body p-6 text-center'>
+                    <div class='text-red-600 mb-3'>
+                        <i class='fa-solid fa-exclamation-triangle fa-2x'></i>
+                    </div>
+                    <h6 class='text-red-800 mb-2'>Failed to Load Contact</h6>
+                    <p class='text-gray-600 mb-4'>There was an error loading the contact details. Please try again.</p>
+                    <button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button>
+                </div>
+            `;
+        });
+    }
+
+    // Function to confirm contact deletion
+    function confirmDeleteContact(contactName) {
+        return confirm(`Are you sure you want to delete the contact "${contactName}"?\\n\\nThis action cannot be undone.`);
+    }
+
+    // Initialize Bootstrap components when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
+        // Auto-hide success alerts after 5 seconds
+        setTimeout(() => {
+            const alerts = document.querySelectorAll('.alert-success');
+            alerts.forEach(alert => {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 5000);
+    });
+
+    // HTMX event handlers for better UX
+    document.addEventListener('htmx:beforeRequest', function(evt) {
+        // Show loading state for form submissions
+        if (evt.target.matches('#contactModal form')) {
+            const submitBtn = evt.target.closest('.modal-content').querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Updating...';
+            }
+        }
+    });
+
+    document.addEventListener('htmx:afterRequest', function(evt) {
+        // Reset button state after request
+        if (evt.target.matches('#contactModal form')) {
+            const submitBtn = evt.target.closest('.modal-content').querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fa-solid fa-save me-2"></i>Update Contact';
+            }
+        }
+    });
+</script>
