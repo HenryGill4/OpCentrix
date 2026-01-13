@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/navigation-enhancements.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/admin-navigation.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/admin-dark-mode.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/OpCentrix.styles.css" asp-append-version="true" />
     
     @* Font Awesome for icons *@
@@ -15,701 +17,9 @@
     <script src="https://unpkg.com/htmx.org@1.9.2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Enhanced Dark Mode System for Admin Layout -->
-    <script>
-        (function() {
-            const getTheme = () => {
-                const stored = localStorage.getItem('theme');
-                if (stored && (stored === 'dark' || stored === 'light')) {
-                    return stored;
-                }
-                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            };
-            
-            const setTheme = (theme) => {
-                if (theme !== 'dark' && theme !== 'light') theme = 'light';
-                localStorage.setItem('theme', theme);
-                
-                if (theme === 'dark') {
-                    document.documentElement.classList.add('dark');
-                    document.documentElement.setAttribute('data-theme', 'dark');
-                } else {
-                    document.documentElement.classList.remove('dark');
-                    document.documentElement.setAttribute('data-theme', 'light');
-                }
-                
-                window.dispatchEvent(new CustomEvent('themeChanged', { detail: { theme } }));
-            };
-            
-            setTheme(getTheme());
-            
-            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-                const userPreference = localStorage.getItem('theme');
-                if (!userPreference) {
-                    setTheme(e.matches ? 'dark' : 'light');
-                }
-            });
-            
-            window.toggleTheme = () => {
-                const current = getTheme();
-                const newTheme = current === 'dark' ? 'light' : 'dark';
-                setTheme(newTheme);
-            };
-            
-            window.getCurrentTheme = getTheme;
-        })();
-    </script>
+    <!-- Admin Dark Mode System -->
+    <script src="~/js/admin-dark-mode.js" asp-append-version="true"></script>
     
-    <!-- Enhanced Dark Mode CSS Framework -->
-    <style>
-        /* Enhanced Dark Mode System - Class-based approach */
-        
-        /* Navigation Dark Mode */
-        .dark .nav-item {
-            color: #d1d5db;
-        }
-        
-        .dark .nav-item:hover {
-            background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
-            color: #e5e7eb;
-        }
-        
-        .dark .nav-item-active {
-            background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%) !important;
-            color: #bfdbfe !important;
-        }
-        
-        /* Sidebar Dark Mode */
-        .dark #sidebar {
-            background-color: #1f2937 !important;
-            border-right-color: #374151 !important;
-        }
-        
-        /* User Profile Dark Mode */
-        .dark .user-info-card {
-            background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
-            border-bottom-color: #4b5563;
-        }
-        
-        /* Header Dark Mode */
-        .dark header {
-            background-color: #1f2937 !important;
-            border-bottom-color: #374151 !important;
-        }
-        
-        /* Main Content Dark Mode */
-        .dark main {
-            background-color: #111827 !important;
-        }
-        
-        /* Scrollbar Dark Mode */
-        .dark ::-webkit-scrollbar-track {
-            background: #374151 !important;
-        }
-        
-        .dark ::-webkit-scrollbar-thumb {
-            background: #6b7280 !important;
-        }
-        
-        .dark ::-webkit-scrollbar-thumb:hover {
-            background: #9ca3af !important;
-        }
-        
-        /* Theme Toggle Button Animation */
-        .theme-toggle-btn {
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .theme-toggle-btn:hover {
-            transform: scale(1.05);
-        }
-        
-        /* Active Navigation Item Enhanced Styles */
-        .nav-item-active {
-            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-            color: #ffffff;
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-        }
-        
-        .dark .nav-item-active {
-            background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%) !important;
-            color: #e0e7ff !important;
-        }
-        
-        /* Section Header Dark Mode */
-        .dark .nav-section-toggle {
-            color: inherit;
-        }
-        
-        /* Logo Container Dark Mode */
-        .dark .opcentrix-logo-container {
-            background-color: rgba(255, 255, 255, 0.15);
-        }
-        
-        /* TAILWIND GRADIENT DARK MODE FIXES */
-        
-        /* Fix bg-gradient-to-r and other gradient utilities for dark mode */
-        .dark .bg-gradient-to-r {
-            background-image: linear-gradient(to right, var(--gradient-from-color), var(--gradient-to-color)) !important;
-        }
-        
-        .dark .from-blue-600 {
-            --gradient-from-color: #1e40af;
-            --gradient-color-stops: var(--gradient-from-color), var(--gradient-to-color, rgba(30, 64, 175, 0));
-        }
-        
-        .dark .to-indigo-600 {
-            --gradient-to-color: #4338ca;
-            --gradient-color-stops: var(--gradient-from-color, rgba(67, 56, 202, 0)), var(--gradient-to-color);
-        }
-        
-        /* User avatar gradient fix for dark mode */
-        .dark .bg-gradient-to-br {
-            background-image: linear-gradient(to bottom right, var(--gradient-from-color), var(--gradient-to-color)) !important;
-        }
-        
-        .dark .from-blue-500 {
-            --gradient-from-color: #1d4ed8;
-            --gradient-color-stops: var(--gradient-from-color), var(--gradient-to-color, rgba(29, 78, 216, 0));
-        }
-        
-        /* Additional gradient directions for comprehensive support */
-        .dark .bg-gradient-to-l {
-            background-image: linear-gradient(to left, var(--gradient-from-color), var(--gradient-to-color)) !important;
-        }
-        
-        .dark .bg-gradient-to-t {
-            background-image: linear-gradient(to top, var(--gradient-from-color), var(--gradient-to-color)) !important;
-        }
-        
-        .dark .bg-gradient-to-b {
-            background-image: linear-gradient(to bottom, var(--gradient-from-color), var(--gradient-to-color)) !important;
-        }
-        
-        .dark .bg-gradient-to-tr {
-            background-image: linear-gradient(to top right, var(--gradient-from-color), var(--gradient-to-color)) !important;
-        }
-        
-        .dark .bg-gradient-to-tl {
-            background-image: linear-gradient(to top left, var(--gradient-from-color), var(--gradient-to-color)) !important;
-        }
-        
-        .dark .bg-gradient-to-bl {
-            background-image: linear-gradient(to bottom left, var(--gradient-from-color), var(--gradient-to-color)) !important;
-        }
-        
-        /* Common gradient color combinations for dark mode */
-        .dark .from-gray-600 {
-            --gradient-from-color: #374151;
-            --gradient-color-stops: var(--gradient-from-color), var(--gradient-to-color, rgba(55, 65, 81, 0));
-        }
-        
-        .dark .to-gray-800 {
-            --gradient-to-color: #1f2937;
-            --gradient-color-stops: var(--gradient-from-color, rgba(31, 41, 55, 0)), var(--gradient-to-color);
-        }
-        
-        .dark .from-purple-600 {
-            --gradient-from-color: #7c3aed;
-            --gradient-color-stops: var(--gradient-from-color), var(--gradient-to-color, rgba(124, 58, 237, 0));
-        }
-        
-        .dark .to-purple-800 {
-            --gradient-to-color: #5b21b6;
-            --gradient-color-stops: var(--gradient-from-color, rgba(91, 33, 182, 0)), var(--gradient-to-color);
-        }
-        
-        /* Ensure gradients maintain visibility and contrast in dark mode */
-        .dark .bg-gradient-to-r.from-blue-600.to-indigo-600 {
-            background-image: linear-gradient(to right, #1e40af, #4338ca) !important;
-        }
-        
-        /* Fix for the specific header gradient to maintain brand colors but ensure visibility */
-        .dark div.bg-gradient-to-r.from-blue-600.to-indigo-600 {
-            background-image: linear-gradient(to right, #1e3a8a, #3730a3) !important;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        /* Additional common Tailwind gradient combinations for dark mode */
-        .dark .from-red-500 {
-            --gradient-from-color: #dc2626;
-            --gradient-color-stops: var(--gradient-from-color), var(--gradient-to-color, rgba(220, 38, 38, 0));
-        }
-        
-        .dark .to-red-700 {
-            --gradient-to-color: #b91c1c;
-            --gradient-color-stops: var(--gradient-from-color, rgba(185, 28, 28, 0)), var(--gradient-to-color);
-        }
-        
-        .dark .from-green-500 {
-            --gradient-from-color: #10b981;
-            --gradient-color-stops: var(--gradient-from-color), var(--gradient-to-color, rgba(16, 185, 129, 0));
-        }
-        
-        .dark .to-green-700 {
-            --gradient-to-color: #047857;
-            --gradient-color-stops: var(--gradient-from-color, rgba(4, 120, 87, 0)), var(--gradient-to-color);
-        }
-        
-        .dark .from-yellow-400 {
-            --gradient-from-color: #fbbf24;
-            --gradient-color-stops: var(--gradient-from-color), var(--gradient-to-color, rgba(251, 191, 36, 0));
-        }
-        
-        .dark .to-orange-500 {
-            --gradient-to-color: #f97316;
-            --gradient-color-stops: var(--gradient-from-color, rgba(249, 115, 22, 0)), var(--gradient-to-color);
-        }
-        
-        /* Comprehensive Tailwind Gradient Classes Override for Dark Mode */
-        .dark [class*="bg-gradient-"] {
-            background-image: var(--gradient-image, none);
-        }
-        
-        /* Override specific problematic gradients that may not work in dark mode */
-        .dark .bg-gradient-to-r.from-transparent {
-            background-image: linear-gradient(to right, transparent, var(--gradient-to-color)) !important;
-        }
-        
-        .dark .bg-gradient-to-r.to-transparent {
-            background-image: linear-gradient(to right, var(--gradient-from-color), transparent) !important;
-        }
-        
-        /* Fix any opacity-based gradients that might not show up in dark mode */
-        .dark .bg-opacity-20 {
-            --tw-bg-opacity: 0.3;
-        }
-        
-        .dark .bg-opacity-10 {
-            --tw-bg-opacity: 0.15;
-        }
-        
-        /* Ensure via utilities work in dark mode */
-        .dark .via-blue-500 {
-            --gradient-via-color: #1d4ed8;
-            --gradient-color-stops: var(--gradient-from-color), var(--gradient-via-color), var(--gradient-to-color);
-        }
-        
-        .dark .via-purple-500 {
-            --gradient-via-color: #7c3aed;
-            --gradient-color-stops: var(--gradient-from-color), var(--gradient-via-color), var(--gradient-to-color);
-        }
-        
-        /* COMPREHENSIVE TAILWIND GRADIENT FIX FOR ALL DIRECTION UTILITIES */
-        
-        /* Critical Tailwind gradient direction utility overrides */
-        .dark .bg-gradient-to-r {
-            background-image: linear-gradient(to right, var(--tw-gradient-from, transparent), var(--tw-gradient-to, transparent)) !important;
-            --tw-gradient-from: var(--gradient-from-color, #3b82f6);
-            --tw-gradient-to: var(--gradient-to-color, #1d4ed8);
-        }
-        
-        .dark .bg-gradient-to-l {
-            background-image: linear-gradient(to left, var(--tw-gradient-from, transparent), var(--tw-gradient-to, transparent)) !important;
-            --tw-gradient-from: var(--gradient-from-color, #3b82f6);
-            --tw-gradient-to: var(--gradient-to-color, #1d4ed8);
-        }
-        
-        .dark .bg-gradient-to-t {
-            background-image: linear-gradient(to top, var(--tw-gradient-from, transparent), var(--tw-gradient-to, transparent)) !important;
-            --tw-gradient-from: var(--gradient-from-color, #3b82f6);
-            --tw-gradient-to: var(--gradient-to-color, #1d4ed8);
-        }
-        
-        .dark .bg-gradient-to-b {
-            background-image: linear-gradient(to bottom, var(--tw-gradient-from, transparent), var(--tw-gradient-to, transparent)) !important;
-            --tw-gradient-from: var(--gradient-from-color, #3b82f6);
-            --tw-gradient-to: var(--gradient-to-color, #1d4ed8);
-        }
-        
-        .dark .bg-gradient-to-tr {
-            background-image: linear-gradient(to top right, var(--tw-gradient-from, transparent), var(--tw-gradient-to, transparent)) !important;
-            --tw-gradient-from: var(--gradient-from-color, #3b82f6);
-            --tw-gradient-to: var(--gradient-to-color, #1d4ed8);
-        }
-        
-        .dark .bg-gradient-to-tl {
-            background-image: linear-gradient(to top left, var(--tw-gradient-from, transparent), var(--tw-gradient-to, transparent)) !important;
-            --tw-gradient-from: var(--gradient-from-color, #3b82f6);
-            --tw-gradient-to: var(--gradient-to-color, #1d4ed8);
-        }
-        
-        .dark .bg-gradient-to-br {
-            background-image: linear-gradient(to bottom right, var(--tw-gradient-from, transparent), var(--tw-gradient-to, transparent)) !important;
-            --tw-gradient-from: var(--gradient-from-color, #3b82f6);
-            --tw-gradient-to: var(--gradient-to-color, #1d4ed8);
-        }
-        
-        .dark .bg-gradient-to-bl {
-            background-image: linear-gradient(to bottom left, var(--tw-gradient-from, transparent), var(--tw-gradient-to, transparent)) !important;
-            --tw-gradient-from: var(--gradient-from-color, #3b82f6);
-            --tw-gradient-to: var(--gradient-to-color, #1d4ed8);
-        }
-        
-        /* Tailwind gradient color stop utilities for dark mode */
-        .dark .from-transparent { --gradient-from-color: transparent; }
-        .dark .to-transparent { --gradient-to-color: transparent; }
-        .dark .via-transparent { --gradient-via-color: transparent; }
-        
-        /* Ensure all color stops work in dark mode */
-        .dark [class*="from-"] { --tw-gradient-from: var(--gradient-from-color); }
-        .dark [class*="to-"] { --tw-gradient-to: var(--gradient-to-color); }
-        .dark [class*="via-"] { --tw-gradient-via: var(--gradient-via-color); }
-        
-        /* Force proper gradient rendering in dark mode */
-        .dark [class*="bg-gradient-"] {
-            background-color: transparent !important;
-        }
-        
-        /* SPECIFIC LOGO/BRAND GRADIENT FIX */
-        /* Override the specific blue to indigo gradient used in the header */
-        .dark .bg-gradient-to-r.from-blue-600.to-indigo-600 {
-            background: linear-gradient(to right, #1e3a8a, #3730a3) !important;
-            --tw-gradient-from: #1e3a8a !important;
-            --tw-gradient-to: #3730a3 !important;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-        }
-        
-        /* User avatar gradient fix */
-        .dark .bg-gradient-to-br.from-blue-500.to-indigo-600 {
-            background: linear-gradient(to bottom right, #1d4ed8, #3730a3) !important;
-            --tw-gradient-from: #1d4ed8 !important;
-            --tw-gradient-to: #3730a3 !important;
-        }
-        
-        /* Ensure all Tailwind gradient utilities work properly */
-        .dark .from-blue-600 { --gradient-from-color: #1e3a8a !important; }
-        .dark .to-indigo-600 { --gradient-to-color: #3730a3 !important; }
-        .dark .from-blue-500 { --gradient-from-color: #1d4ed8 !important; }
-        
-        /* Navigation item active gradient fix */
-        .dark .nav-item-active {
-            background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%) !important;
-            color: #e0e7ff !important;
-        }
-        
-        /* Ensure gradients maintain contrast in dark mode */
-        .dark .bg-gradient-to-r, 
-        .dark .bg-gradient-to-br,
-        .dark .bg-gradient-to-l,
-        .dark .bg-gradient-to-t,
-        .dark .bg-gradient-to-b,
-        .dark .bg-gradient-to-tr,
-        .dark .bg-gradient-to-tl,
-        .dark .bg-gradient-to-bl {
-            background-color: transparent !important;
-        }
-        
-        /* Modal and Loading Indicator Dark Mode */
-        .dark #modal-container {
-            background-color: rgba(0, 0, 0, 0.75);
-        }
-        
-        .dark #loading-indicator {
-            background-color: rgba(0, 0, 0, 0.5);
-        }
-        
-        .dark #loading-indicator > div {
-            background-color: #1f2937;
-            color: #e5e7eb;
-            border-color: #374151;
-        }
-        
-        /* Badge Dark Mode */
-        .dark .bg-blue-100 {
-            background-color: #1e3a8a !important;
-        }
-        
-        .dark .text-blue-800 {
-            color: #bfdbfe !important;
-        }
-        
-        .dark .bg-purple-100 {
-            background-color: #581c87 !important;
-        }
-        
-        .dark .text-purple-800 {
-            color: #e9d5ff !important;
-        }
-        
-        .dark .bg-green-100 {
-            background-color: #14532d !important;
-        }
-        
-        .dark .text-green-800 {
-            color: #bbf7d0 !important;
-        }
-        
-        /* Form Elements Dark Mode */
-        .dark input,
-        .dark select,
-        .dark textarea {
-            background-color: #374151;
-            border-color: #6b7280;
-            color: #e5e7eb;
-        }
-        
-        .dark input:focus,
-        .dark select:focus,
-        .dark textarea:focus {
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-        
-        /* Cards and Containers Dark Mode */
-        .dark .bg-white {
-            background-color: #1f2937 !important;
-        }
-        
-        .dark .border-gray-200 {
-            border-color: #374151 !important;
-        }
-        
-        .dark .text-gray-900 {
-            color: #f9fafb !important;
-        }
-        
-        .dark .text-gray-700 {
-            color: #d1d5db !important;
-        }
-        
-        .dark .text-gray-600 {
-            color: #9ca3af !important;
-        }
-        
-        .dark .text-gray-500 {
-            color: #6b7280 !important;
-        }
-        
-        /* Button Dark Mode Enhancement */
-        .dark button:not(.theme-toggle-btn):not([class*="bg-"]) {
-            background-color: #374151;
-            color: #e5e7eb;
-            border-color: #6b7280;
-        }
-        
-        .dark button:not(.theme-toggle-btn):not([class*="bg-"]):hover {
-            background-color: #4b5563;
-        }
-        
-        /* Critical Background and Hover Overrides */
-        .dark .bg-gray-50 {
-            background-color: #1f2937 !important;
-        }
-        
-        .dark .hover\:bg-gray-50:hover {
-            background-color: #374151 !important;
-        }
-        
-        .dark .hover\:bg-gray-100:hover {
-            background-color: #374151 !important;
-        }
-        
-        .dark .bg-gray-100 {
-            background-color: #374151 !important;
-        }
-        
-        .dark .hover\:bg-blue-50:hover {
-            background-color: #1e3a8a !important;
-        }
-        
-        .dark .bg-blue-50 {
-            background-color: #1e3a8a !important;
-        }
-        
-        .dark .hover\:bg-blue-100:hover {
-            background-color: #1e40af !important;
-        }
-        
-        .dark .hover\:bg-emerald-50:hover {
-            background-color: #064e3b !important;
-        }
-        
-        .dark .bg-emerald-50 {
-            background-color: #064e3b !important;
-        }
-        
-        .dark .hover\:bg-emerald-100:hover {
-            background-color: #065f46 !important;
-        }
-        
-        .dark .bg-emerald-100 {
-            background-color: #065f46 !important;
-        }
-        
-        .dark .hover\:bg-red-50:hover {
-            background-color: #7f1d1d !important;
-        }
-        
-        .dark .bg-red-50 {
-            background-color: #7f1d1d !important;
-        }
-        
-        .dark .hover\:bg-red-100:hover {
-            background-color: #991b1b !important;
-        }
-        
-        .dark .bg-red-100 {
-            background-color: #991b1b !important;
-        }
-        
-        .dark .hover\:bg-indigo-50:hover {
-            background-color: #312e81 !important;
-        }
-        
-        .dark .bg-indigo-50 {
-            background-color: #312e81 !important;
-        }
-        
-        .dark .hover\:bg-indigo-100:hover {
-            background-color: #3730a3 !important;
-        }
-        
-        .dark .bg-indigo-100 {
-            background-color: #3730a3 !important;
-        }
-        
-        .dark .hover\:bg-green-50:hover {
-            background-color: #14532d !important;
-        }
-        
-        .dark .bg-green-50 {
-            background-color: #14532d !important;
-        }
-        
-        .dark .hover\:bg-green-100:hover {
-            background-color: #166534 !important;
-        }
-        
-        .dark .hover\:bg-amber-50:hover {
-            background-color: #451a03 !important;
-        }
-        
-        .dark .bg-amber-50 {
-            background-color: #451a03 !important;
-        }
-        
-        .dark .hover\:bg-amber-100:hover {
-            background-color: #78350f !important;
-        }
-        
-        .dark .bg-amber-100 {
-            background-color: #78350f !important;
-        }
-        
-        .dark .hover\:bg-purple-50:hover {
-            background-color: #581c87 !important;
-        }
-        
-        .dark .bg-purple-50 {
-            background-color: #581c87 !important;
-        }
-        
-        .dark .hover\:bg-purple-100:hover {
-            background-color: #6b21a8 !important;
-        }
-        
-        .dark .hover\:bg-orange-50:hover {
-            background-color: #7c2d12 !important;
-        }
-        
-        .dark .bg-orange-50 {
-            background-color: #7c2d12 !important;
-        }
-        
-        .dark .hover\:bg-orange-100:hover {
-            background-color: #9a3412 !important;
-        }
-        
-        .dark .bg-orange-100 {
-            background-color: #9a3412 !important;
-        }
-        
-        /* Global Page Content Dark Mode */
-        .dark .opcentrix-card {
-            background-color: #1f2937 !important;
-            border-color: #374151 !important;
-        }
-        
-        .dark .hover\:shadow-lg:hover {
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.25) !important;
-        }
-        
-        /* Text color overrides for better contrast */
-        .dark .text-gray-400 {
-            color: #9ca3af !important;
-        }
-        
-        .dark .text-gray-300 {
-            color: #d1d5db !important;
-        }
-        
-        /* Loading indicator dark mode */
-        .dark #loading-indicator > div {
-            background-color: #1f2937 !important;
-            color: #e5e7eb !important;
-            border-color: #374151 !important;
-        }
-        
-        /* Additional comprehensive dark mode overrides */
-        .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
-            color: #f9fafb !important;
-        }
-        
-        .dark p {
-            color: #e5e7eb !important;
-        }
-        
-        .dark .table {
-            color: #e5e7eb !important;
-            background-color: #1f2937 !important;
-        }
-        
-        .dark .table th {
-            color: #f9fafb !important;
-            background-color: #374151 !important;
-            border-color: #4b5563 !important;
-        }
-        
-        .dark .table td {
-            border-color: #4b5563 !important;
-            background-color: #1f2937 !important;
-        }
-        
-        .dark .table-striped > tbody > tr:nth-of-type(odd) > td {
-            background-color: #2d3748 !important;
-        }
-        
-        .dark .btn-outline-primary {
-            color: #60a5fa !important;
-            border-color: #3b82f6 !important;
-        }
-        
-        .dark .btn-outline-primary:hover {
-            background-color: #3b82f6 !important;
-            border-color: #3b82f6 !important;
-            color: #ffffff !important;
-        }
-        
-        .dark .badge {
-            background-color: #374151 !important;
-            color: #e5e7eb !important;
-        }
-        
-        /* Fix any remaining issues with specific utility classes */
-        .dark .shadow {
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.5), 0 1px 2px 0 rgba(0, 0, 0, 0.25) !important;
-        }
-        
-        .dark .shadow-lg {
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.25) !important;
-        }
-        
-        .dark .shadow-xl {
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.25) !important;
-        }
-    </style>
     
     @await RenderSectionAsync("Styles", required: false)
 </head>
@@ -765,14 +75,34 @@
 
             @{
                 var path = ViewContext.HttpContext?.Request?.Path.Value ?? string.Empty;
-                bool isDashboard = path.Equals("/Admin", StringComparison.OrdinalIgnoreCase) || path.StartsWith("/Admin/Index", StringComparison.OrdinalIgnoreCase);
-                bool isScheduler = path.Equals("/Scheduler", StringComparison.OrdinalIgnoreCase) || path.StartsWith("/Scheduler/Index", StringComparison.OrdinalIgnoreCase);
-                bool isMasterSchedule = path.StartsWith("/Scheduler/MasterSchedule", StringComparison.OrdinalIgnoreCase);
-                bool isCrmAccounts = path.StartsWith("/CRM/Accounts", StringComparison.OrdinalIgnoreCase);
-                bool isCrmTasks = path.StartsWith("/CRM/Tasks", StringComparison.OrdinalIgnoreCase);
-                bool isCrmTaskAdmin = path.StartsWith("/CRM/Tasks/Admin", StringComparison.OrdinalIgnoreCase);
+                var page = ViewContext.RouteData.Values["page"]?.ToString();
+                var handler = ViewContext.HttpContext.Request.Query["handler"].ToString();
+                
+                // Enhanced route detection for better active states
+                bool isDashboard = path.Equals("/Admin", StringComparison.OrdinalIgnoreCase) || path.Equals("/Admin/Index", StringComparison.OrdinalIgnoreCase);
+                bool isScheduler = path.Equals("/Scheduler", StringComparison.OrdinalIgnoreCase) || path.Equals("/Scheduler/Index", StringComparison.OrdinalIgnoreCase);
+                bool isMasterSchedule = path.Equals("/Scheduler/MasterSchedule", StringComparison.OrdinalIgnoreCase) || path.StartsWith("/Scheduler/MasterSchedule/", StringComparison.OrdinalIgnoreCase);
+                bool isCrmAccounts = path.Equals("/CRM/Accounts", StringComparison.OrdinalIgnoreCase) || path.StartsWith("/CRM/Accounts/", StringComparison.OrdinalIgnoreCase);
+                bool isCrmTasks = path.Equals("/CRM/Tasks", StringComparison.OrdinalIgnoreCase) || (path.StartsWith("/CRM/Tasks/", StringComparison.OrdinalIgnoreCase) && !path.StartsWith("/CRM/Tasks/Admin", StringComparison.OrdinalIgnoreCase));
+                bool isCrmTaskAdmin = path.Equals("/CRM/Tasks/Admin", StringComparison.OrdinalIgnoreCase) || path.StartsWith("/CRM/Tasks/Admin/", StringComparison.OrdinalIgnoreCase);
                 bool isCrmTaskProgress = path.Contains("/AddProgress", StringComparison.OrdinalIgnoreCase);
-                bool isCrmAlerts = path.StartsWith("/CRM/Alerts", StringComparison.OrdinalIgnoreCase);
+                bool isCrmAlerts = path.Equals("/CRM/Alerts", StringComparison.OrdinalIgnoreCase) || path.StartsWith("/CRM/Alerts/", StringComparison.OrdinalIgnoreCase);
+                
+                // Admin page detection
+                bool isAdminUsers = page == "/Admin/Users" || path.Contains("/Admin/Users");
+                bool isAdminRoles = page == "/Admin/Roles" || path.Contains("/Admin/Roles");
+                bool isAdminSettings = page == "/Admin/Settings" || path.Contains("/Admin/Settings");
+                bool isAdminMachines = page == "/Admin/Machines" || path.Contains("/Admin/Machines");
+                bool isAdminParts = page == "/Admin/Parts" || path.Contains("/Admin/Parts");
+                bool isAdminMaterials = page == "/Admin/Materials" || path.Contains("/Admin/Materials");
+                bool isAdminJobs = page == "/Admin/Jobs" || path.Contains("/Admin/Jobs");
+                bool isAdminShifts = page == "/Admin/Shifts" || path.Contains("/Admin/Shifts");
+                bool isAdminStages = page == "/Admin/Stages" || path.Contains("/Admin/Stages");
+                bool isAdminProductionStages = path.Contains("ProductionStages");
+                bool isPrintTracking = path.Equals("/PrintTracking", StringComparison.OrdinalIgnoreCase) || path.StartsWith("/PrintTracking/", StringComparison.OrdinalIgnoreCase);
+                
+                // Helper function to get active class
+                Func<bool, string> GetActiveClass = (isActive) => isActive ? "nav-item-active" : "";
             }
 
             <!-- Navigation Menu -->
@@ -784,15 +114,15 @@
                         <span class="chevron text-gray-400 dark:text-gray-500"><i class="fa-solid fa-chevron-down"></i></span>
                     </button>
                     <div id="section-overview" class="nav-section-content space-y-1">
-                        <a href="/Admin" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(isDashboard ? "nav-item-active" : "text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700") transition-colors duration-200">
+                        <a href="/Admin" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @GetActiveClass(isDashboard) transition-colors duration-200">
                             <i class="fa-solid fa-gauge mr-3"></i>
                             Admin Dashboard
                         </a>
-                        <a href="/Scheduler" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(isScheduler ? "nav-item-active" : "text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700") transition-colors duration-200">
+                        <a href="/Scheduler" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @GetActiveClass(isScheduler) transition-colors duration-200">
                             <i class="fa-solid fa-calendar-days mr-3"></i>
                             Job Scheduler
                         </a>
-                        <a href="/Scheduler/MasterSchedule" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(isMasterSchedule ? "nav-item-active" : "text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700") transition-colors duration-200">
+                        <a href="/Scheduler/MasterSchedule" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @GetActiveClass(isMasterSchedule) transition-colors duration-200">
                             <i class="fa-solid fa-chart-line mr-3"></i>
                             Master Schedule
                         </a>
@@ -806,22 +136,22 @@
                         <span class="chevron text-emerald-400 dark:text-emerald-500"><i class="fa-solid fa-chevron-down"></i></span>
                     </button>
                     <div id="section-crm" class="nav-section-content space-y-1">
-                        <a href="/CRM/Accounts" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(isCrmAccounts ? "bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300" : "text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900") transition-colors duration-200">
+                        <a href="/CRM/Accounts" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @GetActiveClass(isCrmAccounts) transition-colors duration-200">
                             <i class="fa-solid fa-building mr-3"></i>
                             Accounts
                         </a>
-                        <a href="/CRM/Tasks" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(isCrmTasks && !isCrmTaskAdmin ? "bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300" : "text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900") transition-colors duration-200">
+                        <a href="/CRM/Tasks" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @GetActiveClass(isCrmTasks) transition-colors duration-200">
                             <i class="fa-solid fa-list-check mr-3"></i>
                             Tasks
                         </a>
                         @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
                         {
-                            <a href="/CRM/Tasks/Admin" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(isCrmTaskAdmin ? "bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300" : "text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900") transition-colors duration-200">
+                            <a href="/CRM/Tasks/Admin" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @GetActiveClass(isCrmTaskAdmin) transition-colors duration-200">
                                 <i class="fa-solid fa-users-gear mr-3"></i>
                                 Task Management
                             </a>
                         }
-                        <a href="/CRM/Alerts" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(isCrmAlerts ? "bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300" : "text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900") transition-colors duration-200">
+                        <a href="/CRM/Alerts" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @GetActiveClass(isCrmAlerts) transition-colors duration-200">
                             <i class="fa-solid fa-bell mr-3"></i>
                             Alerts & Notifications
                         </a>
@@ -835,15 +165,15 @@
                         <span class="chevron text-red-400 dark:text-red-500"><i class="fa-solid fa-chevron-down"></i></span>
                     </button>
                     <div id="section-system-admin" class="nav-section-content space-y-1">
-                        <a href="/Admin/Users" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Users" ? "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300" : "text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900") transition-colors duration-200">
+                        <a href="/Admin/Users" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @GetActiveClass(isAdminUsers) transition-colors duration-200">
                             <i class="fa-solid fa-users mr-3"></i>
                             User Management
                         </a>
-                        <a href="/Admin/Roles" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Roles" ? "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300" : "text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900") transition-colors duration-200">
+                        <a href="/Admin/Roles" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @GetActiveClass(isAdminRoles) transition-colors duration-200">
                             <i class="fa-solid fa-shield-halved mr-3"></i>
                             Role Permissions
                         </a>
-                        <a href="/Admin/Settings" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Settings" ? "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300" : "text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900") transition-colors duration-200">
+                        <a href="/Admin/Settings" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @GetActiveClass(isAdminSettings) transition-colors duration-200">
                             <i class="fa-solid fa-gear mr-3"></i>
                             System Settings
                         </a>
@@ -857,7 +187,7 @@
                         <span class="chevron text-blue-400 dark:text-blue-500"><i class="fa-solid fa-chevron-down"></i></span>
                     </button>
                     <div id="section-resources" class="nav-section-content space-y-1">
-                        <a href="/Admin/Machines" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Machines" ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300" : "text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900") transition-colors duration-200">
+                        <a href="/Admin/Machines" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @GetActiveClass(isAdminMachines) transition-colors duration-200">
                             <i class="fa-solid fa-industry mr-3"></i>
                             Machine Management
                             @if (ViewBag.MachineCount != null && ViewBag.MachineCount > 0)
@@ -865,7 +195,7 @@
                                 <span class="ml-auto bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 text-xs px-2 py-1 rounded-full">@ViewBag.MachineCount</span>
                             }
                         </a>
-                        <a href="/Admin/Parts" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Parts" ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300" : "text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900") transition-colors duration-200">
+                        <a href="/Admin/Parts" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @GetActiveClass(isAdminParts) transition-colors duration-200">
                             <i class="fa-solid fa-puzzle-piece mr-3"></i>
                             Parts Management
                             @if (ViewBag.PartCount != null && ViewBag.PartCount > 0)
@@ -873,7 +203,7 @@
                                 <span class="ml-auto bg-purple-100 dark:bg-purple-800 text-purple-800 dark:text-purple-200 text-xs px-2 py-1 rounded-full">@ViewBag.PartCount</span>
                             }
                         </a>
-                        <a href="/Admin/Materials" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Materials" ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300" : "text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900") transition-colors duration-200">
+                        <a href="/Admin/Materials" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @GetActiveClass(isAdminMaterials) transition-colors duration-200">
                             <i class="fa-solid fa-flask mr-3"></i>
                             Materials Management
                             @if (ViewBag.MaterialCount != null && ViewBag.MaterialCount > 0)
@@ -881,11 +211,11 @@
                                 <span class="ml-auto bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200 text-xs px-2 py-1 rounded-full">@ViewBag.MaterialCount</span>
                             }
                         </a>
-                        <a href="/Admin/Jobs" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Jobs" ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300" : "text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900") transition-colors duration-200">
+                        <a href="/Admin/Jobs" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @GetActiveClass(isAdminJobs) transition-colors duration-200">
                             <i class="fa-solid fa-list-check mr-3"></i>
                             Job Management
                         </a>
-                        <a href="/Admin/Shifts" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Shifts" ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300" : "text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900") transition-colors duration-200">
+                        <a href="/Admin/Shifts" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @GetActiveClass(isAdminShifts) transition-colors duration-200">
                             <i class="fa-solid fa-business-time mr-3"></i>
                             Operating Shifts
                         </a>
@@ -899,22 +229,22 @@
                         <span class="chevron text-indigo-400 dark:text-indigo-500"><i class="fa-solid fa-chevron-down"></i></span>
                     </button>
                     <div id="section-mfg-ops" class="nav-section-content space-y-1">
-                        <a href="/Admin/Stages" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Admin/Stages" ? "bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300" : "text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900") transition-colors duration-200">
+                        <a href="/Admin/Stages" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @GetActiveClass(isAdminStages) transition-colors duration-200">
                             <i class="fa-solid fa-diagram-project mr-3"></i>
                             Multi-Stage Jobs
                         </a>
-                        <a href="/Admin/ProductionStages" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @(ViewContext.RouteData.Values["Page"]?.ToString().Contains("ProductionStages") == true ? "bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300" : "text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900") transition-colors duration-200">
+                        <a href="/Admin/ProductionStages" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @GetActiveClass(isAdminProductionStages) transition-colors duration-200">
                             <i class="fa-solid fa-sitemap mr-3"></i>
                             Production Stages
                         </a>
-                        <a href="/PrintTracking" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900 transition-colors duration-200">
+                        <a href="/PrintTracking" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @GetActiveClass(isPrintTracking) transition-colors duration-200">
                             <i class="fa-solid fa-print mr-3"></i>
                             Print Tracking
                         </a>
                     </div>
                 </section>
 
-                <!-- Quality Management -->
+                @* <!-- Quality Management -->
                 <section class="nav-section" data-key="quality">
                     <button class="nav-section-toggle w-full flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300" aria-expanded="true" aria-controls="section-quality">
                         <span>Quality Management</span>
@@ -930,9 +260,9 @@
                             Defect Categories
                         </a>
                     </div>
-                </section>
+                </section> *@
 
-                <!-- B&T Administration -->
+                @* <!-- B&T Administration -->
                 <section class="nav-section" data-key="bt-admin">
                     <button class="nav-section-toggle w-full flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300" aria-expanded="true" aria-controls="section-bt-admin">
                         <span>B&T Administration</span>
@@ -956,9 +286,9 @@
                             Compliance Documents
                         </a>
                     </div>
-                </section>
+                </section> *@
 
-                <!-- B&T Analytics -->
+                @* <!-- B&T Analytics -->
                 <section class="nav-section" data-key="bt-analytics">
                     <button class="nav-section-toggle w-full flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300" aria-expanded="true" aria-controls="section-bt-analytics">
                         <span>B&T Analytics</span>
@@ -978,9 +308,9 @@
                             Production Tracking
                         </a>
                     </div>
-                </section>
+                </section> *@
 
-                <!-- Advanced Workflows -->
+                @* <!-- Advanced Workflows -->
                 <section class="nav-section" data-key="workflows">
                     <button class="nav-section-toggle w-full flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300" aria-expanded="true" aria-controls="section-workflows">
                         <span>Advanced Workflows</span>
@@ -1000,9 +330,9 @@
                             Resource Allocation
                         </a>
                     </div>
-                </section>
+                </section> *@
 
-                <!-- System Tools -->
+                @* <!-- System Tools -->
                 <section class="nav-section" data-key="tools">
                     <button class="nav-section-toggle w-full flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300" aria-expanded="true" aria-controls="section-tools">
                         <span>System Tools</span>
@@ -1022,9 +352,9 @@
                             Admin Audit Log
                         </a>
                     </div>
-                </section>
+                </section> *@
 
-                <!-- Data Management -->
+                @* <!-- Data Management -->
                 <section class="nav-section" data-key="data">
                     <button class="nav-section-toggle w-full flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200" aria-expanded="true" aria-controls="section-data">
                         <span>Data Management</span>
@@ -1048,7 +378,7 @@
                             System Logs
                         </a>
                     </div>
-                </section>
+                </section> *@
             </nav>
             
             <!-- Footer -->
@@ -1103,6 +433,7 @@
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/js/masterPartForm.js" asp-append-version="true"></script>
+    <script src="~/js/admin-navigation.js" asp-append-version="true"></script>
     
     <!-- Global OpCentrix Functions - MUST LOAD FIRST (kept after form script to allow wrapper calls) -->
     <script src="~/js/opcentrix-global.js" asp-append-version="true"></script>
@@ -1119,84 +450,6 @@
             <span>Loading...</span>
         </div>
     </div>
-
-    <script>
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            sidebar.classList.toggle('-translate-x-full');
-        }
-        
-        // Collapsible sections with persisted state
-        document.addEventListener('DOMContentLoaded', function () {
-            const sections = document.querySelectorAll('.nav-section');
-            const storageKey = (key) => `oc:nav:${key}`;
-
-            function setCollapsed(section, collapsed) {
-                const btn = section.querySelector('.nav-section-toggle');
-                const content = section.querySelector('.nav-section-content');
-                if (!btn || !content) return;
-                if (collapsed) {
-                    section.classList.add('collapsed');
-                    btn.setAttribute('aria-expanded', 'false');
-                    content.style.display = 'none';
-                } else {
-                    section.classList.remove('collapsed');
-                    btn.setAttribute('aria-expanded', 'true');
-                    content.style.display = '';
-                }
-            }
-
-            sections.forEach(sec => {
-                const key = sec.getAttribute('data-key');
-                const btn = sec.querySelector('.nav-section-toggle');
-                const saved = localStorage.getItem(storageKey(key));
-                const collapsed = saved === '0' ? false : (saved === '1' ? true : false);
-                setCollapsed(sec, collapsed);
-
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const isCollapsed = sec.classList.contains('collapsed');
-                    setCollapsed(sec, !isCollapsed);
-                    localStorage.setItem(storageKey(key), (!isCollapsed) ? '1' : '0');
-                });
-
-                // Keyboard accessibility
-                btn.setAttribute('role', 'button');
-                btn.setAttribute('tabindex', '0');
-                btn.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); btn.click(); }
-                });
-            });
-
-            // Expand/Collapse all
-            const expandAllBtn = document.getElementById('expandAllBtn');
-            const collapseAllBtn = document.getElementById('collapseAllBtn');
-            if (expandAllBtn && collapseAllBtn) {
-                expandAllBtn.addEventListener('click', () => {
-                    sections.forEach(sec => { const key = sec.getAttribute('data-key'); setCollapsed(sec, false); localStorage.setItem(storageKey(key), '0'); });
-                });
-                collapseAllBtn.addEventListener('click', () => {
-                    sections.forEach(sec => { const key = sec.getAttribute('data-key'); setCollapsed(sec, true); localStorage.setItem(storageKey(key), '1'); });
-                });
-            }
-
-            // Active highlighting based on current path
-            const currentPath = window.location.pathname;
-            document.querySelectorAll('.nav-item').forEach(item => {
-                const href = item.getAttribute('href');
-                if (href && (currentPath === href || currentPath.startsWith(href + '/'))) {
-                    item.classList.add('nav-item-active');
-                    // Auto-expand parent section if collapsed
-                    const parent = item.closest('.nav-section');
-                    if (parent && parent.classList.contains('collapsed')) {
-                        const key = parent.getAttribute('data-key');
-                        setCollapsed(parent, false);
-                        localStorage.setItem(storageKey(key), '0');
-                    }
-                }
-            });
-        });
-    </script>
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

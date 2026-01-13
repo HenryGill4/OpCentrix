@@ -1,0 +1,546 @@
+/* Admin Navigation Styles - Clean and organized like _Layout.cshtml */
+
+/* Enhanced sidebar navigation styles */
+.nav-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem;
+    margin: 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #4b5563;
+    border-radius: 0.75rem;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.dark .nav-item {
+    color: #d1d5db;
+}
+
+.nav-item:hover:not(.nav-item-active) {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    color: #1e293b;
+    text-decoration: none;
+    transform: translateX(2px);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+}
+
+.dark .nav-item:hover:not(.nav-item-active) {
+    background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+    color: #e5e7eb;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+}
+
+/* Enhanced focus states for accessibility */
+.nav-item:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.dark .nav-item:focus {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+    background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+}
+
+.nav-item:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+}
+
+.nav-item-active {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    color: #1d4ed8 !important;
+    box-shadow: 0 2px 12px rgba(59, 130, 246, 0.2);
+    border: 1px solid rgba(59, 130, 246, 0.15);
+    transform: translateX(2px);
+}
+
+.dark .nav-item-active {
+    background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%) !important;
+    color: #bfdbfe !important;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    box-shadow: 0 2px 12px rgba(59, 130, 246, 0.3);
+}
+
+.nav-item-active:hover {
+    background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%) !important;
+    color: #1e40af !important;
+    transform: translateX(3px);
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+}
+
+.dark .nav-item-active:hover {
+    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%) !important;
+    color: #dbeafe !important;
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+}
+
+.nav-item-active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(to bottom, #3b82f6, #1d4ed8);
+    border-radius: 0 2px 2px 0;
+    animation: activeIndicator 0.3s ease-out;
+}
+
+@keyframes activeIndicator {
+    from {
+        width: 0;
+        opacity: 0;
+    }
+    to {
+        width: 4px;
+        opacity: 1;
+    }
+}
+
+.nav-item i {
+    width: 20px;
+    margin-right: 12px;
+    font-size: 16px;
+}
+
+/* Enhanced Section Headers with role-based styling */
+.nav-section-header {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    transition: color 0.3s ease;
+}
+
+.dark .nav-section-header {
+    color: #9ca3af;
+}
+
+/* Role-based section styling */
+.nav-section[data-key="overview"] .nav-section-toggle {
+    color: #6b7280;
+}
+
+.nav-section[data-key="crm"] .nav-section-toggle {
+    color: #059669;
+}
+
+.dark .nav-section[data-key="crm"] .nav-section-toggle {
+    color: #10b981;
+}
+
+.nav-section[data-key="system-admin"] .nav-section-toggle {
+    color: #dc2626;
+}
+
+.dark .nav-section[data-key="system-admin"] .nav-section-toggle {
+    color: #ef4444;
+}
+
+.nav-section[data-key="resources"] .nav-section-toggle {
+    color: #2563eb;
+}
+
+.dark .nav-section[data-key="resources"] .nav-section-toggle {
+    color: #3b82f6;
+}
+
+.nav-section[data-key="mfg-ops"] .nav-section-toggle {
+    color: #7c3aed;
+}
+
+.dark .nav-section[data-key="mfg-ops"] .nav-section-toggle {
+    color: #8b5cf6;
+}
+
+/* Enhanced Group Toggle */
+.nav-group-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.75rem;
+    margin: 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #4b5563;
+    background: none;
+    border: none;
+    border-radius: 0.75rem;
+    transition: all 0.2s ease;
+}
+
+.dark .nav-group-toggle {
+    color: #d1d5db;
+}
+
+.nav-group-toggle:hover {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    color: #1e293b;
+    transform: translateX(2px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.dark .nav-group-toggle:hover {
+    background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+    color: #e5e7eb;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.nav-group-content {
+    margin-left: 1.5rem;
+    margin-top: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding-left: 1rem;
+    border-left: 2px solid #e2e8f0;
+    transition: border-color 0.3s ease;
+}
+
+.dark .nav-group-content {
+    border-left-color: #4b5563;
+}
+
+.nav-subitem {
+    display: flex;
+    align-items: center;
+    padding: 0.6rem 0.75rem;
+    margin: 0.125rem 0;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #64748b;
+    border-radius: 0.6rem;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.dark .nav-subitem {
+    color: #9ca3af;
+}
+
+.nav-subitem:hover {
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    color: #334155;
+    text-decoration: none;
+    transform: translateX(1px);
+}
+
+.dark .nav-subitem:hover {
+    background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+    color: #d1d5db;
+}
+
+.nav-subitem i {
+    width: 16px;
+    margin-right: 10px;
+    font-size: 14px;
+}
+
+/* Enhanced User Info Card */
+.user-info-card {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border-bottom: 1px solid #e2e8f0;
+    transition: all 0.3s ease;
+}
+
+.dark .user-info-card {
+    background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+    border-bottom: 1px solid #4b5563;
+}
+
+.user-avatar {
+    background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* Enhanced Sidebar Header */
+.sidebar-header {
+    background: linear-gradient(135deg, #1e40af 0%, #3730a3 100%);
+    box-shadow: 0 4px 12px rgba(30, 64, 175, 0.3);
+}
+
+/* Enhanced Logout Button */
+.logout-btn {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    transition: all 0.2s ease;
+}
+
+.logout-btn:hover {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+/* Theme Toggle Button with enhanced states */
+.theme-toggle-btn {
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.theme-toggle-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dark .theme-toggle-btn:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.theme-toggle-btn:active {
+    transform: scale(0.95);
+}
+
+.theme-toggle-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(59, 130, 246, 0.3);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.3s ease, height 0.3s ease;
+}
+
+.theme-toggle-btn:active::before {
+    width: 100%;
+    height: 100%;
+}
+
+/* Chevron icons */
+.nav-chevron {
+    width: 1rem;
+    height: 1rem;
+    color: #9ca3af;
+    transition: color 0.3s ease;
+}
+
+.dark .nav-chevron {
+    color: #6b7280;
+}
+
+.rotate-180 {
+    transform: rotate(180deg);
+}
+
+/* Smooth scrollbar for sidebar */
+.sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: linear-gradient(to bottom, #f1f5f9, #e2e8f0);
+    border-radius: 3px;
+}
+
+.dark .sidebar::-webkit-scrollbar-track {
+    background: linear-gradient(to bottom, #374151, #4b5563);
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: linear-gradient(to bottom, #cbd5e1, #94a3b8);
+    border-radius: 3px;
+}
+
+.dark .sidebar::-webkit-scrollbar-thumb {
+    background: linear-gradient(to bottom, #6b7280, #9ca3af);
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(to bottom, #94a3b8, #64748b);
+}
+
+.dark .sidebar::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(to bottom, #9ca3af, #d1d5db);
+}
+
+/* Task Badge Styling with Priority Colors and Animations */
+.task-badge {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    min-width: 1.5rem;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+}
+
+/* Priority-based colors with subtle animations */
+.task-badge-low {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    color: white !important;
+    animation: pulse-gentle 4s ease-in-out infinite;
+}
+
+.task-badge-normal {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
+    color: white !important;
+    animation: pulse-normal 3s ease-in-out infinite;
+}
+
+.task-badge-high {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+    color: white !important;
+    animation: pulse-attention 2.5s ease-in-out infinite;
+}
+
+.task-badge-urgent {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+    color: white !important;
+    animation: pulse-urgent 2s ease-in-out infinite;
+}
+
+.task-badge-critical {
+    background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%) !important;
+    color: white !important;
+    animation: pulse-critical 1.5s ease-in-out infinite;
+}
+
+/* Notification pulse animations */
+@keyframes pulse-gentle {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.8; }
+}
+
+@keyframes pulse-normal {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.75; }
+}
+
+@keyframes pulse-attention {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.05); }
+}
+
+@keyframes pulse-urgent {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    25% { opacity: 0.9; }
+    50% { opacity: 0.6; transform: scale(1.1); }
+    75% { opacity: 0.9; }
+}
+
+@keyframes pulse-critical {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    20% { opacity: 0.8; transform: scale(1.1); }
+    40% { opacity: 0.5; transform: scale(1.15); }
+    60% { opacity: 0.8; transform: scale(1.05); }
+    80% { opacity: 0.9; }
+}
+
+/* Bell notification animation for admin interface */
+.bell-notification {
+    animation: bell-ring 2s ease-in-out infinite;
+    transform-origin: 50% 0%;
+}
+
+.bell-urgent {
+    animation: bell-urgent 1.5s ease-in-out infinite;
+    transform-origin: 50% 0%;
+}
+
+@keyframes bell-ring {
+    0%, 100% { transform: rotate(0deg); }
+    10% { transform: rotate(10deg); }
+    20% { transform: rotate(-10deg); }
+    30% { transform: rotate(8deg); }
+    40% { transform: rotate(-8deg); }
+    50% { transform: rotate(0deg); }
+}
+
+/* Theme Toggle Button with enhanced states */
+.theme-toggle-btn {
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.theme-toggle-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dark .theme-toggle-btn:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.theme-toggle-btn:active {
+    transform: scale(0.95);
+}
+
+.theme-toggle-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(59, 130, 246, 0.3);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.3s ease, height 0.3s ease;
+}
+
+.theme-toggle-btn:active::before {
+    width: 100%;
+    height: 100%;
+}
+
+/* Responsive design improvements */
+@media (max-width: 768px) {
+    .nav-item {
+        padding: 0.5rem;
+        font-size: 0.8125rem;
+    }
+    
+    .nav-item i {
+        width: 18px;
+        margin-right: 10px;
+        font-size: 14px;
+    }
+    
+    .nav-section-toggle {
+        padding: 0.5rem;
+        font-size: 0.8125rem;
+    }
+    
+    .nav-subitem {
+        padding: 0.5rem 0.625rem;
+        font-size: 0.75rem;
+    }
+}
+
+/* Print styles */
+@media print {
+    .sidebar {
+        display: none;
+    }
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    .nav-item,
+    .nav-group-toggle,
+    .nav-subitem,
+    .task-badge {
+        transition: none;
+        animation: none;
+    }
+    
+    .nav-item-active::before {
+        animation: none;
+    }
+}
