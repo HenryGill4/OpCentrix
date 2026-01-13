@@ -4,114 +4,166 @@
 @model OpCentrix.Pages.Admin.MaterialsModel
 @{
     ViewData["Title"] = "Materials Management";
-    Layout = "~/Pages/Admin/Shared/_AdminLayout.cshtml"; 
+    Layout = "~/Pages/Admin/Shared/_AdminLayout.cshtml";
 }
 
-<div class="space-y-6">
-    <!-- Header Section -->
-    <div class="flex items-center justify-between">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-900">Materials Management</h1>
-            <p class="mt-1 text-sm text-gray-600">Manage manufacturing materials, properties, and stock levels</p>
-        </div>
-        <div class="flex space-x-3">
-            <button onclick="showCreateMaterialModal()" class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 active:bg-blue-900 focus:outline-none focus:border-blue-900 focus:ring ring-blue-300 transition ease-in-out duration-150">
-                ➕ Add New Material
-            </button>
-        </div>
-    </div>
-
-    <!-- Statistics Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
-            <div class="flex items-center">
-                <div class="flex-1">
-                    <h3 class="text-sm font-medium text-gray-500">Total Materials</h3>
-                    <p class="text-2xl font-bold text-gray-900">@Model.TotalMaterials</p>
-                </div>
-                <div class="text-blue-500 text-3xl">🧪</div>
+<div class="p-6">
+    <!-- Enhanced Header Section -->
+    <div class="mb-8">
+        <div class="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-6">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Materials Management</h1>
+                <p class="mt-2 text-gray-600 dark:text-gray-400">Manage manufacturing materials, properties, and inventory across your production facility</p>
             </div>
-        </div>
-        
-        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
-            <div class="flex items-center">
-                <div class="flex-1">
-                    <h3 class="text-sm font-medium text-gray-500">Active Materials</h3>
-                    <p class="text-2xl font-bold text-gray-900">@Model.ActiveMaterials</p>
-                </div>
-                <div class="text-green-500 text-3xl">✅</div>
-            </div>
-        </div>
-        
-        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500">
-            <div class="flex items-center">
-                <div class="flex-1">
-                    <h3 class="text-sm font-medium text-gray-500">Material Types</h3>
-                    <p class="text-2xl font-bold text-gray-900">@Model.MaterialTypes.Count</p>
-                </div>
-                <div class="text-purple-500 text-3xl">🏷️</div>
-            </div>
-        </div>
-        
-        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-amber-500">
-            <div class="flex items-center">
-                <div class="flex-1">
-                    <h3 class="text-sm font-medium text-gray-500">Avg Cost/g</h3>
-                    <p class="text-2xl font-bold text-gray-900">$@Model.AverageCostPerGram.ToString("F2")</p>
-                </div>
-                <div class="text-amber-500 text-3xl">💰</div>
-            </div>
-        </div>
-        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-indigo-500">
-            <div class="flex items-center">
-                <div class="flex-1">
-                    <h3 class="text-sm font-medium text-gray-500">Total Powder (kg)</h3>
-                    <p class="text-2xl font-bold text-gray-900">@Model.TotalPowderOnHandKg.ToString("F1")</p>
-                </div>
-                <div class="text-indigo-500 text-3xl">⚖️</div>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <button onclick="showCreateMaterialModal()" class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                    <i class="fa-solid fa-plus mr-2"></i>
+                    Add New Material
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- Material Types Distribution -->
+    <!-- Enhanced Statistics Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Total Materials</h3>
+                    <p class="text-3xl font-bold text-gray-900 dark:text-gray-100">@Model.TotalMaterials</p>
+                </div>
+                <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                    <i class="fa-solid fa-flask text-blue-600 dark:text-blue-400 text-xl"></i>
+                </div>
+            </div>
+            <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <span class="text-xs text-gray-500 dark:text-gray-400">Manufacturing materials</span>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Active Materials</h3>
+                    <p class="text-3xl font-bold text-green-600 dark:text-green-400">@Model.ActiveMaterials</p>
+                </div>
+                <div class="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
+                    <i class="fa-solid fa-check-circle text-green-600 dark:text-green-400 text-xl"></i>
+                </div>
+            </div>
+            <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <span class="text-xs text-gray-500 dark:text-gray-400">Ready for production</span>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Material Types</h3>
+                    <p class="text-3xl font-bold text-purple-600 dark:text-purple-400">@Model.MaterialTypes.Count</p>
+                </div>
+                <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
+                    <i class="fa-solid fa-tags text-purple-600 dark:text-purple-400 text-xl"></i>
+                </div>
+            </div>
+            <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <span class="text-xs text-gray-500 dark:text-gray-400">Available categories</span>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Avg Cost/g</h3>
+                    <p class="text-3xl font-bold text-amber-600 dark:text-amber-400">$@Model.AverageCostPerGram.ToString("F2")</p>
+                </div>
+                <div class="w-12 h-12 bg-amber-100 dark:bg-amber-900 rounded-lg flex items-center justify-center">
+                    <i class="fa-solid fa-dollar-sign text-amber-600 dark:text-amber-400 text-xl"></i>
+                </div>
+            </div>
+            <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <span class="text-xs text-gray-500 dark:text-gray-400">Material cost average</span>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Total Powder (kg)</h3>
+                    <p class="text-3xl font-bold text-indigo-600 dark:text-indigo-400">@Model.TotalPowderOnHandKg.ToString("F1")</p>
+                </div>
+                <div class="w-12 h-12 bg-indigo-100 dark:bg-indigo-900 rounded-lg flex items-center justify-center">
+                    <i class="fa-solid fa-weight-scale text-indigo-600 dark:text-indigo-400 text-xl"></i>
+                </div>
+            </div>
+            <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <span class="text-xs text-gray-500 dark:text-gray-400">Inventory on hand</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enhanced Material Types Statistics -->
     @if (Model.MaterialTypeStatistics.Any())
     {
-        <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">Materials by Type</h3>
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 mb-8">
+            <div class="flex items-center mb-6">
+                <i class="fa-solid fa-chart-pie text-blue-600 dark:text-blue-400 mr-2"></i>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Materials by Type</h3>
+                <span class="ml-auto text-sm text-gray-500 dark:text-gray-400">@Model.MaterialTypeStatistics.Values.Sum() total materials</span>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                 @foreach (var typeStats in Model.MaterialTypeStatistics.OrderByDescending(s => s.Value))
                 {
-                    <div class="text-center p-3 bg-gray-50 rounded-lg">
-                        <div class="text-2xl font-bold @(typeStats.Key.ToLower() switch 
+                    <div class="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200">
+                        <div class="text-3xl font-bold mb-1 @(typeStats.Key.ToLower() switch 
                         { 
-                            "titanium" => "text-purple-600", 
-                            "steel" => "text-gray-600", 
-                            "aluminum" => "text-green-600", 
-                            "nickel" => "text-orange-600", 
-                            "cobalt" => "text-red-600",
-                            "ceramic" => "text-blue-600",
-                            _ => "text-gray-600" 
+                            "titanium" => "text-purple-600 dark:text-purple-400", 
+                            "steel" => "text-gray-600 dark:text-gray-400", 
+                            "aluminum" => "text-green-600 dark:text-green-400", 
+                            "nickel" => "text-orange-600 dark:text-orange-400", 
+                            "cobalt" => "text-red-600 dark:text-red-400",
+                            "ceramic" => "text-blue-600 dark:text-blue-400",
+                            _ => "text-gray-600 dark:text-gray-400" 
                         })">@typeStats.Value</div>
-                        <div class="text-sm text-gray-600">@typeStats.Key</div>
+                        <div class="text-sm text-gray-700 dark:text-gray-300 font-medium">@typeStats.Key</div>
+                        <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1 mt-2">
+                            <div class="@(typeStats.Key.ToLower() switch 
+                        { 
+                            "titanium" => "bg-purple-500", 
+                            "steel" => "bg-gray-500", 
+                            "aluminum" => "bg-green-500", 
+                            "nickel" => "bg-orange-500", 
+                            "cobalt" => "bg-red-500",
+                            "ceramic" => "bg-blue-500",
+                            _ => "bg-gray-500" 
+                        }) h-1 rounded-full transition-all duration-300" style="width: @Math.Round((double)typeStats.Value / Model.MaterialTypeStatistics.Values.Sum() * 100, 1)%"></div>
+                        </div>
                     </div>
                 }
             </div>
         </div>
     }
 
-    <!-- Search and Filter Section -->
-    <div class="bg-white rounded-lg shadow p-6">
-        <h3 class="text-lg font-medium text-gray-900 mb-4">Search & Filter</h3>
-        <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Search</label>
-                <input type="text" name="searchTerm" value="@Model.SearchTerm" placeholder="Material code, name, type..." 
-                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+    <!-- Enhanced Search and Filter Section -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 mb-8">
+        <div class="flex items-center mb-6">
+            <i class="fa-solid fa-filter text-blue-600 dark:text-blue-400 mr-2"></i>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Search & Filter Materials</h3>
+        </div>
+        <form method="get" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="space-y-1">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Search</label>
+                <div class="relative">
+                    <input type="text" name="searchTerm" value="@Model.SearchTerm" 
+                           placeholder="Material code, name, type..." 
+                           class="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200" />
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                </div>
             </div>
             
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Material Type</label>
-                <select name="typeFilter" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+            <div class="space-y-1">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Material Type</label>
+                <select name="typeFilter" class="w-full py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
                     <option value="">All Types</option>
                     @foreach (var type in Model.MaterialTypes)
                     {
@@ -120,9 +172,9 @@
                 </select>
             </div>
             
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Status</label>
-                <select name="statusFilter" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+            <div class="space-y-1">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
+                <select name="statusFilter" class="w-full py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
                     <option value="">All</option>
                     <option value="active" selected="@(Model.StatusFilter == "active")">Active</option>
                     <option value="inactive" selected="@(Model.StatusFilter == "inactive")">Inactive</option>
@@ -130,157 +182,208 @@
             </div>
             
             <div class="flex items-end">
-                <button type="submit" class="w-full px-4 py-2 bg-gray-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:outline-none focus:border-gray-700 focus:ring ring-gray-300 transition ease-in-out duration-150">
-                    🔍 Search
+                <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                    <i class="fa-solid fa-search mr-2"></i>
+                    Apply Filters
                 </button>
             </div>
         </form>
     </div>
 
-    <!-- Materials Table -->
-    <div class="bg-white rounded-lg shadow overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
-            <h3 class="text-lg font-medium text-gray-900">Materials (@Model.Materials.Count)</h3>
+    <!-- Results Summary -->
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6">
+        <div class="flex items-center space-x-2">
+            <i class="fa-solid fa-flask text-gray-500 dark:text-gray-400"></i>
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+                <span class="font-semibold text-gray-900 dark:text-gray-100">@Model.Materials.Count</span> materials found
+            </p>
         </div>
-        
-        @if (Model.Materials.Any())
-        {
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                <a href="?searchTerm=@Model.SearchTerm&typeFilter=@Model.TypeFilter&statusFilter=@Model.StatusFilter&sortBy=MaterialCode&sortDirection=@Model.GetNextSortDirection("MaterialCode")" 
-                                   class="flex items-center hover:text-gray-700">
-                                    Material Code @Model.GetSortIcon("MaterialCode")
-                                </a>
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                <a href="?searchTerm=@Model.SearchTerm&typeFilter=@Model.TypeFilter&statusFilter=@Model.StatusFilter&sortBy=MaterialName&sortDirection=@Model.GetNextSortDirection("MaterialName")" 
-                                   class="flex items-center hover:text-gray-700">
-                                    Material Name @Model.GetSortIcon("MaterialName")
-                                </a>
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                <a href="?searchTerm=@Model.SearchTerm&typeFilter=@Model.TypeFilter&statusFilter=@Model.StatusFilter&sortBy=MaterialType&sortDirection=@Model.GetNextSortDirection("MaterialType")" 
-                                   class="flex items-center hover:text-gray-700">
-                                    Type @Model.GetSortIcon("MaterialType")
-                                </a>
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Properties
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                <a href="?searchTerm=@Model.SearchTerm&typeFilter=@Model.TypeFilter&statusFilter=@Model.StatusFilter&sortBy=CostPerGram&sortDirection=@Model.GetNextSortDirection("CostPerGram")" 
-                                   class="flex items-center hover:text-gray-700">
-                                    Cost/g @Model.GetSortIcon("CostPerGram")
-                                </a>
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                <a href="?searchTerm=@Model.SearchTerm&typeFilter=@Model.TypeFilter&statusFilter=@Model.StatusFilter&sortBy=QuantityOnHandKg&sortDirection=@Model.GetNextSortDirection("QuantityOnHandKg")" 
-                                   class="flex items-center hover:text-gray-700">
-                                    Qty (kg) @Model.GetSortIcon("QuantityOnHandKg")
-                                </a>
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Status
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Actions
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        @foreach (var material in Model.Materials)
+        <div class="mt-2 sm:mt-0">
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                <i class="fa-solid fa-clock mr-1"></i>
+                Updated @DateTime.Now.ToString("HH:mm")
+            </span>
+        </div>
+    </div>
+
+    <!-- Materials Cards Grid -->
+    @if (Model.Materials.Any())
+    {
+        <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+            @foreach (var material in Model.Materials)
+            {
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden">
+                    <!-- Card Header -->
+                    <div class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600 p-4 border-b border-gray-200 dark:border-gray-600">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-6 h-6 rounded-full border-2 border-white shadow-md" style="background-color: @material.MaterialTypeColor"></div>
+                                <div>
+                                    <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">@material.MaterialCode</h3>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">@material.MaterialName</p>
+                                </div>
+                            </div>
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border @(material.IsActive ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 border-green-200 dark:border-green-800" : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 border-red-200 dark:border-red-800")">
+                                @if (material.IsActive)
+                                {
+                                    <i class="fa-solid fa-check-circle mr-1"></i>
+                                }
+                                else
+                                {
+                                    <i class="fa-solid fa-times-circle mr-1"></i>
+                                }
+                                @(material.IsActive ? "Active" : "Inactive")
+                            </span>
+                        </div>
+                        
+                        <div>
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium" style="background-color: @(material.MaterialTypeColor)15; color: @material.MaterialTypeColor;">
+                                <i class="fa-solid fa-atom mr-1"></i>
+                                @material.MaterialType
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Card Body -->
+                    <div class="p-4 space-y-4">
+                        <!-- Description -->
+                        @if (!string.IsNullOrEmpty(material.Description))
                         {
-                            <tr class="hover:bg-gray-50">
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="flex items-center">
-                                        <div class="w-3 h-3 rounded-full mr-3" style="background-color: @material.MaterialTypeColor"></div>
-                                        <div class="text-sm font-medium text-gray-900">@material.MaterialCode</div>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm text-gray-900">@material.MaterialName</div>
-                                    <div class="text-sm text-gray-500">@(material.Description.Length > 50 ? material.Description.Substring(0, 47) + "..." : material.Description)</div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style="background-color: @(material.MaterialTypeColor)15; color: @material.MaterialTypeColor;">
-                                        @material.MaterialType
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm text-gray-900">Density: @material.Density.ToString("F2") g/cm³</div>
-                                    <div class="text-sm text-gray-500">Melting Point: @material.MeltingPointC.ToString("F0")°C</div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm font-medium text-gray-900">$@material.CostPerGram.ToString("F3")</div>
-                                    <div class="text-sm text-gray-500">per gram</div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm font-medium @(material.QuantityOnHandKg <= 2 ? "text-red-600" : material.QuantityOnHandKg <=5 ? "text-amber-600" : "text-gray-900")">
-                                        @material.QuantityOnHandKg.ToString("F2")
-                                    </div>
-                                    <div class="text-xs text-gray-500">kg</div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium @(material.IsActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")">
-                                        @(material.IsActive ? "Active" : "Inactive")
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <div class="flex items-center justify-end space-x-2">
-                                        <button onclick="editMaterial(@material.Id, '@material.MaterialCode', '@material.MaterialName', '@material.MaterialType', '@Html.Raw(material.Description.Replace("'", "\\'"))', @material.Density, @material.MeltingPointC, @(material.IsActive ? "true" : "false"), @material.CostPerGram, @material.DefaultLayerThicknessMicrons, @material.DefaultLaserPowerPercent, @material.DefaultScanSpeedMmPerSec, '@Html.Raw(material.CompatibleMachineTypes.Replace("'", "\\'"))', '@Html.Raw(material.SafetyNotes.Replace("'", "\\'"))', @material.QuantityOnHandKg)" 
-                                                class="text-blue-600 hover:text-blue-900" title="Edit Material">
-                                            ✏️
-                                        </button>
-                                        
-                                        <form method="post" asp-page-handler="ToggleMaterialStatus" class="inline">
-                                            <input type="hidden" name="materialId" value="@material.Id" />
-                                            <button type="submit" 
-                                                    class="@(material.IsActive ? "text-orange-600 hover:text-orange-900" : "text-green-600 hover:text-green-900")" 
-                                                    title="@(material.IsActive ? "Deactivate Material" : "Activate Material")"
-                                                    onclick="return confirm('@(material.IsActive ? "Deactivate" : "Activate") material @material.MaterialCode?')">
-                                                @(material.IsActive ? "🚫" : "✅")
-                                            </button>
-                                        </form>
-                                        
-                                        <form method="post" asp-page-handler="DeleteMaterial" class="inline">
-                                            <input type="hidden" name="materialId" value="@material.Id" />
-                                            <button type="submit" 
-                                                    class="text-red-600 hover:text-red-900" 
-                                                    title="Delete Material"
-                                                    onclick="return confirm('Are you sure you want to delete material @material.MaterialCode? This action cannot be undone.')">
-                                                🗑️
-                                            </button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
+                            <div>
+                                <div class="flex items-center mb-2">
+                                    <i class="fa-solid fa-info-circle text-blue-600 dark:text-blue-400 mr-2"></i>
+                                    <h4 class="font-semibold text-gray-900 dark:text-gray-100">Description</h4>
+                                </div>
+                                <p class="text-sm text-gray-700 dark:text-gray-300">@(material.Description.Length > 100 ? material.Description.Substring(0, 97) + "..." : material.Description)</p>
+                            </div>
                         }
-                    </tbody>
-                </table>
+
+                        <!-- Physical Properties -->
+                        <div>
+                            <div class="flex items-center mb-2">
+                                <i class="fa-solid fa-atom text-purple-600 dark:text-purple-400 mr-2"></i>
+                                <h4 class="font-semibold text-gray-900 dark:text-gray-100">Physical Properties</h4>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 space-y-1">
+                                <p class="text-sm text-gray-800 dark:text-gray-200">
+                                    <span class="font-medium">Density:</span> @material.Density.ToString("F2") g/cm³
+                                </p>
+                                <p class="text-sm text-gray-800 dark:text-gray-200">
+                                    <span class="font-medium">Melting Point:</span> @material.MeltingPointC.ToString("F0")°C
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Cost & Inventory -->
+                        <div>
+                            <div class="flex items-center mb-2">
+                                <i class="fa-solid fa-dollar-sign text-green-600 dark:text-green-400 mr-2"></i>
+                                <h4 class="font-semibold text-gray-900 dark:text-gray-100">Cost & Inventory</h4>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="bg-green-50 dark:bg-green-900 rounded-lg p-3">
+                                    <p class="text-sm text-green-800 dark:text-green-200 font-medium">Cost per Gram</p>
+                                    <p class="text-lg font-bold text-green-900 dark:text-green-100">$@material.CostPerGram.ToString("F3")</p>
+                                </div>
+                                <div class="bg-@(material.QuantityOnHandKg <= 2 ? "red" : material.QuantityOnHandKg <= 5 ? "amber" : "blue")-50 dark:bg-@(material.QuantityOnHandKg <= 2 ? "red" : material.QuantityOnHandKg <= 5 ? "amber" : "blue")-900 rounded-lg p-3">
+                                    <p class="text-sm text-@(material.QuantityOnHandKg <= 2 ? "red" : material.QuantityOnHandKg <= 5 ? "amber" : "blue")-800 dark:text-@(material.QuantityOnHandKg <= 2 ? "red" : material.QuantityOnHandKg <= 5 ? "amber" : "blue")-200 font-medium">On Hand</p>
+                                    <p class="text-lg font-bold text-@(material.QuantityOnHandKg <= 2 ? "red" : material.QuantityOnHandKg <= 5 ? "amber" : "blue")-900 dark:text-@(material.QuantityOnHandKg <= 2 ? "red" : material.QuantityOnHandKg <= 5 ? "amber" : "blue")-100">@material.QuantityOnHandKg.ToString("F2") kg</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card Footer -->
+                    <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 border-t border-gray-200 dark:border-gray-600">
+                        <div class="flex justify-between items-center">
+                            <div class="text-xs text-gray-500 dark:text-gray-400">
+                                @if (material.QuantityOnHandKg <= 2)
+                                {
+                                    <span class="flex items-center text-red-600 dark:text-red-400 font-medium">
+                                        <i class="fa-solid fa-exclamation-triangle mr-1"></i>
+                                        Low Stock
+                                    </span>
+                                }
+                                else if (material.QuantityOnHandKg <= 5)
+                                {
+                                    <span class="flex items-center text-amber-600 dark:text-amber-400 font-medium">
+                                        <i class="fa-solid fa-exclamation-circle mr-1"></i>
+                                        Moderate Stock
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="flex items-center text-green-600 dark:text-green-400 font-medium">
+                                        <i class="fa-solid fa-check-circle mr-1"></i>
+                                        Good Stock
+                                    </span>
+                                }
+                            </div>
+                            <div class="flex space-x-2">
+                                <button onclick="editMaterial(@material.Id, '@material.MaterialCode', '@material.MaterialName', '@material.MaterialType', '@Html.Raw(material.Description.Replace("'", "\\'"))', @material.Density, @material.MeltingPointC, @(material.IsActive ? "true" : "false"), @material.CostPerGram, @material.DefaultLayerThicknessMicrons, @material.DefaultLaserPowerPercent, @material.DefaultScanSpeedMmPerSec, '@Html.Raw(material.CompatibleMachineTypes.Replace("'", "\\'"))', '@Html.Raw(material.SafetyNotes.Replace("'", "\\'"))', @material.QuantityOnHandKg)" 
+                                        class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-900 hover:bg-blue-200 dark:hover:bg-blue-800 rounded-lg transition-colors duration-200" title="Edit Material">
+                                    <i class="fa-solid fa-edit mr-1"></i>
+                                    Edit
+                                </button>
+                                
+                                <form method="post" asp-page-handler="ToggleMaterialStatus" class="inline">
+                                    <input type="hidden" name="materialId" value="@material.Id" />
+                                    <button type="submit" 
+                                            class="inline-flex items-center px-3 py-1.5 text-xs font-medium @(material.IsActive ? "text-orange-700 dark:text-orange-400 bg-orange-100 dark:bg-orange-900 hover:bg-orange-200 dark:hover:bg-orange-800" : "text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900 hover:bg-green-200 dark:hover:bg-green-800") rounded-lg transition-colors duration-200" 
+                                            title="@(material.IsActive ? "Deactivate Material" : "Activate Material")"
+                                            onclick="return confirm('@(material.IsActive ? "Deactivate" : "Activate") material @material.MaterialCode?')">
+                                        <i class="fa-solid @(material.IsActive ? "fa-pause" : "fa-play") mr-1"></i>
+                                        @(material.IsActive ? "Deactivate" : "Activate")
+                                    </button>
+                                </form>
+                                
+                                <form method="post" asp-page-handler="DeleteMaterial" class="inline">
+                                    <input type="hidden" name="materialId" value="@material.Id" />
+                                    <button type="submit" 
+                                            class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-red-700 dark:text-red-400 bg-red-100 dark:bg-red-900 hover:bg-red-200 dark:hover:bg-red-800 rounded-lg transition-colors duration-200" 
+                                            title="Delete Material"
+                                            onclick="return confirm('Are you sure you want to delete material @material.MaterialCode? This action cannot be undone.')">
+                                        <i class="fa-solid fa-trash mr-1"></i>
+                                        Delete
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <!-- Enhanced Empty State -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border-2 border-dashed border-gray-300 dark:border-gray-600 p-12 text-center">
+            <div class="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fa-solid fa-flask text-3xl text-gray-400 dark:text-gray-500"></i>
             </div>
-        }
-        else
-        {
-            <div class="text-center py-12">
-                <div class="text-gray-400 text-6xl mb-4">🧪</div>
-                <h3 class="text-lg font-medium text-gray-900 mb-2">No materials found</h3>
-                <p class="text-gray-600 mb-4">Try adjusting your search criteria or add a new material.</p>
-                <button onclick="showCreateMaterialModal()" class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700">
-                    ➕ Add First Material
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">No Materials Found</h3>
+            <p class="text-gray-600 dark:text-gray-400 mb-6">No materials match your current filter criteria or no materials have been added yet.</p>
+            <div class="space-x-3">
+                <button onclick="document.querySelector('form').reset(); document.querySelector('form').submit();" 
+                        class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg transition-colors duration-200">
+                    <i class="fa-solid fa-refresh mr-2"></i>
+                    Clear Filters
+                </button>
+                <button onclick="showCreateMaterialModal()" 
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200">
+                    <i class="fa-solid fa-plus mr-2"></i>
+                    Add First Material
                 </button>
             </div>
-        }
-    </div>
+        </div>
+    }
 </div>
 
-<!-- Create/Edit Material Modal -->
+<!-- Enhanced Create/Edit Material Modal -->
 <div id="materialModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
-    <div class="relative top-10 mx-auto p-5 border w-[90%] max-w-4xl shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
+    <div class="relative top-10 mx-auto p-5 border w-[90%] max-w-4xl shadow-lg rounded-xl bg-white dark:bg-gray-800 max-h-[90vh] overflow-y-auto">
         <div class="mt-3">
-            <h3 id="materialModalTitle" class="text-lg font-medium text-gray-900 mb-4">Add New Material</h3>
+            <h3 id="materialModalTitle" class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Add New Material</h3>
             
             <form method="post" id="materialForm">
                 <input type="hidden" id="editingMaterialId" name="EditingMaterialId" value="" />
@@ -288,23 +391,23 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Basic Information -->
                     <div class="space-y-4">
-                        <h4 class="font-medium text-gray-900">Basic Information</h4>
+                        <h4 class="font-semibold text-gray-900 dark:text-gray-100">Basic Information</h4>
                         
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Material Code*</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Material Code*</label>
                             <input type="text" name="CreateMaterialRequest.MaterialCode" id="materialCode" required minlength="2" maxlength="50" 
-                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                   class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                         </div>
                         
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Material Name*</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Material Name*</label>
                             <input type="text" name="CreateMaterialRequest.MaterialName" id="materialName" required minlength="3" maxlength="200" 
-                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                   class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                         </div>
                         
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Material Type*</label>
-                            <select name="CreateMaterialRequest.MaterialType" id="materialType" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Material Type*</label>
+                            <select name="CreateMaterialRequest.MaterialType" id="materialType" required class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                                 <option value="">Select Type</option>
                                 <option value="Titanium">Titanium</option>
                                 <option value="Steel">Steel</option>
@@ -318,100 +421,102 @@
                         </div>
                         
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Description</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
                             <textarea name="CreateMaterialRequest.Description" id="description" maxlength="1000" rows="3" 
-                                      class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
+                                      class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"></textarea>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Quantity On Hand (kg)</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Quantity On Hand (kg)</label>
                             <input type="number" step="0.01" min="0" name="CreateMaterialRequest.QuantityOnHandKg" id="quantityOnHandKg" value="0" 
-                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
+                                   class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" />
                         </div>
                     </div>
 
                     <!-- Physical Properties -->
                     <div class="space-y-4">
-                        <h4 class="font-medium text-gray-900">Physical Properties</h4>
+                        <h4 class="font-semibold text-gray-900 dark:text-gray-100">Physical Properties</h4>
                         
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700">Density (g/cm³)*</label>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Density (g/cm³)*</label>
                                 <input type="number" name="CreateMaterialRequest.Density" id="density" min="0.1" max="50" step="0.01" value="4.43" 
-                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                       class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                             </div>
                             
                             <div>
-                                <label class="block text-sm font-medium text-gray-700">Melting Point (°C)*</label>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Melting Point (°C)*</label>
                                 <input type="number" name="CreateMaterialRequest.MeltingPointC" id="meltingPointC" min="100" max="5000" value="1660" 
-                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                       class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                             </div>
                         </div>
                         
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Cost per Gram ($)*</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Cost per Gram ($)*</label>
                             <input type="number" name="CreateMaterialRequest.CostPerGram" id="costPerGram" min="0" max="1000" step="0.001" value="0.500" 
-                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                   class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                         </div>
                         
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Compatible Machine Types</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Compatible Machine Types</label>
                             <input type="text" name="CreateMaterialRequest.CompatibleMachineTypes" id="compatibleMachineTypes" maxlength="500" value="SLS" 
-                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                            <p class="text-xs text-gray-500 mt-1">Comma-separated list (e.g., SLS, EDM, CNC)</p>
+                                   class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Comma-separated list (e.g., SLS, EDM, CNC)</p>
                         </div>
                     </div>
 
                     <!-- Process Parameters -->
                     <div class="space-y-4">
-                        <h4 class="font-medium text-gray-900">Default Process Parameters</h4>
+                        <h4 class="font-semibold text-gray-900 dark:text-gray-100">Default Process Parameters</h4>
                         
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700">Layer Thickness (µm)</label>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Layer Thickness (µm)</label>
                                 <input type="number" name="CreateMaterialRequest.DefaultLayerThicknessMicrons" id="defaultLayerThicknessMicrons" min="10" max="200" value="30" 
-                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                       class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                             </div>
                             
                             <div>
-                                <label class="block text-sm font-medium text-gray-700">Laser Power (%)</label>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Laser Power (%)</label>
                                 <input type="number" name="CreateMaterialRequest.DefaultLaserPowerPercent" id="defaultLaserPowerPercent" min="10" max="100" value="85" 
-                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                       class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                             </div>
                         </div>
                         
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Scan Speed (mm/s)</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Scan Speed (mm/s)</label>
                             <input type="number" name="CreateMaterialRequest.DefaultScanSpeedMmPerSec" id="defaultScanSpeedMmPerSec" min="500" max="10000" value="1200" 
-                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                   class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                         </div>
                         
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Safety Notes</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Safety Notes</label>
                             <textarea name="CreateMaterialRequest.SafetyNotes" id="safetyNotes" maxlength="1000" rows="3" 
-                                      class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
+                                      class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"></textarea>
                         </div>
                     </div>
 
                     <!-- Status -->
                     <div class="space-y-4">
-                        <h4 class="font-medium text-gray-900">Status</h4>
+                        <h4 class="font-semibold text-gray-900 dark:text-gray-100">Status</h4>
                         
                         <div class="flex items-center">
                             <input type="checkbox" name="CreateMaterialRequest.IsActive" id="isActive" value="true" checked 
                                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                            <label for="isActive" class="ml-2 block text-sm text-gray-900">Active Material</label>
+                            <label for="isActive" class="ml-2 block text-sm text-gray-900 dark:text-gray-100">Active Material</label>
                             <input type="hidden" name="CreateMaterialRequest.IsActive" value="false" />
                         </div>
                     </div>
                 </div>
                 
-                <div class="flex items-center justify-end space-x-2 mt-6 pt-6 border-t">
+                <div class="flex items-center justify-end space-x-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-600">
                     <button type="button" onclick="hideMaterialModal()" 
-                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
+                        <i class="fa-solid fa-times mr-2"></i>
                         Cancel
                     </button>
                     <button type="submit" id="materialSubmitBtn" 
-                            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-2 rounded-lg font-medium transition-all duration-200 shadow-md hover:shadow-lg">
+                        <i class="fa-solid fa-save mr-2"></i>
                         Create Material
                     </button>
                 </div>
