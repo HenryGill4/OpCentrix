@@ -126,21 +126,21 @@ namespace OpCentrix.Services
         public string GetStatusMessage()
         {
             if (!string.IsNullOrEmpty(ValidationError))
-                return $"<i class='fa-solid fa-circle-exclamation text-red-500'></i> Database Error: {ValidationError}";
+                return $"<i class='fas fa-exclamation-circle text-red-500'></i> Database Error: {ValidationError}";
 
             if (!DatabaseConnected)
-                return "<i class='fa-solid fa-circle-exclamation text-red-500'></i> Database Connection Failed";
+                return "<i class='fas fa-exclamation-circle text-red-500'></i> Database Connection Failed";
 
             if (!HasUsers || !HasMachines)
-                return "<i class='fa-solid fa-triangle-exclamation text-amber-500'></i> Missing Essential Data (Users/Machines)";
+                return "<i class='fas fa-exclamation-triangle text-amber-500'></i> Missing Essential Data (Users/Machines)";
 
             if (HasSampleData)
-                return "<i class='fa-solid fa-triangle-exclamation text-amber-500'></i> Sample Data Detected - Remove for Production";
+                return "<i class='fas fa-exclamation-triangle text-amber-500'></i> Sample Data Detected - Remove for Production";
 
             if (RealPartsCount == 0)
-                return "<i class='fa-solid fa-triangle-exclamation text-amber-500'></i> Ready for Your Parts - Add Real Manufacturing Data";
+                return "<i class='fas fa-exclamation-triangle text-amber-500'></i> Ready for Your Parts - Add Real Manufacturing Data";
 
-            return $"<i class='fa-solid fa-check-circle text-green-500'></i> Production Ready - {RealPartsCount} parts, {RealJobsCount} jobs";
+            return $"<i class='fas fa-check-circle text-green-500'></i> Production Ready - {RealPartsCount} parts, {RealJobsCount} jobs";
         }
     }
 }

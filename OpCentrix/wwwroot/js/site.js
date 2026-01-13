@@ -1,7 +1,7 @@
 ﻿// OpCentrix Site-wide JavaScript Functions - SAFE VERSION
 // CRITICAL FIX: Simplified version to prevent memory issues
 
-console.log('✓ [SITE] OpCentrix site.js loading - SAFE MODE');
+console.log('[SITE] OpCentrix site.js loading - SAFE MODE');
 
 // DISABLED: All complex monitoring and logging systems
 // These were causing memory leaks and Out of Memory errors
@@ -11,13 +11,13 @@ console.log('✓ [SITE] OpCentrix site.js loading - SAFE MODE');
 window.SafeExecute = window.SafeExecute || {
     call: function(functionName, ...args) {
         const operationId = this.generateOperationId();
-        console.log(`🔧 [SAFE-${operationId}] Executing: ${functionName}`);
+        console.log(`[SAFE-${operationId}] Executing: ${functionName}`);
         
         try {
             // Try window scope first
             if (typeof window[functionName] === 'function') {
                 const result = window[functionName].apply(this, args);
-                console.log(`✅ [SAFE-${operationId}] ${functionName} completed successfully`);
+                console.log(`[SAFE-${operationId}] ${functionName} completed successfully`);
                 return result;
             }
             
@@ -26,7 +26,7 @@ window.SafeExecute = window.SafeExecute || {
             for (const objName of pageObjects) {
                 if (window[objName] && typeof window[objName][functionName] === 'function') {
                     const result = window[objName][functionName].apply(this, args);
-                    console.log(`✅ [SAFE-${operationId}] ${functionName} completed successfully`);
+                    console.log(`[SAFE-${operationId}] ${functionName} completed successfully`);
                     return result;
                 }
             }
@@ -44,7 +44,7 @@ window.SafeExecute = window.SafeExecute || {
     },
     
     logError: function(operationId, functionName, error) {
-        console.error(`❌ [SAFE-${operationId}] Error in ${functionName}:`, error);
+        console.error(`[SAFE-${operationId}] Error in ${functionName}:`, error);
         
         // Store basic error info in localStorage (limited to prevent memory issues)
         try {
@@ -88,7 +88,7 @@ window.SafeExecute = window.SafeExecute || {
         notification.innerHTML = `
             <div class="flex items-start">
                 <div class="flex-shrink-0">
-                    ${type === 'error' ? '❌' : type === 'warning' ? '⚠️' : '✅'}
+                    ${type === 'error' ? '[X]' : type === 'warning' ? '[!]' : '[✓]'}
                 </div>
                 <div class="ml-3">
                     <p class="font-semibold">${message}</p>
@@ -155,9 +155,9 @@ window.OpCentrix = {
 
 // Simple initialization only
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('✅ [SITE] OpCentrix site.js loaded - SAFE MODE ACTIVE');
-    console.log('🛡️ [SITE] Complex monitoring disabled to prevent memory issues');
-    console.log('🔧 [SITE] Global SafeExecute system available');
+    console.log('[SITE] OpCentrix site.js loaded - SAFE MODE ACTIVE');
+    console.log('[SITE] Complex monitoring disabled to prevent memory issues');
+    console.log('[SITE] Global SafeExecute system available');
 });
 
 // Enhanced navigation dropdown functionality
@@ -217,4 +217,4 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-console.log('✅ [SITE] OpCentrix site.js loaded successfully - SAFE MODE');
+console.log('[SITE] OpCentrix site.js loaded successfully - SAFE MODE');

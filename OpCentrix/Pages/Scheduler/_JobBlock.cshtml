@@ -10,7 +10,7 @@
         5 => "priority-lowest",
         _ => "priority-normal"
     };
-    var rushIndicator = Model.IsRushJob ? "✱" : "";
+    var rushIndicator = Model.IsRushJob ? "<i class='fas fa-star text-yellow-500'></i>" : "";
     var shortPartNumber = Model.PartNumber?.Length > 10 ? Model.PartNumber.Substring(0, 10) + "..." : Model.PartNumber;
     var isScheduled = Model.Status == "Scheduled";
     var isBuilding = Model.Status == "Building" || Model.Status == "In Progress" || Model.Status == "InProgress";

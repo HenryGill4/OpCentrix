@@ -1,4 +1,4 @@
-﻿# 🎯 OpCentrix - SLS Metal Printing Scheduler
+﻿# ⭐ OpCentrix - SLS Metal Printing Scheduler
 
 **Version 4.0** - Complete Manufacturing Execution System
 
@@ -6,7 +6,7 @@ OpCentrix is a comprehensive manufacturing execution system for SLS (Selective L
 
 ---
 
-## 🚀 **Quick Start**
+## <i class="fas fa-rocket"></i> **Quick Start**
 
 ### **Prerequisites**
 - .NET 8 SDK
@@ -42,9 +42,9 @@ Operator:       operator/operator123
 
 ---
 
-## 🏭 **Complete Manufacturing System**
+## <i class="fas fa-industry"></i> **Complete Manufacturing System**
 
-### **🎛️ Core System Features**
+### **<i class="fas fa-sliders-h"></i> Core System Features**
 
 #### **1. Production Scheduler (`/Scheduler`)**
 - **Multi-machine scheduling**: TI1, TI2, INC machines with capacity management
@@ -71,14 +71,14 @@ Operator:       operator/operator123
 
 ---
 
-## 🛡️ **Complete Admin Control System**
+## <i class="fas fa-shield-alt"></i> **Complete Admin Control System**
 
 ### **Admin Panel Access**
 - **URL**: `http://localhost:5090/Admin`
 - **Required Role**: Admin
 - **Features**: Complete system administration and management
 
-### **🎛️ Comprehensive Admin Features**
+### **<i class="fas fa-sliders-h"></i> Comprehensive Admin Features**
 
 #### **1. Admin Dashboard (`/Admin`)**
 - **System overview**: Complete statistics and health monitoring
@@ -174,21 +174,21 @@ Operator:       operator/operator123
 
 ---
 
-## 📋 **User Roles & Comprehensive Permissions**
+## <i class="fas fa-clipboard-list"></i> **User Roles & Comprehensive Permissions**
 
-### **🛡️ Admin**
+### **<i class="fas fa-shield-alt"></i> Admin**
 - **Access**: Complete system administration and management
 - **Features**: All admin panels, user management, system configuration
 - **Special privileges**: System settings, user roles, database management
 - **Restrictions**: Cannot delete own account or last admin user
 
-### **👨‍💼 Manager**
+### **<i class="fas fa-user-tie"></i> Manager**
 - **Access**: Management oversight, reporting, and operational control
 - **Features**: Scheduler, analytics, stage management, quality oversight
 - **Reports**: Production metrics, quality reports, efficiency analytics
 - **Restrictions**: Cannot modify system settings or user accounts
 
-### **📅 Scheduler**
+### **<i class="fas fa-calendar-alt"></i> Scheduler**
 - **Access**: Production scheduling and job management
 - **Features**: Scheduler grid, job creation/editing, machine allocation
 - **Planning**: Capacity planning, resource optimization, timeline management
