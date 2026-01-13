@@ -1,59 +1,114 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
+using OpCentrix.Data;
+using OpCentrix.Models.CRM;
+using System.Security.Claims;
 
 namespace OpCentrix.Pages
 {
-    /// <summary>
-    /// OpCentrix Debug Suite - Development Dashboard
-    /// SAFE VERSION - Simplified to prevent memory issues
-    /// </summary>
-    public class DebugSuiteModel : PageModel
+    [Authorize]
+    public class DashboardModel : PageModel
     {
-        private readonly ILogger<DebugSuiteModel> _logger;
+        private readonly ILogger<DashboardModel> _logger;
+        private readonly SchedulerContext _context;
 
-        public DebugSuiteModel(ILogger<DebugSuiteModel> logger)
+        public DashboardModel(ILogger<DashboardModel> logger, SchedulerContext context)
         {
             _logger = logger;
+            _context = context;
         }
 
-        // SIMPLIFIED: Basic properties only
-        public string BuildStatus { get; set; } = "Success";
-        public string DatabaseStatus { get; set; } = "SQLite Connected";
-        public string Environment { get; set; } = "Development";
-        public string ServerUrl { get; set; } = "localhost:5090";
-        public DateTime LastUpdated { get; set; } = DateTime.Now;
+        public string UserRole { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public DashboardData Dashboard { get; set; } = new();
 
-        public void OnGet()
-        {
-            _logger.LogInformation("Debug Suite accessed - User: {User}, Time: {Time}",
-                User.Identity?.Name ?? "Anonymous", DateTime.Now);
-
-            // SIMPLIFIED: Basic initialization only
-            CheckSystemHealth();
-        }
-
-        private void CheckSystemHealth()
+        public async Task<IActionResult> OnGetAsync()
         {
             try
             {
-                // SIMPLIFIED: Basic health check only
-                DatabaseStatus = "? SQLite Connected";
-                Environment = System.Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
-                ServerUrl = "localhost:5090";
-                BuildStatus = "? Success";
+                UserRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "";
+                UserName = User.FindFirst(ClaimTypes.GivenName)?.Value ?? User.Identity?.Name ?? "";
                 
-                _logger.LogInformation("System health check completed successfully");
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (int.TryParse(userIdClaim, out int userId))
+                {
+                    await LoadDashboardDataAsync(userId);
+                }
+
+                _logger.LogInformation("Dashboard accessed by user {UserName} with role {UserRole}", UserName, UserRole);
+
+                return Page();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "System health check failed");
-                BuildStatus = "? Issues Detected";
-                DatabaseStatus = "? Connection Issues";
+                _logger.LogError(ex, "Error loading dashboard for user {UserName}", UserName);
+                return Page(); // Still show page with default data
             }
         }
 
-        // REMOVED: Complex page categorization that was not needed
-        // REMOVED: Complex helper classes that could cause memory issues
+        private async Task LoadDashboardDataAsync(int userId)
+        {
+            var now = DateTime.UtcNow;
+            var startOfDay = now.Date;
+            var endOfDay = startOfDay.AddDays(1);
+
+            // Load user-specific task data
+            var userTasks = await _context.CrmTasks
+                .Where(t => t.AssignedToUserId == userId)
+                .ToListAsync();
+
+            Dashboard.TotalTasks = userTasks.Count;
+            Dashboard.ActiveTasks = userTasks.Count(t => t.Status != "Completed");
+            Dashboard.CompletedTasks = userTasks.Count(t => t.Status == "Completed");
+            Dashboard.OverdueTasks = userTasks.Count(t => t.DueAt.HasValue && t.DueAt < now && t.Status != "Completed");
+            Dashboard.TasksDueToday = userTasks.Count(t => t.DueAt.HasValue && 
+                t.DueAt >= startOfDay && t.DueAt < endOfDay && t.Status != "Completed");
+
+            // Recent task activity
+            Dashboard.RecentTasks = userTasks
+                .Where(t => t.Status != "Completed")
+                .OrderByDescending(t => t.Priority)
+                .ThenBy(t => t.DueAt ?? DateTime.MaxValue)
+                .Take(5)
+                .ToList();
+
+            // Load recent progress entries
+            Dashboard.RecentProgress = await _context.CrmTaskProgress
+                .Include(p => p.Task)
+                .Where(p => p.CreatedByUserId == userId)
+                .OrderByDescending(p => p.CreatedDate)
+                .Take(3)
+                .ToListAsync();
+
+            // Quick stats for management roles
+            if (UserRole is "Admin" or "Manager" or "Supervisor")
+            {
+                var allTasks = await _context.CrmTasks.ToListAsync();
+                Dashboard.TeamTotalTasks = allTasks.Count;
+                Dashboard.TeamActiveTasks = allTasks.Count(t => t.Status != "Completed");
+                Dashboard.TeamOverdueTasks = allTasks.Count(t => t.DueAt.HasValue && t.DueAt < now && t.Status != "Completed");
+            }
+        }
+
+        public class DashboardData
+        {
+            // Personal task stats
+            public int TotalTasks { get; set; }
+            public int ActiveTasks { get; set; }
+            public int CompletedTasks { get; set; }
+            public int OverdueTasks { get; set; }
+            public int TasksDueToday { get; set; }
+            
+            // Team stats (for managers)
+            public int TeamTotalTasks { get; set; }
+            public int TeamActiveTasks { get; set; }
+            public int TeamOverdueTasks { get; set; }
+            
+            // Recent activity
+            public List<CrmTask> RecentTasks { get; set; } = new();
+            public List<CrmTaskProgress> RecentProgress { get; set; } = new();
+        }
     }
 }

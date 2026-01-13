@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using OpCentrix.Models;
 
 namespace OpCentrix.Models.CRM;
 
@@ -29,6 +30,7 @@ public class CrmTask
 
     public CrmAccount? Account { get; set; }
     public CrmContact? Contact { get; set; }
+    public User? AssignedToUser { get; set; }
 
     // Progress tracking
     public virtual List<CrmTaskProgress> ProgressEntries { get; set; } = new();

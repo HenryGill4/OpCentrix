@@ -176,6 +176,7 @@ builder.Services.AddScoped<OpCentrix.Services.CRM.ICrmAccountService, OpCentrix.
 builder.Services.AddScoped<OpCentrix.Services.CRM.ICrmContactService, OpCentrix.Services.CRM.CrmContactService>();
 builder.Services.AddScoped<OpCentrix.Services.CRM.ICrmTaskService, OpCentrix.Services.CRM.CrmTaskService>();
 builder.Services.AddScoped<OpCentrix.Services.CRM.ICrmNotificationService, OpCentrix.Services.CRM.CrmNotificationService>();
+builder.Services.AddScoped<OpCentrix.Services.CRM.CrmTaskSeedingService>();
 
 // Register application services
 builder.Services.AddScoped<ISchedulerService, SchedulerService>();
@@ -352,9 +353,22 @@ using (var scope = app.Services.CreateScope())
         
         var coreSeeder = scope.ServiceProvider.GetRequiredService<CoreManufacturingDataSeedingService>();
         await coreSeeder.EnsureCoreManufacturingDataAsync();
-        // NEW: seed maintenance components
-        var maintCompSeeder = scope.ServiceProvider.GetRequiredService<OpCentrix.Services.Maintenance.MaintenanceComponentSeedingService>();
-        await maintCompSeeder.EnsureSeedAsync();
+        
+        // NEW: seed maintenance components (only if tables exist)
+        try
+        {
+            var maintCompSeeder = scope.ServiceProvider.GetRequiredService<OpCentrix.Services.Maintenance.MaintenanceComponentSeedingService>();
+            await maintCompSeeder.EnsureSeedAsync();
+        }
+        catch (Exception maintEx)
+        {
+            var log = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+            log.LogWarning(maintEx, "Maintenance seeding skipped - tables may not exist yet");
+        }
+        
+        // NEW: Seed CRM tasks for user experience
+        var crmTaskSeeder = scope.ServiceProvider.GetRequiredService<OpCentrix.Services.CRM.CrmTaskSeedingService>();
+        await crmTaskSeeder.SeedSampleTasksAsync();
     }
     catch (Exception ex)
     {

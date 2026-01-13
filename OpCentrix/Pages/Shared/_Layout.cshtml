@@ -1,4 +1,4 @@
-﻿@* Enhanced Navigation for Option A: Stage-Aware Manufacturing Execution System *@
+﻿@* Enhanced Sidebar Navigation for Option A: Stage-Aware Manufacturing Execution System *@
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -60,6 +60,56 @@
     
     @* Render Styles section *@
     @await RenderSectionAsync("Styles", required: false)
+    
+    <style>
+        /* Sidebar styles */
+        .sidebar {
+            transition: transform 0.3s ease-in-out;
+        }
+        
+        .sidebar-collapsed {
+            transform: translateX(-16rem);
+        }
+        
+        @@media (max-width: 768px) {
+            .sidebar-mobile-hidden {
+                transform: translateX(-100%);
+            }
+        }
+        
+        .content-area {
+            margin-left: 16rem; /* 64 * 0.25rem = 16rem */
+            transition: margin-left 0.3s ease-in-out;
+        }
+        
+        .content-area-expanded {
+            margin-left: 0;
+        }
+        
+        @@media (max-width: 768px) {
+            .content-area {
+                margin-left: 0;
+            }
+        }
+        
+        /* Enhanced scrollbar */
+        .sidebar::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .sidebar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        
+        .sidebar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 2px;
+        }
+        
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
 </head>
 <body class="bg-gray-50">
     @{
@@ -67,421 +117,330 @@
         var isAuthenticated = user.Identity?.IsAuthenticated ?? false;
         var userRole = user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
         var userName = user.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value ?? user.Identity?.Name ?? "";
+        var userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "";
         var currentPage = ViewContext.RouteData.Values["page"]?.ToString()?.TrimStart('/');
     }
 
-    <!-- Session Timeout Warning -->
-    <div id="session-timeout-warning" class="session-timeout-warning">
-        <div class="max-w-7xl mx-auto px-4 flex items-center justify-center space-x-4">
-            <div class="flex items-center space-x-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                <span id="timeout-message">Your session will expire in <span id="timeout-countdown">5</span> minutes</span>
+    @if (isAuthenticated)
+    {
+        <!-- Sidebar Navigation -->
+        <div id="sidebar" class="sidebar fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg border-r border-gray-200 overflow-y-auto">
+            <!-- Logo and Header -->
+            <div class="sidebar-header flex items-center h-16 px-6 border-b border-gray-200">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 bg-white rounded-lg flex items-center justify-center mr-3 shadow-md">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-lg font-bold text-white">OpCentrix</span>
+                        </div>
+                        <p class="text-xs text-blue-100 leading-none">Manufacturing Execution</p>
+                    </div>
+                </div>
             </div>
 
-                    @* CRM (Management) *@
-                    @if (userRole is "Admin" or "Manager" or "Supervisor")
+            <!-- User Info Card -->
+            <div class="user-info-card p-4 border-b border-gray-200">
+                <div class="flex items-center space-x-3">
+                    <div class="user-avatar w-10 h-10 rounded-full flex items-center justify-center shadow-md">
+                        <span class="text-white font-semibold text-sm">@(userName.FirstOrDefault())</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-gray-900 truncate">@userName</p>
+                        <p class="text-xs text-gray-600">@userRole</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Menu -->
+            <nav class="flex-1 px-4 py-4 space-y-1">
+                
+                <!-- Dashboard -->
+                <a href="/" class="nav-item @(currentPage == "" || currentPage == "Index" ? "nav-item-active" : "")">
+                    <i class="fas fa-home"></i>
+                    <span>Dashboard</span>
+                </a>
+
+                <!-- Manufacturing Sections - Role-Based Access -->
+                @if (userRole != "Admin" && userRole != "Manager")
+                {
+                    <!-- My Tasks for All Employees -->
+                    <a href="/Tasks/MyTasks" class="nav-item @(currentPage?.Contains("Tasks/MyTasks") == true ? "nav-item-active" : "")">
+                        <i class="fas fa-clipboard-list"></i>
+                        <span>My Tasks</span>
+                        <span id="my-tasks-badge" class="task-badge bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full ml-auto">0</span>
+                    </a>
+
+                    @if (userRole == "PrintingSpecialist" || userRole == "Operator")
                     {
-                        <div class="relative group">
-                            <a class="nav-link flex items-center px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-emerald-50" href="/CRM/Tasks">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18" />
-                                </svg>
-                                CRM
+                        <a href="/PrintTracking" class="nav-item @(currentPage?.Contains("PrintTracking") == true ? "nav-item-active" : "")">
+                            <i class="fas fa-cube text-blue-500"></i>
+                            <span>SLS Printing</span>
+                        </a>
+                    }
+
+                    @if (userRole == "EDMSpecialist" || userRole == "Operator")
+                    {
+                        <a href="/EDM" class="nav-item @(currentPage?.Contains("EDM") == true ? "nav-item-active" : "")">
+                            <i class="fas fa-bolt text-pink-500"></i>
+                            <span>EDM Operations</span>
+                        </a>
+                    }
+
+                    @if (userRole == "CoatingSpecialist" || userRole == "Operator")
+                    {
+                        <a href="/Coating" class="nav-item @(currentPage?.Contains("Coating") == true ? "nav-item-active" : "")">
+                            <i class="fas fa-paint-brush text-orange-500"></i>
+                            <span>Coating</span>
+                        </a>
+                    }
+
+                    @if (userRole == "QualityInspector" || userRole == "QCSpecialist" || userRole == "Operator")
+                    {
+                        <a href="/QC" class="nav-item @(currentPage?.Contains("QC") == true ? "nav-item-active" : "")">
+                            <i class="fas fa-check-circle text-green-500"></i>
+                            <span>Quality Control</span>
+                        </a>
+                    }
+
+                    @if (userRole == "ShippingSpecialist" || userRole == "Operator")
+                    {
+                        <a href="/Shipping" class="nav-item @(currentPage?.Contains("Shipping") == true ? "nav-item-active" : "")">
+                            <i class="fas fa-truck text-indigo-500"></i>
+                            <span>Shipping</span>
+                        </a>
+                    }
+
+                    @if (userRole == "BTSpecialist")
+                    {
+                        <a href="/BT/Dashboard" class="nav-item">
+                            <i class="fas fa-chart-pie text-amber-500"></i>
+                            <span>B&T Operations</span>
+                        </a>
+                        <a href="/BT/SerialNumbers" class="nav-item">
+                            <i class="fas fa-barcode text-amber-500"></i>
+                            <span>Serial Numbers</span>
+                        </a>
+                        <a href="/BT/Compliance" class="nav-item">
+                            <i class="fas fa-shield-alt text-amber-500"></i>
+                            <span>Compliance</span>
+                        </a>
+                    }
+                }
+
+                @* Management & Admin Sections *@
+                @if (userRole is "Admin" or "Manager" or "Supervisor")
+                {
+                    <!-- My Tasks for Management -->
+                    <a href="/Tasks/MyTasks" class="nav-item @(currentPage?.Contains("Tasks/MyTasks") == true ? "nav-item-active" : "")">
+                        <i class="fas fa-clipboard-list"></i>
+                        <span>My Tasks</span>
+                        <span id="my-tasks-badge" class="task-badge bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full ml-auto">0</span>
+                    </a>
+
+                    <!-- Scheduling -->
+                    <a href="/Scheduler" class="nav-item @(currentPage?.Contains("Scheduler") == true ? "nav-item-active" : "")">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>Production Scheduler</span>
+                    </a>
+
+                    <!-- Production Areas - Condensed -->
+                    <div class="nav-group">
+                        <button class="nav-group-toggle" onclick="toggleNavGroup('production')">
+                            <i class="fas fa-cogs"></i>
+                            <span>Production Areas</span>
+                            <i class="fas fa-chevron-down nav-chevron" id="production-chevron"></i>
+                        </button>
+                        <div id="production-group" class="nav-group-content hidden">
+                            <a href="/PrintTracking" class="nav-subitem @(currentPage?.Contains("PrintTracking") == true ? "nav-item-active" : "")">
+                                <i class="fas fa-cube text-blue-500"></i>
+                                <span>SLS Printing</span>
+                            </a>
+                            <a href="/EDM" class="nav-subitem @(currentPage?.Contains("EDM") == true ? "nav-item-active" : "")">
+                                <i class="fas fa-bolt text-pink-500"></i>
+                                <span>EDM Operations</span>
+                            </a>
+                            <a href="/Coating" class="nav-subitem @(currentPage?.Contains("Coating") == true ? "nav-item-active" : "")">
+                                <i class="fas fa-paint-brush text-orange-500"></i>
+                                <span>Coating</span>
+                            </a>
+                            <a href="/QC" class="nav-subitem @(currentPage?.Contains("QC") == true ? "nav-item-active" : "")">
+                                <i class="fas fa-check-circle text-green-500"></i>
+                                <span>Quality Control</span>
+                            </a>
+                            <a href="/Shipping" class="nav-subitem @(currentPage?.Contains("Shipping") == true ? "nav-item-active" : "")">
+                                <i class="fas fa-truck text-indigo-500"></i>
+                                <span>Shipping</span>
                             </a>
                         </div>
-                    }
-            <button onclick="extendSession()" class="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200">
-                Extend Session
-            </button>
-        </div>
-    </div>
-
-    <!-- Enhanced Navigation for Option A Implementation -->
-    <nav class="bg-white shadow-lg border-b border-gray-200">
-        <div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <!-- Logo and Primary Navigation -->
-                <div class="flex items-center space-x-8">
-                    <!-- Enhanced Logo with Option A Badge -->
-                    <div class="flex-shrink-0 flex items-center">
-                        <a href="/" class="flex items-center">
-                            <div class="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center mr-3 shadow-lg">
-                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
-                                </svg>
-                            </div>
-                            <div>
-                                <div class="flex items-center space-x-2">
-                                    <span class="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">OpCentrix</span>
-                                    <span class="px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs font-bold rounded-full animate-pulse">
-                                        OPTION A
-                                    </span>
-                                </div>
-                                <p class="text-xs text-gray-500 leading-none">Stage-Aware Manufacturing Execution System</p>
-                            </div>
-                        </a>
                     </div>
 
-                    @if (isAuthenticated)
-                    {
-                        <!-- Stage-Aware Navigation Links -->
-                        <div class="hidden md:flex space-x-6">
-                            <!-- Core Scheduling -->
-                            <div class="relative group">
-                                <button class="nav-link scheduler flex items-center px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-blue-50" onclick="toggleDropdown('scheduler-dropdown')">
-                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                                    </svg>
-                                    Scheduling
-                                    <span class="ml-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">Enhanced</span>
-                                    <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                    </svg>
-                                </button>
-                                <div id="scheduler-dropdown" class="hidden absolute top-full mt-1 w-56 bg-white rounded-md shadow-lg border border-gray-200 z-50">
-                                    <a href="/Scheduler" class="block px-4 py-2 text-sm text-blue-700 hover:bg-blue-50">
-                                        <i class="fas fa-calendar me-2"></i>Job Scheduler
-                                    </a>
-                                    <a href="/Operations/StageDashboard" class="block px-4 py-2 text-sm text-blue-700 hover:bg-blue-50">
-                                        <i class="fas fa-industry me-2"></i>Master Stage Dashboard
-                                    </a>
-                                    <a href="/Operations/Dashboard" class="block px-4 py-2 text-sm text-blue-700 hover:bg-blue-50">
-                                        <i class="fas fa-user-hard-hat me-2"></i>Operator Dashboard
-                                    </a>
-                                    <hr class="my-2">
-                                    <div class="px-4 py-2 text-xs font-medium text-gray-500 uppercase">Individual Stages</div>
-                                    <a href="/Operations/Stages/SLS" class="block px-4 py-2 text-sm text-blue-700 hover:bg-blue-50">
-                                        <i class="fas fa-cube me-2" style="color: #007bff;"></i>SLS Operations
-                                    </a>
-                                    <a href="/Operations/Stages/CNC" class="block px-4 py-2 text-sm text-blue-700 hover:bg-blue-50">
-                                        <i class="fas fa-cogs me-2" style="color: #28a745;"></i>CNC Operations
-                                    </a>
-                                    <a href="/Operations/Stages/EDM" class="block px-4 py-2 text-sm text-blue-700 hover:bg-blue-50">
-                                        <i class="fas fa-bolt me-2" style="color: #ffc107;"></i>EDM Operations
-                                    </a>
-                                    <a href="/Operations/Stages/Laser" class="block px-4 py-2 text-sm text-blue-700 hover:bg-blue-50">
-                                        <i class="fas fa-crosshairs me-2" style="color: #fd7e14;"></i>Laser Operations
-                                    </a>
-                                    <a href="/Operations/Stages/Sandblasting" class="block px-4 py-2 text-sm text-blue-700 hover:bg-blue-50">
-                                        <i class="fas fa-spray-can me-2" style="color: #6c757d;"></i>Sandblasting
-                                    </a>
-                                    <a href="/Operations/Stages/Coating" class="block px-4 py-2 text-sm text-blue-700 hover:bg-blue-50">
-                                        <i class="fas fa-paint-brush me-2" style="color: #17a2b8;"></i>Coating/Cerakote
-                                    </a>
-                                    <a href="/Operations/Stages/Assembly" class="block px-4 py-2 text-sm text-blue-700 hover:bg-blue-50">
-                                        <i class="fas fa-wrench me-2" style="color: #dc3545;"></i>Assembly
-                                    </a>
-                                </div>
-                            </div>
-
-                            <!-- Manufacturing Workflow Stages -->
-                            <div class="flex items-center space-x-1">
-                                <!-- SLS Stage -->
-                                <a href="/PrintTracking" class="nav-link stage-sls flex items-center px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-blue-50">
-                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
-                                    </svg>
-                                    SLS
-                                </a>
-                                
-                                <!-- Stage Progression Arrow -->
-                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                                </svg>
-
-                                <!-- EDM Stage -->
-                                <a href="/EDM" class="nav-link stage-edm flex items-center px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-pink-50">
-                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                                    </svg>
-                                    EDM
-                                </a>
-
-                                <!-- Stage Progression Arrow -->
-                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                                </svg>
-
-                                <!-- Coating Stage -->
-                                <a href="/Coating" class="nav-link stage-coating flex items-center px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-orange-50">
-                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V9a2 2 0 012-2h2l2-4h6l2 4h2a2 2 0 012 2v8a4 4 0 01-4 4H7zM12 17a3 3 0 100-6 3 3 0 000 6z"></path>
-                                    </svg>
-                                    Coating
-                                </a>
-
-                                <!-- Stage Progression Arrow -->
-                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                                </svg>
-
-                                <!-- QC Stage -->
-                                <a href="/QC" class="nav-link stage-qc flex items-center px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-green-50">
-                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                    </svg>
-                                    QC
-                                </a>
-
-                                <!-- Stage Progression Arrow -->
-                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                                </svg>
-
-                                <!-- Shipping Stage -->
-                                <a href="/Shipping" class="nav-link stage-shipping flex items-center px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-indigo-50">
-                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
-                                    </svg>
-                                    Shipping
-                                </a>
-                            </div>
-
-                            <!-- B&T Manufacturing Section (NEW - Amber Color) -->
-                            @if (userRole == "Admin" || userRole == "Manager" || userRole == "BTSpecialist")
-                            {
-                                <div class="relative group">
-                                    <button class="nav-link bt-manufacturing flex items-center px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-amber-50 text-amber-600" onclick="toggleDropdown('bt-dropdown')">
-                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
-                                        </svg>
-                                        B&T Manufacturing
-                                        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                        </svg>
-                                    </button>
-                                    <div id="bt-dropdown" class="hidden absolute top-full mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50">
-                                        <a href="/BT/Dashboard" class="block px-4 py-2 text-sm text-amber-700 hover:bg-amber-50">B&T Dashboard</a>
-                                        <a href="/BT/SerialNumbers" class="block px-4 py-2 text-sm text-amber-700 hover:bg-amber-50">Serial Numbers</a>
-                                        <a href="/BT/Compliance" class="block px-4 py-2 text-sm text-amber-700 hover:bg-amber-50">Compliance</a>
-                                    </div>
-                                </div>
-                            }
-
-                            <!-- Advanced Workflows Section (NEW - Purple Color) -->
-                            @if (userRole == "Admin" || userRole == "Manager" || userRole == "WorkflowSpecialist")
-                            {
-                                <div class="relative group">
-                                    <button class="nav-link advanced-workflows flex items-center px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-purple-50 text-purple-600" onclick="toggleDropdown('workflows-dropdown')">
-                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path>
-                                        </svg>
-                                        Advanced Workflows
-                                        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                        </svg>
-                                    </button>
-                                    <div id="workflows-dropdown" class="hidden absolute top-full mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50">
-                                        <a href="/Workflows/MultiStage" class="block px-4 py-2 text-sm text-purple-700 hover:bg-purple-50">Multi-Stage Jobs</a>
-                                        <a href="/Workflows/Resources" class="block px-4 py-2 text-sm text-purple-700 hover:bg-purple-50">Resource Scheduling</a>
-                                    </div>
-                                </div>
-                            }
-
-                            <!-- Admin Access -->
-                            @if (userRole == "Admin" || userRole == "Manager")
-                            {
-                                <a href="/Admin" class="nav-link admin flex items-center px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-red-50">
-                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                                    </svg>
-                                    Admin
-                                </a>
-                            }
-                        </div>
-                        
-                        <!-- Mobile Menu Button -->
-                        <div class="md:hidden">
-                            <button id="mobile-menu-button" class="text-gray-600 hover:text-gray-900 focus:outline-none p-2 rounded-md">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                                </svg>
-                            </button>
-                        </div>
-                    }
-                </div>
-
-                @if (isAuthenticated)
-                {
-                    <!-- User Menu with Stage Context -->
-                    <div class="flex items-center space-x-4">
-                        <!-- Stage Status Indicator (if on a stage page) -->
-                        @if (currentPage?.Contains("Scheduler") == true)
-                        {
-                            <div class="hidden sm:flex items-center space-x-2 px-3 py-1 bg-blue-50 rounded-full">
-                                <div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                                <span class="text-xs font-medium text-blue-700">Scheduler Active</span>
-                            </div>
-                        }
-                        @if (currentPage?.Contains("PrintTracking") == true)
-                        {
-                            <div class="hidden sm:flex items-center space-x-2 px-3 py-1 bg-blue-50 rounded-full">
-                                <div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                                <span class="text-xs font-medium text-blue-700">SLS Stage</span>
-                            </div>
-                        }
-                        @if (currentPage?.Contains("EDM") == true)
-                        {
-                            <div class="hidden sm:flex items-center space-x-2 px-3 py-1 bg-pink-50 rounded-full">
-                                <div class="w-2 h-2 bg-pink-500 rounded-full animate-pulse"></div>
-                                <span class="text-xs font-medium text-pink-700">EDM Stage</span>
-                            </div>
-                        }
-                        @if (currentPage?.Contains("Coating") == true)
-                        {
-                            <div class="hidden sm:flex items-center space-x-2 px-3 py-1 bg-orange-50 rounded-full">
-                                <div class="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-                                <span class="text-xs font-medium text-orange-700">Coating Stage</span>
-                            </div>
-                        }
-
-                        <!-- User Info -->
-                        <div class="hidden sm:flex items-center space-x-3">
-                            <div class="text-right">
-                                <p class="text-sm font-medium text-gray-900">@userName</p>
-                                <p class="text-xs text-gray-500">@userRole</p>
-                            </div>
-                            <div class="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full flex items-center justify-center">
-                                <span class="text-white font-semibold text-xs">@(userName.FirstOrDefault())</span>
-                            </div>
-                        </div>
-                        
-                        <!-- Logout Button -->
-                        <button onclick="performLogout()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
-                            Logout
-                        </button>
-                    </div>
-                }
-                else
-                {
-                    <!-- Login Button for unauthenticated users -->
-                    <div class="flex items-center">
-                        <a href="/Account/Login" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
-                            Login
-                        </a>
-                    </div>
-                }
-            </div>
-        </div>
-        
-        <!-- Enhanced Mobile Menu for Stage-Aware Navigation -->
-        <div id="mobile-menu" class="md:hidden hidden border-t border-gray-200 bg-gray-50">
-            <div class="px-4 py-3 space-y-1">
-                @if (isAuthenticated)
-                {
-                    <div class="pb-2 mb-2 border-b border-gray-200">
-                        <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Manufacturing Workflow</p>
-                    </div>
-                    
-                    <a href="/Scheduler" class="flex items-center px-3 py-2 text-gray-600 hover:text-blue-600 font-medium rounded-md">
-                        <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                        </svg>
-                        Production Scheduler
-                        <span class="ml-auto px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">Enhanced</span>
+                    <!-- Team Management -->
+                    <a href="/CRM/Tasks" class="nav-item @(currentPage?.Contains("CRM/Tasks") == true ? "nav-item-active" : "")">
+                        <i class="fas fa-tasks"></i>
+                        <span>Team Tasks</span>
                     </a>
-                    
-                    <div class="pl-6 space-y-1">
-                        <a href="/PrintTracking" class="flex items-center px-3 py-2 text-blue-600 hover:text-blue-700 font-medium rounded-md">
-                            <span class="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
-                            Stage 1: SLS Printing
-                        </a>
-                        <a href="/EDM" class="flex items-center px-3 py-2 text-pink-600 hover:text-pink-700 font-medium rounded-md">
-                            <span class="w-2 h-2 bg-pink-500 rounded-full mr-3"></span>
-                            Stage 2: EDM Operations
-                                                            </a>
-                        <a href="/Coating" class="flex items-center px-3 py-2 text-orange-600 hover:text-orange-700 font-medium rounded-md">
-                            <span class="w-2 h-2 bg-orange-500 rounded-full mr-3"></span>
-                            Stage 3: Coating
-                        </a>
-                        <a href="/QC" class="flex items-center px-3 py-2 text-green-600 hover:text-green-700 font-medium rounded-md">
-                            <span class="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
-                            Stage 4: Quality Control
-                        </a>
-                        <a href="/Shipping" class="flex items-center px-3 py-2 text-indigo-600 hover:text-indigo-700 font-medium rounded-md">
-                            <span class="w-2 h-2 bg-indigo-500 rounded-full mr-3"></span>
-                            Stage 5: Shipping
-                        </a>
-                    </div>
-                    
-                    <!-- B&T Manufacturing Mobile Section (NEW - Amber Color) -->
-                    @if (userRole == "Admin" || userRole == "Manager" || userRole == "BTSpecialist")
-                    {
-                        <div class="border-t border-gray-200 pt-2 mt-2">
-                            <p class="text-xs font-medium text-amber-600 uppercase tracking-wide mb-2">B&T Manufacturing</p>
-                            <div class="pl-3 space-y-1">
-                                <a href="/BT/Dashboard" class="flex items-center px-3 py-2 text-amber-600 hover:text-amber-700 font-medium rounded-md">
-                                    <span class="w-2 h-2 bg-amber-500 rounded-full mr-3"></span>
-                                    B&T Dashboard
-                                </a>
-                                <a href="/BT/SerialNumbers" class="flex items-center px-3 py-2 text-amber-600 hover:text-amber-700 font-medium rounded-md">
-                                    <span class="w-2 h-2 bg-amber-500 rounded-full mr-3"></span>
-                                    Serial Numbers
-                                </a>
-                                <a href="/BT/Compliance" class="flex items-center px-3 py-2 text-amber-600 hover:text-amber-700 font-medium rounded-md">
-                                    <span class="w-2 h-2 bg-amber-500 rounded-full mr-3"></span>
-                                    Compliance
-                                </a>
-                            </div>
-                        </div>
-                    }
 
-                    <!-- Advanced Workflows Mobile Section (NEW - Purple Color) -->
-                    @if (userRole == "Admin" || userRole == "Manager" || userRole == "WorkflowSpecialist")
-                    {
-                        <div class="border-t border-gray-200 pt-2 mt-2">
-                            <p class="text-xs font-medium text-purple-600 uppercase tracking-wide mb-2">Advanced Workflows</p>
-                            <div class="pl-3 space-y-1">
-                                <a href="/Workflows/MultiStage" class="flex items-center px-3 py-2 text-purple-600 hover:text-purple-700 font-medium rounded-md">
-                                    <span class="w-2 h-2 bg-purple-500 rounded-full mr-3"></span>
-                                    Multi-Stage Jobs
-                                </a>
-                                <a href="/Workflows/Resources" class="flex items-center px-3 py-2 text-purple-600 hover:text-purple-700 font-medium rounded-md">
-                                    <span class="w-2 h-2 bg-purple-500 rounded-full mr-3"></span>
-                                    Resource Scheduling
-                                </a>
-                            </div>
+                    <a href="/CRM/Tasks/Create" class="nav-item">
+                        <i class="fas fa-plus-circle"></i>
+                        <span>Assign Tasks</span>
+                    </a>
+
+                    <div class="nav-group">
+                        <button class="nav-group-toggle" onclick="toggleNavGroup('clients')">
+                            <i class="fas fa-handshake"></i>
+                            <span>Client Relations</span>
+                            <i class="fas fa-chevron-down nav-chevron" id="clients-chevron"></i>
+                        </button>
+                        <div id="clients-group" class="nav-group-content hidden">
+                            <a href="/CRM/Accounts" class="nav-subitem">
+                                <i class="fas fa-building"></i>
+                                <span>Accounts</span>
+                            </a>
+                            <a href="/CRM/Contacts" class="nav-subitem">
+                                <i class="fas fa-address-book"></i>
+                                <span>Contacts</span>
+                            </a>
                         </div>
-                    }
-                    
+                    </div>
+
+                    <!-- B&T Manufacturing Section -->
                     @if (userRole == "Admin" || userRole == "Manager")
                     {
-                        <div class="border-t border-gray-200 pt-2 mt-2">
-                            <a href="/Admin" class="flex items-center px-3 py-2 text-red-600 hover:text-red-700 font-medium rounded-md">
-                                <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                                </svg>
-                                Admin Panel
-                            </a>
+                        <a href="/BT/Dashboard" class="nav-item">
+                            <i class="fas fa-chart-pie text-amber-500"></i>
+                            <span>B&T Operations</span>
+                        </a>
+                        
+                        <div class="nav-group">
+                            <button class="nav-group-toggle" onclick="toggleNavGroup('bt-details')">
+                                <i class="fas fa-cog"></i>
+                                <span>B&T Details</span>
+                                <i class="fas fa-chevron-down nav-chevron" id="bt-details-chevron"></i>
+                            </button>
+                            <div id="bt-details-group" class="nav-group-content hidden">
+                                <a href="/BT/SerialNumbers" class="nav-subitem">
+                                    <i class="fas fa-barcode"></i>
+                                    <span>Serial Numbers</span>
+                                </a>
+                                <a href="/BT/Compliance" class="nav-subitem">
+                                    <i class="fas fa-shield-alt"></i>
+                                    <span>Compliance</span>
+                                </a>
+                            </div>
                         </div>
                     }
-                    
-                    <div class="border-t border-gray-200 pt-2 mt-2">
-                        <button onclick="performLogout()" class="w-full text-left px-3 py-2 text-red-600 hover:text-red-700 font-medium rounded-md">
-                            Logout
-                        </button>
-                    </div>
+
+                    <!-- Admin Access -->
+                    @if (userRole == "Admin")
+                    {
+                        <a href="/Admin" class="nav-item @(currentPage?.Contains("Admin") == true ? "nav-item-active" : "")">
+                            <i class="fas fa-tools text-red-500"></i>
+                            <span>Admin Panel</span>
+                        </a>
+                    }
                 }
-                else
-                {
-                    <a href="/Account/Login" class="block px-3 py-2 text-blue-600 hover:text-blue-700 font-medium rounded-md">Login</a>
-                }
+            </nav>
+
+            <!-- Footer Actions -->
+            <div class="p-4 border-t border-gray-200 bg-gray-50">
+                <button onclick="performLogout()" class="logout-btn w-full text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center">
+                    <i class="fas fa-sign-out-alt mr-2"></i>
+                    Logout
+                </button>
             </div>
         </div>
-    </nav>
 
-    <!-- Main Content -->
-    <main class="min-h-screen">
-        @RenderBody()
-    </main>
+        <!-- Mobile overlay -->
+        <div id="sidebar-overlay" class="fixed inset-0 bg-black opacity-0 pointer-events-none transition-opacity duration-300 md:hidden z-40"></div>
+    }
+
+    <!-- Top Bar for Mobile and Sidebar Toggle -->
+    <div class="@(isAuthenticated ? "content-area" : "")" id="main-content-area">
+        @if (isAuthenticated)
+        {
+            <!-- Top bar -->
+            <div class="sticky top-0 z-40 bg-white shadow-sm border-b border-gray-200">
+                <div class="flex items-center justify-between h-14 px-4">
+                    <button id="sidebar-toggle" class="text-gray-500 hover:text-gray-700 md:hidden">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                    
+                    <div class="hidden md:flex items-center">
+                        <button id="sidebar-collapse" class="text-gray-500 hover:text-gray-700 mr-4">
+                            <i class="fas fa-angle-double-left text-lg"></i>
+                        </button>
+                        <h1 class="text-lg font-semibold text-gray-900">@ViewData["Title"]</h1>
+                    </div>
+                    
+                    <!-- Page title for mobile -->
+                    <h1 class="text-lg font-semibold text-gray-900 md:hidden">@ViewData["Title"]</h1>
+                    
+                    <!-- Right side actions -->
+                    <div class="flex items-center space-x-3">
+                        @if (userRole != "Admin" && userRole != "Manager")
+                        {
+                            <!-- Quick Task Actions for Employees -->
+                            <div class="relative">
+                                <button id="quick-tasks-btn" class="text-gray-500 hover:text-gray-700 relative">
+                                    <i class="fas fa-bell text-lg"></i>
+                                    <span id="task-notification-count" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center hidden">0</span>
+                                </button>
+                                <!-- Quick task dropdown will be populated via HTMX -->
+                                <div id="quick-tasks-dropdown" class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 hidden">
+                                    <!-- Content loaded via HTMX -->
+                                </div>
+                            </div>
+                        }
+                        
+                        <!-- User menu -->
+                        <div class="flex items-center text-sm text-gray-600">
+                            <span class="hidden sm:block">@userName</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Session Timeout Warning -->
+        <div id="session-timeout-warning" class="session-timeout-warning">
+            <div class="max-w-7xl mx-auto px-4 flex items-center justify-center space-x-4">
+                <div class="flex items-center space-x-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span id="timeout-message">Your session will expire in <span id="timeout-countdown">5</span> minutes</span>
+                </div>
+                <button onclick="extendSession()" class="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200">
+                    Extend Session
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main class="@(isAuthenticated ? "p-6 min-h-screen" : "min-h-screen")">
+            @if (!isAuthenticated)
+            {
+                <!-- Login page styling -->
+                <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+                    @RenderBody()
+                </div>
+            }
+            else
+            {
+                @RenderBody()
+            }
+        </main>
+    </div>
 
     <!-- Bug Report Tool - Available on all pages -->
     @await Html.PartialAsync("_BugReportTool")
 
     <!-- Enhanced Footer -->
-    <footer class="bg-white border-t border-gray-200 mt-auto">
+    <footer class="@(isAuthenticated ? "ml-64" : "") bg-white border-t border-gray-200 mt-auto">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <div class="flex flex-col md:flex-row justify-between items-center">
                 <div class="flex items-center space-x-4">
@@ -491,7 +450,7 @@
                         </svg>
                     </div>
                     <div>
-                        <p class="text-sm font-medium text-gray-900">&copy; @DateTime.Now.Year OpCentrix - Option A Enhanced</p>
+                        <p class="text-sm font-medium text-gray-900">&copy; @DateTime.Now.Year OpCentrix</p>
                         <p class="text-xs text-gray-500">Stage-Aware Manufacturing Execution System</p>
                     </div>
                 </div>
@@ -499,7 +458,6 @@
                     <div class="flex items-center space-x-4">
                         <div class="flex items-center space-x-2">
                             <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                            <span class="text-xs text-gray-500">Option A Active</span>
                         </div>
                         <p class="text-xs text-gray-500">Last updated: @DateTime.Now.ToString("MMM dd, yyyy HH:mm")</p>
                     </div>
@@ -517,11 +475,180 @@
     <script src="~/js/scheduler-ui.js" asp-append-version="true"></script>
     <script src="~/js/job-form.js" asp-append-version="true"></script>
 
+    <!-- Sidebar and Navigation JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.getElementById('sidebar');
+            const sidebarToggle = document.getElementById('sidebar-toggle');
+            const sidebarCollapse = document.getElementById('sidebar-collapse');
+            const sidebarOverlay = document.getElementById('sidebar-overlay');
+            const mainContentArea = document.getElementById('main-content-area');
+            
+            let isSidebarCollapsed = false;
+            let isMobile = window.innerWidth < 768;
+            
+            // Mobile sidebar toggle
+            if (sidebarToggle) {
+                sidebarToggle.addEventListener('click', function() {
+                    if (isMobile) {
+                        sidebar.classList.toggle('sidebar-mobile-hidden');
+                        sidebarOverlay.classList.toggle('opacity-0');
+                        sidebarOverlay.classList.toggle('pointer-events-none');
+                    }
+                });
+            }
+            
+            // Desktop sidebar collapse
+            if (sidebarCollapse) {
+                sidebarCollapse.addEventListener('click', function() {
+                    if (!isMobile) {
+                        isSidebarCollapsed = !isSidebarCollapsed;
+                        sidebar.classList.toggle('sidebar-collapsed');
+                        mainContentArea.classList.toggle('content-area-expanded');
+                    }
+                });
+            }
+            
+            // Close mobile sidebar when clicking overlay
+            if (sidebarOverlay) {
+                sidebarOverlay.addEventListener('click', function() {
+                    sidebar.classList.add('sidebar-mobile-hidden');
+                    sidebarOverlay.classList.add('opacity-0', 'pointer-events-none');
+                });
+            }
+            
+            // Handle window resize
+            window.addEventListener('resize', function() {
+                const wasMobile = isMobile;
+                isMobile = window.innerWidth < 768;
+                
+                if (wasMobile !== isMobile) {
+                    if (isMobile) {
+                        // Switched to mobile
+                        sidebar.classList.remove('sidebar-collapsed');
+                        sidebar.classList.add('sidebar-mobile-hidden');
+                        mainContentArea.classList.remove('content-area-expanded');
+                    } else {
+                        // Switched to desktop
+                        sidebar.classList.remove('sidebar-mobile-hidden');
+                        sidebarOverlay.classList.add('opacity-0', 'pointer-events-none');
+                        
+                        if (isSidebarCollapsed) {
+                            sidebar.classList.add('sidebar-collapsed');
+                            mainContentArea.classList.add('content-area-expanded');
+                        }
+                    }
+                }
+            });
+            
+            // Navigation group toggle
+            window.toggleNavGroup = function(groupId) {
+                const group = document.getElementById(groupId + '-group');
+                const chevron = document.getElementById(groupId + '-chevron');
+                
+                if (group && chevron) {
+                    group.classList.toggle('hidden');
+                    chevron.classList.toggle('rotate-180');
+                }
+            };
+            
+            // Load user task notifications
+            loadUserTaskNotifications();
+            
+            // Refresh task notifications every 60 seconds
+            setInterval(loadUserTaskNotifications, 60000);
+        });
+        
+        // Function to load user task notifications
+        function loadUserTaskNotifications() {
+            fetch(`/api/tasks/user-notifications`)
+                .then(response => response.json())
+                .then(data => {
+                    updateTaskBadges(data);
+                })
+                .catch(error => {
+                    console.error('Error loading task notifications:', error);
+                });
+        }
+        
+        // Function to get priority class based on task data
+        function getTaskBadgePriorityClass(data) {
+            if (!data || !data.taskPriorities) return 'task-badge-normal';
+            
+            const priorities = data.taskPriorities;
+            
+            // Check for critical priority tasks (priority 5)
+            if (priorities.critical > 0) return 'task-badge-critical';
+            
+            // Check for urgent priority tasks (priority 4)
+            if (priorities.urgent > 0) return 'task-badge-urgent';
+            
+            // Check for high priority tasks (priority 3)
+            if (priorities.high > 0) return 'task-badge-high';
+            
+            // Check for normal priority tasks (priority 2)
+            if (priorities.normal > 0) return 'task-badge-normal';
+            
+            // Default to low priority (priority 1)
+            return 'task-badge-low';
+        }
+        
+        // Function to update task badges and notifications
+        function updateTaskBadges(data) {
+            // Update My Tasks badge
+            const myTasksBadge = document.getElementById('my-tasks-badge');
+            if (myTasksBadge && data && data.myTasksCount !== undefined) {
+                myTasksBadge.textContent = data.myTasksCount;
+                
+                if (data.myTasksCount > 0) {
+                    // Remove all existing priority classes
+                    myTasksBadge.className = myTasksBadge.className.replace(/task-badge-\w+/g, '');
+                    
+                    // Add base task-badge class and priority-specific class
+                    myTasksBadge.className = 'task-badge ml-auto ' + getTaskBadgePriorityClass(data);
+                    myTasksBadge.style.display = 'inline';
+                } else {
+                    myTasksBadge.style.display = 'none';
+                }
+            }
+            
+            // Update notification count in top bar
+            const notificationCount = document.getElementById('task-notification-count');
+            if (notificationCount && data && data.urgentTasksCount !== undefined) {
+                notificationCount.textContent = data.urgentTasksCount;
+                notificationCount.style.display = data.urgentTasksCount > 0 ? 'flex' : 'none';
+            }
+        }
+        
+        // Quick tasks dropdown toggle
+        document.addEventListener('click', function(e) {
+            const quickTasksBtn = document.getElementById('quick-tasks-btn');
+            const quickTasksDropdown = document.getElementById('quick-tasks-dropdown');
+            
+            if (quickTasksBtn && quickTasksBtn.contains(e.target)) {
+                e.preventDefault();
+                quickTasksDropdown.classList.toggle('hidden');
+                
+                // Load quick tasks content if not already loaded
+                if (!quickTasksDropdown.dataset.loaded) {
+                    fetch(`/api/tasks/quick-dropdown`)
+                        .then(response => response.text())
+                        .then(html => {
+                            quickTasksDropdown.innerHTML = html;
+                            quickTasksDropdown.dataset.loaded = 'true';
+                        });
+                }
+            } else if (quickTasksDropdown && !quickTasksDropdown.contains(e.target)) {
+                quickTasksDropdown.classList.add('hidden');
+            }
+        });
+    </script>
+
     @if (isAuthenticated)
     {
-        <!-- Session Management Script - Enhanced for Option A -->
+        <!-- Session Management Script - Enhanced for Sidebar Layout -->
         <script>
-            // Enhanced session timeout management with stage awareness
+            // Enhanced session timeout management with sidebar awareness
             (function() {
                 let sessionTimeoutMinutes = 120; // 2 hours
                 let warningTimeoutMinutes = 5; // 5 minutes warning
@@ -596,7 +723,7 @@
                         });
                 };
 
-                // Enhanced activity tracking with stage awareness
+                // Enhanced activity tracking with sidebar awareness
                 let lastActivity = Date.now();
                 function trackActivity() {
                     const now = Date.now();
@@ -612,56 +739,289 @@
 
                 resetSessionTimeout();
             })();
-            
-            // Enhanced mobile menu toggle
-            document.addEventListener('DOMContentLoaded', function() {
-                const mobileMenuButton = document.getElementById('mobile-menu-button');
-                const mobileMenu = document.getElementById('mobile-menu');
-                
-                if (mobileMenuButton && mobileMenu) {
-                    mobileMenuButton.addEventListener('click', function() {
-                        mobileMenu.classList.toggle('hidden');
-                    });
-                }
-
-                // Add stage-aware navigation highlighting
-                const currentPath = window.location.pathname;
-                const navLinks = document.querySelectorAll('.nav-link');
-                
-                navLinks.forEach(link => {
-                    if (link.getAttribute('href') === currentPath) {
-                        link.classList.add('bg-blue-50', 'text-blue-700');
-                    }
-                });
-            });
-            
-            // Enhanced dropdown functionality for B&T and Workflows
-            window.toggleDropdown = function(dropdownId) {
-                const dropdown = document.getElementById(dropdownId);
-                const allDropdowns = document.querySelectorAll('[id$="-dropdown"]');
-                
-                // Close all other dropdowns
-                allDropdowns.forEach(dd => {
-                    if (dd.id !== dropdownId) {
-                        dd.classList.add('hidden'); 
-                    }
-                });
-                
-                // Toggle current dropdown
-                dropdown.classList.toggle('hidden');
-            };
-            
-            // Close dropdowns when clicking outside
-            document.addEventListener('click', function(event) {
-                if (!event.target.closest('.relative.group')) {
-                    const allDropdowns = document.querySelectorAll('[id$="-dropdown"]');
-                    allDropdowns.forEach(dd => {
-                        dd.classList.add('hidden');
-                    });
-                }
-            });
         </script>
     }
+
+    <!-- Custom CSS for sidebar navigation -->
+    <style>
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
+            margin: 0.25rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #4b5563;
+            border-radius: 0.75rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .nav-item:hover {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            color: #1e293b;
+            text-decoration: none;
+            transform: translateX(2px);
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+        }
+        
+        .nav-item-active {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            color: #1d4ed8;
+            box-shadow: 0 2px 12px rgba(59, 130, 246, 0.2);
+            border: 1px solid rgba(59, 130, 246, 0.15);
+        }
+        
+        .nav-item-active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(to bottom, #3b82f6, #1d4ed8);
+            border-radius: 0 2px 2px 0;
+        }
+        
+        .nav-item i {
+            width: 20px;
+            margin-right: 12px;
+            font-size: 16px;
+        }
+        
+        .nav-section-header {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 0.75rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .nav-group-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            padding: 0.75rem;
+            margin: 0.25rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #4b5563;
+            background: none;
+            border: none;
+            border-radius: 0.75rem;
+        }
+        
+        .nav-group-toggle:hover {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            color: #1e293b;
+            transform: translateX(2px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+        
+        .nav-group-content {
+            margin-left: 1.5rem;
+            margin-top: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            padding-left: 1rem;
+            border-left: 2px solid #e2e8f0;
+        }
+        
+        .nav-subitem {
+            display: flex;
+            align-items: center;
+            padding: 0.6rem 0.75rem;
+            margin: 0.125rem 0;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            color: #64748b;
+            border-radius: 0.6rem;
+            text-decoration: none;
+        }
+        
+        .nav-subitem:hover {
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            color: #334155;
+            text-decoration: none;
+            transform: translateX(1px);
+        }
+        
+        .nav-subitem i {
+            width: 16px;
+            margin-right: 10px;
+            font-size: 14px;
+        }
+        
+        /* Task Badge Styling with Priority Colors - No Animations */
+        .task-badge {
+            font-size: 0.6875rem;
+            font-weight: 600;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            min-width: 1.5rem;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        /* Priority-based colors - No animations */
+        .task-badge-low {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            animation: pulse-subtle-low 4s ease-in-out infinite;
+        }
+        
+        .task-badge-normal {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            animation: pulse-subtle-normal 3.5s ease-in-out infinite;
+        }
+        
+        .task-badge-high {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            animation: pulse-subtle-high 3s ease-in-out infinite;
+        }
+        
+        .task-badge-urgent {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            animation: pulse-subtle-urgent 2.5s ease-in-out infinite;
+        }
+        
+        .task-badge-critical {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            color: white;
+            animation: pulse-subtle-critical 2s ease-in-out infinite;
+        }
+        
+        /* Subtle pulse animations - Much more professional */
+        @@keyframes pulse-subtle-low {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.9; }
+        }
+        
+        @@keyframes pulse-subtle-normal {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.85; }
+        }
+        
+        @@keyframes pulse-subtle-high {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+        
+        @@keyframes pulse-subtle-urgent {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.75; }
+        }
+        
+        @@keyframes pulse-subtle-critical {
+            0%, 100% { opacity: 1; }
+            25% { opacity: 0.9; }
+            75% { opacity: 0.7; }
+        }
+        
+        .nav-badge {
+            padding: 0.125rem 0.5rem;
+            font-size: 0.75rem;
+            background-color: #dbeafe;
+            color: #1e40af;
+            border-radius: 9999px;
+            font-weight: 500;
+        }
+        
+        .stage-badge {
+            padding: 0.125rem 0.5rem;
+            font-size: 0.75rem;
+            color: white;
+            border-radius: 9999px;
+            font-weight: 500;
+            margin-left: auto;
+        }
+        
+        .stage-sls { background-color: #3b82f6; }
+        .stage-edm { background-color: #ec4899; }
+        .stage-coating { background-color: #f59e0b; }
+        .stage-qc { background-color: #10b981; }
+        .stage-shipping { background-color: #6366f1; }
+        
+        .nav-chevron {
+            width: 1rem;
+            height: 1rem;
+            color: #9ca3af;
+        }
+        
+        .rotate-180 {
+            transform: rotate(180deg);
+        }
+        
+        /* Enhanced User Info Card */
+        .user-info-card {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .user-avatar {
+            background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+        
+        /* Enhanced Sidebar Header */
+        .sidebar-header {
+            background: linear-gradient(135deg, #1e40af 0%, #3730a3 100%);
+            box-shadow: 0 4px 12px rgba(30, 64, 175, 0.3);
+        }
+        
+        /* Session Timeout Warning */
+        .session-timeout-warning {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            padding: 0.75rem;
+            z-index: 9999;
+            display: none;
+            box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4);
+        }
+        
+        /* Enhanced Logout Button */
+        .logout-btn {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+        
+        .logout-btn:hover {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+        
+        /* Smooth scrollbar for sidebar */
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .sidebar::-webkit-scrollbar-track {
+            background: linear-gradient(to bottom, #f1f5f9, #e2e8f0);
+            border-radius: 3px;
+        }
+        
+        .sidebar::-webkit-scrollbar-thumb {
+            background: linear-gradient(to bottom, #cbd5e1, #94a3b8);
+            border-radius: 3px;
+        }
+        
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(to bottom, #94a3b8, #64748b);
+        }
+    </style>
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

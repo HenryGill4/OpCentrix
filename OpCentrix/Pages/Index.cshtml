@@ -1,283 +1,366 @@
 ﻿@page
-@model OpCentrix.Pages.DebugSuiteModel
+@model OpCentrix.Pages.DashboardModel
 @{
-    ViewData["Title"] = "OpCentrix Debug Suite - B&T Manufacturing MES";
+    ViewData["Title"] = "Dashboard";
     Layout = "_Layout";
 }
 
-<div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <!-- Header -->
-        <div class="text-center mb-12">
-            <div class="flex items-center justify-center mb-6">
-                <div class="w-16 h-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
-                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 11.172V5l-1-1z"></path>
-                    </svg>
-                </div>
+<div class="space-y-6">
+    <!-- Welcome Section -->
+    <div class="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-lg text-white p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold mb-2">Welcome back, @Model.UserName! 👋</h1>
+                <p class="text-blue-100">
+                    @DateTime.Now.ToString("dddd, MMMM dd, yyyy") • 
+                    @(Model.UserRole == "PrintingSpecialist" ? "SLS Printing Specialist" :
+                      Model.UserRole == "EDMSpecialist" ? "EDM Operations Specialist" :
+                      Model.UserRole == "CoatingSpecialist" ? "Coating Specialist" :
+                      Model.UserRole == "QualityInspector" ? "Quality Control Inspector" :
+                      Model.UserRole == "QCSpecialist" ? "Quality Control Specialist" :
+                      Model.UserRole == "ShippingSpecialist" ? "Shipping Specialist" :
+                      Model.UserRole == "BTSpecialist" ? "B&T Manufacturing Specialist" :
+                      Model.UserRole)
+                </p>
             </div>
-            <h1 class="text-4xl font-bold text-gray-900 mb-4">OpCentrix Debug Suite</h1>
-            <p class="text-xl text-gray-600 mb-2">B&T Manufacturing Execution System</p>
-            <p class="text-lg text-gray-500">Development & Testing Dashboard</p>
-            
-            <!-- System Status -->
-            <div class="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div class="bg-white rounded-lg shadow p-4">
-                    <div class="text-sm text-gray-500">Build Status</div>
-                    <div class="text-lg font-semibold text-green-600">✅ Success</div>
+            <div class="text-right">
+                <div class="text-3xl mb-2">
+                    @(Model.UserRole switch {
+                        "PrintingSpecialist" => "🖨️",
+                        "EDMSpecialist" => "⚡",
+                        "CoatingSpecialist" => "🎨",
+                        "QualityInspector" or "QCSpecialist" => "✅",
+                        "ShippingSpecialist" => "🚚",
+                        "BTSpecialist" => "🏷️",
+                        "Admin" => "⚙️",
+                        "Manager" => "👔",
+                        "Supervisor" => "📋",
+                        _ => "👤"
+                    })
                 </div>
-                <div class="bg-white rounded-lg shadow p-4">
-                    <div class="text-sm text-gray-500">Database</div>
-                    <div class="text-lg font-semibold text-blue-600">🗄️ SQLite</div>
-                </div>
-                <div class="bg-white rounded-lg shadow p-4">
-                    <div class="text-sm text-gray-500">Environment</div>
-                    <div class="text-lg font-semibold text-purple-600">🔧 Development</div>
-                </div>
-                <div class="bg-white rounded-lg shadow p-4">
-                    <div class="text-sm text-gray-500">Server</div>
-                    <div class="text-lg font-semibold text-orange-600">🚀 localhost:5090</div>
-                </div>
+                <div class="text-sm text-blue-200">@DateTime.Now.ToString("h:mm tt")</div>
             </div>
-        </div>
-
-        <!-- Quick Navigation -->
-        <div class="mb-12">
-            <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Quick Navigation</h2>
-            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                <a href="/Account/Login" class="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow text-center">
-                    <div class="text-2xl mb-2">🔐</div>
-                    <div class="text-sm font-medium">Login</div>
-                </a>
-                <a href="/Scheduler" class="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow text-center">
-                    <div class="text-2xl mb-2">📅</div>
-                    <div class="text-sm font-medium">Scheduler</div>
-                </a>
-                <a href="/Admin" class="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow text-center">
-                    <div class="text-2xl mb-2">⚙️</div>
-                    <div class="text-sm font-medium">Admin</div>
-                </a>
-                <a href="/Admin/Parts" class="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow text-center">
-                    <div class="text-2xl mb-2">🔧</div>
-                    <div class="text-sm font-medium">Parts</div>
-                </a>
-                <a href="/PrintTracking" class="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow text-center">
-                    <div class="text-2xl mb-2">🖨️</div>
-                    <div class="text-sm font-medium">Print Tracking</div>
-                </a>
-                <a href="/health" class="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow text-center">
-                    <div class="text-2xl mb-2">💚</div>
-                    <div class="text-sm font-medium">Health</div>
-                </a>
-            </div>
-        </div>
-
-        <!-- Core System Pages -->
-        <div class="mb-12">
-            <h2 class="text-2xl font-bold text-gray-900 mb-6">Core System Pages</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                
-                <!-- Authentication -->
-                <div class="bg-white rounded-xl shadow-lg p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Authentication</h3>
-                    <div class="space-y-2">
-                        <a href="/Account/Login" class="block text-blue-600 hover:text-blue-800">Login Page</a>
-                        <a href="/Account/Logout" class="block text-blue-600 hover:text-blue-800">Logout</a>
-                        <a href="/Account/AccessDenied" class="block text-blue-600 hover:text-blue-800">Access Denied</a>
-                    </div>
-                </div>
-
-                <!-- Scheduler System -->
-                <div class="bg-white rounded-xl shadow-lg p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Production Scheduler</h3>
-                    <div class="space-y-2">
-                        <a href="/Scheduler" class="block text-blue-600 hover:text-blue-800">Scheduler Grid</a>
-                        <a href="/Scheduler/MasterSchedule" class="block text-blue-600 hover:text-blue-800">Master Schedule</a>
-                        <a href="/Scheduler/JobLog" class="block text-blue-600 hover:text-blue-800">Job Log</a>
-                    </div>
-                </div>
-
-                <!-- Print Tracking -->
-                <div class="bg-white rounded-xl shadow-lg p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Print Tracking</h3>
-                    <div class="space-y-2">
-                        <a href="/PrintTracking" class="block text-blue-600 hover:text-blue-800">Print Dashboard</a>
-                        <a href="/Printing" class="block text-blue-600 hover:text-blue-800">SLS Metal Printing</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Manufacturing Operations -->
-        <div class="mb-12">
-            <h2 class="text-2xl font-bold text-gray-900 mb-6">Manufacturing Operations</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                
-                <!-- EDM Operations -->
-                <div class="bg-white rounded-xl shadow-lg p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">EDM Operations</h3>
-                    <a href="/EDM" class="block text-blue-600 hover:text-blue-800">EDM Dashboard</a>
-                </div>
-
-                <!-- Coating Operations -->
-                <div class="bg-white rounded-xl shadow-lg p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Coating</h3>
-                    <a href="/Coating" class="block text-blue-600 hover:text-blue-800">Coating Dashboard</a>
-                </div>
-
-                <!-- Quality Control -->
-                <div class="bg-white rounded-xl shadow-lg p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Quality Control</h3>
-                    <a href="/QC" class="block text-blue-600 hover:text-blue-800">QC Dashboard</a>
-                </div>
-
-                <!-- Shipping -->
-                <div class="bg-white rounded-xl shadow-lg p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Shipping</h3>
-                    <a href="/Shipping" class="block text-blue-600 hover:text-blue-800">Shipping Dashboard</a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Admin & Management -->
-        <div class="mb-12">
-            <h2 class="text-2xl font-bold text-gray-900 mb-6">Administration & Management</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                
-                <!-- Admin Dashboard -->
-                <div class="bg-white rounded-xl shadow-lg p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Admin Panel</h3>
-                    <div class="space-y-2">
-                        <a href="/Admin" class="block text-blue-600 hover:text-blue-800">Admin Dashboard</a>
-                        <a href="/Admin/Jobs" class="block text-blue-600 hover:text-blue-800">Job Management</a>
-                        <a href="/Admin/Database" class="block text-blue-600 hover:text-blue-800">Database Management</a>
-                        <a href="/Admin/Archive" class="block text-blue-600 hover:text-blue-800">Archive Management</a>
-                    </div>
-                </div>
-
-                <!-- Parts Management -->
-                <div class="bg-white rounded-xl shadow-lg p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Parts System</h3>
-                    <div class="space-y-2">
-                        <a href="/Admin/Parts" class="block text-blue-600 hover:text-blue-800">Parts Management</a>
-                    </div>
-                </div>
-
-                <!-- B&T Manufacturing (NEW) -->
-                <div class="bg-white rounded-xl shadow-lg p-6 border-2 border-amber-200">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">
-                        B&T Manufacturing
-                        <span class="ml-2 px-2 py-1 bg-amber-100 text-amber-800 text-xs rounded-full">NEW</span>
-                    </h3>
-                    <div class="space-y-2">
-                        <a href="/Admin/Prototypes" class="block text-blue-600 hover:text-blue-800">Prototype Tracking</a>
-                        <a href="/Admin/ProductionStages" class="block text-blue-600 hover:text-blue-800">Production Stages</a>
-                        <a href="/Admin/Checkpoints" class="block text-blue-600 hover:text-blue-800">Quality Checkpoints</a>
-                        <a href="/Admin/DefectCategories" class="block text-blue-600 hover:text-blue-800">Defect Categories</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Analytics & Reporting -->
-        <div class="mb-12">
-            <h2 class="text-2xl font-bold text-gray-900 mb-6">Analytics & Reporting</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
-                <!-- Analytics -->
-                <div class="bg-white rounded-xl shadow-lg p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Analytics</h3>
-                    <a href="/Analytics" class="block text-blue-600 hover:text-blue-800">Analytics Dashboard</a>
-                </div>
-
-                <!-- Error Logging -->
-                <div class="bg-white rounded-xl shadow-lg p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Error Monitoring</h3>
-                    <a href="/Api/ErrorLog" class="block text-blue-600 hover:text-blue-800">Error Log</a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Development Tools -->
-        <div class="mb-12">
-            <h2 class="text-2xl font-bold text-gray-900 mb-6">Development Tools</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                
-                <!-- Health Check -->
-                <div class="bg-white rounded-xl shadow-lg p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Health Check</h3>
-                    <a href="/health" class="block text-blue-600 hover:text-blue-800">Health Status</a>
-                </div>
-
-                <!-- Error Page -->
-                <div class="bg-white rounded-xl shadow-lg p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Error Testing</h3>
-                    <a href="/Error" class="block text-blue-600 hover:text-blue-800">Error Page</a>
-                </div>
-
-                <!-- Debug Console -->
-                <div class="bg-white rounded-xl shadow-lg p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Debug Console</h3>
-                    <button onclick="openDebugConsole()" class="text-blue-600 hover:text-blue-800">Open Debug Console</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Footer -->
-        <div class="text-center py-8 border-t border-gray-200">
-            <p class="text-gray-600 mb-2">OpCentrix B&T Manufacturing Execution System</p>
-            <p class="text-sm text-gray-500">Version 4.0 | .NET 8 | SQLite | Last Updated: @DateTime.Now.ToString("MMM dd, yyyy HH:mm")</p>
         </div>
     </div>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <!-- My Tasks -->
+        <div class="bg-white rounded-lg border border-gray-200 p-6">
+            <div class="flex items-center">
+                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                    <i class="fas fa-tasks text-blue-600"></i>
+                </div>
+                <div>
+                    <div class="text-2xl font-bold text-gray-900">@Model.Dashboard.ActiveTasks</div>
+                    <div class="text-sm text-gray-500">Active Tasks</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Due Today -->
+        <div class="bg-white rounded-lg border border-gray-200 p-6">
+            <div class="flex items-center">
+                <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
+                    <i class="fas fa-calendar-day text-orange-600"></i>
+                </div>
+                <div>
+                    <div class="text-2xl font-bold text-gray-900">@Model.Dashboard.TasksDueToday</div>
+                    <div class="text-sm text-gray-500">Due Today</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Overdue -->
+        <div class="bg-white rounded-lg border border-gray-200 p-6">
+            <div class="flex items-center">
+                <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-3">
+                    <i class="fas fa-exclamation-triangle text-red-600"></i>
+                </div>
+                <div>
+                    <div class="text-2xl font-bold text-gray-900">@Model.Dashboard.OverdueTasks</div>
+                    <div class="text-sm text-gray-500">Overdue</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Completed -->
+        <div class="bg-white rounded-lg border border-gray-200 p-6">
+            <div class="flex items-center">
+                <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                    <i class="fas fa-check-circle text-green-600"></i>
+                </div>
+                <div>
+                    <div class="text-2xl font-bold text-gray-900">@Model.Dashboard.CompletedTasks</div>
+                    <div class="text-sm text-gray-500">Completed</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Team Overview (Management Only) -->
+    @if (Model.UserRole is "Admin" or "Manager" or "Supervisor")
+    {
+        <div class="bg-white rounded-lg border border-gray-200 p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <i class="fas fa-users text-purple-600 mr-2"></i>
+                Team Overview
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="text-center p-4 bg-gray-50 rounded-lg">
+                    <div class="text-2xl font-bold text-purple-600">@Model.Dashboard.TeamActiveTasks</div>
+                    <div class="text-sm text-gray-600">Team Active Tasks</div>
+                </div>
+                <div class="text-center p-4 bg-gray-50 rounded-lg">
+                    <div class="text-2xl font-bold text-red-600">@Model.Dashboard.TeamOverdueTasks</div>
+                    <div class="text-sm text-gray-600">Team Overdue</div>
+                </div>
+                <div class="text-center p-4 bg-gray-50 rounded-lg">
+                    <div class="text-2xl font-bold text-blue-600">@Model.Dashboard.TeamTotalTasks</div>
+                    <div class="text-sm text-gray-600">Total Tasks</div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Recent Tasks -->
+        <div class="bg-white rounded-lg border border-gray-200 p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                    <i class="fas fa-clock text-blue-600 mr-2"></i>
+                    Priority Tasks
+                </h3>
+                <a href="/Tasks/MyTasks" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                    View All →
+                </a>
+            </div>
+            
+            @if (Model.Dashboard.RecentTasks.Any())
+            {
+                <div class="space-y-3">
+                    @foreach (var task in Model.Dashboard.RecentTasks)
+                    {
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-2 mb-1">
+                                    <h4 class="font-medium text-gray-900 text-sm">@task.Title</h4>
+                                    @if (task.Priority >= 4)
+                                    {
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                            High Priority
+                                        </span>
+                                    }
+                                    @if (task.DueAt.HasValue && task.DueAt < DateTime.UtcNow)
+                                    {
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                            <i class="fas fa-exclamation-triangle mr-1"></i>Overdue
+                                        </span>
+                                    }
+                                </div>
+                                @if (task.DueAt.HasValue)
+                                {
+                                    <p class="text-xs text-gray-500">
+                                        Due: @task.DueAt.Value.ToString("MMM dd, yyyy 'at' h:mm tt")
+                                    </p>
+                                }
+                            </div>
+                            <a href="/Tasks/@task.Id/AddProgress" class="btn btn-sm btn-outline-primary ml-3">
+                                <i class="fas fa-plus text-xs mr-1"></i>Update
+                            </a>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-8">
+                    <div class="text-gray-400 mb-2">
+                        <i class="fas fa-check-circle text-4xl"></i>
+                    </div>
+                    <p class="text-gray-500">All caught up! No active tasks.</p>
+                </div>
+            }
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="bg-white rounded-lg border border-gray-200 p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <i class="fas fa-bolt text-yellow-600 mr-2"></i>
+                Quick Actions
+            </h3>
+            
+            <div class="grid grid-cols-1 gap-3">
+                <!-- Common Actions for All Users -->
+                <a href="/Tasks/MyTasks" class="flex items-center p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
+                    <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fas fa-user-check text-white text-sm"></i>
+                    </div>
+                    <div>
+                        <div class="font-medium text-blue-900">My Tasks</div>
+                        <div class="text-sm text-blue-700">View and manage your assigned tasks</div>
+                    </div>
+                </a>
+
+                <a href="/Tasks/Progress" class="flex items-center p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
+                    <div class="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fas fa-chart-line text-white text-sm"></i>
+                    </div>
+                    <div>
+                        <div class="font-medium text-green-900">Add Progress</div>
+                        <div class="text-sm text-green-700">Update task progress and status</div>
+                    </div>
+                </a>
+
+                <!-- Role-Specific Actions -->
+                @if (Model.UserRole == "PrintingSpecialist")
+                {
+                    <a href="/PrintTracking" class="flex items-center p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
+                        <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center mr-3">
+                            <i class="fas fa-cube text-white text-sm"></i>
+                        </div>
+                        <div>
+                            <div class="font-medium text-blue-900">SLS Printing</div>
+                            <div class="text-sm text-blue-700">Manage 3D printing operations</div>
+                        </div>
+                    </a>
+                }
+                else if (Model.UserRole == "EDMSpecialist")
+                {
+                    <a href="/EDM" class="flex items-center p-3 bg-pink-50 rounded-lg hover:bg-pink-100 transition-colors">
+                        <div class="w-8 h-8 bg-pink-600 rounded-lg flex items-center justify-center mr-3">
+                            <i class="fas fa-bolt text-white text-sm"></i>
+                        </div>
+                        <div>
+                            <div class="font-medium text-pink-900">EDM Operations</div>
+                            <div class="text-sm text-pink-700">Electric discharge machining</div>
+                        </div>
+                    </a>
+                }
+                else if (Model.UserRole == "CoatingSpecialist")
+                {
+                    <a href="/Coating" class="flex items-center p-3 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors">
+                        <div class="w-8 h-8 bg-orange-600 rounded-lg flex items-center justify-center mr-3">
+                            <i class="fas fa-paint-brush text-white text-sm"></i>
+                        </div>
+                        <div>
+                            <div class="font-medium text-orange-900">Coating Operations</div>
+                            <div class="text-sm text-orange-700">Surface treatment and coating</div>
+                        </div>
+                    </a>
+                }
+                else if (Model.UserRole is "QualityInspector" or "QCSpecialist")
+                {
+                    <a href="/QC" class="flex items-center p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
+                        <div class="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center mr-3">
+                            <i class="fas fa-check-circle text-white text-sm"></i>
+                        </div>
+                        <div>
+                            <div class="font-medium text-green-900">Quality Control</div>
+                            <div class="text-sm text-green-700">Quality inspection and testing</div>
+                        </div>
+                    </a>
+                }
+                else if (Model.UserRole == "ShippingSpecialist")
+                {
+                    <a href="/Shipping" class="flex items-center p-3 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors">
+                        <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center mr-3">
+                            <i class="fas fa-truck text-white text-sm"></i>
+                        </div>
+                        <div>
+                            <div class="font-medium text-indigo-900">Shipping</div>
+                            <div class="text-sm text-indigo-700">Package and ship orders</div>
+                        </div>
+                    </a>
+                }
+                else if (Model.UserRole == "BTSpecialist")
+                {
+                    <a href="/BT/Dashboard" class="flex items-center p-3 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors">
+                        <div class="w-8 h-8 bg-amber-600 rounded-lg flex items-center justify-center mr-3">
+                            <i class="fas fa-tag text-white text-sm"></i>
+                        </div>
+                        <div>
+                            <div class="font-medium text-amber-900">B&T Manufacturing</div>
+                            <div class="text-sm text-amber-700">Specialized B&T operations</div>
+                        </div>
+                    </a>
+                }
+
+                <!-- Management Actions -->
+                @if (Model.UserRole is "Admin" or "Manager" or "Supervisor")
+                {
+                    <a href="/CRM/Tasks/Create" class="flex items-center p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors">
+                        <div class="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center mr-3">
+                            <i class="fas fa-plus text-white text-sm"></i>
+                        </div>
+                        <div>
+                            <div class="font-medium text-purple-900">Create Task</div>
+                            <div class="text-sm text-purple-700">Assign new tasks to team members</div>
+                        </div>
+                    </a>
+
+                    <a href="/Scheduler" class="flex items-center p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
+                        <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center mr-3">
+                            <i class="fas fa-calendar-alt text-white text-sm"></i>
+                        </div>
+                        <div>
+                            <div class="font-medium text-blue-900">Production Scheduler</div>
+                            <div class="text-sm text-blue-700">Schedule and manage production</div>
+                        </div>
+                    </a>
+
+                    @if (Model.UserRole == "Admin")
+                    {
+                        <a href="/Admin" class="flex items-center p-3 bg-red-50 rounded-lg hover:bg-red-100 transition-colors">
+                            <div class="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center mr-3">
+                                <i class="fas fa-cog text-white text-sm"></i>
+                            </div>
+                            <div>
+                                <div class="font-medium text-red-900">Admin Panel</div>
+                                <div class="text-sm text-red-700">System administration</div>
+                            </div>
+                        </a>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    @if (Model.Dashboard.RecentProgress.Any())
+    {
+        <div class="bg-white rounded-lg border border-gray-200 p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <i class="fas fa-history text-green-600 mr-2"></i>
+                Recent Progress Updates
+            </h3>
+            
+            <div class="space-y-3">
+                @foreach (var progress in Model.Dashboard.RecentProgress)
+                {
+                    <div class="flex items-start p-3 bg-gray-50 rounded-lg">
+                        <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3 mt-1">
+                            <i class="fas fa-check text-green-600 text-sm"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2 mb-1">
+                                <h4 class="font-medium text-gray-900 text-sm">@progress.Task?.Title</h4>
+                                @if (progress.PercentComplete.HasValue)
+                                {
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        @progress.PercentComplete%
+                                    </span>
+                                }
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    @progress.ProgressType
+                                </span>
+                            </div>
+                            <p class="text-sm text-gray-700 mb-1">@progress.ProgressNote</p>
+                            <p class="text-xs text-gray-500">@progress.CreatedDate.ToString("MMM dd, yyyy 'at' h:mm tt")</p>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
 </div>
-
-@section Scripts {
-<script>
-    function openDebugConsole() {
-        // Open browser console with debug information
-        console.log('🎯 OpCentrix Debug Suite - System Information');
-        console.log('=====================================');
-        console.log('Environment: Development');
-        console.log('Server: localhost:5090');
-        console.log('Database: SQLite');
-        console.log('Framework: .NET 8');
-        console.log('Build Status: Success');
-        console.log('=====================================');
-        console.log('💡 Tip: Press F12 to see this console');
-        
-        // Show alert for users
-        alert('Debug console opened! Press F12 to view detailed system information.');
-    }
-
-    // Simple health check on page load (no infinite loops)
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('🎯 OpCentrix Debug Suite loaded successfully');
-        
-        // Single health check (no setInterval)
-        fetch('/health')
-            .then(response => response.text())
-            .then(data => {
-                console.log('✅ System Health:', data);
-            })
-            .catch(err => {
-                console.warn('⚠️ Health Check Failed:', err);
-            });
-    });
-</script>
-}
-
-<style>
-    /* Simple hover effects without complex animations */
-    .hover\:shadow-md:hover {
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    }
-    
-    .transition-shadow {
-        transition: box-shadow 0.3s ease;
-    }
-    
-    /* Custom badge styles */
-    .border-amber-200 {
-        border-color: #fcd34d;
-    }
-</style>

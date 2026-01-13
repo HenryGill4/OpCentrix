@@ -92,11 +92,12 @@ namespace OpCentrix.Services
                 var claims = new List<Claim>
                 {
                     new(ClaimTypes.Name, user.Username),
+                    new(ClaimTypes.NameIdentifier, user.Id.ToString()), // Standard user ID claim
                     new(ClaimTypes.GivenName, user.FullName),
                     new(ClaimTypes.Email, user.Email),
                     new(ClaimTypes.Role, user.Role),
                     new("Department", user.Department ?? ""),
-                    new("UserId", user.Id.ToString()),
+                    new("UserId", user.Id.ToString()), // Keep for backward compatibility
                     new("SessionTimeout", sessionTimeoutMinutes.ToString())
                 };
 

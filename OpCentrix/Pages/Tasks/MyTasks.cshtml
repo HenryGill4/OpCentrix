@@ -1,0 +1,580 @@
+@page
+@model OpCentrix.Pages.Tasks.MyTasksModel
+@{
+    ViewData["Title"] = "My Tasks";
+    Layout = "~/Pages/Shared/_Layout.cshtml";
+}
+
+<div class="space-y-6">
+    <!-- Header Section -->
+    <div class="bg-white border rounded-lg p-6">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 flex items-center">
+                    <i class="fas fa-user-check text-blue-600 mr-3"></i>
+                    My Tasks
+                </h1>
+                <p class="text-gray-600 mt-1">
+                    Your assigned tasks and responsibilities
+                </p>
+            </div>
+            <div class="flex space-x-3">
+                <a class="btn btn-outline-primary" href="/Tasks/Progress">
+                    <i class="fa-solid fa-chart-line mr-2"></i>My Progress
+                </a>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div class="stat-card bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-blue-600">@Model.Statistics.Total</div>
+                <div class="text-sm text-blue-700">Total Tasks</div>
+            </div>
+            <div class="stat-card bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-yellow-600">@Model.Statistics.Open</div>
+                <div class="text-sm text-yellow-700">Open</div>
+            </div>
+            <div class="stat-card bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-green-600">@Model.Statistics.InProgress</div>
+                <div class="text-sm text-green-700">Active</div>
+            </div>
+            <div class="stat-card bg-emerald-50 border border-emerald-200 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-emerald-600">@Model.Statistics.Completed</div>
+                <div class="text-sm text-emerald-700">Completed</div>
+            </div>
+            <div class="stat-card bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-red-600">@Model.Statistics.Overdue</div>
+                <div class="text-sm text-red-700">Overdue</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="bg-white border rounded-lg p-4">
+        <form method="get" class="flex items-center space-x-4">
+            <div class="flex-1">
+                <select name="status" class="form-select">
+                    <option value="">All Statuses</option>
+                    <option value="Open" selected="@(Model.StatusFilter == "Open" ? "selected" : null)">Open</option>
+                    <option value="InProgress" selected="@(Model.StatusFilter == "InProgress" ? "selected" : null)">In Progress</option>
+                    <option value="Completed" selected="@(Model.StatusFilter == "Completed" ? "selected" : null)">Completed</option>
+                </select>
+            </div>
+            <div>
+                <label class="inline-flex items-center">
+                    <input type="checkbox" name="overdue" value="true" @(Model.OverdueOnly ? "checked" : "") class="form-check-input mr-2">
+                    <span class="text-sm">Overdue Only</span>
+                </label>
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <i class="fa-solid fa-search mr-2"></i>Filter
+            </button>
+        </form>
+    </div>
+
+    <!-- Tasks Sections -->
+    @{
+        var activeTasks = Model.Tasks.Where(t => t.Task.Status != "Completed").ToList();
+        var completedTasks = Model.Tasks.Where(t => t.Task.Status == "Completed").ToList();
+    }
+
+    @if (Model.Tasks.Any())
+    {
+        <!-- Active Tasks Section -->
+        @if (activeTasks.Any())
+        {
+            <div class="bg-white border rounded-lg overflow-hidden">
+                <div class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-4">
+                    <h2 class="text-lg font-semibold flex items-center">
+                        <i class="fas fa-tasks mr-2"></i>
+                        Active Tasks (@activeTasks.Count)
+                    </h2>
+                    <p class="text-blue-100 text-sm mt-1">Tasks that need your attention</p>
+                </div>
+                
+                <div class="divide-y divide-gray-100">
+                    @foreach (var taskViewModel in activeTasks)
+                    {
+                        var task = taskViewModel.Task;
+                        var progressId = "progress-" + task.Id;
+                        
+                        <div class="p-6 hover:bg-gray-50 transition-colors @(taskViewModel.IsOverdue ? "border-l-4 border-red-500" : "") task-card">
+                            <div class="space-y-4">
+                                <!-- Task Header -->
+                                <div class="flex items-start justify-between">
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center space-x-3 mb-2">
+                                            <h3 class="text-lg font-semibold text-gray-900">@task.Title</h3>
+                                            
+                                            <!-- Status Badge -->
+                                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full @(GetStatusBadgeClass(task.Status))">
+                                                @GetStatusDisplayName(task.Status)
+                                            </span>
+                                            
+                                            <!-- Priority Badge -->
+                                            <span class="inline-flex items-center px-2 py-1 text-xs font-bold rounded-full @(GetPriorityBadgeClass(task.Priority))">
+                                                @GetPriorityLabel(task.Priority)
+                                            </span>
+                                            
+                                            <!-- Overdue Warning -->
+                                            @if (taskViewModel.IsOverdue)
+                                            {
+                                                <span class="inline-flex items-center px-2 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800">
+                                                    <i class="fa-solid fa-exclamation-triangle mr-1"></i>OVERDUE
+                                                </span>
+                                            }
+                                        </div>
+                                        
+                                        @if (!string.IsNullOrEmpty(task.Description))
+                                        {
+                                            <p class="text-gray-700 mb-3">@task.Description</p>
+                                        }
+                                    </div>
+                                    
+                                    <!-- Action Buttons -->
+                                    <div class="flex items-center space-x-2 ml-4">
+                                        <a class="btn btn-sm btn-success" href="/Tasks/@task.Id/AddProgress">
+                                            <i class="fa-solid fa-plus mr-1"></i>Add Progress
+                                        </a>
+                                        <a class="btn btn-sm btn-outline-primary" href="/Tasks/Progress">
+                                            <i class="fa-solid fa-chart-line mr-1"></i>Progress
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <!-- Progress Bar and Info -->
+                                <div class="bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg p-4">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <div class="text-sm font-medium text-gray-700">Task Progress</div>
+                                        <div class="flex items-center space-x-4">
+                                            @if (taskViewModel.CompletionPercentage.HasValue)
+                                            {
+                                                <span class="text-lg font-bold text-blue-600">@taskViewModel.CompletionPercentage%</span>
+                                            }
+                                            @if (taskViewModel.ProgressCount > 0)
+                                            {
+                                                <button type="button" 
+                                                        class="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center transition-colors progress-toggle"
+                                                        onclick="toggleProgress('@progressId')"
+                                                        id="toggle-@progressId">
+                                                    <i class="fa-solid fa-chevron-down mr-2 transition-transform" id="icon-@progressId"></i>
+                                                    View @taskViewModel.ProgressCount Update@(taskViewModel.ProgressCount == 1 ? "" : "s")
+                                                </button>
+                                            }
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Progress Bar -->
+                                    <div class="w-full bg-gray-200 rounded-full h-4 mb-3">
+                                        <div class="bg-gradient-to-r from-blue-500 to-blue-600 h-4 rounded-full transition-all duration-700 ease-out" 
+                                             style="width: @(taskViewModel.CompletionPercentage ?? 0)%"></div>
+                                    </div>
+                                    
+                                    <!-- Task Details -->
+                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                        @if (task.DueAt.HasValue)
+                                        {
+                                            <div class="flex items-center">
+                                                <i class="fa-solid fa-calendar text-gray-500 mr-2"></i>
+                                                <span class="@(taskViewModel.IsOverdue ? "text-red-600 font-semibold" : "text-gray-600")">
+                                                    Due @task.DueAt.Value.ToString("MMM dd, yyyy")
+                                                </span>
+                                            </div>
+                                        }
+                                        
+                                        @if (task.Account != null)
+                                        {
+                                            <div class="flex items-center">
+                                                <i class="fa-solid fa-building text-gray-500 mr-2"></i>
+                                                <span class="text-gray-600">@task.Account.Name</span>
+                                            </div>
+                                        }
+                                        
+                                        <div class="flex items-center">
+                                            <i class="fa-solid fa-clock text-gray-500 mr-2"></i>
+                                            <span class="text-gray-600">Created @task.CreatedDate.ToString("MMM dd")</span>
+                                        </div>
+                                        
+                                        <div class="flex items-center">
+                                            <i class="fa-solid fa-hashtag text-gray-500 mr-2"></i>
+                                            <span class="text-gray-600">Task #@task.Id</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Collapsible Progress Updates -->
+                                @if (taskViewModel.ProgressCount > 0)
+                                {
+                                    <div id="@progressId" class="progress-entries hidden">
+                                        <div class="bg-white border border-gray-200 rounded-lg p-4">
+                                            <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                                                <i class="fa-solid fa-history mr-2"></i>Progress History
+                                            </h4>
+                                            <div class="space-y-3 max-h-60 overflow-y-auto">
+                                                @foreach (var progress in task.ProgressEntries.OrderByDescending(p => p.CreatedDate))
+                                                {
+                                                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                                                        <div class="flex items-start justify-between">
+                                                            <div class="flex-1">
+                                                                <div class="flex items-center space-x-2 mb-2">
+                                                                    @if (progress.PercentComplete.HasValue)
+                                                                    {
+                                                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                                            @progress.PercentComplete%
+                                                                        </span>
+                                                                    }
+                                                                    @if (!string.IsNullOrEmpty(progress.Status))
+                                                                    {
+                                                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium @(GetStatusBadgeClass(progress.Status))">
+                                                                            @progress.Status
+                                                                        </span>
+                                                                    }
+                                                                    <span class="text-xs font-semibold text-indigo-600 bg-indigo-100 px-2 py-1 rounded">@progress.ProgressType</span>
+                                                                </div>
+                                                                <p class="text-sm text-gray-800 mb-2">@progress.ProgressNote</p>
+                                                                <div class="flex items-center text-xs text-gray-500">
+                                                                    <i class="fa-solid fa-clock mr-1"></i>
+                                                                    <span>@progress.CreatedDate.ToString("MMM dd, yyyy HH:mm")</span>
+                                                                    @if (progress.CreatedBy != null)
+                                                                    {
+                                                                        <span class="mx-2">•</span>
+                                                                        <span>by @progress.CreatedBy.FullName</span>
+                                                                    }
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <!-- Completed Tasks Section -->
+        @if (completedTasks.Any())
+        {
+            <div class="bg-white border rounded-lg overflow-hidden">
+                <div class="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-4">
+                    <button type="button" 
+                            class="w-full text-left flex items-center justify-between"
+                            onclick="toggleCompletedTasks()"
+                            id="completed-toggle">
+                        <div>
+                            <h2 class="text-lg font-semibold flex items-center">
+                                <i class="fas fa-check-circle mr-2"></i>
+                                Completed Tasks (@completedTasks.Count)
+                            </h2>
+                            <p class="text-green-100 text-sm mt-1">Tasks you've successfully completed</p>
+                        </div>
+                        <i class="fas fa-chevron-down text-white transition-transform" id="completed-chevron"></i>
+                    </button>
+                </div>
+                
+                <div id="completed-tasks" class="divide-y divide-gray-100 hidden">
+                    @foreach (var taskViewModel in completedTasks)
+                    {
+                        var task = taskViewModel.Task;
+                        var progressId = "completed-progress-" + task.Id;
+                        
+                        <div class="p-6 bg-green-50 hover:bg-green-100 transition-colors task-card">
+                            <div class="space-y-4">
+                                <!-- Task Header -->
+                                <div class="flex items-start justify-between">
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center space-x-3 mb-2">
+                                            <h3 class="text-lg font-medium text-gray-800">@task.Title</h3>
+                                            
+                                            <!-- Status Badge -->
+                                            <span class="inline-flex items-center px-3 py-1 text-sm font-semibold rounded-full bg-green-100 text-green-800 border border-green-300">
+                                                <i class="fas fa-check mr-1"></i>Completed
+                                            </span>
+                                            
+                                            <!-- Completion Date -->
+                                            @if (task.CompletedAt.HasValue)
+                                            {
+                                                <span class="inline-flex items-center px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-700">
+                                                    <i class="fas fa-calendar-check mr-1"></i>
+                                                    Completed @task.CompletedAt.Value.ToString("MMM dd, yyyy")
+                                                </span>
+                                            }
+                                        </div>
+                                        
+                                        @if (!string.IsNullOrEmpty(task.Description))
+                                        {
+                                            <p class="text-gray-600 mb-3">@task.Description</p>
+                                        }
+                                    </div>
+                                    
+                                    <!-- Progress History Button -->
+                                    @if (taskViewModel.ProgressCount > 0)
+                                    {
+                                        <div class="ml-4">
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-outline-success progress-toggle"
+                                                    onclick="toggleProgress('@progressId')"
+                                                    id="toggle-@progressId">
+                                                <i class="fa-solid fa-history mr-2 transition-transform" id="icon-@progressId"></i>
+                                                View History
+                                            </button>
+                                        </div>
+                                    }
+                                </div>
+
+                                <!-- Task Details -->
+                                <div class="bg-white rounded-lg p-3">
+                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                        @if (task.DueAt.HasValue)
+                                        {
+                                            <div class="flex items-center">
+                                                <i class="fa-solid fa-calendar text-gray-500 mr-2"></i>
+                                                <span class="text-gray-600">
+                                                    Due @task.DueAt.Value.ToString("MMM dd, yyyy")
+                                                </span>
+                                            </div>
+                                        }
+                                        
+                                        @if (task.Account != null)
+                                        {
+                                            <div class="flex items-center">
+                                                <i class="fa-solid fa-building text-gray-500 mr-2"></i>
+                                                <span class="text-gray-600">@task.Account.Name</span>
+                                            </div>
+                                        }
+                                        
+                                        <div class="flex items-center">
+                                            <i class="fa-solid fa-clock text-gray-500 mr-2"></i>
+                                            <span class="text-gray-600">Created @task.CreatedDate.ToString("MMM dd")</span>
+                                        </div>
+                                        
+                                        <div class="flex items-center">
+                                            <i class="fa-solid fa-hashtag text-gray-500 mr-2"></i>
+                                            <span class="text-gray-600">Task #@task.Id</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Collapsible Progress History -->
+                                @if (taskViewModel.ProgressCount > 0)
+                                {
+                                    <div id="@progressId" class="progress-entries hidden">
+                                        <div class="bg-white border border-gray-200 rounded-lg p-4">
+                                            <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                                                <i class="fa-solid fa-history mr-2"></i>Complete Progress History
+                                            </h4>
+                                            <div class="space-y-3 max-h-60 overflow-y-auto">
+                                                @foreach (var progress in task.ProgressEntries.OrderByDescending(p => p.CreatedDate))
+                                                {
+                                                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                                                        <div class="flex items-start justify-between">
+                                                            <div class="flex-1">
+                                                                <div class="flex items-center space-x-2 mb-2">
+                                                                    @if (progress.PercentComplete.HasValue)
+                                                                    {
+                                                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                                            @progress.PercentComplete%
+                                                                        </span>
+                                                                    }
+                                                                    @if (!string.IsNullOrEmpty(progress.Status))
+                                                                    {
+                                                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium @(GetStatusBadgeClass(progress.Status))">
+                                                                            @progress.Status
+                                                                        </span>
+                                                                    }
+                                                                    <span class="text-xs font-semibold text-indigo-600 bg-indigo-100 px-2 py-1 rounded">@progress.ProgressType</span>
+                                                                </div>
+                                                                <p class="text-sm text-gray-800 mb-2">@progress.ProgressNote</p>
+                                                                <div class="flex items-center text-xs text-gray-500">
+                                                                    <i class="fa-solid fa-clock mr-1"></i>
+                                                                    <span>@progress.CreatedDate.ToString("MMM dd, yyyy HH:mm")</span>
+                                                                    @if (progress.CreatedBy != null)
+                                                                    {
+                                                                        <span class="mx-2">•</span>
+                                                                        <span>by @progress.CreatedBy.FullName</span>
+                                                                    }
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+        else
+        {
+            <div class="bg-white border rounded-lg p-12 text-center">
+                <div class="text-gray-400 mb-4">
+                    <i class="fa-solid fa-tasks text-6xl mb-4"></i>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">No tasks assigned</h3>
+                    <p>You don't have any tasks assigned to you at the moment.</p>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@{
+    string GetStatusBadgeClass(string status)
+    {
+        return status switch
+        {
+            "Open" => "bg-yellow-100 text-yellow-800 border border-yellow-300",
+            "InProgress" => "bg-blue-100 text-blue-800 border border-blue-300", 
+            "Completed" => "bg-green-100 text-green-800 border border-green-300",
+            _ => "bg-gray-100 text-gray-800 border border-gray-300"
+        };
+    }
+
+    string GetPriorityBadgeClass(int priority)
+    {
+        return priority switch
+        {
+            1 => "bg-gray-100 text-gray-800 border border-gray-300",
+            2 => "bg-blue-100 text-blue-800 border border-blue-300",
+            3 => "bg-yellow-100 text-yellow-800 border border-yellow-300",
+            4 => "bg-orange-100 text-orange-800 border border-orange-300",
+            5 => "bg-red-100 text-red-800 border border-red-300",
+            _ => "bg-gray-100 text-gray-800 border border-gray-300"
+        };
+    }
+
+    string GetPriorityLabel(int priority)
+    {
+        return priority switch
+        {
+            1 => "P1 Lowest",
+            2 => "P2 Low", 
+            3 => "P3 Normal",
+            4 => "P4 High",
+            5 => "P5 Critical",
+            _ => $"P{priority}"
+        };
+    }
+
+    string GetStatusDisplayName(string status)
+    {
+        return status switch
+        {
+            "Open" => "Open",
+            "InProgress" => "In Progress",
+            "Completed" => "Completed",
+            _ => status
+        };
+    }
+}
+
+<script>
+// Progress toggle functionality
+function toggleProgress(progressId) {
+    const progressDiv = document.getElementById(progressId);
+    const toggleButton = document.getElementById('toggle-' + progressId);
+    const icon = document.getElementById('icon-' + progressId);
+    
+    if (progressDiv && toggleButton && icon) {
+        const isHidden = progressDiv.classList.contains('hidden');
+        
+        if (isHidden) {
+            progressDiv.classList.remove('hidden');
+            icon.style.transform = 'rotate(180deg)';
+            toggleButton.setAttribute('aria-expanded', 'true');
+        } else {
+            progressDiv.classList.add('hidden');
+            icon.style.transform = 'rotate(0deg)';
+            toggleButton.setAttribute('aria-expanded', 'false');
+        }
+    }
+}
+
+// Completed tasks toggle functionality
+function toggleCompletedTasks() {
+    const completedDiv = document.getElementById('completed-tasks');
+    const chevron = document.getElementById('completed-chevron');
+    
+    if (completedDiv && chevron) {
+        const isHidden = completedDiv.classList.contains('hidden');
+        
+        if (isHidden) {
+            completedDiv.classList.remove('hidden');
+            chevron.style.transform = 'rotate(180deg)';
+        } else {
+            completedDiv.classList.add('hidden');
+            chevron.style.transform = 'rotate(0deg)';
+        }
+    }
+}
+
+// Initialize toggle states
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.progress-toggle').forEach(button => {
+        button.setAttribute('aria-expanded', 'false');
+        
+        button.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                this.click();
+            }
+        });
+    });
+    
+    // Set up completed tasks toggle
+    const completedToggle = document.getElementById('completed-toggle');
+    if (completedToggle) {
+        completedToggle.setAttribute('aria-expanded', 'false');
+        
+        completedToggle.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleCompletedTasks();
+            }
+        });
+    }
+});
+</script>
+
+<style>
+.task-card {
+    transition: all 0.2s ease;
+}
+
+.task-card:hover {
+    box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.1);
+}
+
+.progress-entries {
+    animation: slideDown 0.3s ease-out;
+}
+
+@@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.stat-card {
+    transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+    box-shadow: 0 4px 8px -2px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+}
+</style>

@@ -114,10 +114,16 @@
                                     <p class="text-xs text-red-600 mt-1">
                                         Due: @task.DueAt?.ToString("MMM d, yyyy 'at' h:mm tt")
                                     </p>
-                                    @if (task.AssignedToUserId.HasValue)
+                                    @if (task.AssignedToUserId.HasValue && task.AssignedToUser != null)
                                     {
                                         <p class="text-xs text-gray-500">
-                                            Assigned to: User @task.AssignedToUserId
+                                            Assigned to: @task.AssignedToUser.FullName
+                                        </p>
+                                    }
+                                    @if (task.AssignedToUserId.HasValue && task.AssignedToUser == null)
+                                    {
+                                        <p class="text-xs text-gray-500">
+                                            Assigned to: User @task.AssignedToUserId (User not found)
                                         </p>
                                     }
                                 </div>
@@ -192,10 +198,16 @@
                                             Due: @task.DueAt.Value.ToString("MMM d, yyyy 'at' h:mm tt")
                                         </p>
                                     }
-                                    @if (task.AssignedToUserId.HasValue)
+                                    @if (task.AssignedToUserId.HasValue && task.AssignedToUser != null)
                                     {
                                         <p class="text-xs text-gray-500">
-                                            Assigned to: User @task.AssignedToUserId
+                                            Assigned to: @task.AssignedToUser.FullName
+                                        </p>
+                                    }
+                                    @if (task.AssignedToUserId.HasValue && task.AssignedToUser == null)
+                                    {
+                                        <p class="text-xs text-gray-500">
+                                            Assigned to: User @task.AssignedToUserId (User not found)
                                         </p>
                                     }
                                 </div>

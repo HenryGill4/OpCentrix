@@ -184,15 +184,21 @@ public class AdminDashboardModel : PageModel
             .Take(10)
             .ToListAsync();
 
-        // Overdue tasks
-        OverdueTasksList = await tasksQuery
+        // Overdue tasks with user information
+        OverdueTasksList = await _context.CrmTasks
+            .Include(t => t.Account)
+            .Include(t => t.Contact)
+            .Include(t => t.AssignedToUser)
             .Where(t => t.DueAt.HasValue && t.DueAt.Value < now && t.Status != "Completed")
             .OrderBy(t => t.DueAt)
             .Take(15)
             .ToListAsync();
 
-        // High priority tasks
-        HighPriorityTasksList = await tasksQuery
+        // High priority tasks with user information
+        HighPriorityTasksList = await _context.CrmTasks
+            .Include(t => t.Account)
+            .Include(t => t.Contact)
+            .Include(t => t.AssignedToUser)
             .Where(t => t.Priority >= 4 && t.Status != "Completed")
             .OrderByDescending(t => t.Priority)
             .ThenBy(t => t.DueAt)
