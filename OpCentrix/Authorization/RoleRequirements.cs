@@ -244,4 +244,67 @@ namespace OpCentrix.Authorization
             }
         }
     }
+
+    /// <summary>
+    /// Laser Engraving access for firearms & suppressor serialization
+    /// Requires specialized authorization due to ATF compliance requirements
+    /// </summary>
+    public class LaserEngravingAccessAttribute : Attribute, IAuthorizationFilter
+    {
+        public void OnAuthorization(AuthorizationFilterContext context)
+        {
+            try
+            {
+                var user = context.HttpContext.User;
+                var logger = context.HttpContext.RequestServices
+                    .GetService<Microsoft.Extensions.Logging.ILogger<LaserEngravingAccessAttribute>>();
+
+                if (!user.Identity?.IsAuthenticated == true)
+                {
+                    logger?.LogWarning("LaserEngraving access denied - user not authenticated");
+                    context.Result = new RedirectToPageResult("/Account/Login", new { returnUrl = context.HttpContext.Request.Path });
+                    return;
+                }
+
+                var userName = user.Identity?.Name ?? "Unknown";
+                var userIdClaim = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "";
+                
+                var userRole = user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ??
+                              user.FindFirst("Role")?.Value ?? "";
+
+                logger?.LogInformation("LaserEngraving access check - User: {UserName} (ID: {UserId}), Role: {UserRole}", 
+                    userName, userIdClaim, userRole);
+
+                // Restricted access - only Admin, Manager, and specialized operators
+                var allowedRoles = new[] { "Admin", "Manager", "LaserEngravingSpecialist", "BTSpecialist" };
+                
+                if (string.IsNullOrEmpty(userRole))
+                {
+                    logger?.LogError("LaserEngraving access denied - no role claim found for user {UserName}", userName);
+                    context.Result = new RedirectToPageResult("/Account/AccessDenied");
+                    return;
+                }
+                
+                if (!allowedRoles.Contains(userRole))
+                {
+                    logger?.LogWarning("LaserEngraving access denied - user {UserName} has role '{UserRole}' which is not in allowed roles: {AllowedRoles}", 
+                        userName, userRole, string.Join(", ", allowedRoles));
+                    context.Result = new RedirectToPageResult("/Account/AccessDenied");
+                    return;
+                }
+
+                logger?.LogInformation("LaserEngraving access granted for user {UserName} with role {UserRole} - ATF compliance required", userName, userRole);
+            }
+            catch (Exception ex)
+            {
+                var logger = context.HttpContext.RequestServices
+                    .GetService<Microsoft.Extensions.Logging.ILogger<LaserEngravingAccessAttribute>>();
+                    
+                logger?.LogError(ex, "Error in LaserEngravingAccessAttribute authorization");
+                
+                // Fail safely by denying access
+                context.Result = new RedirectToPageResult("/Account/AccessDenied");
+            }
+        }
+    }
 }

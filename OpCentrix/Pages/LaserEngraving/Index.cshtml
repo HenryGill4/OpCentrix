@@ -1,0 +1,368 @@
+@page
+@model OpCentrix.Pages.LaserEngraving.IndexModel
+@{
+    ViewData["Title"] = "Laser Engraving Department";
+    Layout = "_OperatorLayout";
+}
+
+<div class="container-fluid py-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header Section -->
+        <div class="flex flex-wrap items-center justify-between mb-8 gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Laser Engraving Department</h1>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Serial Number Request & Engraving Operations</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-all">
+                    <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    New Serial Request
+                </button>
+                <button class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-all">
+                    <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    View Records
+                </button>
+            </div>
+        </div>
+
+        <!-- Dashboard Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 transition-colors duration-300">
+                <div class="flex items-center">
+                    <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center text-blue-600 dark:text-blue-400 mr-4">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Serial Requests Today</p>
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100">@Model.TodayRequests</h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 transition-colors duration-300">
+                <div class="flex items-center">
+                    <div class="w-12 h-12 bg-amber-100 dark:bg-amber-900/30 rounded-lg flex items-center justify-center text-amber-600 dark:text-amber-400 mr-4">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Pending Engraving</p>
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100">@Model.PendingJobs</h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 transition-colors duration-300">
+                <div class="flex items-center">
+                    <div class="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center text-green-600 dark:text-green-400 mr-4">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Completed Today</p>
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100">@Model.CompletedToday</h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 transition-colors duration-300">
+                <div class="flex items-center">
+                    <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center text-purple-600 dark:text-purple-400 mr-4">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Units to Mark</p>
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100">@Model.ActiveForms</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Serial Number Request Form -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-colors duration-300">
+                <div class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 px-6 py-4 transition-colors duration-300">
+                    <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100 flex items-center">
+                        <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        Serial Number Request
+                    </h2>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Request serial numbers from compliance department</p>
+                </div>
+                
+                <div class="p-6">
+                    <form class="space-y-4" method="post" asp-page-handler="SubmitRequest">
+                        <!-- Model Information -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Model Information</label>
+                            <input type="text" 
+                                   name="ModelInfo" 
+                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200" 
+                                   placeholder="Print-XH 5.56"
+                                   required>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Example: Print-XH 5.56, Suppressor-300BLK, Receiver-308</p>
+                        </div>
+
+                        <!-- Quantity -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Quantity</label>
+                            <input type="number" 
+                                   name="Quantity" 
+                                   min="1" 
+                                   max="500" 
+                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200" 
+                                   value="1"
+                                   required>
+                        </div>
+
+                        <!-- Priority Level -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Priority Level</label>
+                            <select name="Priority" 
+                                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
+                                <option value="Normal">Normal</option>
+                                <option value="Urgent">Urgent</option>
+                                <option value="Rush">Rush</option>
+                            </select>
+                        </div>
+
+                        <!-- Optional Notes -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Additional Notes</label>
+                            <textarea name="Notes" 
+                                      rows="3" 
+                                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200" 
+                                      placeholder="Any special requirements or notes..."></textarea>
+                        </div>
+
+                        <!-- Submission -->
+                        <div class="flex items-center justify-between pt-4">
+                            <div class="text-sm text-gray-600 dark:text-gray-400">
+                                Request will be sent to compliance department
+                            </div>
+                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-all">
+                                Submit Request
+                            </button>
+                        </div>
+                        @Html.AntiForgeryToken()
+                    </form>
+                </div>
+            </div>
+
+            <!-- Recent Requests & Status -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-colors duration-300">
+                <div class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 px-6 py-4 transition-colors duration-300">
+                    <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100 flex items-center">
+                        <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        Recent Requests
+                    </h2>
+                </div>
+                
+                <div class="p-6">
+                    <div class="space-y-4">
+                        <!-- Sample Request 1 -->
+                        <div class="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700 transition-colors duration-300">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <span class="text-sm font-bold text-gray-900 dark:text-gray-100">REQ-2024-001</span>
+                                        <span class="px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 text-xs rounded-full">Pending</span>
+                                    </div>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">Model: Print-XH 5.56</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">Qty: 93 • Priority: Normal</p>
+                                </div>
+                                <button class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm">
+                                    View
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Sample Request 2 -->
+                        <div class="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700 transition-colors duration-300">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <span class="text-sm font-bold text-gray-900 dark:text-gray-100">REQ-2024-002</span>
+                                        <span class="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs rounded-full">In Progress</span>
+                                    </div>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">Model: Suppressor-300BLK</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">Qty: 25 • Priority: Rush</p>
+                                </div>
+                                <button class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm">
+                                    View
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Sample Request 3 -->
+                        <div class="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700 transition-colors duration-300">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <span class="text-sm font-bold text-gray-900 dark:text-gray-100">REQ-2024-003</span>
+                                        <span class="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs rounded-full">Completed</span>
+                                    </div>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">Model: Receiver-308</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">Qty: 15 • Priority: Normal</p>
+                                </div>
+                                <button class="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 text-sm">
+                                    View
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- View All Link -->
+                    <div class="mt-6 text-center">
+                        <button class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium">
+                            View All Requests ?
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Laser Equipment Status -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden mb-8 transition-colors duration-300">
+            <div class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 px-6 py-4 transition-colors duration-300">
+                <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">Laser Engraving Equipment</h2>
+            </div>
+            
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Laser 1 - Operational -->
+                    <div class="border border-gray-200 dark:border-gray-600 rounded-xl p-4 bg-green-50 dark:bg-green-900/20 border-l-4 border-l-green-400 transition-colors duration-300">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 bg-green-500 rounded-full mr-3 animate-pulse"></div>
+                                <h3 class="font-semibold text-green-900 dark:text-green-100">LASER-01 - Fiber Laser</h3>
+                            </div>
+                            <span class="text-sm text-green-700 dark:text-green-300 font-medium bg-green-100 dark:bg-green-900/40 px-2 py-1 rounded-full">Operational</span>
+                        </div>
+                        <div class="text-sm text-green-800 dark:text-green-200">
+                            <p><span class="font-medium">Power:</span> 20W IPG Fiber</p>
+                            <p><span class="font-medium">Material:</span> Titanium, Steel, Aluminum</p>
+                            <p><span class="font-medium">Queue:</span> 3 jobs pending</p>
+                            <p class="text-xs mt-2 text-green-600 dark:text-green-400">Last maintenance: 2 days ago</p>
+                        </div>
+                    </div>
+
+                    <!-- Laser 2 - In Use -->
+                    <div class="border border-gray-200 dark:border-gray-600 rounded-xl p-4 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-l-blue-400 transition-colors duration-300">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 bg-blue-500 rounded-full mr-3 animate-pulse"></div>
+                                <h3 class="font-semibold text-blue-900 dark:text-blue-100">LASER-02 - CO2 Laser</h3>
+                            </div>
+                            <span class="text-sm text-blue-700 dark:text-blue-300 font-medium bg-blue-100 dark:bg-blue-900/40 px-2 py-1 rounded-full">In Use</span>
+                        </div>
+                        <div class="text-sm text-blue-800 dark:text-blue-200">
+                            <p><span class="font-medium">Power:</span> 40W CO2</p>
+                            <p><span class="font-medium">Material:</span> Polymer, Coated Metals</p>
+                            <p><span class="font-medium">Current Job:</span> Print-XH 5.56 (25 units)</p>
+                            <p class="text-xs mt-2 text-blue-600 dark:text-blue-400">ETC: 45 minutes</p>
+                        </div>
+                    </div>
+
+                    <!-- Laser 3 - Maintenance -->
+                    <div class="border border-gray-200 dark:border-gray-600 rounded-xl p-4 bg-amber-50 dark:bg-amber-900/20 border-l-4 border-l-amber-400 transition-colors duration-300">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 bg-amber-500 rounded-full mr-3"></div>
+                                <h3 class="font-semibold text-amber-900 dark:text-amber-100">LASER-03 - UV Laser</h3>
+                            </div>
+                            <span class="text-sm text-amber-700 dark:text-amber-300 font-medium bg-amber-100 dark:bg-amber-900/40 px-2 py-1 rounded-full">Maintenance</span>
+                        </div>
+                        <div class="text-sm text-amber-800 dark:text-amber-200">
+                            <p><span class="font-medium">Power:</span> 5W UV Diode</p>
+                            <p><span class="font-medium">Material:</span> Precision Marking</p>
+                            <p><span class="font-medium">Status:</span> Calibration in progress</p>
+                            <p class="text-xs mt-2 text-amber-600 dark:text-amber-400">Available: Tomorrow 8:00 AM</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upcoming Demo Feature Notes -->
+        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6 transition-colors duration-300">
+            <h3 class="text-lg font-bold text-blue-900 dark:text-blue-100 mb-4 flex items-center">
+                <svg class="w-6 h-6 text-blue-600 dark:text-blue-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+                Demo Features - Coming Soon
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="bg-white dark:bg-blue-800/20 rounded-lg p-4 border border-blue-200 dark:border-blue-700 transition-colors duration-300">
+                    <h4 class="font-semibold text-blue-900 dark:text-blue-100 mb-2">Serial Number Generation</h4>
+                    <p class="text-sm text-blue-700 dark:text-blue-200">Automated serial number assignment with ATF format compliance and duplicate prevention.</p>
+                </div>
+                <div class="bg-white dark:bg-blue-800/20 rounded-lg p-4 border border-blue-200 dark:border-blue-700 transition-colors duration-300">
+                    <h4 class="font-semibold text-blue-900 dark:text-blue-100 mb-2">Job Queue Management</h4>
+                    <p class="text-sm text-blue-700 dark:text-blue-200">Priority-based job scheduling with material-specific laser assignments and time estimation.</p>
+                </div>
+                <div class="bg-white dark:bg-blue-800/20 rounded-lg p-4 border border-blue-200 dark:border-blue-700 transition-colors duration-300">
+                    <h4 class="font-semibold text-blue-900 dark:text-blue-100 mb-2">Compliance Tracking</h4>
+                    <p class="text-sm text-blue-700 dark:text-blue-200">Full audit trail with ATF form integration, FFL verification, and ITAR export control monitoring.</p>
+                </div>
+                <div class="bg-white dark:bg-blue-800/20 rounded-lg p-4 border border-blue-200 dark:border-blue-700 transition-colors duration-300">
+                    <h4 class="font-semibold text-blue-900 dark:text-blue-100 mb-2">Quality Control</h4>
+                    <p class="text-sm text-blue-700 dark:text-blue-200">Engraving depth verification, character legibility checks, and post-process inspection workflows.</p>
+                </div>
+                <div class="bg-white dark:bg-blue-800/20 rounded-lg p-4 border border-blue-200 dark:border-blue-700 transition-colors duration-300">
+                    <h4 class="font-semibold text-blue-900 dark:text-blue-100 mb-2">Equipment Monitoring</h4>
+                    <p class="text-sm text-blue-700 dark:text-blue-200">Real-time laser parameter monitoring, maintenance scheduling, and consumables tracking.</p>
+                </div>
+                <div class="bg-white dark:bg-blue-800/20 rounded-lg p-4 border border-blue-200 dark:border-blue-700 transition-colors duration-300">
+                    <h4 class="font-semibold text-blue-900 dark:text-blue-100 mb-2">Customer Portal</h4>
+                    <p class="text-sm text-blue-700 dark:text-blue-200">Secure customer access for request status, compliance document uploads, and delivery tracking.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Form validation
+        const form = document.querySelector('form');
+        
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                const modelInfo = form.querySelector('input[name="ModelInfo"]');
+                const quantity = form.querySelector('input[name="Quantity"]');
+                
+                if (!modelInfo.value.trim()) {
+                    e.preventDefault();
+                    alert('Please enter model information.');
+                    modelInfo.focus();
+                    return false;
+                }
+                
+                if (!quantity.value || quantity.value < 1) {
+                    e.preventDefault();
+                    alert('Please enter a valid quantity.');
+                    quantity.focus();
+                    return false;
+                }
+                
+                console.log(`Serial number request submitted: ${modelInfo.value}, Qty: ${quantity.value}`);
+            });
+        }
+    });
+</script>
+}

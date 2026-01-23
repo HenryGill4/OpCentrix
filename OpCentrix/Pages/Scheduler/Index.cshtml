@@ -5,9 +5,10 @@
 @{
     ViewData["Title"] = "Production Scheduler";
     ViewData["Description"] = "Schedule and manage production jobs across all machines";
-    var adminLayout = "~/Pages/Admin/Shared/_AdminLayout.cshtml";
-    var userLayout = "~/Pages/Shared/_UserLayout.cshtml";
-    Layout = (User.IsInRole("Admin") || User.IsInRole("Manager")) ? adminLayout : userLayout;
+    // var adminLayout = "~/Pages/Admin/Shared/_AdminLayout.cshtml";
+    var userLayout = "~/Pages/Shared/_Layout.cshtml";
+    Layout = userLayout;
+    // Layout = (User.IsInRole("Admin") || User.IsInRole("Manager")) ? adminLayout : userLayout;
 
     var zoomLevels = new[] { "2month", "month", "week", "12h", "6h", "4h", "2h", "1h", "30min", "15min" };
     var zoomParam = Request.Query["zoom"].FirstOrDefault() ?? "week";
