@@ -225,9 +225,19 @@ builder.Services.AddScoped<OpCentrix.Services.Admin.IJobArchiveService, OpCentri
 // FIXED: Add missing OPC UA service
 builder.Services.AddScoped<IOpcUaService, OpcUaService>();
 
+// NEW: Machine Provider System (Phase 1)
+builder.Services.AddSingleton<OpCentrix.Services.MachineProviders.MockMachineProvider>();
+builder.Services.AddSingleton<OpCentrix.Services.MachineProviders.IMachineProviderFactory, OpCentrix.Services.MachineProviders.MachineProviderFactory>();
+builder.Services.Configure<OpCentrix.Services.MachineProviders.MachineSyncOptions>(
+    builder.Configuration.GetSection(OpCentrix.Services.MachineProviders.MachineSyncOptions.SectionName));
+builder.Services.AddHostedService<OpCentrix.Services.MachineProviders.MachineSyncService>();
+
 // FIXED: Add missing multi-stage job service with correct namespace
 builder.Services.AddScoped<IMultiStageJobService, MultiStageJobService>();
 builder.Services.AddScoped<IStagePermissionService, StagePermissionService>();
+
+// NEW: Stage Duration Learning Service (Phase 3 - Auto-refine estimates from actuals)
+builder.Services.AddScoped<OpCentrix.Services.Learning.IPartStageLearningService, OpCentrix.Services.Learning.PartStageLearningService>();
 
 // Task 6: Enhanced machine management services
 builder.Services.AddScoped<IMaterialService, MaterialService>();

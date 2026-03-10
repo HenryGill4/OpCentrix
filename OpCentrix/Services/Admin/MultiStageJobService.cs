@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using OpCentrix.Data;
 using OpCentrix.Models;
 using OpCentrix.Models.JobStaging;
+using OpCentrix.Services.Learning;
 using System.ComponentModel.DataAnnotations;
 
 namespace OpCentrix.Services.Admin;
@@ -28,11 +29,16 @@ public class MultiStageJobService : IMultiStageJobService
 {
     private readonly SchedulerContext _context;
     private readonly ILogger<MultiStageJobService> _logger;
+    private readonly IPartStageLearningService? _learningService;
 
-    public MultiStageJobService(SchedulerContext context, ILogger<MultiStageJobService> logger)
+    public MultiStageJobService(
+        SchedulerContext context, 
+        ILogger<MultiStageJobService> logger,
+        IPartStageLearningService? learningService = null)
     {
         _context = context;
         _logger = logger;
+        _learningService = learningService;
     }
 
     public async Task<List<JobStage>> GetJobStagesAsync(int jobId)
@@ -176,7 +182,30 @@ public class MultiStageJobService : IMultiStageJobService
             stage.ActualEnd = DateTime.UtcNow;
             stage.ProgressPercent = 100;
             
+            if (!string.IsNullOrWhiteSpace(notes))
+            {
+                stage.Notes = string.IsNullOrWhiteSpace(stage.Notes) 
+                    ? notes 
+                    : $"{stage.Notes}\n{notes}";
+            }
+            
             await _context.SaveChangesAsync();
+
+            // Trigger learning service to record completion and refine estimates
+            if (_learningService != null)
+            {
+                try
+                {
+                    await _learningService.RecordCompletionAsync(stageId);
+                    _logger.LogInformation("[LEARNING] Triggered learning for completed stage {StageId}", stageId);
+                }
+                catch (Exception learningEx)
+                {
+                    // Learning failure should not fail stage completion
+                    _logger.LogWarning(learningEx, "[LEARNING] Failed to record learning for stage {StageId}", stageId);
+                }
+            }
+
             return true;
         }
         catch (Exception ex)

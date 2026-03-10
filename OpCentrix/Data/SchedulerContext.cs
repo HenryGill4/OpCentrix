@@ -3,6 +3,7 @@ using OpCentrix.Models;
 using OpCentrix.Models.CRM;
 using OpCentrix.Models.JobStaging;
 using OpCentrix.Models.Maintenance;
+using OpCentrix.Models.MachineProviders;
 
 namespace OpCentrix.Data
 {
@@ -20,6 +21,10 @@ namespace OpCentrix.Data
         public DbSet<User> Users { get; set; }
         public DbSet<UserSettings> UserSettings { get; set; }
         public DbSet<JobLogEntry> JobLogEntries { get; set; }
+
+        // Machine Provider System (Phase 1)
+        public DbSet<MachineConnectionSettings> MachineConnectionSettings { get; set; }
+        public DbSet<MachineStateRecord> MachineStateRecords { get; set; }
 
         // Task 9: Enhanced scheduler features
         public DbSet<JobNote> JobNotes { get; set; }
@@ -155,6 +160,9 @@ namespace OpCentrix.Data
 
             // Configure admin entities
             ConfigureAdminEntities(modelBuilder);
+
+            // Configure Machine Provider entities (Phase 1)
+            ConfigureMachineProviderEntities(modelBuilder);
 
             // PHASE 3: Configure Part Form Refactor entities
             ConfigurePartFormRefactorEntities(modelBuilder);
@@ -1678,6 +1686,67 @@ namespace OpCentrix.Data
                 entity.HasIndex(e => e.CurrentStage);
                 entity.HasIndex(e => e.QualityStatus);
                 entity.HasIndex(e => e.CreatedDate);
+            });
+        }
+
+        private void ConfigureMachineProviderEntities(ModelBuilder modelBuilder)
+        {
+            // Configure MachineConnectionSettings entity
+            modelBuilder.Entity<MachineConnectionSettings>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.MachineId).IsRequired();
+                entity.Property(e => e.ProviderType).IsRequired().HasMaxLength(50).HasDefaultValue("Mock");
+                entity.Property(e => e.ConnectionConfigJson).HasColumnType("TEXT").HasDefaultValue("{}");
+                entity.Property(e => e.IsEnabled).HasDefaultValue(true);
+                entity.Property(e => e.PollIntervalSeconds).HasDefaultValue(30);
+                entity.Property(e => e.ConsecutiveFailures).HasDefaultValue(0);
+                entity.Property(e => e.MaxConsecutiveFailures).HasDefaultValue(10);
+                entity.Property(e => e.LastError).HasMaxLength(500);
+                entity.Property(e => e.CreatedBy).IsRequired().HasMaxLength(100).HasDefaultValue("System");
+                entity.Property(e => e.LastModifiedBy).IsRequired().HasMaxLength(100).HasDefaultValue("System");
+                entity.Property(e => e.CreatedDate).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.LastModifiedDate).HasDefaultValueSql("datetime('now')");
+
+                // Foreign key to Machine (int PK)
+                entity.HasOne(e => e.Machine)
+                    .WithMany()
+                    .HasForeignKey(e => e.MachineId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Indexes
+                entity.HasIndex(e => e.MachineId).IsUnique(); // One config per machine
+                entity.HasIndex(e => e.ProviderType);
+                entity.HasIndex(e => e.IsEnabled);
+            });
+
+            // Configure MachineStateRecord entity
+            modelBuilder.Entity<MachineStateRecord>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.MachineId).IsRequired();
+                entity.Property(e => e.Status).IsRequired().HasMaxLength(50).HasDefaultValue("Unknown");
+                entity.Property(e => e.CurrentJobReference).HasMaxLength(100);
+                entity.Property(e => e.AlarmsSnapshot).HasMaxLength(1000);
+                entity.Property(e => e.StateDataJson).HasColumnType("TEXT");
+                entity.Property(e => e.ProviderType).HasMaxLength(50).HasDefaultValue("Unknown");
+                entity.Property(e => e.PreviousStatus).HasMaxLength(50);
+                entity.Property(e => e.IsStateChange).HasDefaultValue(false);
+                entity.Property(e => e.IsConnected).HasDefaultValue(true);
+                entity.Property(e => e.Timestamp).IsRequired().HasDefaultValueSql("datetime('now')");
+
+                // Foreign key to Machine (int PK)
+                entity.HasOne(e => e.Machine)
+                    .WithMany()
+                    .HasForeignKey(e => e.MachineId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Indexes for querying state history
+                entity.HasIndex(e => e.MachineId);
+                entity.HasIndex(e => e.Timestamp);
+                entity.HasIndex(e => new { e.MachineId, e.Timestamp });
+                entity.HasIndex(e => e.IsStateChange);
+                entity.HasIndex(e => e.Status);
             });
         }
 

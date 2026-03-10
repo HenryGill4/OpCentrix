@@ -175,6 +175,39 @@ namespace OpCentrix.Models
         
         #endregion
         
+        #region Stage Duration Learning
+        
+        /// <summary>
+        /// Rolling weighted average of actual stage durations (EMA with ?=0.3)
+        /// Updated automatically when stages complete via IPartStageLearningService
+        /// </summary>
+        public double? ActualAverageDurationHours { get; set; }
+        
+        /// <summary>
+        /// Number of completed stage executions used for learning
+        /// Minimum of 3 samples recommended before trusting auto-estimates
+        /// </summary>
+        public int ActualSampleCount { get; set; } = 0;
+        
+        /// <summary>
+        /// Most recent actual duration from the last completed stage execution
+        /// </summary>
+        public double? LastActualDurationHours { get; set; }
+        
+        /// <summary>
+        /// Source of the current EstimatedHours value
+        /// "Manual" = set by admin, "Auto" = calculated from actuals, "Default" = stage default
+        /// </summary>
+        [StringLength(20)]
+        public string EstimateSource { get; set; } = "Manual";
+        
+        /// <summary>
+        /// Timestamp of the last automatic estimate refinement
+        /// </summary>
+        public DateTime? EstimateLastUpdated { get; set; }
+        
+        #endregion
+        
         #region Audit Fields
         
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
