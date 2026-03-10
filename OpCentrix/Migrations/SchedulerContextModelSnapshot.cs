@@ -1765,6 +1765,137 @@ namespace OpCentrix.Migrations
                 {
                     b.Navigation("Settings");
                 });
+
+            modelBuilder.Entity("OpCentrix.Models.MachineProviders.MachineConnectionSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("MachineId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProviderType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasDefaultValue("Mock")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RestApiBaseUrl")
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OAuthClientId")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OAuthClientSecretEncrypted")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OpcUaEndpointUrl")
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OpcUaUsername")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OpcUaPasswordHash")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("JobControlEnabled")
+                        .HasDefaultValue(false)
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("PollIntervalSeconds")
+                        .HasDefaultValue(30)
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasDefaultValue(true)
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("LastSuccessfulSync")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastSyncError")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ConsecutiveFailures")
+                        .HasDefaultValue(0)
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastModifiedDate")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+                    b.HasIndex("MachineId").IsUnique();
+                    b.ToTable("MachineConnectionSettings");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.MachineProviders.MachineStateRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("MachineId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProviderType")
+                        .IsRequired()
+                        .HasDefaultValue("")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasDefaultValue("Unknown")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("BuildProgressPercent")
+                        .HasDefaultValue(0.0)
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("ActiveJobId")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ActiveJobName")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("EstimatedCompletion")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TelemetryJson")
+                        .IsRequired()
+                        .HasDefaultValue("{}")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AlertsJson")
+                        .IsRequired()
+                        .HasDefaultValue("[]")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("RecordedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+                    b.HasIndex("MachineId").IsUnique();
+                    b.HasIndex("RecordedAt");
+                    b.ToTable("MachineStateRecords");
+                });
+
 #pragma warning restore 612, 618
         }
     }

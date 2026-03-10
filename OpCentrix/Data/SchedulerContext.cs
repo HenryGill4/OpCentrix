@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OpCentrix.Models;
+using OpCentrix.Models.MachineProviders;
 
 namespace OpCentrix.Data
 {
@@ -28,6 +29,10 @@ namespace OpCentrix.Data
         public DbSet<BuildJob> BuildJobs { get; set; }
         public DbSet<BuildJobPart> BuildJobParts { get; set; }
         public DbSet<DelayLog> DelayLogs { get; set; }
+
+        // Machine provider tables
+        public DbSet<MachineConnectionSettings> MachineConnectionSettings { get; set; }
+        public DbSet<MachineStateRecord> MachineStateRecords { get; set; }
 
         // NEW: Department-specific operations tables - TEMPORARILY COMMENTED OUT
         // public DbSet<CoatingOperation> CoatingOperations { get; set; }
@@ -794,6 +799,46 @@ namespace OpCentrix.Data
             
             #endregion
             */
+
+            #region MachineConnectionSettings Configuration
+
+            modelBuilder.Entity<MachineConnectionSettings>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.MachineId).IsUnique();
+                entity.Property(e => e.MachineId).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.ProviderType).HasMaxLength(50).HasDefaultValue("Mock");
+                entity.Property(e => e.RestApiBaseUrl).HasMaxLength(300);
+                entity.Property(e => e.OAuthClientId).HasMaxLength(200);
+                entity.Property(e => e.OAuthClientSecretEncrypted).HasMaxLength(500);
+                entity.Property(e => e.OpcUaEndpointUrl).HasMaxLength(300);
+                entity.Property(e => e.OpcUaUsername).HasMaxLength(100);
+                entity.Property(e => e.OpcUaPasswordHash).HasMaxLength(200);
+                entity.Property(e => e.LastSyncError).HasMaxLength(500);
+                entity.Property(e => e.PollIntervalSeconds).HasDefaultValue(30);
+            });
+
+            #endregion
+
+            #region MachineStateRecord Configuration
+
+            modelBuilder.Entity<MachineStateRecord>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                // One row per machine — queried by MachineId frequently
+                entity.HasIndex(e => e.MachineId).IsUnique();
+                entity.HasIndex(e => e.RecordedAt);
+                entity.Property(e => e.MachineId).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.ProviderType).HasMaxLength(50);
+                entity.Property(e => e.ActiveJobId).HasMaxLength(200);
+                entity.Property(e => e.ActiveJobName).HasMaxLength(200);
+                entity.Property(e => e.TelemetryJson).HasDefaultValue("{}");
+                entity.Property(e => e.AlertsJson).HasDefaultValue("[]");
+                // Store the enum as a string for readability in the DB
+                entity.Property(e => e.State).HasConversion<string>();
+            });
+
+            #endregion
         }
 
         /// <summary>

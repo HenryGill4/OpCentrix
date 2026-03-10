@@ -4,6 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 using OpCentrix.Data;
 using OpCentrix.Models;
 using OpCentrix.Services;
+using OpCentrix.Services.MachineProviders;
+using OpCentrix.Services.MachineProviders.Eos;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using OpCentrix.Authorization;
 using Microsoft.AspNetCore.Authorization;
@@ -101,8 +103,28 @@ builder.Services.AddScoped<IPrintTrackingService, PrintTrackingService>();
 // Register database validation service
 builder.Services.AddScoped<DatabaseValidationService>();
 
-// Background services for OPC UA monitoring (if needed in future)
-// builder.Services.AddHostedService<OpcUaMonitoringService>();
+// ── Machine Provider Layer ────────────────────────────────────────────────────
+// Universal abstraction over any machine brand (EOS, future vendors).
+// Add a new IMachineProvider implementation here when onboarding new hardware.
+
+// EOS M4 Onyx provider and its internal clients.
+// AddHttpClient<EosRestClient> registers EosRestClient as a typed HTTP client
+// (Transient, with a managed HttpClient injected by IHttpClientFactory).
+builder.Services.AddHttpClient<EosRestClient>();
+builder.Services.AddTransient<EosOpcUaClient>();
+builder.Services.AddTransient<EosMachineProvider>();
+
+// Mock provider for development / pre-EDN testing
+builder.Services.AddTransient<MockMachineProvider>();
+
+// Factory that selects the right provider by ProviderType string
+builder.Services.AddSingleton<MachineProviderFactory>();
+
+// Background sync service — polls machines and writes MachineStateRecords
+builder.Services.AddHostedService<MachineSyncService>();
+
+// SignalR — used by MachineSyncService (Phase 2) to broadcast live state to the UI
+builder.Services.AddSignalR();
 
 // Logging configuration
 builder.Logging.ClearProviders();

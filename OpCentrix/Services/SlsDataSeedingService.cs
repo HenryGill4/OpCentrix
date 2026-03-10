@@ -1,5 +1,6 @@
 ﻿using OpCentrix.Data;
 using OpCentrix.Models;
+using OpCentrix.Models.MachineProviders;
 using Microsoft.EntityFrameworkCore;
 
 namespace OpCentrix.Services
@@ -26,6 +27,7 @@ namespace OpCentrix.Services
 
                 // Seed core data first
                 await SeedSlsMachinesAsync();
+                await SeedMachineConnectionSettingsAsync();
                 await SeedUsersAsync();
                 await SeedPartsAsync();
 
@@ -140,6 +142,51 @@ namespace OpCentrix.Services
 
             await _context.SlsMachines.AddRangeAsync(machines);
             _logger.LogInformation("Seeded {Count} SLS machines with basic configuration", machines.Count);
+        }
+
+        private async Task SeedMachineConnectionSettingsAsync()
+        {
+            if (await _context.MachineConnectionSettings.AnyAsync())
+                return;
+
+            // Default all machines to the Mock provider so the sync service
+            // starts producing data immediately without any hardware.
+            // Change ProviderType to "EOS" and fill in the REST/OPC UA fields
+            // once EOSCONNECT credentials are available.
+            var settings = new List<MachineConnectionSettings>
+            {
+                new()
+                {
+                    MachineId = "TI1",
+                    ProviderType = "Mock",
+                    PollIntervalSeconds = 30,
+                    IsEnabled = true,
+                    CreatedDate = DateTime.UtcNow,
+                    LastModifiedDate = DateTime.UtcNow
+                },
+                new()
+                {
+                    MachineId = "TI2",
+                    ProviderType = "Mock",
+                    PollIntervalSeconds = 30,
+                    IsEnabled = true,
+                    CreatedDate = DateTime.UtcNow,
+                    LastModifiedDate = DateTime.UtcNow
+                },
+                new()
+                {
+                    MachineId = "INC",
+                    ProviderType = "Mock",
+                    PollIntervalSeconds = 30,
+                    IsEnabled = true,
+                    CreatedDate = DateTime.UtcNow,
+                    LastModifiedDate = DateTime.UtcNow
+                }
+            };
+
+            await _context.MachineConnectionSettings.AddRangeAsync(settings);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Seeded {Count} machine connection settings (Mock provider)", settings.Count);
         }
 
         public async Task SeedPartsAsync()
