@@ -227,6 +227,7 @@ builder.Services.AddScoped<IOpcUaService, OpcUaService>();
 
 // NEW: Machine Provider System (Phase 1)
 builder.Services.AddSingleton<OpCentrix.Services.MachineProviders.MockMachineProvider>();
+builder.Services.AddSingleton<OpCentrix.Services.MachineProviders.Eos.EosMachineProvider>();
 builder.Services.AddSingleton<OpCentrix.Services.MachineProviders.IMachineProviderFactory, OpCentrix.Services.MachineProviders.MachineProviderFactory>();
 builder.Services.Configure<OpCentrix.Services.MachineProviders.MachineSyncOptions>(
     builder.Configuration.GetSection(OpCentrix.Services.MachineProviders.MachineSyncOptions.SectionName));

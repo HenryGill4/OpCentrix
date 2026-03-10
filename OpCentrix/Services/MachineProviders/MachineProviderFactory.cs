@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpCentrix.Data;
 using OpCentrix.Models.MachineProviders;
+using OpCentrix.Services.MachineProviders.Eos;
 
 namespace OpCentrix.Services.MachineProviders;
 
@@ -27,8 +28,8 @@ public class MachineProviderFactory : IMachineProviderFactory
         _providerTypes = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase)
         {
             ["Mock"] = typeof(MockMachineProvider),
+            ["Eos"] = typeof(EosMachineProvider),
             // Future providers:
-            // ["Eos"] = typeof(EosMachineProvider),
             // ["GenericOpcUa"] = typeof(GenericOpcUaProvider),
         };
     }
