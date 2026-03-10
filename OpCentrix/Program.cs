@@ -351,6 +351,10 @@ if (builder.Configuration.GetValue<bool>("EnableMaintenanceBackgroundService", f
     builder.Services.AddHostedService<OpCentrix.Services.Background.MaintenanceBackgroundService>();
 }
 
+// PHASE 4: SignalR for real-time machine state updates
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<OpCentrix.Hubs.IMachineStateNotifier, OpCentrix.Hubs.MachineStateNotifier>();
+
 var app = builder.Build();
 
 // Ensure core manufacturing data (idempotent lightweight seeding)
@@ -425,6 +429,9 @@ app.MapRazorPages();
 
 // FIXED: Map API controllers for Production Stages and other API endpoints  
 app.MapControllers();
+
+// PHASE 4: Map SignalR hub for real-time machine state updates
+app.MapHub<OpCentrix.Hubs.MachineStateHub>("/hubs/machinestate");
 
 app.Run();
 

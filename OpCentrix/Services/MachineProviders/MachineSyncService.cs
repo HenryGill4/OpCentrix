@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpCentrix.Data;
+using OpCentrix.Hubs;
 using OpCentrix.Models;
 using OpCentrix.Models.MachineProviders;
 
@@ -45,24 +46,30 @@ public class MachineSyncOptions
 /// <summary>
 /// Background service that periodically polls machines and syncs their state.
 /// Updates Machine.Status, creates MachineStateRecords, and detects state changes.
+/// Broadcasts changes via SignalR to connected clients.
 /// </summary>
 public class MachineSyncService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<MachineSyncService> _logger;
     private readonly MachineSyncOptions _options;
+    private readonly IMachineStateNotifier _notifier;
 
     // Track last known state for change detection
     private readonly Dictionary<int, MachineStateRecord> _lastKnownStates = new();
+    // Track machine codes for notifications
+    private readonly Dictionary<int, string> _machineCodes = new();
 
     public MachineSyncService(
         IServiceProvider serviceProvider,
         ILogger<MachineSyncService> logger,
-        IOptions<MachineSyncOptions> options)
+        IOptions<MachineSyncOptions> options,
+        IMachineStateNotifier notifier)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
         _options = options.Value;
+        _notifier = notifier;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -167,16 +174,43 @@ public class MachineSyncService : BackgroundService
             if (machine != null)
             {
                 var statusChanged = machine.Status != stateRecord.Status;
+                var wasOffline = machine.Status == "Offline" || machine.Status == "Unknown";
+                var previousStatus = machine.Status;
                 
                 machine.Status = stateRecord.Status;
                 machine.LastStatusUpdate = DateTime.UtcNow;
                 machine.LastModifiedDate = DateTime.UtcNow;
                 machine.LastModifiedBy = "MachineSyncService";
 
+                // Cache machine code for notifications
+                _machineCodes[machineId] = machine.MachineId ?? $"Machine-{machineId}";
+
                 if (statusChanged)
                 {
                     _logger.LogInformation("[SYNC] Machine {MachineId} ({Name}) status changed: {OldStatus} ? {NewStatus}",
                         machine.MachineId, machine.Name, previousState?.Status ?? "Unknown", stateRecord.Status);
+                }
+
+                // Broadcast state update via SignalR
+                var machineCode = _machineCodes.GetValueOrDefault(machineId, $"Machine-{machineId}");
+                var update = MachineStateUpdate.FromMachineStatus(
+                    machineData.Status, 
+                    machineCode, 
+                    statusChanged, 
+                    previousStatus);
+                
+                await _notifier.NotifyMachineStateAsync(update, ct);
+
+                // Send online notification if machine came back online
+                if (wasOffline && stateRecord.IsConnected)
+                {
+                    await _notifier.NotifyMachineOnlineAsync(machineId, machineCode, ct);
+                }
+
+                // Send alarm notifications
+                foreach (var alarm in machineData.Status.Alarms)
+                {
+                    await _notifier.NotifyAlarmAsync(machineId, machineCode, alarm, "Warning", ct);
                 }
             }
 
@@ -212,6 +246,12 @@ public class MachineSyncService : BackgroundService
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "[SYNC] Failed to sync machine {MachineId}", machineId);
+
+            // Get machine code for notification
+            var machineCode = _machineCodes.GetValueOrDefault(machineId, $"Machine-{machineId}");
+
+            // Notify clients of offline status
+            await _notifier.NotifyMachineOfflineAsync(machineId, machineCode, ex.Message, ct);
 
             // Record failure in connection settings
             try
