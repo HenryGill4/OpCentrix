@@ -16,7 +16,7 @@ namespace OpCentrix.Services.MachineProviders.Eos
     /// Replace the TODO markers with real HttpClient calls once an EDN account
     /// or the production machine IP is available.
     /// </summary>
-    internal sealed class EosRestClient : IAsyncDisposable
+    public sealed class EosRestClient : IAsyncDisposable
     {
         private readonly ILogger<EosRestClient> _logger;
         private readonly HttpClient _http;
@@ -167,7 +167,7 @@ namespace OpCentrix.Services.MachineProviders.Eos
         [JsonPropertyName("token_type")]   public string TokenType { get; set; } = "Bearer";
     }
 
-    internal sealed class EosMachineStatusDto
+    public sealed class EosMachineStatusDto
     {
         public string? MachineState { get; set; }       // "Idle", "Building", "Error", etc.
         public string? ActiveJobId { get; set; }
@@ -176,7 +176,7 @@ namespace OpCentrix.Services.MachineProviders.Eos
         public string? SystemMessage { get; set; }
     }
 
-    internal sealed class EosSensorDataDto
+    public sealed class EosSensorDataDto
     {
         public double? BuildChamberTempC { get; set; }
         public double? OxygenContentPpm { get; set; }
@@ -187,7 +187,7 @@ namespace OpCentrix.Services.MachineProviders.Eos
         public int? TotalLayers { get; set; }
     }
 
-    internal sealed class EosJobDto
+    public sealed class EosJobDto
     {
         public string? JobId { get; set; }
         public string? JobName { get; set; }
@@ -200,7 +200,7 @@ namespace OpCentrix.Services.MachineProviders.Eos
         public string? FailureReason { get; set; }
     }
 
-    internal sealed class EosProcessParametersDto
+    public sealed class EosProcessParametersDto
     {
         public string? JobId { get; set; }
         public double? LaserPowerW { get; set; }

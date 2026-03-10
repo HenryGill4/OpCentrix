@@ -96,9 +96,9 @@ namespace OpCentrix.Services
                 if (provider == null) return;
 
                 _providers[config.MachineId] = new MachineProviderState(
-                    Provider: provider,
-                    Config: config,
-                    NextPollAt: DateTime.UtcNow);
+                    provider: provider,
+                    config: config,
+                    nextPollAt: DateTime.UtcNow);
 
                 _logger.LogInformation(
                     "Registered {ProviderType} provider for machine {MachineId}",

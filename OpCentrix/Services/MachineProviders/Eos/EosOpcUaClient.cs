@@ -30,7 +30,7 @@ namespace OpCentrix.Services.MachineProviders.Eos
     ///   ns=2;s=Machine.Control.PauseJob      (requires Control license)
     ///   ns=2;s=Machine.Control.ResumeJob     (requires Control license)
     /// </summary>
-    internal sealed class EosOpcUaClient : IAsyncDisposable
+    public sealed class EosOpcUaClient : IAsyncDisposable
     {
         private readonly ILogger<EosOpcUaClient> _logger;
 
@@ -188,7 +188,7 @@ namespace OpCentrix.Services.MachineProviders.Eos
     }
 
     /// <summary>Telemetry values read from OPC UA sensor nodes.</summary>
-    internal sealed class EosOpcUaTelemetry
+    public sealed class EosOpcUaTelemetry
     {
         public double BuildChamberTempC { get; set; }
         public double OxygenContentPpm { get; set; }
