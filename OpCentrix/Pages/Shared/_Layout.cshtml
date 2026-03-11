@@ -350,13 +350,7 @@
                         </a>
                     }
 
-                    @if (userRole == "QualityInspector" || userRole == "QCSpecialist" || userRole == "Operator")
-                    {
-                        <a href="/QC" class="nav-item @(currentPage?.Contains("QC") == true ? "nav-item-active" : "")">
-                            <i class="fas fa-check-circle text-green-500"></i>
-                            <span>Quality Control</span>
-                        </a>
-                    }
+                    @* QC page is under construction - hidden from nav until implemented *@
 
                     @if (userRole == "ShippingSpecialist" || userRole == "Operator")
                     {
@@ -374,21 +368,7 @@
                         </a>
                     }
 
-                    @if (userRole == "BTSpecialist")
-                    {
-                        <a href="/BT/Dashboard" class="nav-item">
-                            <i class="fas fa-chart-pie text-amber-500"></i>
-                            <span>B&T Operations</span>
-                        </a>
-                        <a href="/BT/SerialNumbers" class="nav-item">
-                            <i class="fas fa-barcode text-amber-500"></i>
-                            <span>Serial Numbers</span>
-                        </a>
-                        <a href="/BT/Compliance" class="nav-item">
-                            <i class="fas fa-shield-alt text-amber-500"></i>
-                            <span>Compliance</span>
-                        </a>
-                    }
+                    @* B&T pages are under construction - hidden from nav until implemented *@
                 }
 
                 @* Management & Admin Sections *@
@@ -431,13 +411,13 @@
                                 <i class="fas fa-paint-brush text-orange-500"></i>
                                 <span>Coating</span>
                             </a>
-                            <a href="/QC" class="nav-subitem @(currentPage?.Contains("QC") == true ? "nav-item-active" : "")">
-                                <i class="fas fa-check-circle text-green-500"></i>
-                                <span>Quality Control</span>
-                            </a>
                             <a href="/Shipping" class="nav-subitem @(currentPage?.Contains("Shipping") == true ? "nav-item-active" : "")">
                                 <i class="fas fa-truck text-indigo-500"></i>
                                 <span>Shipping</span>
+                            </a>
+                            <a href="/Operations/StageDashboard" class="nav-subitem @(currentPage?.Contains("Operations/StageDashboard") == true ? "nav-item-active" : "")">
+                                <i class="fas fa-tasks text-purple-500"></i>
+                                <span>Stage Dashboard</span>
                             </a>
                         </div>
                     </div>
@@ -471,28 +451,50 @@
                         </div>
                     </div>
 
-                    <!-- B&T Manufacturing Section -->
+                    <!-- Machine Integration & Analytics (Phase 1-5 Features) -->
                     @if (userRole == "Admin" || userRole == "Manager")
                     {
-                        <a href="/BT/Dashboard" class="nav-item">
-                            <i class="fas fa-chart-pie text-amber-500"></i>
-                            <span>B&T Operations</span>
-                        </a>
-                        
                         <div class="nav-group">
-                            <button class="nav-group-toggle" onclick="toggleNavGroup('bt-details')">
-                                <i class="fas fa-cog"></i>
-                                <span>B&T Details</span>
-                                <i class="fas fa-chevron-down nav-chevron" id="bt-details-chevron"></i>
+                            <button class="nav-group-toggle" onclick="toggleNavGroup('machine-integration')">
+                                <i class="fas fa-microchip text-cyan-500"></i>
+                                <span>Machine Integration</span>
+                                <i class="fas fa-chevron-down nav-chevron" id="machine-integration-chevron"></i>
                             </button>
-                            <div id="bt-details-group" class="nav-group-content hidden">
-                                <a href="/BT/SerialNumbers" class="nav-subitem">
-                                    <i class="fas fa-barcode"></i>
-                                    <span>Serial Numbers</span>
+                            <div id="machine-integration-group" class="nav-group-content hidden">
+                                <a href="/PrintTracking" class="nav-subitem @(currentPage?.Contains("PrintTracking") == true ? "nav-item-active" : "")">
+                                    <i class="fas fa-broadcast-tower text-blue-500"></i>
+                                    <span>Live Machine Status</span>
                                 </a>
-                                <a href="/BT/Compliance" class="nav-subitem">
-                                    <i class="fas fa-shield-alt"></i>
-                                    <span>Compliance</span>
+                                <a href="/Operations/StageDashboard" class="nav-subitem @(currentPage?.Contains("StageDashboard") == true ? "nav-item-active" : "")">
+                                    <i class="fas fa-chart-line text-green-500"></i>
+                                    <span>Stage Performance</span>
+                                </a>
+                                <a href="/Analytics/BuildTimeAnalytics" class="nav-subitem @(currentPage?.Contains("BuildTimeAnalytics") == true ? "nav-item-active" : "")">
+                                    <i class="fas fa-clock text-purple-500"></i>
+                                    <span>Build Time Analytics</span>
+                                </a>
+                                <a href="/Analytics/Dashboard" class="nav-subitem @(currentPage?.Contains("Analytics/Dashboard") == true ? "nav-item-active" : "")">
+                                    <i class="fas fa-tachometer-alt text-indigo-500"></i>
+                                    <span>Analytics Dashboard</span>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- MES Operations -->
+                        <div class="nav-group">
+                            <button class="nav-group-toggle" onclick="toggleNavGroup('mes-operations')">
+                                <i class="fas fa-industry text-teal-500"></i>
+                                <span>MES Operations</span>
+                                <i class="fas fa-chevron-down nav-chevron" id="mes-operations-chevron"></i>
+                            </button>
+                            <div id="mes-operations-group" class="nav-group-content hidden">
+                                <a href="/Builds" class="nav-subitem @(currentPage?.Contains("Builds") == true ? "nav-item-active" : "")">
+                                    <i class="fas fa-cubes text-blue-500"></i>
+                                    <span>Build Planning</span>
+                                </a>
+                                <a href="/QC" class="nav-subitem @(currentPage?.Contains("QC") == true ? "nav-item-active" : "")">
+                                    <i class="fas fa-clipboard-check text-green-500"></i>
+                                    <span>QC Workflow</span>
                                 </a>
                             </div>
                         </div>

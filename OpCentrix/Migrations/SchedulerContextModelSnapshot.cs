@@ -1054,6 +1054,174 @@ namespace OpCentrix.Migrations
                     b.ToTable("BuildJobParts");
                 });
 
+            modelBuilder.Entity("OpCentrix.Models.BuildPackage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("BuildFileHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BuildFileName")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BuildFilePath")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("BuildFileSizeBytes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("BuildFileUploadedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double?>("BuildHeightMm")
+                        .HasColumnType("REAL");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("DueDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("EstimatedBuildHours")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("EstimatedPowderKg")
+                        .HasColumnType("REAL");
+
+                    b.Property<bool>("IsRushJob")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("LastModifiedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("LayerCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double>("LayerThicknessMicrons")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("Material")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PackageNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("PreferredStartDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("ScheduledJobId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Draft");
+
+                    b.Property<string>("SupportComplexity")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Medium");
+
+                    b.Property<string>("TargetMachineId")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("PackageNumber")
+                        .IsUnique();
+
+                    b.HasIndex("ScheduledJobId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("TargetMachineId");
+
+                    b.ToTable("BuildPackages");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.BuildPackagePart", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BuildPackageId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double>("EstimatedHours")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Orientation")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Flat");
+
+                    b.Property<int>("PartId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("PositionIndex")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SupportType")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BuildPackageId");
+
+                    b.HasIndex("PartId");
+
+                    b.ToTable("BuildPackageParts");
+                });
+
             modelBuilder.Entity("OpCentrix.Models.BuildTimeLearningData", b =>
                 {
                     b.Property<int>("Id")
@@ -5260,6 +5428,12 @@ namespace OpCentrix.Migrations
                         .HasColumnType("TEXT")
                         .HasDefaultValueSql("datetime('now')");
 
+                    b.Property<double?>("DepowderingDurationHours")
+                        .HasColumnType("REAL");
+
+                    b.Property<int?>("DepowderingPartsPerBatch")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -5272,6 +5446,12 @@ namespace OpCentrix.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("EnableTripleStack")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double?>("HeatTreatmentDurationHours")
+                        .HasColumnType("REAL");
+
+                    b.Property<int?>("HeatTreatmentPartsPerBatch")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsActive")
@@ -5333,11 +5513,23 @@ namespace OpCentrix.Migrations
                     b.Property<double?>("SingleStackDurationHours")
                         .HasColumnType("REAL");
 
+                    b.Property<double?>("SlsBuildDurationHours")
+                        .HasColumnType("REAL");
+
+                    b.Property<int?>("SlsPartsPerBuild")
+                        .HasColumnType("INTEGER");
+
                     b.Property<double?>("StageEstimateSingle")
                         .HasColumnType("REAL");
 
                     b.Property<double?>("TripleStackDurationHours")
                         .HasColumnType("REAL");
+
+                    b.Property<double?>("WireEdmDurationHours")
+                        .HasColumnType("REAL");
+
+                    b.Property<int?>("WireEdmPartsPerSession")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -7259,6 +7451,190 @@ namespace OpCentrix.Migrations
                     b.ToTable("PrototypeTimeLogs");
                 });
 
+            modelBuilder.Entity("OpCentrix.Models.QCChecklistItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ActualValue")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Visual");
+
+                    b.Property<bool>("IsCritical")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ItemName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("QCInspectionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Result")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("NA");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Specification")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Category");
+
+                    b.HasIndex("QCInspectionId");
+
+                    b.ToTable("QCChecklistItems");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.QCInspection", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("BuildCohortId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("BuildJobId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CorrectiveActions")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("datetime('now')");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DefectsJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double?>("DensityPercent")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("DimensionalResultsJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("FailedQuantity")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("InspectionNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("InspectionType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("InspectorName")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("InspectorUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("JobId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("LastModifiedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PartId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("PassedQuantity")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double?>("QualityScore")
+                        .HasColumnType("REAL");
+
+                    b.Property<int>("ReworkQuantity")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ScrappedQuantity")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Pending");
+
+                    b.Property<double?>("SurfaceRoughnessRa")
+                        .HasColumnType("REAL");
+
+                    b.Property<int>("TotalQuantity")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("VisualInspectionNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BuildJobId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("InspectionNumber")
+                        .IsUnique();
+
+                    b.HasIndex("InspectionType");
+
+                    b.HasIndex("InspectorUserId");
+
+                    b.HasIndex("JobId");
+
+                    b.HasIndex("PartId");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("QCInspections");
+                });
+
             modelBuilder.Entity("OpCentrix.Models.ResourcePool", b =>
                 {
                     b.Property<int>("Id")
@@ -8554,6 +8930,35 @@ namespace OpCentrix.Migrations
                     b.Navigation("BuildJob");
                 });
 
+            modelBuilder.Entity("OpCentrix.Models.BuildPackage", b =>
+                {
+                    b.HasOne("OpCentrix.Models.Job", "ScheduledJob")
+                        .WithMany()
+                        .HasForeignKey("ScheduledJobId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("ScheduledJob");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.BuildPackagePart", b =>
+                {
+                    b.HasOne("OpCentrix.Models.BuildPackage", "BuildPackage")
+                        .WithMany("Parts")
+                        .HasForeignKey("BuildPackageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("OpCentrix.Models.Part", "Part")
+                        .WithMany()
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("BuildPackage");
+
+                    b.Navigation("Part");
+                });
+
             modelBuilder.Entity("OpCentrix.Models.BuildTimeLearningData", b =>
                 {
                     b.HasOne("OpCentrix.Models.BuildJob", "BuildJob")
@@ -9231,6 +9636,49 @@ namespace OpCentrix.Migrations
                     b.Navigation("ProductionStageExecution");
                 });
 
+            modelBuilder.Entity("OpCentrix.Models.QCChecklistItem", b =>
+                {
+                    b.HasOne("OpCentrix.Models.QCInspection", "QCInspection")
+                        .WithMany("ChecklistItems")
+                        .HasForeignKey("QCInspectionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("QCInspection");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.QCInspection", b =>
+                {
+                    b.HasOne("OpCentrix.Models.BuildJob", "BuildJob")
+                        .WithMany()
+                        .HasForeignKey("BuildJobId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("OpCentrix.Models.User", "Inspector")
+                        .WithMany()
+                        .HasForeignKey("InspectorUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("OpCentrix.Models.Job", "Job")
+                        .WithMany()
+                        .HasForeignKey("JobId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("OpCentrix.Models.Part", "Part")
+                        .WithMany()
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("BuildJob");
+
+                    b.Navigation("Inspector");
+
+                    b.Navigation("Job");
+
+                    b.Navigation("Part");
+                });
+
             modelBuilder.Entity("OpCentrix.Models.SerialNumber", b =>
                 {
                     b.HasOne("OpCentrix.Models.ComplianceRequirement", "ComplianceRequirement")
@@ -9355,6 +9803,11 @@ namespace OpCentrix.Migrations
                     b.Navigation("BuildJobParts");
 
                     b.Navigation("DelayLogs");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.BuildPackage", b =>
+                {
+                    b.Navigation("Parts");
                 });
 
             modelBuilder.Entity("OpCentrix.Models.CRM.CrmAccount", b =>
@@ -9496,6 +9949,11 @@ namespace OpCentrix.Migrations
                     b.Navigation("AssemblyComponents");
 
                     b.Navigation("StageExecutions");
+                });
+
+            modelBuilder.Entity("OpCentrix.Models.QCInspection", b =>
+                {
+                    b.Navigation("ChecklistItems");
                 });
 
             modelBuilder.Entity("OpCentrix.Models.SerialNumber", b =>

@@ -240,6 +240,14 @@ builder.Services.AddScoped<IStagePermissionService, StagePermissionService>();
 // NEW: Stage Duration Learning Service (Phase 3 - Auto-refine estimates from actuals)
 builder.Services.AddScoped<OpCentrix.Services.Learning.IPartStageLearningService, OpCentrix.Services.Learning.PartStageLearningService>();
 
+// PHASE 5: Intelligent Scheduling - Stacking recommendations and weekend fill
+builder.Services.AddScoped<OpCentrix.Services.Scheduling.IScheduleSuggestionService, OpCentrix.Services.Scheduling.ScheduleSuggestionService>();
+
+// MES Suite Services: Build Planning, QC Inspection, Analytics Dashboard
+builder.Services.AddScoped<IBuildPlanningService, BuildPlanningService>();
+builder.Services.AddScoped<IQCInspectionService, QCInspectionService>();
+builder.Services.AddScoped<IAnalyticsDashboardService, AnalyticsDashboardService>();
+
 // Task 6: Enhanced machine management services
 builder.Services.AddScoped<IMaterialService, MaterialService>();
 

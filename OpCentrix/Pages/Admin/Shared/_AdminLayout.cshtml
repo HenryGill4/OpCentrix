@@ -255,6 +255,40 @@
                     </div>
                 </section>
 
+                @{
+                    // Machine Integration section detection
+                    bool isStageDashboard = path.Contains("StageDashboard", StringComparison.OrdinalIgnoreCase);
+                    bool isBuildTimeAnalytics = path.Contains("BuildTimeAnalytics", StringComparison.OrdinalIgnoreCase);
+                    bool isOperationsDashboard = path.Contains("/Operations/Dashboard", StringComparison.OrdinalIgnoreCase);
+                }
+
+                <!-- Machine Integration & Analytics (Phase 1-5 Features) -->
+                <section class="nav-section" data-key="machine-integration">
+                    <button class="nav-section-toggle w-full flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300" aria-expanded="true" aria-controls="section-machine-integration">
+                        <span>Machine Integration</span>
+                        <span class="chevron text-cyan-400 dark:text-cyan-500"><i class="fa-solid fa-chevron-down"></i></span>
+                    </button>
+                    <div id="section-machine-integration" class="nav-section-content space-y-1">
+                        <a href="/PrintTracking" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @GetActiveClass(isPrintTracking) transition-colors duration-200">
+                            <i class="fa-solid fa-broadcast-tower mr-3 text-blue-500"></i>
+                            Live Machine Status
+                            <span class="ml-auto bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200 text-xs px-2 py-0.5 rounded-full">Live</span>
+                        </a>
+                        <a href="/Operations/StageDashboard" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @GetActiveClass(isStageDashboard) transition-colors duration-200">
+                            <i class="fa-solid fa-chart-line mr-3 text-green-500"></i>
+                            Stage Performance
+                        </a>
+                        <a href="/Analytics/BuildTimeAnalytics" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @GetActiveClass(isBuildTimeAnalytics) transition-colors duration-200">
+                            <i class="fa-solid fa-clock mr-3 text-purple-500"></i>
+                            Build Time Analytics
+                        </a>
+                        <a href="/Operations/Dashboard" class="nav-item group flex items-center px-3 py-2 text-sm font-medium rounded-lg @GetActiveClass(isOperationsDashboard) transition-colors duration-200">
+                            <i class="fa-solid fa-gauge-high mr-3 text-orange-500"></i>
+                            Operations Dashboard
+                        </a>
+                    </div>
+                </section>
+
                 @* <!-- Quality Management -->
                 <section class="nav-section" data-key="quality">
                     <button class="nav-section-toggle w-full flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300" aria-expanded="true" aria-controls="section-quality">

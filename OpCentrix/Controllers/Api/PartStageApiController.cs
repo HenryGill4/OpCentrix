@@ -381,6 +381,130 @@ namespace OpCentrix.Controllers.Api
             }
         }
 
+        /// <summary>
+        /// Get stage learning data for a part - shows manual vs auto-learned estimates
+        /// Used by the Parts page to display learning status badges
+        /// </summary>
+        [HttpGet("{partNumber}/stage-learning")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetStageLearningData(string partNumber)
+        {
+            try
+            {
+                var part = await _context.Parts
+                    .FirstOrDefaultAsync(p => p.PartNumber == partNumber);
+
+                if (part == null)
+                {
+                    return Ok(new { 
+                        found = false,
+                        stages = new List<object>()
+                    });
+                }
+
+                var stageRequirements = await _context.PartStageRequirements
+                    .Include(psr => psr.ProductionStage)
+                    .Where(psr => psr.PartId == part.Id && psr.IsActive)
+                    .OrderBy(psr => psr.ExecutionOrder)
+                    .Select(psr => new
+                    {
+                        ProductionStageId = psr.ProductionStageId,
+                        StageName = psr.ProductionStage != null ? psr.ProductionStage.Name : "Unknown",
+                        ExecutionOrder = psr.ExecutionOrder,
+                        EstimatedHours = psr.EstimatedHours,
+                        EstimateSource = psr.EstimateSource,
+                        ActualAverageDurationHours = psr.ActualAverageDurationHours,
+                        ActualSampleCount = psr.ActualSampleCount,
+                        LastActualDurationHours = psr.LastActualDurationHours,
+                        EstimateLastUpdated = psr.EstimateLastUpdated,
+                        IsLearned = psr.EstimateSource == "Auto" && psr.ActualSampleCount >= 3,
+                        HasData = psr.ActualSampleCount > 0,
+                        Accuracy = psr.ActualAverageDurationHours.HasValue && psr.EstimatedHours.HasValue && psr.EstimatedHours > 0
+                            ? Math.Round(100 - Math.Abs((psr.ActualAverageDurationHours.Value - psr.EstimatedHours.Value) / psr.EstimatedHours.Value * 100), 1)
+                            : (double?)null
+                    })
+                    .ToListAsync();
+
+                var totalManual = stageRequirements.Count(s => s.EstimateSource == "Manual");
+                var totalAuto = stageRequirements.Count(s => s.EstimateSource == "Auto");
+                var totalWithData = stageRequirements.Count(s => s.HasData);
+
+                return Ok(new
+                {
+                    found = true,
+                    partId = part.Id,
+                    partNumber = part.PartNumber,
+                    stages = stageRequirements,
+                    summary = new
+                    {
+                        TotalStages = stageRequirements.Count,
+                        ManualEstimates = totalManual,
+                        AutoLearnedEstimates = totalAuto,
+                        StagesWithData = totalWithData,
+                        LearningProgress = stageRequirements.Count > 0 
+                            ? Math.Round((double)totalAuto / stageRequirements.Count * 100, 1) 
+                            : 0
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting stage learning data for part {PartNumber}", partNumber);
+                return StatusCode(500, new { error = "Failed to get stage learning data", details = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Reset a stage estimate to manual mode
+        /// </summary>
+        [HttpPost("{partNumber}/stage-learning/{productionStageId}/reset")]
+        public async Task<IActionResult> ResetStageLearning(string partNumber, int productionStageId, [FromBody] ResetLearningDto resetDto)
+        {
+            try
+            {
+                var part = await _context.Parts
+                    .FirstOrDefaultAsync(p => p.PartNumber == partNumber);
+
+                if (part == null)
+                {
+                    return NotFound(new { error = "Part not found" });
+                }
+
+                var stageRequirement = await _context.PartStageRequirements
+                    .FirstOrDefaultAsync(psr => psr.PartId == part.Id && psr.ProductionStageId == productionStageId);
+
+                if (stageRequirement == null)
+                {
+                    return NotFound(new { error = "Stage requirement not found" });
+                }
+
+                // Reset to manual with optional new estimate
+                stageRequirement.EstimateSource = "Manual";
+                if (resetDto.NewEstimatedHours.HasValue)
+                {
+                    stageRequirement.EstimatedHours = resetDto.NewEstimatedHours.Value;
+                }
+                stageRequirement.LastModifiedBy = User.Identity?.Name ?? "API";
+                stageRequirement.LastModifiedDate = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Reset stage learning for part {PartNumber}, stage {StageId} to manual with {Hours}h", 
+                    partNumber, productionStageId, stageRequirement.EstimatedHours);
+
+                return Ok(new { 
+                    message = "Stage estimate reset to manual",
+                    estimatedHours = stageRequirement.EstimatedHours
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error resetting stage learning for part {PartNumber}, stage {StageId}", 
+                    partNumber, productionStageId);
+                return StatusCode(500, new { error = "Failed to reset stage learning", details = ex.Message });
+            }
+        }
+
         private string CalculateComplexity(int stageCount, double totalHours)
         {
             var score = stageCount + Math.Floor(totalHours / 4);
@@ -396,20 +520,28 @@ namespace OpCentrix.Controllers.Api
     }
 
     /// <summary>
-    /// DTO for Part Stage Requirement API operations
-    /// </summary>
-    public class PartStageRequirementDto
-    {
-        public int? Id { get; set; }
-        public int ProductionStageId { get; set; }
-        public int ExecutionOrder { get; set; }
-        public double EstimatedHours { get; set; }
-        public int? SetupTimeMinutes { get; set; }
-        public int? TeardownTimeMinutes { get; set; } // Note: Not available in current schema
-        public decimal? HourlyRateOverride { get; set; }
-        public decimal MaterialCost { get; set; }
-        public bool IsRequired { get; set; } = true;
-        public string? RequirementNotes { get; set; }
-        public string? SpecialInstructions { get; set; }
+        /// DTO for Part Stage Requirement API operations
+        /// </summary>
+        public class PartStageRequirementDto
+        {
+            public int? Id { get; set; }
+            public int ProductionStageId { get; set; }
+            public int ExecutionOrder { get; set; }
+            public double EstimatedHours { get; set; }
+            public int? SetupTimeMinutes { get; set; }
+            public int? TeardownTimeMinutes { get; set; } // Note: Not available in current schema
+            public decimal? HourlyRateOverride { get; set; }
+            public decimal MaterialCost { get; set; }
+            public bool IsRequired { get; set; } = true;
+            public string? RequirementNotes { get; set; }
+            public string? SpecialInstructions { get; set; }
+        }
+
+        /// <summary>
+        /// DTO for resetting stage learning to manual
+        /// </summary>
+        public class ResetLearningDto
+        {
+            public double? NewEstimatedHours { get; set; }
+        }
     }
-}

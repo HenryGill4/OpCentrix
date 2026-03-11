@@ -82,6 +82,12 @@ namespace OpCentrix.Pages.Admin
         // Form data
         public List<ProductionStage> AvailableStages { get; set; } = new();
         public Dictionary<int, List<StageDefinition>> PartStages { get; set; } = new();
+        
+        /// <summary>
+        /// Learning status data for stage requirements keyed by ProductionStageId
+        /// Contains: EstimateSource, ActualSampleCount, ActualAverageDurationHours
+        /// </summary>
+        public Dictionary<int, StageLearningInfo> StageLearningData { get; set; } = new();
 
         public async Task<IActionResult> OnGetAsync()
         {
@@ -164,6 +170,27 @@ namespace OpCentrix.Pages.Admin
                     
                     SelectedStageIds = string.Join(",", stageIds);
                     StageEstimatedHours = string.Join(",", hours);
+                }
+
+                // Load learning data for this part's stages
+                var part = await _context.Parts.FirstOrDefaultAsync(p => p.PartNumber == MasterPart.PartNumber);
+                if (part != null)
+                {
+                    var learningData = await _context.PartStageRequirements
+                        .Where(psr => psr.PartId == part.Id && psr.IsActive)
+                        .Select(psr => new StageLearningInfo
+                        {
+                            ProductionStageId = psr.ProductionStageId,
+                            EstimateSource = psr.EstimateSource,
+                            ActualSampleCount = psr.ActualSampleCount,
+                            ActualAverageDurationHours = psr.ActualAverageDurationHours,
+                            LastActualDurationHours = psr.LastActualDurationHours,
+                            EstimatedHours = psr.EstimatedHours
+                        })
+                        .ToListAsync();
+
+                    StageLearningData = learningData.ToDictionary(l => l.ProductionStageId, l => l);
+                    _logger.LogInformation("?? [PARTS-{OperationId}] Loaded learning data for {Count} stages", operationId, StageLearningData.Count);
                 }
 
                 _logger.LogInformation("? [PARTS-{OperationId}] Edit form loaded with {StageCount} stages", operationId, MasterPart.StageDefinitions.Count);
@@ -332,17 +359,26 @@ namespace OpCentrix.Pages.Admin
                 existingPart.ManufacturingApproach = MasterPart.ManufacturingApproach;
                 // legacy stacking fields retained but no longer primary logic
                 existingPart.AllowStacking = MasterPart.AllowStacking;
-                existingPart.SingleStackDurationHours = MasterPart.SingleStackDurationHours; // observed single duration (user entered)
+                existingPart.SingleStackDurationHours = MasterPart.SingleStackDurationHours;
                 existingPart.DoubleStackDurationHours = MasterPart.DoubleStackDurationHours;
                 existingPart.TripleStackDurationHours = MasterPart.TripleStackDurationHours;
                 existingPart.MaxStackCount = MasterPart.MaxStackCount;
-                // NEW SLS Build Configuration fields
+                // SLS Build Configuration fields
                 existingPart.PartsPerBuildSingle = MasterPart.PartsPerBuildSingle == 0 ? 1 : MasterPart.PartsPerBuildSingle;
                 existingPart.PartsPerBuildDouble = MasterPart.EnableDoubleStack ? MasterPart.PartsPerBuildDouble : null;
                 existingPart.PartsPerBuildTriple = MasterPart.EnableTripleStack ? MasterPart.PartsPerBuildTriple : null;
                 existingPart.EnableDoubleStack = MasterPart.EnableDoubleStack;
                 existingPart.EnableTripleStack = MasterPart.EnableTripleStack;
-                existingPart.StageEstimateSingle = MasterPart.StageEstimateSingle; // advisory
+                existingPart.StageEstimateSingle = MasterPart.StageEstimateSingle;
+                // Batch Stage Build Configuration fields
+                existingPart.SlsBuildDurationHours = MasterPart.SlsBuildDurationHours;
+                existingPart.SlsPartsPerBuild = MasterPart.SlsPartsPerBuild;
+                existingPart.DepowderingDurationHours = MasterPart.DepowderingDurationHours;
+                existingPart.DepowderingPartsPerBatch = MasterPart.DepowderingPartsPerBatch;
+                existingPart.HeatTreatmentDurationHours = MasterPart.HeatTreatmentDurationHours;
+                existingPart.HeatTreatmentPartsPerBatch = MasterPart.HeatTreatmentPartsPerBatch;
+                existingPart.WireEdmDurationHours = MasterPart.WireEdmDurationHours;
+                existingPart.WireEdmPartsPerSession = MasterPart.WireEdmPartsPerSession;
                 existingPart.IsActive = MasterPart.IsActive;
                 existingPart.LastModifiedDate = DateTime.UtcNow;
                 existingPart.LastModifiedBy = User.Identity?.Name ?? "System";
@@ -424,19 +460,44 @@ namespace OpCentrix.Pages.Admin
         {
             try
             {
+                // Check if any production stages exist, if not seed defaults
+                if (!await _context.ProductionStages.AnyAsync())
+                {
+                    _logger.LogInformation("[PARTS] No production stages found, seeding defaults");
+                    await SeedDefaultProductionStagesAsync();
+                }
+
                 AvailableStages = await _context.ProductionStages
                     .Where(ps => ps.IsActive)
                     .OrderBy(ps => ps.DisplayOrder)
                     .ThenBy(ps => ps.Name)
                     .ToListAsync();
 
-                _logger.LogInformation("?? [PARTS] Form data loaded - {StageCount} available stages", AvailableStages.Count);
+                _logger.LogInformation("[PARTS] Form data loaded - {StageCount} available stages", AvailableStages.Count);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "? [PARTS] Error loading form data");
+                _logger.LogError(ex, "[PARTS] Error loading form data");
                 AvailableStages = new List<ProductionStage>();
             }
+        }
+
+        private async Task SeedDefaultProductionStagesAsync()
+        {
+            var stages = new List<ProductionStage>
+            {
+                new() { Name = "SLS Printing", Description = "Selective Laser Sintering build", Department = "SLS", DisplayOrder = 1, DefaultDurationHours = 8.0, DefaultHourlyRate = 125m, DefaultSetupMinutes = 30, IsBatchStage = true, IsActive = true },
+                new() { Name = "Powder Removal", Description = "Remove excess powder", Department = "SLS", DisplayOrder = 2, DefaultDurationHours = 1.0, DefaultHourlyRate = 85m, DefaultSetupMinutes = 15, IsBatchStage = true, IsActive = true },
+                new() { Name = "Heat Treatment", Description = "Stress relief heat treatment", Department = "Post-Process", DisplayOrder = 3, DefaultDurationHours = 4.0, DefaultHourlyRate = 95m, DefaultSetupMinutes = 30, IsBatchStage = true, IsActive = true },
+                new() { Name = "Wire EDM", Description = "Wire EDM cutting from plate", Department = "EDM", DisplayOrder = 4, DefaultDurationHours = 2.0, DefaultHourlyRate = 110m, DefaultSetupMinutes = 20, IsBatchStage = true, IsActive = true },
+                new() { Name = "CNC Machining", Description = "CNC milling and turning", Department = "Machining", DisplayOrder = 5, DefaultDurationHours = 3.0, DefaultHourlyRate = 95m, DefaultSetupMinutes = 30, IsActive = true },
+                new() { Name = "Surface Finishing", Description = "Surface treatment", Department = "Finishing", DisplayOrder = 6, DefaultDurationHours = 1.5, DefaultHourlyRate = 75m, DefaultSetupMinutes = 15, IsActive = true },
+                new() { Name = "Quality Inspection", Description = "Dimensional inspection", Department = "Quality", DisplayOrder = 7, DefaultDurationHours = 0.5, DefaultHourlyRate = 85m, DefaultSetupMinutes = 10, IsActive = true },
+                new() { Name = "Assembly", Description = "Component assembly", Department = "Assembly", DisplayOrder = 8, DefaultDurationHours = 1.0, DefaultHourlyRate = 75m, DefaultSetupMinutes = 15, IsActive = true }
+            };
+            _context.ProductionStages.AddRange(stages);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("[PARTS] Seeded {Count} default production stages", stages.Count);
         }
 
         private async Task LoadPartsDataAsync()
@@ -586,6 +647,25 @@ namespace OpCentrix.Pages.Admin
 
                 var stageDefinitions = new List<StageDefinition>();
 
+                // Get MasterPart to find or create corresponding Part for learning system
+                var masterPart = await _context.MasterParts.FindAsync(masterPartId);
+                if (masterPart == null)
+                {
+                    _logger.LogError("? [PARTS-{OperationId}] MasterPart not found: {MasterPartId}", operationId, masterPartId);
+                    return;
+                }
+
+                // Find or create corresponding Part for learning system integration
+                var part = await _context.Parts.FirstOrDefaultAsync(p => p.PartNumber == masterPart.PartNumber);
+                if (part == null)
+                {
+                    // Create a corresponding Part entry for the learning system
+                    part = CreatePartFromMasterPart(masterPart);
+                    _context.Parts.Add(part);
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation("? [PARTS-{OperationId}] Created corresponding Part entry with ID: {PartId}", operationId, part.Id);
+                }
+
                 for (int i = 0; i < stageIds.Count; i++)
                 {
                     var stageId = stageIds[i];
@@ -616,7 +696,55 @@ namespace OpCentrix.Pages.Admin
                     };
 
                     stageDefinitions.Add(stageDefinition);
-                }
+
+                        // Create corresponding PartStageRequirement for learning system
+                        var existingRequirement = await _context.PartStageRequirements
+                            .FirstOrDefaultAsync(psr => psr.PartId == part.Id && psr.ProductionStageId == stageId);
+
+                        if (existingRequirement == null)
+                        {
+                            var partStageRequirement = new PartStageRequirement
+                            {
+                                PartId = part.Id,
+                                ProductionStageId = stageId,
+                                ExecutionOrder = i + 1,
+                                IsRequired = true,
+                                IsActive = true,
+                                EstimatedHours = estimatedHours,
+                                SetupTimeMinutes = productionStage.DefaultSetupMinutes,
+                                EstimateSource = "Manual", // Initial values are manual
+                                CreatedBy = User.Identity?.Name ?? "System",
+                                LastModifiedBy = User.Identity?.Name ?? "System",
+                                CreatedDate = DateTime.UtcNow,
+                                LastModifiedDate = DateTime.UtcNow
+                            };
+                            _context.PartStageRequirements.Add(partStageRequirement);
+                            _logger.LogInformation("? [PARTS-{OperationId}] Created PartStageRequirement for Part {PartId}, Stage {StageId} with {Hours}h", operationId, part.Id, stageId, estimatedHours);
+                        }
+                        else
+                        {
+                            // Update existing requirement - only if not auto-learned
+                            if (existingRequirement.EstimateSource == "Manual")
+                            {
+                                existingRequirement.ExecutionOrder = i + 1;
+                                existingRequirement.EstimatedHours = estimatedHours;
+                                existingRequirement.IsActive = true;
+                                existingRequirement.LastModifiedBy = User.Identity?.Name ?? "System";
+                                existingRequirement.LastModifiedDate = DateTime.UtcNow;
+                                _logger.LogInformation("?? [PARTS-{OperationId}] Updated PartStageRequirement for Part {PartId}, Stage {StageId}", operationId, part.Id, stageId);
+                            }
+                            else
+                            {
+                                // Preserve auto-learned estimate, just update order
+                                existingRequirement.ExecutionOrder = i + 1;
+                                existingRequirement.IsActive = true;
+                                existingRequirement.LastModifiedBy = User.Identity?.Name ?? "System";
+                                existingRequirement.LastModifiedDate = DateTime.UtcNow;
+                                _logger.LogInformation("?? [PARTS-{OperationId}] Preserved auto-learned estimate for Part {PartId}, Stage {StageId} ({Hours}h from {Samples} samples)", 
+                                    operationId, part.Id, stageId, existingRequirement.ActualAverageDurationHours, existingRequirement.ActualSampleCount);
+                            }
+                        }
+                    }
 
                 if (stageDefinitions.Any())
                 {
@@ -657,12 +785,61 @@ namespace OpCentrix.Pages.Admin
             {
                 _logger.LogError(ex, "? [PARTS-{OperationId}] Error updating stage definitions", operationId);
                 throw;
-            }
-        }
+                    }
+                }
 
-        private string GetMachineTypeForStage(string stageName)
-        {
-            return stageName switch
+                /// <summary>
+                /// Create a Part entity from a MasterPart for learning system integration
+                /// </summary>
+                private Part CreatePartFromMasterPart(MasterPart masterPart)
+                {
+                    return new Part
+                    {
+                        PartNumber = masterPart.PartNumber,
+                        Name = masterPart.Name,
+                        Description = masterPart.Description ?? "",
+                        Material = masterPart.Material,
+                        IsActive = masterPart.IsActive,
+                        SlsMaterial = masterPart.Material,
+                        ManufacturingStage = "Initial",
+                        StageDetails = "Auto-created from MasterPart",
+                        BTComponentType = "Standard",
+                        BTFirearmCategory = "N/A",
+                        ProcessType = masterPart.ManufacturingApproach,
+                        RequiredMachineType = "SLS",
+                        PreferredMachines = "TI1,TI2",
+                        CreatedBy = User.Identity?.Name ?? "System",
+                        LastModifiedBy = User.Identity?.Name ?? "System",
+                        CreatedDate = DateTime.UtcNow,
+                        LastModifiedDate = DateTime.UtcNow,
+                        PowderSpecification = "Ti-6Al-4V Grade 5",
+                        QualityStandards = "Standard",
+                        ToleranceRequirements = "±0.1mm",
+                        RequiredSkills = "SLS Operation",
+                        RequiredCertifications = "Basic",
+                        RequiredTooling = "Standard",
+                        ConsumableMaterials = "Standard",
+                        SupportStrategy = "Auto",
+                        CustomerPartNumber = masterPart.PartNumber,
+                        PartCategory = "Production",
+                        PartClass = "A",
+                        Industry = "Manufacturing",
+                        Application = "General",
+                        ProcessParameters = "{}",
+                        QualityCheckpoints = "{}",
+                        BuildFileTemplate = "",
+                        CadFilePath = "",
+                        CadFileVersion = "1.0",
+                        AvgDuration = "8h",
+                        Dimensions = "Standard",
+                        SurfaceFinishRequirement = "Standard",
+                        AdminOverrideBy = ""
+                    };
+                }
+
+                private string GetMachineTypeForStage(string stageName)
+                {
+                    return stageName switch
             {
                 "SLS Printing" => "SLS",
                 "Heat Treatment" => "Furnace",
@@ -854,10 +1031,26 @@ namespace OpCentrix.Pages.Admin
             {
                 _logger.LogError(ex, "? [PARTS-{OperationId}] Error fixing legacy parts", operationId);
                 return new JsonResult(new { 
-                    success = false, 
-                    message = $"Error fixing legacy parts: {ex.Message}" 
-                });
-            }
-        }
-    }
-}
+                                    success = false, 
+                                    message = $"Error fixing legacy parts: {ex.Message}" 
+                                });
+                            }
+                        }
+                    }
+
+                    /// <summary>
+                    /// DTO for stage learning status information
+                    /// </summary>
+                    public class StageLearningInfo
+                    {
+                        public int ProductionStageId { get; set; }
+                        public string EstimateSource { get; set; } = "Manual";
+                        public int ActualSampleCount { get; set; }
+                        public double? ActualAverageDurationHours { get; set; }
+                        public double? LastActualDurationHours { get; set; }
+                        public double? EstimatedHours { get; set; }
+        
+                        public bool IsLearned => EstimateSource == "Auto" && ActualSampleCount >= 3;
+                        public bool HasData => ActualSampleCount > 0;
+                    }
+                }

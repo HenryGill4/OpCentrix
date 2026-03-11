@@ -136,6 +136,12 @@ namespace OpCentrix.Data
         public DbSet<CrmAlert> CrmAlerts { get; set; }
         public DbSet<CrmTaskProgress> CrmTaskProgress { get; set; }
 
+        // Build Planning & QC
+        public DbSet<BuildPackage> BuildPackages { get; set; }
+        public DbSet<BuildPackagePart> BuildPackageParts { get; set; }
+        public DbSet<QCInspection> QCInspections { get; set; }
+        public DbSet<QCChecklistItem> QCChecklistItems { get; set; }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             if (!optionsBuilder.IsConfigured)
@@ -270,6 +276,117 @@ namespace OpCentrix.Data
                 entity.HasIndex(e => e.CreatedDate);
                 entity.HasIndex(e => e.CreatedByUserId);
                 entity.HasIndex(e => new { e.TaskId, e.CreatedDate });
+            });
+
+            // Build Planning entities
+            modelBuilder.Entity<BuildPackage>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.PackageNumber).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Name).HasMaxLength(200);
+                entity.Property(e => e.Status).IsRequired().HasMaxLength(50).HasDefaultValue("Draft");
+                entity.Property(e => e.TargetMachineId).HasMaxLength(50);
+                entity.Property(e => e.Material).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.BuildFileName).HasMaxLength(255);
+                entity.Property(e => e.BuildFilePath).HasMaxLength(500);
+                entity.Property(e => e.BuildFileHash).HasMaxLength(64);
+                entity.Property(e => e.SupportComplexity).HasMaxLength(20).HasDefaultValue("Medium");
+                entity.Property(e => e.CreatedBy).HasMaxLength(100);
+                entity.Property(e => e.LastModifiedBy).HasMaxLength(100);
+                entity.Property(e => e.Notes).HasMaxLength(1000);
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+
+                entity.HasOne(e => e.ScheduledJob)
+                      .WithMany()
+                      .HasForeignKey(e => e.ScheduledJobId)
+                      .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasIndex(e => e.PackageNumber).IsUnique();
+                entity.HasIndex(e => e.Status);
+                entity.HasIndex(e => e.TargetMachineId);
+                entity.HasIndex(e => e.CreatedAt);
+            });
+
+            modelBuilder.Entity<BuildPackagePart>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Orientation).HasMaxLength(50).HasDefaultValue("Flat");
+                entity.Property(e => e.SupportType).HasMaxLength(50);
+                entity.Property(e => e.Notes).HasMaxLength(500);
+
+                entity.HasOne(e => e.BuildPackage)
+                      .WithMany(bp => bp.Parts)
+                      .HasForeignKey(e => e.BuildPackageId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Part)
+                      .WithMany()
+                      .HasForeignKey(e => e.PartId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(e => e.BuildPackageId);
+                entity.HasIndex(e => e.PartId);
+            });
+
+            // QC Inspection entities
+            modelBuilder.Entity<QCInspection>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.InspectionNumber).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.InspectionType).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Status).IsRequired().HasMaxLength(50).HasDefaultValue("Pending");
+                entity.Property(e => e.InspectorName).HasMaxLength(100);
+                entity.Property(e => e.VisualInspectionNotes).HasMaxLength(2000);
+                entity.Property(e => e.CorrectiveActions).HasMaxLength(2000);
+                entity.Property(e => e.CreatedBy).HasMaxLength(100);
+                entity.Property(e => e.LastModifiedBy).HasMaxLength(100);
+                entity.Property(e => e.Notes).HasMaxLength(2000);
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+
+                entity.HasOne(e => e.Part)
+                      .WithMany()
+                      .HasForeignKey(e => e.PartId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Job)
+                      .WithMany()
+                      .HasForeignKey(e => e.JobId)
+                      .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.BuildJob)
+                      .WithMany()
+                      .HasForeignKey(e => e.BuildJobId)
+                      .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.Inspector)
+                      .WithMany()
+                      .HasForeignKey(e => e.InspectorUserId)
+                      .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasIndex(e => e.InspectionNumber).IsUnique();
+                entity.HasIndex(e => e.Status);
+                entity.HasIndex(e => e.InspectionType);
+                entity.HasIndex(e => e.PartId);
+                entity.HasIndex(e => e.CreatedAt);
+            });
+
+            modelBuilder.Entity<QCChecklistItem>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.ItemName).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Category).HasMaxLength(50).HasDefaultValue("Visual");
+                entity.Property(e => e.Specification).HasMaxLength(200);
+                entity.Property(e => e.ActualValue).HasMaxLength(200);
+                entity.Property(e => e.Result).HasMaxLength(20).HasDefaultValue("NA");
+                entity.Property(e => e.Notes).HasMaxLength(500);
+
+                entity.HasOne(e => e.QCInspection)
+                      .WithMany(i => i.ChecklistItems)
+                      .HasForeignKey(e => e.QCInspectionId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => e.QCInspectionId);
+                entity.HasIndex(e => e.Category);
             });
 
             // Maintenance module entities

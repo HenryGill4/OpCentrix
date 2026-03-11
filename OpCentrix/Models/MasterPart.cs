@@ -103,6 +103,102 @@ namespace OpCentrix.Models
 
         #endregion
 
+        #region Batch Stage Build Configuration
+
+        /// <summary>
+        /// SLS Printing: Total build duration in hours
+        /// </summary>
+        [Range(0.1, 500.0)]
+        [Display(Name = "SLS Build Duration (hours)")]
+        public double? SlsBuildDurationHours { get; set; }
+
+        /// <summary>
+        /// SLS Printing: Number of parts in a typical build
+        /// </summary>
+        [Range(1, 100)]
+        [Display(Name = "SLS Parts Per Build")]
+        public int? SlsPartsPerBuild { get; set; }
+
+        /// <summary>
+        /// Depowdering: Total batch duration in hours
+        /// </summary>
+        [Range(0.1, 100.0)]
+        [Display(Name = "Depowdering Duration (hours)")]
+        public double? DepowderingDurationHours { get; set; }
+
+        /// <summary>
+        /// Depowdering: Number of parts processed per batch
+        /// </summary>
+        [Range(1, 100)]
+        [Display(Name = "Depowdering Parts Per Batch")]
+        public int? DepowderingPartsPerBatch { get; set; }
+
+        /// <summary>
+        /// Heat Treatment: Total batch duration in hours
+        /// </summary>
+        [Range(0.1, 100.0)]
+        [Display(Name = "Heat Treatment Duration (hours)")]
+        public double? HeatTreatmentDurationHours { get; set; }
+
+        /// <summary>
+        /// Heat Treatment: Number of parts processed per batch
+        /// </summary>
+        [Range(1, 100)]
+        [Display(Name = "Heat Treatment Parts Per Batch")]
+        public int? HeatTreatmentPartsPerBatch { get; set; }
+
+        /// <summary>
+        /// Wire EDM: Total batch duration in hours
+        /// </summary>
+        [Range(0.1, 100.0)]
+        [Display(Name = "Wire EDM Duration (hours)")]
+        public double? WireEdmDurationHours { get; set; }
+
+        /// <summary>
+        /// Wire EDM: Number of parts cut per session
+        /// </summary>
+        [Range(1, 100)]
+        [Display(Name = "Wire EDM Parts Per Session")]
+        public int? WireEdmPartsPerSession { get; set; }
+
+        #endregion
+
+        #region Computed Batch Per-Part Durations
+
+        /// <summary>
+        /// Calculated SLS per-part duration: SlsBuildDurationHours / SlsPartsPerBuild
+        /// </summary>
+        [NotMapped]
+        public double? SlsPerPartHours => SlsBuildDurationHours.HasValue && SlsPartsPerBuild.HasValue && SlsPartsPerBuild > 0
+            ? SlsBuildDurationHours.Value / SlsPartsPerBuild.Value
+            : null;
+
+        /// <summary>
+        /// Calculated Depowdering per-part duration
+        /// </summary>
+        [NotMapped]
+        public double? DepowderingPerPartHours => DepowderingDurationHours.HasValue && DepowderingPartsPerBatch.HasValue && DepowderingPartsPerBatch > 0
+            ? DepowderingDurationHours.Value / DepowderingPartsPerBatch.Value
+            : null;
+
+        /// <summary>
+        /// Calculated Heat Treatment per-part duration
+        /// </summary>
+        [NotMapped]
+        public double? HeatTreatmentPerPartHours => HeatTreatmentDurationHours.HasValue && HeatTreatmentPartsPerBatch.HasValue && HeatTreatmentPartsPerBatch > 0
+            ? HeatTreatmentDurationHours.Value / HeatTreatmentPartsPerBatch.Value
+            : null;
+
+        /// <summary>
+        /// Calculated Wire EDM per-part duration
+        /// </summary>
+        [NotMapped]
+        public double? WireEdmPerPartHours => WireEdmDurationHours.HasValue && WireEdmPartsPerSession.HasValue && WireEdmPartsPerSession > 0
+            ? WireEdmDurationHours.Value / WireEdmPartsPerSession.Value
+            : null;
+
+        #endregion
+
         #region Required Stages JSON
 
         /// <summary>

@@ -1,0 +1,392 @@
+using Microsoft.EntityFrameworkCore;
+using OpCentrix.Models;
+using OpCentrix.Models.Maintenance;
+
+namespace OpCentrix.Data;
+
+public class TenantDbContext : DbContext
+{
+    public TenantDbContext(DbContextOptions<TenantDbContext> options)
+        : base(options)
+    {
+    }
+
+    // ?? Core Reference ??????????????????????????????????????????
+    public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
+    public DbSet<Material> Materials => Set<Material>();
+    public DbSet<OperatingShift> OperatingShifts => Set<OperatingShift>();
+
+    // ?? Users ???????????????????????????????????????????????????
+    public DbSet<User> Users => Set<User>();
+    public DbSet<UserSettings> UserSettings => Set<UserSettings>();
+
+    // ?? Machines ????????????????????????????????????????????????
+    public DbSet<Machine> Machines => Set<Machine>();
+    public DbSet<MachineStateRecord> MachineStateRecords => Set<MachineStateRecord>();
+    public DbSet<MachineConnectionSettings> MachineConnectionSettings => Set<MachineConnectionSettings>();
+
+    // ?? Stages & Parts ??????????????????????????????????????????
+    public DbSet<ProductionStage> ProductionStages => Set<ProductionStage>();
+    public DbSet<Part> Parts => Set<Part>();
+    public DbSet<PartStageRequirement> PartStageRequirements => Set<PartStageRequirement>();
+
+    // ?? Work Orders & Quotes ????????????????????????????????????
+    public DbSet<WorkOrder> WorkOrders => Set<WorkOrder>();
+    public DbSet<WorkOrderLine> WorkOrderLines => Set<WorkOrderLine>();
+    public DbSet<Quote> Quotes => Set<Quote>();
+    public DbSet<QuoteLine> QuoteLines => Set<QuoteLine>();
+
+    // ?? Jobs & Execution ????????????????????????????????????????
+    public DbSet<Job> Jobs => Set<Job>();
+    public DbSet<StageExecution> StageExecutions => Set<StageExecution>();
+    public DbSet<JobNote> JobNotes => Set<JobNote>();
+
+    // ?? Build ???????????????????????????????????????????????????
+    public DbSet<BuildJob> BuildJobs => Set<BuildJob>();
+    public DbSet<BuildJobPart> BuildJobParts => Set<BuildJobPart>();
+    public DbSet<BuildPackage> BuildPackages => Set<BuildPackage>();
+    public DbSet<BuildPackagePart> BuildPackageParts => Set<BuildPackagePart>();
+    public DbSet<BuildFileInfo> BuildFileInfos => Set<BuildFileInfo>();
+
+    // ?? Tracking & QC ???????????????????????????????????????????
+    public DbSet<PartInstance> PartInstances => Set<PartInstance>();
+    public DbSet<PartInstanceStageLog> PartInstanceStageLogs => Set<PartInstanceStageLog>();
+    public DbSet<QCInspection> QCInspections => Set<QCInspection>();
+    public DbSet<QCChecklistItem> QCChecklistItems => Set<QCChecklistItem>();
+    public DbSet<DelayLog> DelayLogs => Set<DelayLog>();
+
+    // ?? Maintenance ?????????????????????????????????????????????
+    public DbSet<MachineComponent> MachineComponents => Set<MachineComponent>();
+    public DbSet<MaintenanceRule> MaintenanceRules => Set<MaintenanceRule>();
+    public DbSet<MaintenanceWorkOrder> MaintenanceWorkOrders => Set<MaintenanceWorkOrder>();
+    public DbSet<MaintenanceActionLog> MaintenanceActionLogs => Set<MaintenanceActionLog>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        // ?? SystemSetting ???????????????????????????????????????
+        modelBuilder.Entity<SystemSetting>(entity =>
+        {
+            entity.HasIndex(e => e.Key).IsUnique();
+        });
+
+        // ?? User ????????????????????????????????????????????????
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.HasIndex(e => e.Username).IsUnique();
+            entity.HasOne(e => e.Settings)
+                  .WithOne(s => s.User)
+                  .HasForeignKey<UserSettings>(s => s.UserId);
+        });
+
+        // ?? Machine ????????????????????????????????????????????
+        modelBuilder.Entity<Machine>(entity =>
+        {
+            entity.HasIndex(e => e.MachineId).IsUnique();
+        });
+
+        // ?? MachineStateRecord ??????????????????????????????????
+        modelBuilder.Entity<MachineStateRecord>(entity =>
+        {
+            entity.HasIndex(e => new { e.MachineId, e.Timestamp });
+        });
+
+        // ?? MachineConnectionSettings ???????????????????????????
+        modelBuilder.Entity<MachineConnectionSettings>(entity =>
+        {
+            entity.HasIndex(e => e.MachineId).IsUnique();
+        });
+
+        // ?? ProductionStage ?????????????????????????????????????
+        modelBuilder.Entity<ProductionStage>(entity =>
+        {
+            entity.HasIndex(e => e.StageSlug).IsUnique();
+        });
+
+        // ?? Part ????????????????????????????????????????????????
+        modelBuilder.Entity<Part>(entity =>
+        {
+            entity.HasIndex(e => e.PartNumber).IsUnique();
+        });
+
+        // ?? PartStageRequirement ????????????????????????????????
+        modelBuilder.Entity<PartStageRequirement>(entity =>
+        {
+            entity.HasIndex(e => new { e.PartId, e.ProductionStageId }).IsUnique();
+
+            entity.HasOne(e => e.Part)
+                  .WithMany(p => p.StageRequirements)
+                  .HasForeignKey(e => e.PartId);
+
+            entity.HasOne(e => e.ProductionStage)
+                  .WithMany(s => s.PartStageRequirements)
+                  .HasForeignKey(e => e.ProductionStageId);
+        });
+
+        // ?? WorkOrder ???????????????????????????????????????????
+        modelBuilder.Entity<WorkOrder>(entity =>
+        {
+            entity.HasIndex(e => e.OrderNumber).IsUnique();
+        });
+
+        modelBuilder.Entity<WorkOrderLine>(entity =>
+        {
+            entity.HasOne(e => e.WorkOrder)
+                  .WithMany(o => o.Lines)
+                  .HasForeignKey(e => e.WorkOrderId);
+
+            entity.HasOne(e => e.Part)
+                  .WithMany()
+                  .HasForeignKey(e => e.PartId);
+        });
+
+        // ?? Quote ???????????????????????????????????????????????
+        modelBuilder.Entity<Quote>(entity =>
+        {
+            entity.HasIndex(e => e.QuoteNumber).IsUnique();
+        });
+
+        modelBuilder.Entity<QuoteLine>(entity =>
+        {
+            entity.HasOne(e => e.Quote)
+                  .WithMany(q => q.Lines)
+                  .HasForeignKey(e => e.QuoteId);
+
+            entity.HasOne(e => e.Part)
+                  .WithMany()
+                  .HasForeignKey(e => e.PartId);
+        });
+
+        // ?? Job ?????????????????????????????????????????????????
+        modelBuilder.Entity<Job>(entity =>
+        {
+            entity.HasOne(e => e.Part)
+                  .WithMany(p => p.Jobs)
+                  .HasForeignKey(e => e.PartId);
+
+            entity.HasOne(e => e.PredecessorJob)
+                  .WithMany()
+                  .HasForeignKey(e => e.PredecessorJobId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.OperatorUser)
+                  .WithMany()
+                  .HasForeignKey(e => e.OperatorUserId);
+
+            entity.HasOne(e => e.WorkOrderLine)
+                  .WithMany()
+                  .HasForeignKey(e => e.WorkOrderLineId);
+        });
+
+        // ?? StageExecution ??????????????????????????????????????
+        modelBuilder.Entity<StageExecution>(entity =>
+        {
+            entity.HasOne(e => e.Job)
+                  .WithMany(j => j.Stages)
+                  .HasForeignKey(e => e.JobId);
+
+            entity.HasOne(e => e.ProductionStage)
+                  .WithMany(s => s.StageExecutions)
+                  .HasForeignKey(e => e.ProductionStageId);
+
+            entity.HasOne(e => e.Operator)
+                  .WithMany()
+                  .HasForeignKey(e => e.OperatorUserId);
+        });
+
+        // ?? JobNote ?????????????????????????????????????????????
+        modelBuilder.Entity<JobNote>(entity =>
+        {
+            entity.HasOne(e => e.Job)
+                  .WithMany(j => j.JobNotes)
+                  .HasForeignKey(e => e.JobId);
+        });
+
+        // ?? BuildJob ????????????????????????????????????????????
+        modelBuilder.Entity<BuildJob>(entity =>
+        {
+            entity.HasKey(e => e.BuildId);
+
+            entity.HasOne(e => e.User)
+                  .WithMany()
+                  .HasForeignKey(e => e.UserId);
+
+            entity.HasOne(e => e.Job)
+                  .WithMany()
+                  .HasForeignKey(e => e.JobId);
+        });
+
+        // ?? BuildJobPart ????????????????????????????????????????
+        modelBuilder.Entity<BuildJobPart>(entity =>
+        {
+            entity.HasOne(e => e.BuildJob)
+                  .WithMany(b => b.Parts)
+                  .HasForeignKey(e => e.BuildJobId)
+                  .HasPrincipalKey(b => b.BuildId);
+
+            entity.HasOne(e => e.Part)
+                  .WithMany()
+                  .HasForeignKey(e => e.PartId);
+        });
+
+        // ?? BuildPackage ????????????????????????????????????????
+        modelBuilder.Entity<BuildPackage>(entity =>
+        {
+            entity.HasIndex(e => e.PackageNumber).IsUnique();
+
+            entity.HasOne(e => e.ScheduledJob)
+                  .WithMany()
+                  .HasForeignKey(e => e.ScheduledJobId);
+        });
+
+        modelBuilder.Entity<BuildPackagePart>(entity =>
+        {
+            entity.HasOne(e => e.BuildPackage)
+                  .WithMany(p => p.Parts)
+                  .HasForeignKey(e => e.BuildPackageId);
+
+            entity.HasOne(e => e.Part)
+                  .WithMany()
+                  .HasForeignKey(e => e.PartId);
+        });
+
+        // ?? BuildFileInfo ???????????????????????????????????????
+        modelBuilder.Entity<BuildFileInfo>(entity =>
+        {
+            entity.HasOne(e => e.BuildPackage)
+                  .WithMany()
+                  .HasForeignKey(e => e.BuildPackageId);
+        });
+
+        // ?? PartInstance ????????????????????????????????????????
+        modelBuilder.Entity<PartInstance>(entity =>
+        {
+            entity.HasIndex(e => e.SerialNumber).IsUnique();
+
+            entity.HasOne(e => e.Part)
+                  .WithMany()
+                  .HasForeignKey(e => e.PartId);
+
+            entity.HasOne(e => e.WorkOrderLine)
+                  .WithMany()
+                  .HasForeignKey(e => e.WorkOrderLineId);
+
+            entity.HasOne(e => e.CurrentStage)
+                  .WithMany()
+                  .HasForeignKey(e => e.CurrentStageId);
+        });
+
+        // ?? PartInstanceStageLog ????????????????????????????????
+        modelBuilder.Entity<PartInstanceStageLog>(entity =>
+        {
+            entity.HasOne(e => e.PartInstance)
+                  .WithMany(i => i.StageLogs)
+                  .HasForeignKey(e => e.PartInstanceId);
+
+            entity.HasOne(e => e.ProductionStage)
+                  .WithMany()
+                  .HasForeignKey(e => e.ProductionStageId);
+        });
+
+        // ?? QCInspection ????????????????????????????????????????
+        modelBuilder.Entity<QCInspection>(entity =>
+        {
+            entity.HasIndex(e => e.InspectionNumber).IsUnique();
+
+            entity.HasOne(e => e.Job)
+                  .WithMany()
+                  .HasForeignKey(e => e.JobId);
+
+            entity.HasOne(e => e.BuildJob)
+                  .WithMany()
+                  .HasForeignKey(e => e.BuildJobId)
+                  .HasPrincipalKey(b => b.BuildId);
+
+            entity.HasOne(e => e.Part)
+                  .WithMany()
+                  .HasForeignKey(e => e.PartId);
+
+            entity.HasOne(e => e.PartInstance)
+                  .WithMany(i => i.Inspections)
+                  .HasForeignKey(e => e.PartInstanceId);
+
+            entity.HasOne(e => e.Inspector)
+                  .WithMany()
+                  .HasForeignKey(e => e.InspectorUserId);
+        });
+
+        modelBuilder.Entity<QCChecklistItem>(entity =>
+        {
+            entity.HasOne(e => e.QCInspection)
+                  .WithMany(i => i.ChecklistItems)
+                  .HasForeignKey(e => e.QCInspectionId);
+        });
+
+        // ?? DelayLog ????????????????????????????????????????????
+        modelBuilder.Entity<DelayLog>(entity =>
+        {
+            entity.HasOne(e => e.BuildJob)
+                  .WithMany(b => b.Delays)
+                  .HasForeignKey(e => e.BuildJobId)
+                  .HasPrincipalKey(b => b.BuildId);
+
+            entity.HasOne(e => e.Job)
+                  .WithMany()
+                  .HasForeignKey(e => e.JobId);
+
+            entity.HasOne(e => e.StageExecution)
+                  .WithMany()
+                  .HasForeignKey(e => e.StageExecutionId);
+        });
+
+        // ?? MachineComponent ????????????????????????????????????
+        modelBuilder.Entity<MachineComponent>(entity =>
+        {
+            entity.HasIndex(e => new { e.MachineId, e.Name }).IsUnique();
+        });
+
+        // ?? MaintenanceRule ?????????????????????????????????????
+        modelBuilder.Entity<MaintenanceRule>(entity =>
+        {
+            entity.HasOne(e => e.MachineComponent)
+                  .WithMany()
+                  .HasForeignKey(e => e.MachineComponentId);
+
+            entity.HasOne(e => e.ProductionStage)
+                  .WithMany()
+                  .HasForeignKey(e => e.ProductionStageId);
+        });
+
+        // ?? MaintenanceWorkOrder ????????????????????????????????
+        modelBuilder.Entity<MaintenanceWorkOrder>(entity =>
+        {
+            entity.HasIndex(e => e.WorkOrderNumber).IsUnique();
+
+            entity.HasOne(e => e.Machine)
+                  .WithMany(m => m.MaintenanceWorkOrders)
+                  .HasForeignKey(e => e.MachineId)
+                  .HasPrincipalKey(m => m.MachineId);
+
+            entity.HasOne(e => e.MachineComponent)
+                  .WithMany()
+                  .HasForeignKey(e => e.MachineComponentId);
+
+            entity.HasOne(e => e.MaintenanceRule)
+                  .WithMany()
+                  .HasForeignKey(e => e.MaintenanceRuleId);
+
+            entity.HasOne(e => e.AssignedTechnicianUser)
+                  .WithMany()
+                  .HasForeignKey(e => e.AssignedTechnicianUserId);
+        });
+
+        // ?? MaintenanceActionLog ????????????????????????????????
+        modelBuilder.Entity<MaintenanceActionLog>(entity =>
+        {
+            entity.HasOne(e => e.Rule)
+                  .WithMany()
+                  .HasForeignKey(e => e.RuleId);
+        });
+    }
+}

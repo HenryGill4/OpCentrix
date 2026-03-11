@@ -302,7 +302,8 @@ namespace OpCentrix.Pages.Admin.ProductionStages
                     stageIcon = stage.StageIcon,
                     department = stage.Department ?? "",
                     allowParallelExecution = stage.AllowParallelExecution,
-                    requiresMachineAssignment = stage.RequiresMachineAssignment
+                    requiresMachineAssignment = stage.RequiresMachineAssignment,
+                    isBatchStage = stage.IsBatchStage
                 });
             }
             catch (Exception ex)
@@ -316,97 +317,55 @@ namespace OpCentrix.Pages.Admin.ProductionStages
         {
             try
             {
-                var contentType = Request.ContentType?.ToLower();
-                
-                if (contentType?.Contains("application/json") == true)
+                if (NewStage == null)
                 {
-                    // Handle JSON request from AJAX
-                    using var reader = new StreamReader(Request.Body);
-                    var body = await reader.ReadToEndAsync();
-                    var stageData = System.Text.Json.JsonSerializer.Deserialize<UpdateStageRequest>(body, 
-                        new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-                    if (stageData?.Id <= 0)
-                    {
-                        return BadRequest("Invalid stage ID");
-                    }
-
-                    var existingStage = await _context.ProductionStages.FindAsync(stageData.Id);
-                    if (existingStage == null)
-                    {
-                        return NotFound("Stage not found");
-                    }
-
-                    // Update properties
-                    existingStage.Name = stageData.Name ?? existingStage.Name;
-                    existingStage.Description = stageData.Description;
-                    existingStage.DefaultSetupMinutes = stageData.DefaultSetupMinutes;
-                    existingStage.DefaultHourlyRate = stageData.DefaultHourlyRate;
-                    existingStage.DefaultDurationHours = stageData.DefaultDurationHours;
-                    existingStage.DefaultMaterialCost = stageData.DefaultMaterialCost;
-                    existingStage.RequiresQualityCheck = stageData.RequiresQualityCheck;
-                    existingStage.RequiresApproval = stageData.RequiresApproval;
-                    existingStage.AllowSkip = stageData.AllowSkip;
-                    existingStage.IsOptional = stageData.IsOptional;
-                    existingStage.RequiredRole = stageData.RequiredRole;
-                    existingStage.StageColor = stageData.StageColor ?? existingStage.StageColor;
-                    existingStage.StageIcon = stageData.StageIcon ?? existingStage.StageIcon;
-                    existingStage.Department = stageData.Department;
-                    existingStage.AllowParallelExecution = stageData.AllowParallelExecution;
-                    existingStage.RequiresMachineAssignment = stageData.RequiresMachineAssignment;
-                    existingStage.LastModifiedBy = User.Identity?.Name ?? "System";
-
-                    await _context.SaveChangesAsync();
-
-                    _logger.LogInformation("Successfully updated stage {StageId}: {StageName}", existingStage.Id, existingStage.Name);
-                    return new JsonResult(new { success = true, message = "Stage updated successfully" });
-                }
-                else
-                {
-                    // Handle form request from modal
-                    var stageId = int.Parse(Request.Form["Id"]!);
-                    var existingStage = await _context.ProductionStages.FindAsync(stageId);
-                    
-                    if (existingStage == null)
-                    {
-                        TempData["ErrorMessage"] = "Stage not found.";
-                        return RedirectToPage();
-                    }
-
-                    // Update from form data
-                    existingStage.Name = Request.Form["Name"]!;
-                    existingStage.Description = Request.Form["Description"];
-                    existingStage.DefaultSetupMinutes = int.Parse(Request.Form["DefaultSetupMinutes"]!);
-                    existingStage.DefaultHourlyRate = decimal.Parse(Request.Form["DefaultHourlyRate"]!);
-                    existingStage.RequiresQualityCheck = Request.Form["RequiresQualityCheck"].Contains("true");
-                    existingStage.RequiresApproval = Request.Form["RequiresApproval"].Contains("true");
-                    existingStage.AllowSkip = Request.Form["AllowSkip"].Contains("true");
-                    existingStage.IsOptional = Request.Form["IsOptional"].Contains("true");
-                    existingStage.RequiredRole = Request.Form["RequiredRole"];
-                    existingStage.LastModifiedBy = User.Identity?.Name ?? "System";
-
-                    await _context.SaveChangesAsync();
-
-                    _logger.LogInformation("Successfully updated stage {StageId}: {StageName}", existingStage.Id, existingStage.Name);
-                    TempData["SuccessMessage"] = $"Production stage '{existingStage.Name}' updated successfully.";
-                    
+                    TempData["ErrorMessage"] = "Invalid stage data.";
                     return RedirectToPage();
                 }
+
+                var stageId = NewStage.Id;
+                if (stageId <= 0)
+                {
+                    TempData["ErrorMessage"] = "Invalid stage ID.";
+                    return RedirectToPage();
+                }
+
+                var existingStage = await _context.ProductionStages.FindAsync(stageId);
+                if (existingStage == null)
+                {
+                    TempData["ErrorMessage"] = "Stage not found.";
+                    return RedirectToPage();
+                }
+
+                existingStage.Name = NewStage.Name;
+                existingStage.Description = NewStage.Description;
+                existingStage.Department = NewStage.Department;
+                existingStage.StageColor = NewStage.StageColor;
+                existingStage.DefaultDurationHours = NewStage.DefaultDurationHours > 0 ? NewStage.DefaultDurationHours : 1.0;
+                existingStage.DefaultSetupMinutes = NewStage.DefaultSetupMinutes;
+                existingStage.DefaultHourlyRate = NewStage.DefaultHourlyRate;
+                existingStage.DefaultMaterialCost = NewStage.DefaultMaterialCost;
+                existingStage.IsBatchStage = NewStage.IsBatchStage;
+                existingStage.RequiresQualityCheck = NewStage.RequiresQualityCheck;
+                existingStage.RequiresApproval = NewStage.RequiresApproval;
+                existingStage.RequiresMachineAssignment = NewStage.RequiresMachineAssignment;
+                existingStage.AllowParallelExecution = NewStage.AllowParallelExecution;
+                existingStage.AllowSkip = NewStage.AllowSkip;
+                existingStage.IsOptional = NewStage.IsOptional;
+                existingStage.LastModifiedBy = User.Identity?.Name ?? "System";
+                existingStage.LastModifiedDate = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Updated stage {StageId}: {StageName}", existingStage.Id, existingStage.Name);
+                TempData["SuccessMessage"] = $"Stage '{existingStage.Name}' updated.";
+                return RedirectToPage();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating production stage");
-                
-                var contentType = Request.ContentType?.ToLower();
-                if (contentType?.Contains("application/json") == true)
-                {
-                    return BadRequest("Error updating stage");
-                }
-                else
-                {
-                    TempData["ErrorMessage"] = "Error updating production stage. Please try again.";
-                    return RedirectToPage();
-                }
+                TempData["ErrorMessage"] = "Error updating production stage.";
+                return RedirectToPage();
             }
         }
 
@@ -471,6 +430,7 @@ namespace OpCentrix.Pages.Admin.ProductionStages
                     RequiresApproval = false,
                     AllowSkip = false,
                     IsOptional = false,
+                    IsBatchStage = true,
                     RequiredRole = "Operator",
                     StageColor = "#007bff",
                     StageIcon = "fas fa-print",

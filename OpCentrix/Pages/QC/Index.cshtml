@@ -1,0 +1,373 @@
+@page
+@model OpCentrix.Pages.QC.IndexModel
+@{
+    ViewData["Title"] = "Quality Control";
+    Layout = "~/Pages/Shared/_Layout.cshtml";
+}
+
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <!-- Header -->
+    <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
+                    <i class="fa-solid fa-clipboard-check mr-3 text-green-600"></i>
+                    Quality Control
+                </h1>
+                <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Inspection workflow and quality tracking</p>
+            </div>
+            <button onclick="document.getElementById('createModal').classList.remove('hidden')"
+                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium shadow transition-all flex items-center">
+                <i class="fa-solid fa-plus mr-2"></i>
+                New Inspection
+            </button>
+        </div>
+    </div>
+
+    <div class="p-6">
+        <!-- Statistics Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow border border-gray-200 dark:border-gray-700">
+                <div class="text-2xl font-bold text-gray-900 dark:text-white">@Model.Statistics.TotalInspections</div>
+                <div class="text-xs text-gray-500 dark:text-gray-400">Total (30d)</div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow border border-gray-200 dark:border-gray-700">
+                <div class="text-2xl font-bold text-gray-500">@Model.Statistics.PendingCount</div>
+                <div class="text-xs text-gray-500 dark:text-gray-400">Pending</div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow border border-gray-200 dark:border-gray-700">
+                <div class="text-2xl font-bold text-yellow-600">@Model.Statistics.InProgressCount</div>
+                <div class="text-xs text-gray-500 dark:text-gray-400">In Progress</div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow border border-gray-200 dark:border-gray-700">
+                <div class="text-2xl font-bold text-green-600">@Model.Statistics.PassedCount</div>
+                <div class="text-xs text-gray-500 dark:text-gray-400">Passed</div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow border border-gray-200 dark:border-gray-700">
+                <div class="text-2xl font-bold text-red-600">@Model.Statistics.FailedCount</div>
+                <div class="text-xs text-gray-500 dark:text-gray-400">Failed</div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow border border-gray-200 dark:border-gray-700">
+                <div class="text-2xl font-bold text-blue-600">@Model.Statistics.FirstPassYield.ToString("F1")%</div>
+                <div class="text-xs text-gray-500 dark:text-gray-400">FPY</div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow border border-gray-200 dark:border-gray-700">
+                <div class="text-2xl font-bold text-purple-600">@Model.Statistics.AverageQualityScore.ToString("F1")</div>
+                <div class="text-xs text-gray-500 dark:text-gray-400">Avg Score</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Inspections List -->
+            <div class="lg:col-span-1 bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+                    <h2 class="font-semibold text-gray-900 dark:text-white">Inspections</h2>
+                </div>
+                
+                <!-- Filters -->
+                <div class="p-3 border-b border-gray-200 dark:border-gray-700">
+                    <form method="get" class="flex gap-2">
+                        <select name="statusFilter" class="flex-1 text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                            <option value="">All Status</option>
+                            <option value="Pending" selected="@(Model.StatusFilter == "Pending")">Pending</option>
+                            <option value="InProgress" selected="@(Model.StatusFilter == "InProgress")">In Progress</option>
+                            <option value="Passed" selected="@(Model.StatusFilter == "Passed")">Passed</option>
+                            <option value="Failed" selected="@(Model.StatusFilter == "Failed")">Failed</option>
+                        </select>
+                        <select name="typeFilter" class="flex-1 text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                            <option value="">All Types</option>
+                            <option value="PostPrint" selected="@(Model.TypeFilter == "PostPrint")">Post-Print</option>
+                            <option value="PostCNC" selected="@(Model.TypeFilter == "PostCNC")">Post-CNC</option>
+                            <option value="PostEDM" selected="@(Model.TypeFilter == "PostEDM")">Post-EDM</option>
+                            <option value="Final" selected="@(Model.TypeFilter == "Final")">Final</option>
+                        </select>
+                        <button type="submit" class="px-3 py-1 bg-gray-100 dark:bg-gray-600 rounded-lg text-sm">
+                            <i class="fa-solid fa-filter"></i>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Inspection List -->
+                <div class="divide-y divide-gray-200 dark:divide-gray-700 max-h-[600px] overflow-y-auto">
+                    @if (Model.Inspections.Any())
+                    {
+                        @foreach (var inspection in Model.Inspections)
+                        {
+                            var isSelected = Model.SelectedInspectionId == inspection.Id;
+                            <a href="?selectedInspectionId=@inspection.Id" 
+                               class="block p-4 hover:bg-gray-50 dark:hover:bg-gray-700 @(isSelected ? "bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-500" : "")">
+                                <div class="flex justify-between items-start mb-2">
+                                    <div>
+                                        <span class="font-medium text-gray-900 dark:text-white">@inspection.InspectionNumber</span>
+                                        <span class="ml-2 px-2 py-0.5 rounded-full text-xs @Model.GetStatusBadgeClass(inspection.Status)">
+                                            @inspection.Status
+                                        </span>
+                                    </div>
+                                    <i class="fa-solid @Model.GetInspectionTypeIcon(inspection.InspectionType) text-gray-400"></i>
+                                </div>
+                                <div class="text-sm text-gray-600 dark:text-gray-400">
+                                    @inspection.Part?.PartNumber - @inspection.InspectionType
+                                </div>
+                                <div class="flex justify-between text-xs text-gray-500 dark:text-gray-500 mt-2">
+                                    <span>Qty: @inspection.TotalQuantity</span>
+                                    <span>@inspection.CreatedAt.ToString("MMM dd")</span>
+                                </div>
+                            </a>
+                        }
+                    }
+                    else
+                    {
+                        <div class="p-8 text-center text-gray-500 dark:text-gray-400">
+                            <i class="fa-solid fa-clipboard text-3xl mb-2"></i>
+                            <p>No inspections found</p>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Inspection Details -->
+            <div class="lg:col-span-2">
+                @if (Model.SelectedInspection != null)
+                {
+                    var insp = Model.SelectedInspection;
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        <!-- Header -->
+                        <div class="p-6 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h2 class="text-xl font-bold text-gray-900 dark:text-white">@insp.InspectionNumber</h2>
+                                    <p class="text-gray-600 dark:text-gray-400">@insp.Part?.PartNumber - @insp.InspectionType Inspection</p>
+                                </div>
+                                <span class="px-4 py-2 rounded-full font-semibold @Model.GetStatusBadgeClass(insp.Status)">
+                                    @insp.Status
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Info Grid -->
+                        <div class="p-6 grid grid-cols-2 md:grid-cols-4 gap-4 border-b border-gray-200 dark:border-gray-700">
+                            <div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400 uppercase">Total Qty</div>
+                                <div class="text-lg font-semibold text-gray-900 dark:text-white">@insp.TotalQuantity</div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400 uppercase">Passed</div>
+                                <div class="text-lg font-semibold text-green-600">@insp.PassedQuantity</div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400 uppercase">Failed</div>
+                                <div class="text-lg font-semibold text-red-600">@insp.FailedQuantity</div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400 uppercase">Pass Rate</div>
+                                <div class="text-lg font-semibold text-blue-600">@insp.PassRate%</div>
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        @if (insp.Status == "Pending")
+                        {
+                            <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-yellow-50 dark:bg-yellow-900/20">
+                                <form method="post" asp-page-handler="StartInspection" class="flex items-center justify-between">
+                                    <input type="hidden" name="inspectionId" value="@insp.Id" />
+                                    <span class="text-yellow-800 dark:text-yellow-200">
+                                        <i class="fa-solid fa-info-circle mr-2"></i>
+                                        This inspection has not been started yet
+                                    </span>
+                                    <button type="submit" class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-medium">
+                                        <i class="fa-solid fa-play mr-2"></i>Start Inspection
+                                    </button>
+                                </form>
+                            </div>
+                        }
+
+                        <!-- Checklist -->
+                        @if (insp.ChecklistItems.Any())
+                        {
+                            <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                                <h3 class="font-semibold text-gray-900 dark:text-white mb-4">Checklist Items</h3>
+                                <div class="space-y-3">
+                                    @foreach (var item in insp.ChecklistItems.OrderBy(c => c.SortOrder))
+                                    {
+                                        <div class="flex items-center gap-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                            <div class="flex-1">
+                                                <div class="flex items-center gap-2">
+                                                    <span class="font-medium text-gray-900 dark:text-white">@item.ItemName</span>
+                                                    @if (item.IsCritical)
+                                                    {
+                                                        <span class="px-1.5 py-0.5 bg-red-100 text-red-800 text-xs rounded">Critical</span>
+                                                    }
+                                                </div>
+                                                @if (!string.IsNullOrEmpty(item.Specification))
+                                                {
+                                                    <div class="text-xs text-gray-500 dark:text-gray-400">Spec: @item.Specification</div>
+                                                }
+                                            </div>
+                                            @if (insp.Status == "InProgress")
+                                            {
+                                                <form method="post" asp-page-handler="UpdateChecklistItem" class="flex items-center gap-2">
+                                                    <input type="hidden" name="itemId" value="@item.Id" />
+                                                    <select name="result" onchange="this.form.submit()" 
+                                                            class="text-sm rounded border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white">
+                                                        <option value="NA" selected="@(item.Result == "NA")">N/A</option>
+                                                        <option value="Pass" selected="@(item.Result == "Pass")">Pass</option>
+                                                        <option value="Fail" selected="@(item.Result == "Fail")">Fail</option>
+                                                    </select>
+                                                </form>
+                                            }
+                                            else
+                                            {
+                                                <span class="px-3 py-1 rounded-full text-sm @Model.GetResultBadgeClass(item.Result)">
+                                                    @item.Result
+                                                </span>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        <!-- Record Results -->
+                        @if (insp.Status == "InProgress")
+                        {
+                            <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                                <h3 class="font-semibold text-gray-900 dark:text-white mb-4">Record Results</h3>
+                                <form method="post" asp-page-handler="RecordResult" class="space-y-4">
+                                    <input type="hidden" name="inspectionId" value="@insp.Id" />
+                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Passed</label>
+                                            <input type="number" name="passed" value="@insp.PassedQuantity" min="0" max="@insp.TotalQuantity"
+                                                   class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Failed</label>
+                                            <input type="number" name="failed" value="@insp.FailedQuantity" min="0" max="@insp.TotalQuantity"
+                                                   class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rework</label>
+                                            <input type="number" name="rework" value="@insp.ReworkQuantity" min="0" max="@insp.TotalQuantity"
+                                                   class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Scrapped</label>
+                                            <input type="number" name="scrapped" value="@insp.ScrappedQuantity" min="0" max="@insp.TotalQuantity"
+                                                   class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
+                                        <textarea name="notes" rows="2" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"></textarea>
+                                    </div>
+                                    <div class="flex justify-end gap-3">
+                                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                                            <i class="fa-solid fa-save mr-2"></i>Save Results
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Complete Inspection -->
+                            <div class="p-6 bg-gray-50 dark:bg-gray-700">
+                                <form method="post" asp-page-handler="CompleteInspection" 
+                                      onsubmit="return confirm('Complete this inspection? This action cannot be undone.')">
+                                    <input type="hidden" name="inspectionId" value="@insp.Id" />
+                                    <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium">
+                                        <i class="fa-solid fa-check-double mr-2"></i>Complete Inspection
+                                    </button>
+                                </form>
+                            </div>
+                        }
+
+                        <!-- Completed Summary -->
+                        @if (insp.Status == "Passed" || insp.Status == "Failed" || insp.Status == "ConditionalPass")
+                        {
+                            <div class="p-6 bg-@(insp.Status == "Passed" ? "green" : insp.Status == "Failed" ? "red" : "purple")-50 dark:bg-@(insp.Status == "Passed" ? "green" : insp.Status == "Failed" ? "red" : "purple")-900/20">
+                                <div class="text-center">
+                                    <i class="fa-solid fa-@(insp.Status == "Passed" ? "check-circle text-green-600" : insp.Status == "Failed" ? "times-circle text-red-600" : "exclamation-circle text-purple-600") text-4xl mb-2"></i>
+                                    <h3 class="text-xl font-bold text-gray-900 dark:text-white">Inspection @insp.Status</h3>
+                                    @if (insp.CompletedAt.HasValue)
+                                    {
+                                        <p class="text-gray-600 dark:text-gray-400">Completed by @insp.InspectorName on @insp.CompletedAt.Value.ToString("MMM dd, yyyy HH:mm")</p>
+                                    }
+                                    @if (insp.QualityScore.HasValue)
+                                    {
+                                        <p class="text-lg font-semibold mt-2">Quality Score: @insp.QualityScore.Value.ToString("F1")%</p>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 p-12 text-center">
+                        <i class="fa-solid fa-arrow-left text-4xl text-gray-300 dark:text-gray-600 mb-4"></i>
+                        <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Select an Inspection</h3>
+                        <p class="text-gray-500 dark:text-gray-400">Choose an inspection from the list to view details and record results</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Inspection Modal -->
+<div id="createModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md mx-4">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white">Create Inspection</h3>
+        </div>
+        <form method="post" asp-page-handler="CreateInspection" class="p-6 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Part *</label>
+                <select name="partId" required
+                        class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                    <option value="">Select part...</option>
+                    @foreach (var part in Model.AvailableParts)
+                    {
+                        <option value="@part.Id">@part.PartNumber - @part.Description</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Inspection Type *</label>
+                <select name="inspectionType" required
+                        class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                    <option value="PostPrint">Post-Print</option>
+                    <option value="PostCNC">Post-CNC</option>
+                    <option value="PostEDM">Post-EDM</option>
+                    <option value="PostCoating">Post-Coating</option>
+                    <option value="Final">Final</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Quantity *</label>
+                <input type="number" name="quantity" value="1" min="1" required
+                       class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+            </div>
+            <div class="flex justify-end gap-3 pt-4">
+                <button type="button" onclick="document.getElementById('createModal').classList.add('hidden')"
+                        class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Create</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                document.getElementById('createModal').classList.add('hidden');
+            }
+        });
+        
+        document.getElementById('createModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.classList.add('hidden');
+            }
+        });
+    </script>
+}

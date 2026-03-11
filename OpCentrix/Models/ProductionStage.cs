@@ -102,6 +102,12 @@ namespace OpCentrix.Models
         /// </summary>
         public double DefaultDurationHours { get; set; } = 1.0;
 
+        /// <summary>
+        /// Whether this stage processes parts in batches (e.g. SLS Printing, Depowdering, Heat Treatment, Wire EDM).
+        /// Batch stages capture total batch duration and parts-per-batch; per-part duration is derived.
+        /// </summary>
+        public bool IsBatchStage { get; set; } = false;
+
         // Audit Fields
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
         public DateTime LastModifiedDate { get; set; } = DateTime.UtcNow;

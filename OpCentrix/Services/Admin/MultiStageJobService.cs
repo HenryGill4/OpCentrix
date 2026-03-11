@@ -23,6 +23,13 @@ public interface IMultiStageJobService
     Task<List<JobStageValidationResult>> ValidateJobStagesAsync(int jobId);
     Task<bool> CanStartStageAsync(int stageId);
     Task<bool> UpdateStageProgressAsync(int stageId, double progressPercent);
+
+    /// <summary>
+    /// Creates JobStage records for a job from its MasterPart stage definitions.
+    /// Reads StageDefinitions, sequences them by ExecutionOrder, and creates
+    /// linked JobStage rows with FinishToStart dependencies.
+    /// </summary>
+    Task<List<JobStage>> CreateJobStagesFromMasterPartAsync(int jobId, CancellationToken ct = default);
 }
 
 public class MultiStageJobService : IMultiStageJobService
@@ -304,6 +311,102 @@ public class MultiStageJobService : IMultiStageJobService
             _logger.LogError(ex, "Error updating progress for stage {StageId}", stageId);
             return false;
         }
+    }
+
+    /// <inheritdoc />
+    public async Task<List<JobStage>> CreateJobStagesFromMasterPartAsync(int jobId, CancellationToken ct = default)
+    {
+        var job = await _context.Jobs
+            .Include(j => j.MasterPart)
+            .FirstOrDefaultAsync(j => j.Id == jobId, ct);
+
+        if (job?.MasterPartId == null)
+        {
+            _logger.LogWarning("Cannot create stages: Job {JobId} not found or has no MasterPart", jobId);
+            return [];
+        }
+
+        var stageDefinitions = await _context.StageDefinitions
+            .Where(sd => sd.MasterPartId == job.MasterPartId && sd.IsActive)
+            .OrderBy(sd => sd.ExecutionOrder)
+            .ToListAsync(ct);
+
+        if (stageDefinitions.Count == 0)
+        {
+            _logger.LogWarning("MasterPart {MasterPartId} has no active stage definitions", job.MasterPartId);
+            return [];
+        }
+
+        var createdStages = new List<JobStage>();
+        var cursor = job.ScheduledStart;
+
+        foreach (var sd in stageDefinitions)
+        {
+            var durationHours = sd.EstimatedHoursPerPart;
+            var setupHours = sd.SetupMinutes / 60.0;
+            var teardownHours = sd.TeardownMinutes / 60.0;
+            var totalHours = setupHours + durationHours + teardownHours;
+
+            var stage = new JobStage
+            {
+                JobId = jobId,
+                StageType = sd.RequiredMachineType ?? sd.StageName,
+                StageName = sd.StageName,
+                ExecutionOrder = sd.ExecutionOrder,
+                Department = sd.RequiredMachineType ?? "General",
+                ScheduledStart = cursor,
+                ScheduledEnd = cursor.AddHours(totalHours),
+                EstimatedDurationHours = durationHours,
+                SetupTimeHours = setupHours,
+                CooldownTimeHours = teardownHours,
+                Status = "Scheduled",
+                CanStart = sd.ExecutionOrder == 1,
+                IsBlocking = true,
+                Priority = job.Priority,
+                CreatedBy = job.CreatedBy,
+                CreatedDate = DateTime.UtcNow,
+                LastModifiedBy = job.CreatedBy,
+                LastModifiedDate = DateTime.UtcNow
+            };
+
+            _context.JobStages.Add(stage);
+            createdStages.Add(stage);
+
+            cursor = stage.ScheduledEnd;
+        }
+
+        await _context.SaveChangesAsync(ct);
+
+        // Create FinishToStart dependencies between sequential stages
+        for (int i = 1; i < createdStages.Count; i++)
+        {
+            var dep = new JobStageDependency
+            {
+                DependentStageId = createdStages[i].Id,
+                RequiredStageId = createdStages[i - 1].Id,
+                DependencyType = "FinishToStart",
+                IsMandatory = true,
+                CreatedDate = DateTime.UtcNow
+            };
+            _context.StageDependencies.Add(dep);
+        }
+
+        await _context.SaveChangesAsync(ct);
+
+        // Update job metadata
+        job.TotalStages = createdStages.Count;
+        job.WorkflowStage = createdStages[0].StageName;
+        job.StageOrder = 1;
+        job.ScheduledEnd = createdStages.Last().ScheduledEnd;
+        job.EstimatedDuration = job.ScheduledEnd - job.ScheduledStart;
+
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "Created {Count} job stages for Job {JobId} from MasterPart {MasterPartId}",
+            createdStages.Count, jobId, job.MasterPartId);
+
+        return createdStages;
     }
 }
 

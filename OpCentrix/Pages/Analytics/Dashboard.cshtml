@@ -1,0 +1,334 @@
+@page
+@model OpCentrix.Pages.Analytics.DashboardModel
+@{
+    ViewData["Title"] = "Analytics Dashboard";
+    Layout = "~/Pages/Shared/_Layout.cshtml";
+}
+
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+    <!-- Header -->
+    <div class="mb-6">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
+                    <i class="fa-solid fa-chart-line mr-3 text-blue-600"></i>
+                    Analytics Dashboard
+                </h1>
+                <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Manufacturing performance metrics and trends</p>
+            </div>
+            <form method="get" class="flex gap-2">
+                <select name="days" onchange="this.form.submit()"
+                        class="rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                    <option value="7" selected="@(Model.Days == 7)">Last 7 Days</option>
+                    <option value="30" selected="@(Model.Days == 30)">Last 30 Days</option>
+                    <option value="90" selected="@(Model.Days == 90)">Last 90 Days</option>
+                </select>
+                <select name="machineFilter"
+                        class="rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                    <option value="">All Machines</option>
+                    @foreach (var machine in Model.Machines)
+                    {
+                        <option value="@machine.MachineId" selected="@(Model.MachineFilter == machine.MachineId)">@machine.Name</option>
+                    }
+                </select>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    <i class="fa-solid fa-refresh"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow border border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-2xl font-bold text-gray-900 dark:text-white">@Model.Metrics.TotalJobsCompleted</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">Jobs Completed</div>
+                </div>
+                <i class="fa-solid fa-check-circle text-2xl text-green-500"></i>
+            </div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow border border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-2xl font-bold text-gray-900 dark:text-white">@Model.Metrics.TotalPartsProduced</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">Parts Produced</div>
+                </div>
+                <i class="fa-solid fa-cubes text-2xl text-blue-500"></i>
+            </div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow border border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-2xl font-bold text-gray-900 dark:text-white">@Model.Metrics.TotalActualHours.ToString("F0")</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">Build Hours</div>
+                </div>
+                <i class="fa-solid fa-clock text-2xl text-purple-500"></i>
+            </div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow border border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-2xl font-bold @(Model.Metrics.OnTimeDeliveryRate >= 90 ? "text-green-600" : Model.Metrics.OnTimeDeliveryRate >= 75 ? "text-yellow-600" : "text-red-600")">
+                        @Model.Metrics.OnTimeDeliveryRate%
+                    </div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">On-Time Rate</div>
+                </div>
+                <i class="fa-solid fa-truck-fast text-2xl text-orange-500"></i>
+            </div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow border border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-2xl font-bold text-gray-900 dark:text-white">@Model.Metrics.AverageBuildTime.ToString("F1")h</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">Avg Build Time</div>
+                </div>
+                <i class="fa-solid fa-hourglass-half text-2xl text-cyan-500"></i>
+            </div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow border border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-2xl font-bold text-gray-900 dark:text-white">@Model.Metrics.AveragePartsPerBuild.ToString("F1")</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">Parts/Build</div>
+                </div>
+                <i class="fa-solid fa-layer-group text-2xl text-indigo-500"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- OEE Section -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 p-6 mb-6">
+        <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center">
+            <i class="fa-solid fa-gauge-high mr-2 text-blue-600"></i>
+            Overall Equipment Effectiveness (OEE)
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            @foreach (var oee in Model.MachineOEE)
+            {
+                <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-semibold text-gray-900 dark:text-white">@oee.MachineId</h3>
+                        <span class="text-2xl font-bold @Model.GetOEEColor(oee.OEE)">@oee.OEE%</span>
+                    </div>
+                    
+                    <!-- OEE Bar -->
+                    <div class="mb-4">
+                        <div class="h-4 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+                            <div class="h-full @Model.GetOEEBgColor(oee.OEE) transition-all duration-500" style="width: @oee.OEE%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Components -->
+                    <div class="grid grid-cols-3 gap-2 text-center text-sm">
+                        <div>
+                            <div class="font-bold text-blue-600">@oee.Availability%</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">Availability</div>
+                        </div>
+                        <div>
+                            <div class="font-bold text-green-600">@oee.Performance%</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">Performance</div>
+                        </div>
+                        <div>
+                            <div class="font-bold text-purple-600">@oee.Quality%</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">Quality</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600 grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                            <span class="text-gray-500 dark:text-gray-400">Builds:</span>
+                            <span class="font-medium text-gray-900 dark:text-white ml-1">@oee.TotalBuilds</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500 dark:text-gray-400">Parts:</span>
+                            <span class="font-medium text-gray-900 dark:text-white ml-1">@oee.TotalParts</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500 dark:text-gray-400">Running:</span>
+                            <span class="font-medium text-gray-900 dark:text-white ml-1">@oee.RunningHours h</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500 dark:text-gray-400">Downtime:</span>
+                            <span class="font-medium text-gray-900 dark:text-white ml-1">@oee.DowntimeHours h</span>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Machine Utilization -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 p-6">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center">
+                <i class="fa-solid fa-industry mr-2 text-green-600"></i>
+                Machine Utilization
+            </h2>
+            <div class="space-y-4">
+                @foreach (var machine in Model.UtilizationReport.MachineMetrics)
+                {
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="font-medium text-gray-900 dark:text-white">@machine.MachineName</span>
+                            <span class="text-gray-600 dark:text-gray-400">@machine.UtilizationPercent% (@machine.TotalBuilds builds)</span>
+                        </div>
+                        <div class="h-3 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+                            <div class="h-full @Model.GetUtilizationColor(machine.UtilizationPercent) transition-all duration-500" 
+                                 style="width: @Math.Min(100, machine.UtilizationPercent)%"></div>
+                        </div>
+                    </div>
+                }
+            </div>
+            <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400">
+                Overall: @Model.UtilizationReport.OverallUtilization% | 
+                Running: @Model.UtilizationReport.TotalRunningHours.ToString("F0")h / 
+                Available: @Model.UtilizationReport.TotalAvailableHours.ToString("F0")h
+            </div>
+        </div>
+
+        <!-- Stage Performance -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 p-6">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center">
+                <i class="fa-solid fa-list-check mr-2 text-purple-600"></i>
+                Stage Performance
+            </h2>
+            @if (Model.StagePerformance.Any())
+            {
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+                                <th class="pb-2">Stage</th>
+                                <th class="pb-2 text-right">Count</th>
+                                <th class="pb-2 text-right">Avg Hours</th>
+                                <th class="pb-2 text-right">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                            @foreach (var stage in Model.StagePerformance)
+                            {
+                                <tr>
+                                    <td class="py-2 font-medium text-gray-900 dark:text-white">@stage.StageName</td>
+                                    <td class="py-2 text-right text-gray-600 dark:text-gray-400">@stage.TotalCompletions</td>
+                                    <td class="py-2 text-right text-gray-600 dark:text-gray-400">@stage.AverageHours h</td>
+                                    <td class="py-2 text-right text-gray-600 dark:text-gray-400">@stage.TotalHours h</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <p class="text-gray-500 dark:text-gray-400 text-center py-8">No stage data available</p>
+            }
+        </div>
+    </div>
+
+    <!-- Build Trends Chart -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 p-6 mb-6">
+        <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center">
+            <i class="fa-solid fa-chart-area mr-2 text-cyan-600"></i>
+            Build Performance Trends
+        </h2>
+        @if (Model.BuildTrends.Any())
+        {
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Builds per day -->
+                <div>
+                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Builds Per Day</h3>
+                    <div class="flex items-end h-40 gap-1">
+                        @{
+                            var maxBuilds = Model.BuildTrends.Max(t => t.BuildCount);
+                            maxBuilds = maxBuilds == 0 ? 1 : maxBuilds;
+                        }
+                        @foreach (var trend in Model.BuildTrends.TakeLast(14))
+                        {
+                            var height = (double)trend.BuildCount / maxBuilds * 100;
+                            <div class="flex-1 bg-blue-500 rounded-t transition-all duration-300 hover:bg-blue-600" 
+                                 style="height: @height%"
+                                 title="@trend.Date.ToString("MMM dd"): @trend.BuildCount builds"></div>
+                        }
+                    </div>
+                    <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-2">
+                        <span>@Model.BuildTrends.TakeLast(14).FirstOrDefault()?.Date.ToString("MMM dd")</span>
+                        <span>@Model.BuildTrends.LastOrDefault()?.Date.ToString("MMM dd")</span>
+                    </div>
+                </div>
+
+                <!-- Parts per day -->
+                <div>
+                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Parts Produced Per Day</h3>
+                    <div class="flex items-end h-40 gap-1">
+                        @{
+                            var maxParts = Model.BuildTrends.Max(t => t.TotalParts);
+                            maxParts = maxParts == 0 ? 1 : maxParts;
+                        }
+                        @foreach (var trend in Model.BuildTrends.TakeLast(14))
+                        {
+                            var height = (double)trend.TotalParts / maxParts * 100;
+                            <div class="flex-1 bg-green-500 rounded-t transition-all duration-300 hover:bg-green-600" 
+                                 style="height: @height%"
+                                 title="@trend.Date.ToString("MMM dd"): @trend.TotalParts parts"></div>
+                        }
+                    </div>
+                    <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-2">
+                        <span>@Model.BuildTrends.TakeLast(14).FirstOrDefault()?.Date.ToString("MMM dd")</span>
+                        <span>@Model.BuildTrends.LastOrDefault()?.Date.ToString("MMM dd")</span>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <p class="text-gray-500 dark:text-gray-400 text-center py-8">No trend data available for the selected period</p>
+        }
+    </div>
+
+    <!-- Top Parts -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 p-6">
+        <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center">
+            <i class="fa-solid fa-trophy mr-2 text-yellow-500"></i>
+            Top Produced Parts
+        </h2>
+        @if (Model.ProductionSummary.PartMetrics.Any())
+        {
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+                            <th class="pb-2">Part Number</th>
+                            <th class="pb-2 text-right">Builds</th>
+                            <th class="pb-2 text-right">Total Qty</th>
+                            <th class="pb-2 text-right">Avg/Build</th>
+                            <th class="pb-2 text-right">Total Hours</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                        @foreach (var part in Model.ProductionSummary.PartMetrics.Take(10))
+                        {
+                            <tr>
+                                <td class="py-3 font-medium text-gray-900 dark:text-white">@part.PartNumber</td>
+                                <td class="py-3 text-right text-gray-600 dark:text-gray-400">@part.TotalBuilds</td>
+                                <td class="py-3 text-right font-semibold text-blue-600">@part.TotalQuantityProduced</td>
+                                <td class="py-3 text-right text-gray-600 dark:text-gray-400">@part.AverageQuantityPerBuild</td>
+                                <td class="py-3 text-right text-gray-600 dark:text-gray-400">@part.TotalBuildHours h</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                <span>@Model.ProductionSummary.TotalUniqueParts unique parts</span>
+                <span>@Model.ProductionSummary.TotalPartsProduced total produced</span>
+                <span>@Model.ProductionSummary.TotalBuildHours total hours</span>
+            </div>
+        }
+        else
+        {
+            <p class="text-gray-500 dark:text-gray-400 text-center py-8">No production data available</p>
+        }
+    </div>
+</div>

@@ -1,0 +1,421 @@
+@page
+@model OpCentrix.Pages.Builds.IndexModel
+@{
+    ViewData["Title"] = "Build Planning";
+    Layout = "~/Pages/Shared/_Layout.cshtml";
+}
+
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
+                    <i class="fa-solid fa-cubes mr-3 text-blue-600"></i>
+                    Build Planning
+                </h1>
+                <p class="text-gray-600 dark:text-gray-400 mt-1">Plan and manage SLS build packages before scheduling</p>
+            </div>
+            <button onclick="document.getElementById('createModal').classList.remove('hidden')"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg transition-all flex items-center">
+                <i class="fa-solid fa-plus mr-2"></i>
+                New Build Package
+            </button>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow border border-gray-200 dark:border-gray-700">
+            <div class="text-2xl font-bold text-gray-900 dark:text-white">@Model.Statistics.TotalPackages</div>
+            <div class="text-sm text-gray-500 dark:text-gray-400">Total Packages</div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow border border-gray-200 dark:border-gray-700">
+            <div class="text-2xl font-bold text-gray-500">@Model.Statistics.DraftCount</div>
+            <div class="text-sm text-gray-500 dark:text-gray-400">Draft</div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow border border-gray-200 dark:border-gray-700">
+            <div class="text-2xl font-bold text-blue-600">@Model.Statistics.ReadyCount</div>
+            <div class="text-sm text-gray-500 dark:text-gray-400">Ready</div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow border border-gray-200 dark:border-gray-700">
+            <div class="text-2xl font-bold text-purple-600">@Model.Statistics.ScheduledCount</div>
+            <div class="text-sm text-gray-500 dark:text-gray-400">Scheduled</div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow border border-gray-200 dark:border-gray-700">
+            <div class="text-2xl font-bold text-yellow-600">@Model.Statistics.InProgressCount</div>
+            <div class="text-sm text-gray-500 dark:text-gray-400">In Progress</div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow border border-gray-200 dark:border-gray-700">
+            <div class="text-2xl font-bold text-green-600">@Model.Statistics.CompletedCount</div>
+            <div class="text-sm text-gray-500 dark:text-gray-400">Completed</div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 p-4 mb-6">
+        <form method="get" class="flex flex-wrap gap-4 items-end">
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Search</label>
+                <input type="text" name="searchTerm" value="@Model.SearchTerm" placeholder="Package #, name, material..."
+                       class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+            </div>
+            <div class="w-48">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                <select name="statusFilter" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                    <option value="">All Statuses</option>
+                    <option value="Draft" selected="@(Model.StatusFilter == "Draft")">Draft</option>
+                    <option value="Ready" selected="@(Model.StatusFilter == "Ready")">Ready</option>
+                    <option value="Scheduled" selected="@(Model.StatusFilter == "Scheduled")">Scheduled</option>
+                    <option value="InProgress" selected="@(Model.StatusFilter == "InProgress")">In Progress</option>
+                    <option value="Completed" selected="@(Model.StatusFilter == "Completed")">Completed</option>
+                </select>
+            </div>
+            <button type="submit" class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg">
+                <i class="fa-solid fa-filter mr-2"></i>Filter
+            </button>
+        </form>
+    </div>
+
+    <!-- Build Packages Grid -->
+    @if (Model.BuildPackages.Any())
+    {
+        <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            @foreach (var package in Model.BuildPackages)
+            {
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <!-- Package Header -->
+                    <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-900 dark:text-white">@package.PackageNumber</h3>
+                                @if (!string.IsNullOrEmpty(package.Name))
+                                {
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">@package.Name</p>
+                                }
+                            </div>
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold @Model.GetStatusBadgeClass(package.Status)">
+                                @package.Status
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Package Body -->
+                    <div class="p-4 space-y-4">
+                        <!-- Material & Machine -->
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <span class="text-gray-500 dark:text-gray-400">Material:</span>
+                                <span class="ml-1 font-medium text-gray-900 dark:text-white">@package.Material</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-500 dark:text-gray-400">Machine:</span>
+                                <span class="ml-1 font-medium text-gray-900 dark:text-white">@(package.TargetMachineId ?? "Not assigned")</span>
+                            </div>
+                        </div>
+
+                        <!-- Build Info -->
+                        <div class="grid grid-cols-3 gap-2 text-sm">
+                            <div class="bg-gray-50 dark:bg-gray-700 p-2 rounded text-center">
+                                <div class="text-lg font-bold text-gray-900 dark:text-white">@package.TotalPartCount</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Parts</div>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700 p-2 rounded text-center">
+                                <div class="text-lg font-bold text-gray-900 dark:text-white">@package.EstimatedBuildHours.ToString("F1")</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Hours</div>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700 p-2 rounded text-center">
+                                <span class="px-2 py-0.5 rounded text-xs font-medium @Model.GetPriorityBadgeClass(package.Priority)">
+                                    @package.PriorityDisplay
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Build File -->
+                        <div class="flex items-center text-sm">
+                            @if (!string.IsNullOrEmpty(package.BuildFileName))
+                            {
+                                <i class="fa-solid fa-file-code text-green-600 mr-2"></i>
+                                <span class="text-gray-700 dark:text-gray-300 truncate">@package.BuildFileName</span>
+                            }
+                            else
+                            {
+                                <i class="fa-solid fa-file-circle-question text-gray-400 mr-2"></i>
+                                <span class="text-gray-500 dark:text-gray-400 italic">No build file assigned</span>
+                            }
+                        </div>
+
+                        <!-- Parts List -->
+                        @if (package.Parts.Any())
+                        {
+                            <div class="border-t border-gray-200 dark:border-gray-700 pt-3">
+                                <div class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">PARTS IN BUILD</div>
+                                <div class="space-y-1 max-h-24 overflow-y-auto">
+                                    @foreach (var part in package.Parts.Take(5))
+                                    {
+                                        <div class="flex justify-between text-sm bg-gray-50 dark:bg-gray-700 px-2 py-1 rounded">
+                                            <span class="text-gray-700 dark:text-gray-300">@part.Part?.PartNumber</span>
+                                            <span class="text-gray-500 dark:text-gray-400">x@part.Quantity</span>
+                                        </div>
+                                    }
+                                    @if (package.Parts.Count > 5)
+                                    {
+                                        <div class="text-xs text-gray-500 dark:text-gray-400 text-center">
+                                            +@(package.Parts.Count - 5) more parts
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Package Actions -->
+                    <div class="p-4 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600 flex flex-wrap gap-2">
+                        @if (package.Status == "Draft")
+                        {
+                            <button onclick="openAddPartModal(@package.Id)" 
+                                    class="flex-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-3 py-2 rounded-lg text-sm font-medium hover:bg-blue-200 dark:hover:bg-blue-800">
+                                <i class="fa-solid fa-plus mr-1"></i>Add Part
+                            </button>
+                            <button onclick="openBuildFileModal(@package.Id)"
+                                    class="flex-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 px-3 py-2 rounded-lg text-sm font-medium hover:bg-purple-200 dark:hover:bg-purple-800">
+                                <i class="fa-solid fa-file-import mr-1"></i>Build File
+                            </button>
+                            <form method="post" asp-page-handler="MarkReady" class="flex-1">
+                                <input type="hidden" name="packageId" value="@package.Id" />
+                                <button type="submit" class="w-full bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-3 py-2 rounded-lg text-sm font-medium hover:bg-green-200 dark:hover:bg-green-800">
+                                    <i class="fa-solid fa-check mr-1"></i>Mark Ready
+                                </button>
+                            </form>
+                        }
+                        else if (package.Status == "Ready")
+                        {
+                            <button onclick="openScheduleModal(@package.Id, '@package.PackageNumber')"
+                                    class="flex-1 bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-green-700">
+                                <i class="fa-solid fa-calendar-plus mr-1"></i>Schedule Build
+                            </button>
+                        }
+                        else if (package.Status == "Scheduled" && package.ScheduledJobId.HasValue)
+                        {
+                            <a href="/Scheduler?jobId=@package.ScheduledJobId" 
+                               class="flex-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 px-3 py-2 rounded-lg text-sm font-medium text-center">
+                                <i class="fa-solid fa-calendar mr-1"></i>View in Scheduler
+                            </a>
+                        }
+
+                        @if (package.Status == "Draft" || package.Status == "Ready")
+                        {
+                            <form method="post" asp-page-handler="DeletePackage" class="contents" 
+                                  onsubmit="return confirm('Are you sure you want to delete this package?')">
+                                <input type="hidden" name="packageId" value="@package.Id" />
+                                <button type="submit" class="bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 px-3 py-2 rounded-lg text-sm">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </form>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 p-12 text-center">
+            <i class="fa-solid fa-cubes text-5xl text-gray-300 dark:text-gray-600 mb-4"></i>
+            <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Build Packages</h3>
+            <p class="text-gray-500 dark:text-gray-400 mb-6">Create your first build package to start planning SLS builds</p>
+            <button onclick="document.getElementById('createModal').classList.remove('hidden')"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg">
+                <i class="fa-solid fa-plus mr-2"></i>Create Build Package
+            </button>
+        </div>
+    }
+</div>
+
+<!-- Create Package Modal -->
+<div id="createModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg mx-4">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white">Create Build Package</h3>
+        </div>
+        <form method="post" asp-page-handler="CreatePackage" class="p-6 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Package Name</label>
+                <input type="text" name="NewPackage.Name" placeholder="e.g., Ti64 Production Run March"
+                       class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Material *</label>
+                <select name="NewPackage.Material" required
+                        class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                    <option value="Ti-6Al-4V Grade 5">Ti-6Al-4V Grade 5</option>
+                    <option value="Ti-6Al-4V ELI Grade 23">Ti-6Al-4V ELI Grade 23</option>
+                    <option value="Inconel 718">Inconel 718</option>
+                    <option value="Inconel 625">Inconel 625</option>
+                    <option value="316L Stainless Steel">316L Stainless Steel</option>
+                    <option value="AlSi10Mg">AlSi10Mg</option>
+                </select>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Priority</label>
+                    <select name="NewPackage.Priority"
+                            class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                        <option value="1">Critical</option>
+                        <option value="2">High</option>
+                        <option value="3" selected>Normal</option>
+                        <option value="4">Low</option>
+                        <option value="5">Lowest</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Due Date</label>
+                    <input type="date" name="NewPackage.DueDate"
+                           class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
+                <textarea name="NewPackage.Notes" rows="2" 
+                          class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"></textarea>
+            </div>
+            <div class="flex justify-end gap-3 pt-4">
+                <button type="button" onclick="document.getElementById('createModal').classList.add('hidden')"
+                        class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Create Package</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Part Modal -->
+<div id="addPartModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md mx-4">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white">Add Part to Build</h3>
+        </div>
+        <form method="post" asp-page-handler="AddPart" class="p-6 space-y-4">
+            <input type="hidden" name="packageId" id="addPartPackageId" />
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Part *</label>
+                <select name="SelectedPartId" required
+                        class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                    <option value="">Select a part...</option>
+                    @foreach (var part in Model.AvailableParts)
+                    {
+                        <option value="@part.Id">@part.PartNumber - @part.Description</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Quantity</label>
+                <input type="number" name="PartQuantity" value="1" min="1" max="500"
+                       class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+            </div>
+            <div class="flex justify-end gap-3 pt-4">
+                <button type="button" onclick="document.getElementById('addPartModal').classList.add('hidden')"
+                        class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Add Part</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Build File Modal -->
+<div id="buildFileModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md mx-4">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white">Assign Build File</h3>
+        </div>
+        <form method="post" asp-page-handler="AssignBuildFile" class="p-6 space-y-4">
+            <input type="hidden" name="packageId" id="buildFilePackageId" />
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">File Name *</label>
+                <input type="text" name="fileName" placeholder="e.g., Build_Ti64_March2024.slm" required
+                       class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">File Path</label>
+                <input type="text" name="filePath" placeholder="e.g., \\server\builds\Ti64\..."
+                       class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+            </div>
+            <div class="flex justify-end gap-3 pt-4">
+                <button type="button" onclick="document.getElementById('buildFileModal').classList.add('hidden')"
+                        class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Assign File</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Schedule Modal -->
+<div id="scheduleModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md mx-4">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white">Schedule Build</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400" id="schedulePackageName"></p>
+        </div>
+        <form method="post" asp-page-handler="ScheduleBuild" class="p-6 space-y-4">
+            <input type="hidden" name="packageId" id="schedulePackageId" />
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Machine *</label>
+                <select name="machineId" required
+                        class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                    @foreach (var machine in Model.AvailableMachines)
+                    {
+                        <option value="@machine.MachineId">@machine.Name (@machine.MachineId)</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date/Time *</label>
+                <input type="datetime-local" name="startDate" required
+                       value="@DateTime.Now.AddDays(1).ToString("yyyy-MM-ddTHH:mm")"
+                       class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+            </div>
+            <div class="flex justify-end gap-3 pt-4">
+                <button type="button" onclick="document.getElementById('scheduleModal').classList.add('hidden')"
+                        class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Schedule</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function openAddPartModal(packageId) {
+            document.getElementById('addPartPackageId').value = packageId;
+            document.getElementById('addPartModal').classList.remove('hidden');
+        }
+
+        function openBuildFileModal(packageId) {
+            document.getElementById('buildFilePackageId').value = packageId;
+            document.getElementById('buildFileModal').classList.remove('hidden');
+        }
+
+        function openScheduleModal(packageId, packageNumber) {
+            document.getElementById('schedulePackageId').value = packageId;
+            document.getElementById('schedulePackageName').textContent = packageNumber;
+            document.getElementById('scheduleModal').classList.remove('hidden');
+        }
+
+        // Close modals on escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('[id$="Modal"]').forEach(modal => {
+                    modal.classList.add('hidden');
+                });
+            }
+        });
+
+        // Close modals on outside click
+        document.querySelectorAll('[id$="Modal"]').forEach(modal => {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+}

@@ -1,25 +1,9 @@
-﻿@* 
-FIX SUMMARY (2025-09-28)
-Problem:
- - Modal form HTML for Master Parts is injected dynamically (fetch/innerHTML) on Parts page.
- - Original inline <script> (and later external include placed inside the partial) never executed after injection.
- - Additionally, the Admin area uses _AdminLayout.cshtml (not the site root _Layout.cshtml) so adding the script only to the main layout failed for /Admin/Parts.
- - Result: No event handlers, no calculated fields, submit logic broke; later server error responses re-rendered a full page where scripts happened to work (looked like a "plain HTML fallback").
-Root Causes:
- 1. Relying on script tags inside dynamically injected partials (innerHTML) – browsers do not execute them.
- 2. Script was only globally included in the non-admin layout first.
- 3. Parallel lightweight initializer code on Parts.cshtml risked divergence.
-Fix Implemented:
- 1. Extracted all logic into /wwwroot/js/masterPartForm.js.
- 2. Added global include in BOTH layouts (_Layout.cshtml and _AdminLayout.cshtml) BEFORE dynamic loads occur.
- 3. Added idempotent guard & MutationObserver in masterPartForm.js to auto-init when #masterPartForm arrives in DOM.
- 4. Exposed window.initMasterPartForm() for manual re-init if needed.
- 5. Added verbose debug logging to verify initialization path.
-Best Practice Going Forward:
- - Never place executable <script> inside dynamically injected HTML fragments; centralize and load once.
- - Keep single authoritative initializer; avoid duplicating stage logic in page-level scripts.
- - If future dynamic components are added, dispatch or listen for a custom event (e.g. document.dispatchEvent(new CustomEvent('oc:partial:loaded',{detail:{id:'masterPartForm'}}))) instead of setTimeout.
- - Remove debug logs for production or gate behind a flag.
+@* 
+SIMPLIFIED SINGLE-TAB MASTER PART FORM
+- Basic part info at top
+- Stage selection with add/remove functionality
+- Batch configuration for each selected stage
+- Per-part duration auto-calculated
 *@
 @model OpCentrix.Pages.Admin.PartsModel
 
@@ -35,462 +19,168 @@ Best Practice Going Forward:
     <div class="modal-body" style="max-height: 80vh; overflow-y: auto;">
         @Html.AntiForgeryToken()
         <input type="hidden" asp-for="MasterPart.Id" />
-        <!-- Hidden Stage Estimate (new) -->
-        <input type="hidden" asp-for="MasterPart.StageEstimateSingle" id="StageEstimateSingleHidden" />
         
         <div asp-validation-summary="All" class="alert alert-danger d-none"></div>
         
-        <!-- Navigation Tabs (Build Config tab removed) -->
-        <ul class="nav nav-pills mb-4" id="masterPartTabs" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="basic-tab" data-bs-toggle="pill" data-bs-target="#basic" type="button" role="tab">
-                    <i class="fas fa-info-circle me-1"></i>Basic Info
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="stages-tab" data-bs-toggle="pill" data-bs-target="#stages" type="button" role="tab">
-                    <i class="fas fa-tasks me-1"></i>Production Stages
-                    <span class="badge bg-secondary ms-1" id="selectedStageCount">0</span>
-                </button>
-            </li>
-        </ul>
-
-        <div class="tab-content" id="masterPartTabContent">
-            <!-- BASIC TAB -->
-            <div class="tab-pane fade show active" id="basic" role="tabpanel" aria-labelledby="basic-tab">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label asp-for="MasterPart.PartNumber" class="form-label fw-bold"><i class="fas fa-hashtag me-1 text-primary"></i>Part Number *</label>
-                            <input asp-for="MasterPart.PartNumber" class="form-control form-control-lg" required pattern="^[A-Z0-9\-]{4,20}$" />
-                            <span asp-validation-for="MasterPart.PartNumber" class="text-danger"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label asp-for="MasterPart.Name" class="form-label fw-bold"><i class="fas fa-tag me-1 text-success"></i>Part Name *</label>
-                            <input asp-for="MasterPart.Name" class="form-control form-control-lg" required />
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <div class="mb-3">
-                            <label asp-for="MasterPart.Description" class="form-label fw-bold"><i class="fas fa-align-left me-1 text-info"></i>Description</label>
-                            <textarea asp-for="MasterPart.Description" class="form-control" rows="3" maxlength="500"></textarea>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="mb-3">
-                            <label asp-for="MasterPart.Material" class="form-label fw-bold"><i class="fas fa-flask me-1 text-warning"></i>Material *</label>
-                            <select asp-for="MasterPart.Material" class="form-select form-select-lg" required>
-                                <option value="">Select Material</option>
-                                <option value="Ti-6Al-4V Grade 5">Ti-6Al-4V Grade 5</option>
-                                <option value="Inconel 718">Inconel 718</option>
-                                <option value="Stainless Steel 316L">Stainless Steel 316L</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="mb-3">
-                            <label asp-for="MasterPart.ManufacturingApproach" class="form-label fw-bold"><i class="fas fa-route me-1 text-primary"></i>Approach *</label>
-                            <select asp-for="MasterPart.ManufacturingApproach" class="form-select form-select-lg" id="manufacturingApproachSelect" required>
-                                <option value="">Select Approach</option>
-                                <option value="SLS-Based">SLS-Based</option>
-                                <option value="Hybrid-Approach">Hybrid</option>
-                                <option value="CNC-Based">CNC-Based</option>
-                                <option value="Traditional-Machining">Traditional</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="mb-3 d-flex align-items-center h-100">
-                            <div class="form-check mt-4">
-                                <input asp-for="MasterPart.IsActive" class="form-check-input" type="checkbox" />
-                                <label asp-for="MasterPart.IsActive" class="form-check-label fw-bold"><i class="fas fa-toggle-on me-1 text-success"></i>Active</label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- NEW: SLS Build Configuration Card -->
-                <div id="slsBuildConfigCard" class="card mt-3" >
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0"><i class="fas fa-layer-group me-2 text-primary"></i>SLS Build Configuration</h6>
-                        <span class="badge bg-light text-dark" id="slcComplexityBadge">--</span>
-                    </div>
-                    <div class="card-body">
-                        <!-- Build Modes Table -->
-                        <div class="table-responsive mb-3">
-                            <table class="table table-sm align-middle">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th style="width:110px;">Mode</th>
-                                        <th style="width:90px;">Enable</th>
-                                        <th style="width:140px;">Observed Parts/Build</th>
-                                        <th style="width:160px;">Observed Duration (h)</th>
-                                        <th style="width:140px;">Derived Hrs/Part</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td><strong>Single</strong></td>
-                                        <td><span class="badge bg-success">Always</span></td>
-                                        <td>
-                                            <input type="number" min="1" class="form-control form-control-sm sls-ppb" id="ppbSingle" value="@(Model.MasterPart.PartsPerBuildSingle == 0 ? 1 : Model.MasterPart.PartsPerBuildSingle)" />
-                                        </td>
-                                        <td>
-                                            <input type="number" step="0.1" min="0.1" class="form-control form-control-sm sls-duration" id="durSingle" value="@(Model.MasterPart.SingleStackDurationHours?.ToString("F1") ?? "")" placeholder="e.g. 8.0" />
-                                        </td>
-                                        <td><input type="text" class="form-control form-control-sm" id="hpSingle" readonly /></td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Double</strong></td>
-                                        <td>
-                                            <div class="form-check form-switch">
-                                                <input class="form-check-input mode-enable" type="checkbox" id="enableDouble" @(Model.MasterPart.EnableDoubleStack ? "checked" : "") />
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <input type="number" min="1" class="form-control form-control-sm sls-ppb" id="ppbDouble" value="@(Model.MasterPart.PartsPerBuildDouble?.ToString() ?? "")" disabled />
-                                        </td>
-                                        <td>
-                                            <input type="number" step="0.1" min="0.1" class="form-control form-control-sm sls-duration" id="durDouble" value="@(Model.MasterPart.DoubleStackDurationHours?.ToString("F1") ?? "")" disabled />
-                                        </td>
-                                        <td><input type="text" class="form-control form-control-sm" id="hpDouble" readonly /></td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Triple</strong></td>
-                                        <td>
-                                            <div class="form-check form-switch">
-                                                <input class="form-check-input mode-enable" type="checkbox" id="enableTriple" @(Model.MasterPart.EnableTripleStack ? "checked" : "") />
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <input type="number" min="1" class="form-control form-control-sm sls-ppb" id="ppbTriple" value="@(Model.MasterPart.PartsPerBuildTriple?.ToString() ?? "")" disabled />
-                                        </td>
-                                        <td>
-                                            <input type="number" step="0.1" min="0.1" class="form-control form-control-sm sls-duration" id="durTriple" value="@(Model.MasterPart.TripleStackDurationHours?.ToString("F1") ?? "")" disabled />
-                                        </td>
-                                        <td><input type="text" class="form-control form-control-sm" id="hpTriple" readonly /></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <!-- Stage Estimate vs Observed -->
-                        <div class="row g-3 align-items-center">
-                            <div class="col-md-4">
-                                <div class="border rounded p-2 bg-light h-100">
-                                    <div class="small text-muted">Stage Estimated Total (Single)</div>
-                                    <div class="h5 mb-0" id="stageEstimateDisplay">--</div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="border rounded p-2 h-100">
-                                    <div class="small text-muted">Observed Single Duration</div>
-                                    <div class="h5 mb-0" id="observedSingleDisplay">--</div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="border rounded p-2 h-100" id="diffContainer">
-                                    <div class="small text-muted">Diff (Observed - Est)</div>
-                                    <div class="h5 mb-0"><span id="diffValue">--</span> <span class="badge bg-secondary" id="diffBadge">N/A</span></div>
-                                </div>
-                            </div>
-                        </div>
-                        <small class="text-muted d-block mt-2">Diff badge colors: ±10% = secondary, >+10% = warning, < -10% = info</small>
-                    </div>
-                </div>
-
-                <div class="alert alert-light border d-flex justify-content-between align-items-center mt-3">
-                    <div><i class="fas fa-clock me-1 text-primary"></i><strong>Complexity:</strong> <span id="complexityDisplay" class="badge bg-secondary">--</span></div>
-                </div>
+        <!-- SECTION 1: Basic Part Information -->
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h6 class="mb-0"><i class="fas fa-info-circle me-2 text-primary"></i>Part Information</h6>
             </div>
-
-            <!-- STAGES TAB (unchanged except removed stacking logic references) -->
-            <div class="tab-pane fade" id="stages" role="tabpanel" aria-labelledby="stages-tab">
-                <div class="mb-3">
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        <strong>Important:</strong> Select all manufacturing stages required for this part in the correct execution order.
-                        Each stage will be created as a separate work order during production.
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label asp-for="MasterPart.PartNumber" class="form-label fw-bold">Part Number *</label>
+                        <input asp-for="MasterPart.PartNumber" class="form-control" required placeholder="e.g. BT-001" />
+                        <span asp-validation-for="MasterPart.PartNumber" class="text-danger small"></span>
                     </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-12">
-                        <h6 class="mb-3">
-                            <i class="fas fa-tasks me-2 text-primary"></i>Available Manufacturing Stages
-                        </h6>
-                        
-                        <div id="stagesContainer">
-                            @if (Model.AvailableStages?.Any() == true)
-                            {
-                                var selectedStageIds = string.IsNullOrEmpty(Model.SelectedStageIds) 
-                                    ? new List<int>() 
-                                    : Model.SelectedStageIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                                        .Select(s => int.TryParse(s.Trim(), out var id) ? id : 0)
-                                        .Where(id => id > 0)
-                                        .ToList();
-                                
-                                var stageHours = string.IsNullOrEmpty(Model.StageEstimatedHours)
-                                    ? new List<double>()
-                                    : Model.StageEstimatedHours.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                                        .Select(s => double.TryParse(s.Trim(), out var hours) ? hours : 1.0)
-                                        .ToList();
-                                        
-                                @for (int i = 0; i < Model.AvailableStages.Count; i++)
-                                {
-                                    var stage = Model.AvailableStages[i];
-                                    var isSelected = selectedStageIds.Contains(stage.Id);
-                                    var selectedIndexInIds = isSelected ? selectedStageIds.IndexOf(stage.Id) : -1;
-                                    var estimatedHours = selectedIndexInIds >= 0 && selectedIndexInIds < stageHours.Count 
-                                        ? stageHours[selectedIndexInIds] 
-                                        : (stage.DefaultDurationHours > 0 ? stage.DefaultDurationHours : 1.0);
-                                    var executionOrder = selectedIndexInIds >= 0 ? selectedIndexInIds + 1 : 1;
-                                    var isBatch = stage.Name == "SLS Printing" || stage.Name == "EDM Operations"; // Batch stages (total hours entered)
-
-                                    var stageIcon = stage.Name switch
-                                    {
-                                        "SLS Printing" => "fas fa-print",
-                                        "Heat Treatment" => "fas fa-fire",
-                                        "CNC Machining" => "fas fa-cogs",
-                                        "EDM Operations" => "fas fa-bolt", 
-                                        "Assembly" => "fas fa-puzzle-piece",
-                                        "Finishing" => "fas fa-brush",
-                                        "Quality Inspection" => "fas fa-search",
-                                        _ => "fas fa-cog"
-                                    };
-                                    
-                                    var stageColor = stage.Name switch
-                                    {
-                                        "SLS Printing" => "primary",
-                                        "Heat Treatment" => "danger",
-                                        "CNC Machining" => "success",
-                                        "EDM Operations" => "warning",
-                                        "Assembly" => "info",
-                                        "Finishing" => "secondary",
-                                        "Quality Inspection" => "dark",
-                                        _ => "secondary"
-                                    };
-
-                                    <div class="card stage-card mb-3 @(isSelected ? "border-primary shadow-sm" : "border-light")" data-stage-id="@stage.Id" data-stage-name="@stage.Name" data-stage-batch="@(isBatch.ToString().ToLower())">
-                                        <div class="card-body">
-                                            <div class="row align-items-center">
-                                                <!-- Selection Checkbox -->
-                                                <div class="col-md-1">
-                                                    <div class="form-check">
-                                                        <input type="checkbox" class="form-check-input stage-checkbox" 
-                                                               value="@stage.Id" 
-                                                               @(isSelected ? "checked" : "")
-                                                               data-stage-name="@stage.Name"
-                                                               data-default-hours="@stage.DefaultDurationHours" />
-                                                    </div>
-                                                </div>
-                                                
-                                                <!-- Stage Info -->
-                                                <div class="col-md-4">
-                                                    <div class="d-flex align-items-center">
-                                                        <div class="stage-icon me-3">
-                                                            <i class="@stageIcon fa-2x text-@stageColor"></i>
-                                                        </div>
-                                                        <div>
-                                                            <strong class="text-@stageColor">@stage.Name</strong>
-                                                            <br><small class="text-muted">@stage.Department</small>
-                                                            @if(!isBatch) {
-                                                                <div><small class="badge bg-outline-secondary text-muted border">Per-Part Stage</small></div>
-                                                            } else {
-                                                                <div><small class="badge bg-outline-primary text-muted border">Batch Stage</small></div>
-                                                            }
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                
-                                                <!-- Description -->
-                                                <div class="col-md-3">
-                                                    <small class="text-muted">@stage.Description</small>
-                                                </div>
-                                                
-                                                <!-- Default Rate -->
-                                                <div class="col-md-2">
-                                                    <div class="text-center">
-                                                        <small class="text-muted">Std. Rate:</small>
-                                                        <br><strong>$@stage.DefaultHourlyRate/hr</strong>
-                                                        <br><small class="text-info">@(stage.DefaultDurationHours > 0 ? stage.DefaultDurationHours.ToString("F1") : "1.0")h default</small>
-                                                    </div>
-                                                </div>
-                                                
-                                                <!-- Time / Cycle Input -->
-                                                <div class="col-md-2">
-                                                    @if (isBatch)
-                                                    {
-                                                        <div class="mb-2">
-                                                            <label class="form-label small fw-bold">Est. Hours:</label>
-                                                            <input type="number" step="0.1" min="0.1" max="50" 
-                                                                   class="form-control form-control-sm stage-hours"
-                                                                   data-stage-id="@stage.Id"
-                                                                   value="@estimatedHours.ToString("F1")"
-                                                                   @(isSelected ? "" : "disabled") />
-                                                        </div>
-                                                    }
-                                                    else
-                                                    {
-                                                        <div class="mb-2">
-                                                            <label class="form-label small fw-bold">Cycle (min/part):</label>
-                                                            <input type="number" step="0.1" min="0.5" max="60" 
-                                                                   class="form-control form-control-sm stage-cycle" 
-                                                                   data-stage-id="@stage.Id" value="5" />
-                                                            <input type="hidden" class="stage-hours" data-stage-id="@stage.Id" value="@estimatedHours.ToString("F2")" />
-                                                            <small class="text-muted d-block total-hours-display" data-stage-id="@stage.Id">Total: @estimatedHours.ToString("F2")h</small>
-                                                        </div>
-                                                    }
-                                                    <div class="execution-order" style="display: @(isSelected ? "block" : "none");">
-                                                        <label class="form-label small text-primary">Order:</label>
-                                                        <input type="number" min="1" max="10" 
-                                                               class="form-control form-control-sm execution-order-input"
-                                                               data-stage-id="@stage.Id"
-                                                               value="@executionOrder" />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            <!-- Stage-Specific Configuration (shown when selected) -->
-                                            <div class="stage-config mt-3" style="display: @(isSelected ? "block" : "none");">
-                                                <div class="border-top pt-3">
-                                                    <h6 class="text-@stageColor mb-2">
-                                                        <i class="fas fa-cog me-1"></i>@stage.Name Configuration
-                                                    </h6>
-                                                    
-                                                    @if (stage.Name == "SLS Printing")
-                                                    {
-                                                        <div class="row">
-                                                            <div class="col-md-3">
-                                                                <small class="form-label">Laser Power (W)</small>
-                                                                <input type="number" class="form-control form-control-sm" value="170" min="100" max="400" />
-                                                            </div>
-                                                            <div class="col-md-3">
-                                                                <small class="form-label">Scan Speed (mm/s)</small>
-                                                                <input type="number" class="form-control form-control-sm" value="1000" min="500" max="2000" />
-                                                            </div>
-                                                            <div class="col-md-3">
-                                                                <small class="form-label">Layer Thickness (µm)</small>
-                                                                <input type="number" class="form-control form-control-sm" value="30" min="15" max="60" />
-                                                            </div>
-                                                            <div class="col-md-3">
-                                                                <small class="form-label">Build Temperature (°C)</small>
-                                                                <input type="number" class="form-control form-control-sm" value="180" min="150" max="300" />
-                                                            </div>
-                                                        </div>
-                                                    }
-                                                    else if (stage.Name == "CNC Machining")
-                                                    {
-                                                        <div class="row">
-                                                            <div class="col-md-4">
-                                                                <small class="form-label">Spindle Speed (RPM)</small>
-                                                                <input type="number" class="form-control form-control-sm" value="2500" min="500" max="8000" />
-                                                            </div>
-                                                            <div class="col-md-4">
-                                                                <small class="form-label">Feed Rate (mm/min)</small>
-                                                                <input type="number" class="form-control form-control-sm" value="500" min="100" max="2000" />
-                                                            </div>
-                                                            <div class="col-md-4">
-                                                                <small class="form-label">Tolerance</small>
-                                                                <select class="form-select form-select-sm">
-                                                                    <option>±0.05mm</option>
-                                                                    <option>±0.1mm</option>
-                                                                    <option selected>±0.2mm</option>
-                                                                </select>
-                                                            </div>
-                                                        </div>
-                                                    }
-                                                    else if (stage.Name == "EDM Operations")
-                                                    {
-                                                        <div class="row">
-                                                            <div class="col-md-4">
-                                                                <small class="form-label">Wire Type</small>
-                                                                <select class="form-select form-select-sm">
-                                                                    <option selected>Brass</option>
-                                                                    <option>Copper</option>
-                                                                    <option>Zinc</option>
-                                                                </select>
-                                                            </div>
-                                                            <div class="col-md-4">
-                                                                <small class="form-label">Wire Diameter (mm)</small>
-                                                                <input type="number" step="0.01" class="form-control form-control-sm" value="0.25" />
-                                                            </div>
-                                                            <div class="col-md-4">
-                                                                <small class="form-label">Cut Speed (mm/min)</small>
-                                                                <input type="number" class="form-control form-control-sm" value="5" min="1" max="20" />
-                                                            </div>
-                                                        </div>
-                                                    }
-                                                    else
-                                                    {
-                                                        <div class="text-muted small">
-                                                            <i class="fas fa-info-circle me-1"></i>Standard @stage.Name configuration will be used
-                                                        </div>
-                                                    }
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                }
-                            }
-                            else
-                            {
-                                <div class="alert alert-warning">
-                                    <i class="fas fa-exclamation-triangle me-2"></i>
-                                    No production stages available. Please add stages in the system settings.
-                                </div>
-                            }
-                        </div>
-                        
-                        <!-- Hidden inputs for form submission -->
-                        <input type="hidden" id="selectedStageIds" name="SelectedStageIds" />
-                        <input type="hidden" id="stageEstimatedHours" name="StageEstimatedHours" />
-                        
-                        <!-- Stage Summary -->
-                        <div class="card mt-3" id="stageSummary" style="display: none;">
-                            <div class="card-header bg-light">
-                                <h6 class="mb-0">
-                                    <i class="fas fa-list-ol me-2 text-primary"></i>Selected Stages Summary
-                                </h6>
-                            </div>
-                            <div class="card-body">
-                                <div id="stageSummaryContent"></div>
-                                <div class="row mt-2">
-                                    <div class="col-md-4">
-                                        <strong>Total Stages: <span id="totalStages" class="text-primary">0</span></strong>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <strong>Total Time: <span id="totalTime" class="text-success">0.0h</span></strong>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <strong>Est. Cost: <span id="totalCost" class="text-warning">$0</span></strong>
-                                    </div>
-                                </div>
-                            </div>
+                    <div class="col-md-4">
+                        <label asp-for="MasterPart.Name" class="form-label fw-bold">Part Name *</label>
+                        <input asp-for="MasterPart.Name" class="form-control" required placeholder="e.g. Suppressor Baffle" />
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="MasterPart.Material" class="form-label fw-bold">Material *</label>
+                        <select asp-for="MasterPart.Material" class="form-select" required>
+                            <option value="">Select Material</option>
+                            <option value="Ti-6Al-4V Grade 5">Ti-6Al-4V Grade 5</option>
+                            <option value="Inconel 718">Inconel 718</option>
+                            <option value="Stainless Steel 316L">Stainless Steel 316L</option>
+                        </select>
+                    </div>
+                    <div class="col-md-8">
+                        <label asp-for="MasterPart.Description" class="form-label">Description</label>
+                        <input asp-for="MasterPart.Description" class="form-control" placeholder="Brief description..." />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="form-check mt-2">
+                            <input asp-for="MasterPart.IsActive" class="form-check-input" type="checkbox" />
+                            <label asp-for="MasterPart.IsActive" class="form-check-label fw-bold">
+                                <i class="fas fa-toggle-on me-1 text-success"></i>Active
+                            </label>
                         </div>
                     </div>
                 </div>
             </div>
-
-            
         </div>
+
+        <!-- SECTION 2: Manufacturing Stages -->
+        <div class="card mb-4">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="fas fa-tasks me-2 text-primary"></i>Manufacturing Stages
+                    <span class="badge bg-primary ms-2" id="selectedStageCount">0</span>
+                </h6>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-primary dropdown-toggle" type="button" id="addStageDropdown" data-bs-toggle="dropdown">
+                        <i class="fas fa-plus me-1"></i>Add Stage
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="addStageDropdown" id="availableStagesMenu">
+                        @if (Model.AvailableStages?.Any() == true)
+                        {
+                            @foreach (var stage in Model.AvailableStages.OrderBy(s => s.DisplayOrder))
+                            {
+                                var icon = stage.Name switch
+                                {
+                                    "SLS Printing" or "3D Printing (SLS)" => "fa-print text-primary",
+                                    "Powder Removal" => "fa-wind text-secondary",
+                                    "Heat Treatment" => "fa-fire text-danger",
+                                    "Wire EDM" or "EDM" => "fa-bolt text-warning",
+                                    "CNC Machining" => "fa-cogs text-success",
+                                    "Surface Finishing" or "Sandblasting" or "Coating/Cerakote" => "fa-brush text-info",
+                                    "Quality Inspection" => "fa-search text-dark",
+                                    "Assembly" => "fa-puzzle-piece text-purple",
+                                    "Laser Engraving" => "fa-crosshairs text-warning",
+                                    _ => "fa-cog text-secondary"
+                                };
+                                <li>
+                                    <a class="dropdown-item add-stage-item" href="#" 
+                                       data-stage-id="@stage.Id" 
+                                       data-stage-name="@stage.Name"
+                                       data-default-hours="@stage.DefaultDurationHours"
+                                       data-default-rate="@stage.DefaultHourlyRate"
+                                       data-is-batch="@(stage.IsBatchStage ? "true" : "false")">
+                                        <i class="fas @icon me-2"></i>@stage.Name
+                                        <small class="text-muted ms-2">(@stage.DefaultDurationHours.ToString("F1")h)</small>
+                                    </a>
+                                </li>
+                            }
+                        }
+                        else
+                        {
+                            <li><span class="dropdown-item text-muted">No stages available</span></li>
+                        }
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <!-- Selected Stages Table -->
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" id="selectedStagesTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:50px;">#</th>
+                                <th>Stage</th>
+                                <th style="width:120px;">Batch Hrs</th>
+                                <th style="width:100px;">Parts/Batch</th>
+                                <th style="width:100px;">Per-Part</th>
+                                <th style="width:80px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="selectedStagesBody">
+                            <!-- Stages will be added here dynamically -->
+                        </tbody>
+                        <tfoot class="table-light" id="stagesTotalFooter" style="display: none;">
+                            <tr>
+                                <td colspan="2" class="text-end fw-bold">Totals:</td>
+                                <td class="fw-bold" id="totalBatchHours">0h</td>
+                                <td>--</td>
+                                <td class="fw-bold text-primary" id="totalPerPartHours">0h</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                
+                <!-- Empty State -->
+                <div id="noStagesMessage" class="text-center py-4 text-muted">
+                    <i class="fas fa-tasks fa-2x mb-2"></i>
+                    <p class="mb-0">No stages selected. Click "Add Stage" to begin.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hidden inputs for form submission -->
+        <input type="hidden" id="selectedStageIds" name="SelectedStageIds" value="" />
+        <input type="hidden" id="stageEstimatedHours" name="StageEstimatedHours" value="" />
+        <input type="hidden" asp-for="MasterPart.ManufacturingApproach" value="SLS-Based" />
+        
+        <!-- Batch stage data (for model binding) -->
+        <input type="hidden" asp-for="MasterPart.SlsBuildDurationHours" id="hiddenSlsDuration" />
+        <input type="hidden" asp-for="MasterPart.SlsPartsPerBuild" id="hiddenSlsParts" />
+        <input type="hidden" asp-for="MasterPart.DepowderingDurationHours" id="hiddenDepowderDuration" />
+        <input type="hidden" asp-for="MasterPart.DepowderingPartsPerBatch" id="hiddenDepowderParts" />
+        <input type="hidden" asp-for="MasterPart.HeatTreatmentDurationHours" id="hiddenHeatDuration" />
+        <input type="hidden" asp-for="MasterPart.HeatTreatmentPartsPerBatch" id="hiddenHeatParts" />
+        <input type="hidden" asp-for="MasterPart.WireEdmDurationHours" id="hiddenEdmDuration" />
+        <input type="hidden" asp-for="MasterPart.WireEdmPartsPerSession" id="hiddenEdmParts" />
     </div>
     
     <div class="modal-footer bg-light">
         <div class="d-flex justify-content-between align-items-center w-100">
             <div class="text-muted small">
-                <i class="fas fa-info-circle me-1"></i>
-                All fields marked with * are required
+                <span id="formStatusText">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Select at least one stage to enable save
+                </span>
             </div>
             <div>
                 <button type="button" class="btn btn-outline-secondary me-2" data-bs-dismiss="modal">
                     <i class="fas fa-times me-1"></i>Cancel
                 </button>
-                <button type="submit" class="btn btn-primary" id="submitBtn">
+                <button type="submit" class="btn btn-secondary" id="submitBtn" disabled>
                     <i class="fas fa-@(Model.MasterPart.Id > 0 ? "save" : "plus") me-1"></i>
-                    @(Model.MasterPart.Id > 0 ? "Update" : "Create") Master Part
+                    @(Model.MasterPart.Id > 0 ? "Update" : "Create") Part
                 </button>
             </div>
         </div>
@@ -498,28 +188,396 @@ Best Practice Going Forward:
 </form>
 
 <style>
-.nav-pills .nav-link { border-radius: 8px; margin-right: 8px; transition: all 0.3s ease; }
-.nav-pills .nav-link:not(.active):hover { background-color: rgba(13,110,253,0.1); color:#0d6efd; }
-.stage-card { transition: all 0.3s ease; border-radius:12px; }
-.stage-card:hover { transform: translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,0.1); }
-.stage-card.border-primary { border-width:2px!important; box-shadow:0 0 0 0.2rem rgba(13,110,253,0.25); }
-.stage-icon i { transition: transform 0.3s ease; }
-.stage-card:hover .stage-icon i { transform: scale(1.1); }
-.stage-config { background: rgba(248,249,250,0.8); border-radius:8px; padding:12px; }
-.stage-cycle.cycle-readonly { background:#f8f9fa; cursor:not-allowed; opacity:.75; }
-.form-control:focus, .form-select:focus { border-color:#0d6efd; box-shadow:0 0 0 0.2rem rgba(13,110,253,0.25); }
-.form-control-lg { border-radius:8px; font-weight:500; }
-.bg-gradient-primary { background: linear-gradient(135deg,#0d6efd 0%,#0a58ca 100%); }
-.card { border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
-.modal-body { scrollbar-width: thin; scrollbar-color:#dee2e6 transparent; }
-.modal-body::-webkit-scrollbar { width:8px; }
-.modal-body::-webkit-scrollbar-thumb { background-color:#dee2e6; border-radius:4px; }
-.modal-body::-webkit-scrollbar-thumb:hover { background-color:#adb5bd; }
-#submitBtn:disabled { opacity:0.7; cursor:not-allowed; }
-.form-control:disabled, .form-select:disabled { background-color:#f8f9fa; opacity:0.7; }
-#slsBuildConfigCard table input[readonly] { background:#f8f9fa; }
-#slsBuildConfigCard .form-control-sm { padding:.25rem .5rem; }
-@@media (max-width:768px){ .modal-body { max-height:70vh; } .nav-pills { flex-wrap:wrap; } .nav-pills .nav-link { margin-bottom:4px; font-size:0.875rem; } }
-@@keyframes stageSelected {0%{transform:scale(1);}50%{transform:scale(1.02);}100%{transform:scale(1);} }
-.stage-card.border-primary { animation: stageSelected 0.5s ease-out; }
+.bg-gradient-primary { background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%); }
+.card { border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.card-header { border-radius: 8px 8px 0 0 !important; }
+#selectedStagesTable tbody tr { transition: background-color 0.2s; }
+#selectedStagesTable tbody tr:hover { background-color: rgba(13, 110, 253, 0.05); }
+#selectedStagesTable .stage-row { cursor: grab; }
+#selectedStagesTable .stage-row:active { cursor: grabbing; }
+#selectedStagesTable input[type="number"] { width: 80px; }
+.per-part-value { font-weight: 600; color: #0d6efd; }
+.batch-stage-row { background-color: rgba(13, 110, 253, 0.03); }
+.dropdown-item.add-stage-item:hover { background-color: rgba(13, 110, 253, 0.1); }
+.stage-icon { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; }
 </style>
+
+<script>
+(function() {
+    'use strict';
+    
+    // State management
+    let selectedStages = [];
+    let stageOrder = 0;
+    
+    // Stage icon/color mapping (visual only - isBatch comes from server data attribute)
+    const stageStyles = {
+        'SLS Printing': { icon: 'fa-print', color: 'primary' },
+        '3D Printing (SLS)': { icon: 'fa-print', color: 'primary' },
+        'Powder Removal': { icon: 'fa-wind', color: 'secondary' },
+        'Heat Treatment': { icon: 'fa-fire', color: 'danger' },
+        'Wire EDM': { icon: 'fa-bolt', color: 'warning' },
+        'EDM': { icon: 'fa-bolt', color: 'warning' },
+        'CNC Machining': { icon: 'fa-cogs', color: 'success' },
+        'Surface Finishing': { icon: 'fa-brush', color: 'info' },
+        'Sandblasting': { icon: 'fa-brush', color: 'secondary' },
+        'Coating/Cerakote': { icon: 'fa-brush', color: 'secondary' },
+        'Quality Inspection': { icon: 'fa-search', color: 'dark' },
+        'Assembly': { icon: 'fa-puzzle-piece', color: 'purple' },
+        'Laser Engraving': { icon: 'fa-crosshairs', color: 'warning' }
+    };
+
+    // Hidden field mapping for batch stages
+    const batchFieldMap = {
+        'SLS Printing': { duration: 'hiddenSlsDuration', parts: 'hiddenSlsParts' },
+        'Powder Removal': { duration: 'hiddenDepowderDuration', parts: 'hiddenDepowderParts' },
+        'Heat Treatment': { duration: 'hiddenHeatDuration', parts: 'hiddenHeatParts' },
+        'Wire EDM': { duration: 'hiddenEdmDuration', parts: 'hiddenEdmParts' }
+    };
+
+    function init() {
+        console.log('[PART-FORM] Initializing simplified form');
+        
+        // Attach add stage handlers
+        document.querySelectorAll('.add-stage-item').forEach(item => {
+            item.addEventListener('click', handleAddStage);
+        });
+        
+        // Load existing stages if editing
+        loadExistingStages();
+        
+        // Attach form field listeners
+        const partNumber = document.getElementById('MasterPart_PartNumber');
+        const partName = document.getElementById('MasterPart_Name');
+        if (partNumber) partNumber.addEventListener('input', updateUI);
+        if (partName) partName.addEventListener('input', updateUI);
+        
+        // Update UI
+        updateUI();
+        
+        console.log('[PART-FORM] Form initialized');
+    }
+
+    function loadExistingStages() {
+        // Parse existing stage data from model
+        const existingIdsRaw = '@(Model.SelectedStageIds ?? "")';
+        const existingHoursRaw = '@(Model.StageEstimatedHours ?? "")';
+        
+        const existingIds = existingIdsRaw.split(',').filter(id => id.trim());
+        const existingHours = existingHoursRaw.split(',').filter(h => h.trim());
+        
+        if (existingIds.length === 0) return;
+        
+        console.log('[PART-FORM] Loading existing stages:', existingIds);
+        
+        existingIds.forEach((id, index) => {
+            const menuItem = document.querySelector(`.add-stage-item[data-stage-id="${id}"]`);
+            if (menuItem) {
+                const stageName = menuItem.dataset.stageName;
+                const defaultHours = parseFloat(existingHours[index]) || parseFloat(menuItem.dataset.defaultHours) || 1;
+                const isBatch = menuItem.dataset.isBatch === 'true';
+                
+                // Get batch config from model if available
+                let batchDuration = defaultHours;
+                let partsPerBatch = 1;
+                
+                if (isBatch) {
+                    const fields = batchFieldMap[stageName];
+                    if (fields) {
+                        const durEl = document.getElementById(fields.duration);
+                        const partsEl = document.getElementById(fields.parts);
+                        if (durEl && durEl.value) batchDuration = parseFloat(durEl.value) || defaultHours;
+                        if (partsEl && partsEl.value) partsPerBatch = parseInt(partsEl.value) || 1;
+                    }
+                }
+                
+                addStageToList(id, stageName, isBatch, batchDuration, partsPerBatch, defaultHours);
+            }
+        });
+    }
+
+    function handleAddStage(e) {
+        e.preventDefault();
+        const item = e.currentTarget;
+        const stageId = item.dataset.stageId;
+        const stageName = item.dataset.stageName;
+        const defaultHours = parseFloat(item.dataset.defaultHours) || 1;
+        const isBatch = item.dataset.isBatch === 'true';
+        
+        // Check if already added
+        if (selectedStages.find(s => s.id === stageId)) {
+            console.log('[PART-FORM] Stage already added:', stageName);
+            return;
+        }
+        
+        addStageToList(stageId, stageName, isBatch, defaultHours, 1, defaultHours);
+        updateUI();
+    }
+
+    function addStageToList(stageId, stageName, isBatch, batchDuration, partsPerBatch, perPartHours) {
+        stageOrder++;
+        const style = stageStyles[stageName] || { icon: 'fa-cog', color: 'secondary' };
+        
+        const stage = {
+            id: stageId,
+            name: stageName,
+            order: stageOrder,
+            isBatch: isBatch,
+            batchDuration: batchDuration,
+            partsPerBatch: partsPerBatch,
+            perPartHours: isBatch ? (batchDuration / Math.max(1, partsPerBatch)) : perPartHours
+        };
+        
+        selectedStages.push(stage);
+        renderStageRow(stage, style);
+        
+        // Hide from dropdown
+        const menuItem = document.querySelector(`.add-stage-item[data-stage-id="${stageId}"]`);
+        if (menuItem) menuItem.closest('li').style.display = 'none';
+        
+        console.log('[PART-FORM] Stage added:', stageName);
+    }
+
+    function renderStageRow(stage, style) {
+        const tbody = document.getElementById('selectedStagesBody');
+        const row = document.createElement('tr');
+        row.className = `stage-row ${stage.isBatch ? 'batch-stage-row' : ''}`;
+        row.dataset.stageId = stage.id;
+        
+        if (stage.isBatch) {
+            row.innerHTML = `
+                <td class="text-center">
+                    <span class="badge bg-${style.color}">${selectedStages.length}</span>
+                </td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <span class="stage-icon bg-${style.color} bg-opacity-10 text-${style.color} me-2">
+                            <i class="fas ${style.icon}"></i>
+                        </span>
+                        <div>
+                            <strong>${stage.name}</strong>
+                            <br><small class="text-muted">Batch Stage</small>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <input type="number" class="form-control form-control-sm batch-duration" 
+                           value="${stage.batchDuration.toFixed(1)}" step="0.1" min="0.1" max="100"
+                           data-stage-id="${stage.id}" />
+                </td>
+                <td>
+                    <input type="number" class="form-control form-control-sm batch-parts" 
+                           value="${stage.partsPerBatch}" min="1" max="100"
+                           data-stage-id="${stage.id}" />
+                </td>
+                <td class="per-part-value" data-stage-id="${stage.id}">
+                    ${stage.perPartHours.toFixed(2)}h
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-stage" data-stage-id="${stage.id}">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </td>
+            `;
+        } else {
+            row.innerHTML = `
+                <td class="text-center">
+                    <span class="badge bg-${style.color}">${selectedStages.length}</span>
+                </td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <span class="stage-icon bg-${style.color} bg-opacity-10 text-${style.color} me-2">
+                            <i class="fas ${style.icon}"></i>
+                        </span>
+                        <div>
+                            <strong>${stage.name}</strong>
+                            <br><small class="text-muted">Per-Part Stage</small>
+                        </div>
+                    </div>
+                </td>
+                <td colspan="2">
+                    <input type="number" class="form-control form-control-sm per-part-input" 
+                           value="${stage.perPartHours.toFixed(1)}" step="0.1" min="0.1" max="50"
+                           data-stage-id="${stage.id}" placeholder="Hours/part" />
+                </td>
+                <td class="per-part-value" data-stage-id="${stage.id}">
+                    ${stage.perPartHours.toFixed(2)}h
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-stage" data-stage-id="${stage.id}">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </td>
+            `;
+        }
+        
+        tbody.appendChild(row);
+        
+        // Attach event listeners
+        row.querySelector('.remove-stage').addEventListener('click', () => removeStage(stage.id));
+        
+        if (stage.isBatch) {
+            row.querySelector('.batch-duration').addEventListener('input', () => updateBatchCalc(stage.id));
+            row.querySelector('.batch-parts').addEventListener('input', () => updateBatchCalc(stage.id));
+        } else {
+            row.querySelector('.per-part-input').addEventListener('input', (e) => updatePerPartHours(stage.id, e.target.value));
+        }
+    }
+
+    function removeStage(stageId) {
+        selectedStages = selectedStages.filter(s => s.id !== stageId);
+        
+        // Remove row
+        const row = document.querySelector(`#selectedStagesBody tr[data-stage-id="${stageId}"]`);
+        if (row) row.remove();
+        
+        // Show in dropdown again
+        const menuItem = document.querySelector(`.add-stage-item[data-stage-id="${stageId}"]`);
+        if (menuItem) menuItem.closest('li').style.display = '';
+        
+        // Re-number remaining stages
+        renumberStages();
+        updateUI();
+        
+        console.log('[PART-FORM] Stage removed:', stageId);
+    }
+
+    function renumberStages() {
+        const rows = document.querySelectorAll('#selectedStagesBody tr.stage-row');
+        rows.forEach((row, index) => {
+            const badge = row.querySelector('.badge');
+            if (badge) badge.textContent = index + 1;
+            
+            const stageId = row.dataset.stageId;
+            const stage = selectedStages.find(s => s.id === stageId);
+            if (stage) stage.order = index + 1;
+        });
+    }
+
+    function updateBatchCalc(stageId) {
+        const row = document.querySelector(`#selectedStagesBody tr[data-stage-id="${stageId}"]`);
+        if (!row) return;
+        
+        const durationInput = row.querySelector('.batch-duration');
+        const partsInput = row.querySelector('.batch-parts');
+        const perPartCell = row.querySelector('.per-part-value');
+        
+        const duration = parseFloat(durationInput.value) || 0;
+        const parts = parseInt(partsInput.value) || 1;
+        const perPart = duration / Math.max(1, parts);
+        
+        perPartCell.textContent = perPart.toFixed(2) + 'h';
+        
+        // Update state
+        const stage = selectedStages.find(s => s.id === stageId);
+        if (stage) {
+            stage.batchDuration = duration;
+            stage.partsPerBatch = parts;
+            stage.perPartHours = perPart;
+        }
+        
+        updateTotals();
+        updateHiddenFields();
+    }
+
+    function updatePerPartHours(stageId, value) {
+        const perPart = parseFloat(value) || 0;
+        const perPartCell = document.querySelector(`.per-part-value[data-stage-id="${stageId}"]`);
+        if (perPartCell) perPartCell.textContent = perPart.toFixed(2) + 'h';
+        
+        // Update state
+        const stage = selectedStages.find(s => s.id === stageId);
+        if (stage) stage.perPartHours = perPart;
+        
+        updateTotals();
+        updateHiddenFields();
+    }
+
+    function updateTotals() {
+        let totalBatch = 0;
+        let totalPerPart = 0;
+        
+        selectedStages.forEach(stage => {
+            if (stage.isBatch) {
+                totalBatch += stage.batchDuration || 0;
+            }
+            totalPerPart += stage.perPartHours || 0;
+        });
+        
+        document.getElementById('totalBatchHours').textContent = totalBatch.toFixed(1) + 'h';
+        document.getElementById('totalPerPartHours').textContent = totalPerPart.toFixed(2) + 'h';
+    }
+
+    function updateHiddenFields() {
+        // Update stage IDs and hours
+        const ids = selectedStages.map(s => s.id);
+        const hours = selectedStages.map(s => s.perPartHours.toFixed(2));
+        
+        document.getElementById('selectedStageIds').value = ids.join(',');
+        document.getElementById('stageEstimatedHours').value = hours.join(',');
+        
+        // Update batch stage hidden fields
+        Object.keys(batchFieldMap).forEach(stageName => {
+            const fields = batchFieldMap[stageName];
+            const stage = selectedStages.find(s => s.name === stageName);
+            
+            const durEl = document.getElementById(fields.duration);
+            const partsEl = document.getElementById(fields.parts);
+            
+            if (stage) {
+                if (durEl) durEl.value = stage.batchDuration;
+                if (partsEl) partsEl.value = stage.partsPerBatch;
+            } else {
+                if (durEl) durEl.value = '';
+                if (partsEl) partsEl.value = '';
+            }
+        });
+    }
+
+    function updateUI() {
+        const count = selectedStages.length;
+        const countBadge = document.getElementById('selectedStageCount');
+        const noStagesMsg = document.getElementById('noStagesMessage');
+        const footer = document.getElementById('stagesTotalFooter');
+        const submitBtn = document.getElementById('submitBtn');
+        const statusText = document.getElementById('formStatusText');
+        
+        // Update count badge
+        countBadge.textContent = count;
+        countBadge.className = 'badge ms-2 ' + (count > 0 ? 'bg-primary' : 'bg-secondary');
+        
+        // Show/hide empty state
+        noStagesMsg.style.display = count > 0 ? 'none' : '';
+        footer.style.display = count > 0 ? '' : 'none';
+        
+        // Enable/disable submit
+        const partNumber = document.getElementById('MasterPart_PartNumber');
+        const partName = document.getElementById('MasterPart_Name');
+        const isValid = count > 0 && partNumber?.value?.trim() && partName?.value?.trim();
+        
+        submitBtn.disabled = !isValid;
+        submitBtn.className = 'btn ' + (isValid ? 'btn-primary' : 'btn-secondary');
+        
+        // Update status text
+        if (count === 0) {
+            statusText.innerHTML = '<i class="fas fa-info-circle me-1"></i>Select at least one stage';
+        } else {
+            const totalHours = selectedStages.reduce((sum, s) => sum + (s.perPartHours || 0), 0);
+            statusText.innerHTML = `<i class="fas fa-check-circle me-1 text-success"></i>${count} stage(s) selected - ${totalHours.toFixed(2)}h per part`;
+        }
+        
+        updateTotals();
+        updateHiddenFields();
+    }
+
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        setTimeout(init, 10);
+    }
+    
+    // Expose for external calls
+    window.initMasterPartForm = init;
+})();
+</script>
