@@ -36,8 +36,8 @@
 
 ### Phase B: Services (�11)
 ```
-[ ] B1.  ITenantService + TenantService
-[ ] B2.  IAuthService + AuthService
+[x] B1.  ITenantService + TenantService
+[x] B2.  IAuthService + AuthService
 [ ] B3.  IPartService + PartService
 [ ] B4.  IJobService + JobService
 [ ] B5.  IWorkOrderService + WorkOrderService
@@ -55,7 +55,7 @@
 [ ] B17. Machine providers + SignalR hubs
 [ ] B18. Register all services in Program.cs DI
 ```
-**Phase B Status**: NOT STARTED
+**Phase B Status**: IN PROGRESS (at step B3)
 
 ### Phase C: Pages + Navigation + PWA (�11)
 ```
